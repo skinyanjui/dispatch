@@ -761,8 +761,9 @@ export function Inbox({
           <h2>Inbox</h2>
           <p>
             Messages sent from Relay, plus calls, texts and emails you log here.
-            Relay does not read your email or phone, so replies from outside
-            appear only when you log them.
+            Relay does not read your mailbox or phone. Replies to emails and
+            texts sent from here appear automatically only when inbound delivery
+            is set up on this server; otherwise log them.
           </p>
         </div>
         <button
@@ -998,6 +999,7 @@ export function Inbox({
                       <span>
                         {channelLabels[m.channel]}
                         {m.source === "logged" && " · logged by hand"}
+                        {m.source === "inbound" && " · received"}
                       </span>
                       <time dateTime={m.occurred_at}>
                         {when(m.occurred_at)}

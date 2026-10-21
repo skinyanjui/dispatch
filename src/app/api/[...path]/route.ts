@@ -36,6 +36,8 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import { receiveEmail, receiveSms } from "@/lib/inbound";
+import { appOrigin } from "@/lib/notifications";
 import { attachmentContent, uploadAttachment } from "@/lib/message-attachments";
 import {
   accountSummary,
@@ -180,6 +182,26 @@ async function handle(req: NextRequest) {
   let actor: string | undefined;
   try {
     const path = req.nextUrl.pathname.slice(5).split("/");
+    // Provider webhooks carry no browser origin or session; each verifies its
+    // own signature before anything is read or written.
+    if (path[0] === "webhooks" && path.length === 2 && req.method === "POST") {
+      const raw = (await readBody(req, 262144)).toString("utf8");
+      if (path[1] === "sms") {
+        await receiveSms(
+          raw,
+          req.headers.get("x-twilio-signature"),
+          appOrigin(new URL(req.url).origin) + "/api/webhooks/sms",
+        );
+        return new NextResponse("<Response></Response>", {
+          headers: { "Content-Type": "text/xml" },
+        });
+      }
+      if (path[1] === "email")
+        return NextResponse.json(
+          await receiveEmail(raw, req.headers.get("x-relay-signature")),
+        );
+      throw new HttpError(404, "NOT_FOUND");
+    }
     if (req.method === "POST") sameOrigin(req);
     if (path.length === 1 && path[0] === "login" && req.method === "POST") {
       const input = z

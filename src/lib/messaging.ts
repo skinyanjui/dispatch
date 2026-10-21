@@ -7,6 +7,7 @@ import { access, collect } from "./contacts";
 import { scoped } from "./loads";
 import { appOrigin, enqueueForEmail, enqueueForUser } from "./notifications";
 import { smsTransport, toE164 } from "./sms";
+import { replyAddress } from "./inbound";
 import {
   linkAttachments,
   maxAttachmentsPerMessage,
@@ -351,6 +352,7 @@ export async function sendMessage(
     const deliveries: { id: string; key: string; address: string }[] = [];
     if (data.mode === "send") {
       const origin_ = appOrigin(origin);
+      const viaRelay = replyAddress(thread.id);
       for (const r of recipients) {
         const id = randomUUID();
         let status = "delivered",
@@ -365,8 +367,10 @@ export async function sendMessage(
               organization: thread.organization_id,
               dedupe: `message:${messageId}:${r.key}`,
               subject: thread.subject,
-              text: `${data.body}\n\n—\nSent by ${me.name} through Relay. Reply to this email to reach ${me.name} at ${me.email}.`,
-              replyTo: me.email,
+              text: viaRelay
+                ? `${data.body}\n\n—\nSent by ${me.name} through Relay. Reply to this email to answer in the conversation, or write to ${me.name} directly at ${me.email}.`
+                : `${data.body}\n\n—\nSent by ${me.name} through Relay. Reply to this email to reach ${me.name} at ${me.email}.`,
+              replyTo: viaRelay ?? me.email,
             })) ?? null;
         } else if (data.channel === "sms") {
           status = "pending";
@@ -540,7 +544,7 @@ export const threadFilters = z
 const unreadSql = `EXISTS(
   SELECT 1 FROM thread_participants me WHERE me.thread_id=t.id AND me.user_id=$1)
   AND EXISTS(SELECT 1 FROM messages m LEFT JOIN thread_reads r ON r.thread_id=t.id AND r.user_id=$1
-    WHERE m.thread_id=t.id AND m.sender_user_id<>$1 AND m.occurred_at>COALESCE(r.last_read_at,'-infinity'))`;
+    WHERE m.thread_id=t.id AND m.sender_user_id IS DISTINCT FROM $1 AND m.occurred_at>COALESCE(r.last_read_at,'-infinity'))`;
 
 export async function listThreads(user: string, params: URLSearchParams) {
   const f = threadFilters.parse({
@@ -566,8 +570,8 @@ export async function listThreads(user: string, params: URLSearchParams) {
       c.name carrier_name,(${unreadSql}) unread,
       (SELECT count(*)::int FROM messages m WHERE m.thread_id=t.id) message_count,
       (SELECT COALESCE(json_agg(p.name ORDER BY p.name),'[]') FROM (SELECT name FROM thread_participants p WHERE p.thread_id=t.id AND (p.user_id IS DISTINCT FROM $1) ORDER BY name LIMIT 4) p) with_names,
-      (SELECT json_build_object('channel',m.channel,'direction',m.direction,'source',m.source,'preview',left(m.body,140),'sender',u.name,'occurred_at',m.occurred_at)
-        FROM messages m JOIN users u ON u.id=m.sender_user_id WHERE m.thread_id=t.id ORDER BY m.occurred_at DESC,m.id DESC LIMIT 1) last
+      (SELECT json_build_object('channel',m.channel,'direction',m.direction,'source',m.source,'preview',left(m.body,140),'sender',COALESCE(u.name,m.sender_label),'occurred_at',m.occurred_at)
+        FROM messages m LEFT JOIN users u ON u.id=m.sender_user_id WHERE m.thread_id=t.id ORDER BY m.occurred_at DESC,m.id DESC LIMIT 1) last
     FROM threads t LEFT JOIN loads l ON l.id=t.load_id LEFT JOIN carriers c ON c.id=t.carrier_id
     WHERE ${visibleThread}
       AND ($2::uuid IS NULL OR t.load_id=$2)
@@ -620,7 +624,7 @@ export async function getThread(user: string, id: string) {
       [id],
     );
     const messages = await c.query(
-      `SELECT m.id,m.channel,m.direction,m.source,m.body,m.counterpart,m.occurred_at,m.sender_user_id,u.name sender_name,
+      `SELECT m.id,m.channel,m.direction,m.source,m.body,m.counterpart,m.occurred_at,m.sender_user_id,COALESCE(u.name,m.sender_label) sender_name,
         (SELECT COALESCE(json_agg(json_build_object('id',d.id,'attempts',d.attempts,'key',d.participant_key,'name',p.name,'channel',d.channel,'status',${deliveryStatus},
           'error',COALESCE(d.last_error,n.last_error)) ORDER BY p.name),'[]')
           FROM message_deliveries d LEFT JOIN notifications n ON n.id=d.notification_id
@@ -628,7 +632,7 @@ export async function getThread(user: string, id: string) {
           WHERE d.message_id=m.id) deliveries,
         (SELECT COALESCE(json_agg(json_build_object('id',a.id,'filename',a.filename,'content_type',a.content_type,'size_bytes',a.size_bytes) ORDER BY a.created_at),'[]')
           FROM message_attachments a WHERE a.message_id=m.id) attachments
-      FROM messages m JOIN users u ON u.id=m.sender_user_id
+      FROM messages m LEFT JOIN users u ON u.id=m.sender_user_id
       WHERE m.thread_id=$1 ORDER BY m.occurred_at DESC,m.id DESC LIMIT 200`,
       [id],
     );
