@@ -82,6 +82,12 @@ const messages: Record<string, string> = {
   JOBS_NOT_CONFIGURED: "Scheduled jobs are not configured.",
   DEMO_UNAVAILABLE:
     "Not available in the demo: it has no real accounts. Sign in to Relay to use account security.",
+  MALWARE_DETECTED:
+    "This file was flagged by the malware scanner and was not stored. Use a clean copy from the original source.",
+  SCAN_UNAVAILABLE:
+    "Malware scanning is unavailable right now, so the file was not stored. Retry in a few minutes.",
+  STORAGE_UNAVAILABLE:
+    "Document storage is unavailable right now, so the file was not stored. Retry in a few minutes.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

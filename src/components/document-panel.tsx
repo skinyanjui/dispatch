@@ -46,6 +46,11 @@ function VersionLine({
         Uploaded by {version.uploader_name} · {when(version.uploaded_at)}
         {version.expires_on && <> · Expires {version.expires_on}</>}
       </small>
+      <small className={version.scan ? "docScan clean" : "docScan"}>
+        {version.scan
+          ? `Malware scan: clean (${version.scan.engine === "clamav" ? "ClamAV" : version.scan.engine})`
+          : "Not malware-scanned (no scanner was configured)"}
+      </small>
       {version.review && (
         <small>
           {version.review.decision === "accepted" ? "Accepted" : "Rejected"} by{" "}
@@ -253,7 +258,8 @@ function Slot({
             {busy ? "Uploading…" : "Upload"}
           </button>
           <small>
-            PDF, PNG or JPEG up to 4 MB. Files are not virus-scanned yet.
+            PDF, PNG or JPEG up to 4 MB. Each version shows its malware scan
+            result.
           </small>
         </form>
       )}

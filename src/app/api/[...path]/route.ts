@@ -324,6 +324,10 @@ async function handle(req: NextRequest) {
       const versionId = z.uuid().parse(path[1]);
       if (path.length === 3 && path[2] === "content" && req.method === "GET") {
         const file = await documentContent(user.id, versionId);
+        // Object storage: a 60-second signed URL issued only after the same
+        // authorization and audit as an inline download.
+        if (file.kind === "redirect")
+          return NextResponse.redirect(file.url, 302);
         return new NextResponse(new Uint8Array(file.content), {
           headers: {
             "Content-Type": file.content_type,

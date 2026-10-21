@@ -139,6 +139,7 @@ test("carrier files version immutably, dedupe retries and require dispatcher rev
     /Append-only record/,
   );
   const file = await documentContent(t.dispatcher, first.version_id);
+  assert.ok(file.kind === "inline");
   assert.deepEqual(file.content, bytes);
   assert.equal(
     (

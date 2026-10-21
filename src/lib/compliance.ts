@@ -58,6 +58,8 @@ export type DocumentVersion = {
   uploaded_at: string;
   uploader_name: string;
   review: DocumentReview | null;
+  /** Null when no scanner was configured at upload time. */
+  scan?: { verdict: "clean"; engine: string; scanned_at: string } | null;
 };
 export type DocumentSlot = {
   type: DocumentType;
