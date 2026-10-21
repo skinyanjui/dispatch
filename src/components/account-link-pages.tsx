@@ -1,9 +1,8 @@
 "use client";
-import { LoginHero } from "@/components/login-hero";
+import { AuthLayout } from "@/components/auth-layout";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
-import { Brand } from "@/components/workspace-shell";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 
 // Tokens arrive in the URL fragment so they never reach server logs or
@@ -27,8 +26,7 @@ export function ResetPasswordPage() {
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(false);
   return (
-    <main className="login joinPage">
-      <Brand />
+    <AuthLayout className="joinPage">
       <section className="loginPanel">
         {token === null ? (
           <p role="status">Opening your reset link…</p>
@@ -114,8 +112,7 @@ export function ResetPasswordPage() {
           </form>
         )}
       </section>
-      <LoginHero />
-    </main>
+    </AuthLayout>
   );
 }
 
@@ -137,8 +134,7 @@ export function VerifyEmailPage() {
       );
   }, [api, token]);
   return (
-    <main className="login joinPage">
-      <Brand />
+    <AuthLayout className="joinPage">
       <section className="loginPanel">
         {state === "working" ? (
           <p role="status">Confirming your email…</p>
@@ -163,7 +159,6 @@ export function VerifyEmailPage() {
           </>
         )}
       </section>
-      <LoginHero />
-    </main>
+    </AuthLayout>
   );
 }

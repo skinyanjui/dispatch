@@ -1,7 +1,6 @@
 "use client";
-import { LoginHero } from "@/components/login-hero";
+import { AuthLayout } from "@/components/auth-layout";
 import { useEffect, useState } from "react";
-import { Brand } from "@/components/workspace-shell";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
 type Invitation = {
@@ -38,8 +37,7 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
       .finally(() => setReady(true));
   }, [api]);
   return (
-    <main className="login joinPage">
-      <Brand />
+    <AuthLayout className="joinPage">
       <section className="loginPanel">
         {!ready ? (
           <p role="status">Opening your invitation…</p>
@@ -250,8 +248,6 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
           </>
         )}
       </section>
-      <p className="loginBottom">A simpler start. A clearer handoff.</p>
-      <LoginHero />
-    </main>
+    </AuthLayout>
   );
 }

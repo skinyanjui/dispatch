@@ -1,5 +1,5 @@
 "use client";
-import { LoginHero } from "@/components/login-hero";
+import { AuthLayout } from "@/components/auth-layout";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import {
@@ -15,6 +15,10 @@ import {
   CircleIcon,
   CheckIcon,
   ArrowUpRightIcon,
+  EnvelopeSimpleIcon,
+  LockSimpleIcon,
+  EyeIcon,
+  EyeSlashIcon,
   ClockIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
@@ -412,17 +416,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     );
   if (!context)
     return (
-      <main className="login">
-        <Brand />
+      <AuthLayout>
         <section className="loginPanel">
-          <p className="eyebrow">DISPATCH, WITH CLARITY</p>
-          <h1>
-            Everything in motion.
-            <br />
-            All in one place.
-          </h1>
+          <h1>Sign in</h1>
           <p className="loginDescription">
-            Welcome back! Sign in to pick up where you left off.
+            Welcome back! Pick up where you left off.
           </p>
           {mfaChallenge ? (
             <form
@@ -554,47 +552,64 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 });
               }}
             >
-              <label>
-                Email
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  required
-                  maxLength={254}
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  maxLength={256}
-                />
-              </label>
-              <label className="setupCheckbox">
-                <input
-                  type="checkbox"
-                  checked={showPassword}
-                  onChange={(e) => setShowPassword(e.target.checked)}
-                />
-                <span>Show password</span>
-              </label>
+              <div className="field">
+                <label htmlFor="login-email">Email</label>
+                <div className="fieldBox">
+                  <EnvelopeSimpleIcon size={18} aria-hidden="true" />
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    placeholder="you@company.com"
+                    required
+                    maxLength={254}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="login-password">Password</label>
+                <div className="fieldBox">
+                  <LockSimpleIcon size={18} aria-hidden="true" />
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    required
+                    maxLength={256}
+                  />
+                  <button
+                    type="button"
+                    className="eyeToggle"
+                    aria-label="Show password"
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon size={18} aria-hidden="true" />
+                    ) : (
+                      <EyeIcon size={18} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="formRow">
+                <button
+                  type="button"
+                  className="textButton"
+                  onClick={() => {
+                    setRecovering(true);
+                    setError("");
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <button className="primary full" disabled={busy || offline}>
                 {busy ? "Signing in…" : "Sign in"}
                 <ArrowRightIcon size={16} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="textButton"
-                onClick={() => {
-                  setRecovering(true);
-                  setError("");
-                }}
-              >
-                Forgot password?
               </button>
             </form>
           )}
@@ -616,20 +631,19 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               your administrator.
             </p>
           </details>
-          <p className="loginFoot">
-            Fictional QA data. No live freight connections.
-            <br />
-            <a href="/demo">
-              Try interactive demo{" "}
-              <ArrowUpRightIcon size={12} aria-hidden="true" />
-            </a>
-          </p>
+          {!mfaChallenge && !recovering && (
+            <>
+              <p className="orDivider">
+                <span>or</span>
+              </p>
+              <a className="secondary full" href="/demo">
+                Try the interactive demo
+                <ArrowUpRightIcon size={14} aria-hidden="true" />
+              </a>
+            </>
+          )}
         </section>
-        <span className="loginBottom">
-          A little less busywork. A lot more visibility.
-        </span>
-        <LoginHero />
-      </main>
+      </AuthLayout>
     );
   const canWrite = context.carriers.some((c) => c.role !== "driver");
   const driverOnly =

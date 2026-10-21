@@ -3,39 +3,41 @@ import {
   ReceiptIcon,
   ShieldCheckIcon,
 } from "@phosphor-icons/react/dist/ssr";
+import { Brand } from "@/components/workspace-shell";
 
-/** The second column of the sign-in and invitation screens. */
+/** The left column of the sign-in and invitation screens. */
 export function LoginHero() {
   return (
     <aside className="loginHero" aria-label="About Relay">
-      <div className="heroInner">
-        <p className="heroEyebrow">Relay for dispatch teams</p>
-        <h2>Know what needs you before you ask.</h2>
+      <Brand />
+      <div className="heroBody">
+        <h2>
+          Everything in motion.
+          <br />
+          All in one place.
+        </h2>
+        <p className="heroLead">
+          Relay helps dispatch teams book, track and bill freight for their
+          carriers without the busywork.
+        </p>
         <ul>
           <li>
-            <LightningIcon size={22} weight="fill" aria-hidden="true" />
-            <span>
-              <strong>One board, real answers</strong>
-              Next appointment, driver, paperwork and what to do next, on every
-              load.
-            </span>
+            <LightningIcon size={20} weight="fill" aria-hidden="true" />
+            See what needs you at a glance
           </li>
           <li>
-            <ShieldCheckIcon size={22} weight="fill" aria-hidden="true" />
-            <span>
-              <strong>Carrier data stays separate</strong>
-              Every carrier sees only its own loads, documents and billing.
-            </span>
+            <ShieldCheckIcon size={20} weight="fill" aria-hidden="true" />
+            Every carrier&apos;s data stays separate
           </li>
           <li>
-            <ReceiptIcon size={22} weight="fill" aria-hidden="true" />
-            <span>
-              <strong>Billing that matches reality</strong>
-              Carrier freight and your dispatch invoices are tracked apart.
-            </span>
+            <ReceiptIcon size={20} weight="fill" aria-hidden="true" />
+            Carrier freight and your fees, tracked apart
           </li>
         </ul>
       </div>
+      <p className="heroNote">
+        Fictional QA data. No live freight connections.
+      </p>
     </aside>
   );
 }

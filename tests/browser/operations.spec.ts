@@ -1222,7 +1222,7 @@ test("friendly wording: wrong password and the show-password option", async ({
   await page.goto("/");
   await page.getByLabel("Email").fill("dispatcher@relay.test");
   await page.getByLabel("Password", { exact: true }).fill("not-the-password-1");
-  await page.getByLabel("Show password").check();
+  await page.getByRole("button", { name: "Show password" }).click();
   await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
     "type",
     "text",

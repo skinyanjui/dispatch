@@ -1,0 +1,358 @@
+/* Sign-in, invitation and password screens: a soft sky hero on the left and a
+   floating card on a pale column. The blue belongs to these screens only; the
+   app itself keeps its own palette. */
+.login {
+  --login-blue: #2f4cf5;
+  --login-blue-hover: #2440d8;
+  --login-ink: #0f1b3d;
+  --login-muted: #4a5578;
+  --login-line: #d5daec;
+}
+.authPage {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  background: #f6f8fd;
+  color: var(--login-ink);
+}
+
+/* ---- Hero ---- */
+.loginHero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 20px 26px;
+  background:
+    radial-gradient(ellipse at 15% 0%, #fde6e0 0, transparent 55%),
+    radial-gradient(ellipse at 100% 40%, #d9d3fb 0, transparent 55%),
+    linear-gradient(180deg, #eef3ff 0%, #f1eafa 50%, #d6e1ff 100%);
+}
+.loginHero .brand {
+  position: relative;
+  z-index: 1;
+  font-size: 22px;
+  color: var(--login-ink);
+}
+.loginHero .brand svg {
+  color: var(--login-blue);
+}
+.heroBody {
+  position: relative;
+  z-index: 1;
+}
+.loginHero h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--login-ink);
+}
+.heroLead,
+.loginHero ul,
+.heroNote {
+  display: none;
+}
+
+/* ---- Right column and card ---- */
+.authSide {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.authTop {
+  margin: 0;
+  padding: 18px 20px 0;
+  text-align: right;
+  font-size: 13px;
+  color: var(--login-muted);
+}
+.authCard {
+  width: min(520px, calc(100% - 32px));
+  margin: 16px auto 32px;
+  padding: 26px 22px;
+  background: #fff;
+  border: 1px solid var(--login-line);
+  border-radius: 16px;
+  box-shadow: 0 24px 56px -28px rgb(31 51 120 / 0.35);
+}
+.loginPanel {
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+.loginPanel h1 {
+  margin: 0 0 6px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1.15;
+  color: var(--login-ink);
+}
+.loginDescription {
+  margin: 0 0 24px;
+  font-size: 15px;
+  color: var(--login-muted);
+}
+.login .eyebrow {
+  color: var(--login-blue);
+  font-weight: 650;
+}
+
+/* ---- Fields ---- */
+.login .field {
+  margin: 0 0 16px;
+}
+.login .field > label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--login-ink);
+}
+.login .fieldBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 8px 0 14px;
+  border: 1px solid #c3cae0;
+  border-radius: 10px;
+  background: #fff;
+  color: #5f6a8d;
+}
+.login .fieldBox:focus-within {
+  border-color: var(--login-blue);
+  box-shadow: 0 0 0 3px rgb(47 76 245 / 0.2);
+}
+.login .fieldBox svg {
+  flex: none;
+}
+.login .fieldBox input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--login-ink);
+}
+.login .fieldBox input::placeholder {
+  color: #5f6a8d;
+}
+.login .eyeToggle {
+  flex: none;
+  min-height: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #4a5578;
+}
+.login .eyeToggle:hover {
+  background: #eef1fb;
+  color: var(--login-ink);
+}
+.login .eyeToggle:focus-visible,
+.login .textButton:focus-visible,
+.login .loginAccess summary:focus-visible {
+  outline: 2px solid var(--login-blue);
+  outline-offset: 2px;
+}
+.login label:not(.field > label) input,
+.login form > label input {
+  min-height: 46px;
+  border-radius: 10px;
+}
+.login .formRow {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 18px;
+}
+.login .textButton {
+  padding-inline: 0;
+  font-size: 14px;
+  color: var(--login-blue);
+  font-weight: 600;
+}
+
+/* ---- Buttons ---- */
+.login .primary {
+  background: var(--login-blue);
+  color: #fff;
+  border-color: var(--login-blue);
+  font-weight: 600;
+  box-shadow: 0 10px 20px -12px var(--login-blue);
+}
+.login .primary:hover:not(:disabled) {
+  background: var(--login-blue-hover);
+  border-color: var(--login-blue-hover);
+}
+.login .primary:disabled {
+  opacity: 0.65;
+}
+.login .primary.full,
+.login .secondary.full {
+  width: 100%;
+  height: 48px;
+  gap: 8px;
+  border-radius: 10px;
+  font-size: 15px;
+  margin: 0;
+}
+.login .secondary.full {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--login-ink);
+  border: 1px solid #c3cae0;
+  font-weight: 600;
+}
+.login .secondary.full:hover {
+  background: #f3f5fc;
+}
+.orDivider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 16px;
+  font-size: 13px;
+  color: var(--login-muted);
+}
+.orDivider::before,
+.orDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--login-line);
+}
+
+/* ---- Access guidance ---- */
+.loginAccess {
+  margin: 22px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--login-muted);
+}
+.loginAccess summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--login-blue);
+}
+.loginAccess strong {
+  color: var(--login-ink);
+}
+
+/* ---- Two columns from 900px ---- */
+@media (min-width: 900px) {
+  .authPage {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: 1fr;
+  }
+  .loginHero {
+    justify-content: flex-start;
+    gap: clamp(32px, 9vh, 88px);
+    /* Content stays above the scene (mountains and water) at the bottom. */
+    padding: clamp(28px, 4vw, 56px) clamp(32px, 6vw, 96px) 36%;
+    min-height: 100dvh;
+  }
+  .loginHero::before,
+  .loginHero::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+  }
+  /* Distant mountains, then water. */
+  .loginHero::before {
+    bottom: 20%;
+    height: 17%;
+    background: linear-gradient(180deg, #a9b8e8, #8499dc);
+    clip-path: polygon(
+      0 100%,
+      0 70%,
+      14% 55%,
+      30% 72%,
+      52% 22%,
+      68% 58%,
+      84% 45%,
+      100% 66%,
+      100% 100%
+    );
+    opacity: 0.85;
+  }
+  .loginHero::after {
+    bottom: 0;
+    height: 21%;
+    background: linear-gradient(180deg, #6f8bde 0%, #3d5bbf 100%);
+  }
+  .loginHero h2 {
+    font-size: clamp(32px, 3.6vw, 52px);
+    letter-spacing: -1.4px;
+  }
+  .heroLead {
+    display: block;
+    max-width: 30ch;
+    margin: 22px 0 28px;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--login-muted);
+  }
+  .loginHero ul {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .loginHero li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 16px;
+    color: var(--login-muted);
+  }
+  .loginHero li svg {
+    flex: none;
+    color: var(--login-blue);
+  }
+  .heroNote {
+    position: absolute;
+    left: clamp(32px, 6vw, 96px);
+    bottom: 28px;
+    z-index: 1;
+    display: block;
+    margin: 0;
+    font-size: 14px;
+    color: #fff;
+  }
+  .authSide {
+    background: #f6f8fd;
+  }
+  .authTop {
+    padding: 28px clamp(24px, 5vw, 64px) 0;
+    font-size: 14px;
+  }
+  .authCard {
+    width: min(540px, calc(100% - clamp(48px, 10vw, 128px)));
+    margin: auto;
+    padding: clamp(28px, 3.4vw, 48px);
+  }
+  .loginPanel h1 {
+    font-size: 40px;
+    letter-spacing: -1.2px;
+  }
+}
