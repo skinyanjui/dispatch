@@ -10,6 +10,7 @@ import {
   PlusIcon,
   TrayIcon,
 } from "@phosphor-icons/react";
+import { Modal } from "@/components/modal";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { DirectoryEntry } from "@/lib/contact-types";
 
@@ -307,24 +308,51 @@ function Composer({
         </label>
       )}
       <div className="composerRow">
-        <label>
-          Action
-          <select
-            value={mode}
-            onChange={(e) => {
-              setMode(e.target.value as Mode);
-              key.current = crypto.randomUUID();
-            }}
-          >
-            {(Object.keys(modeLabels) as Mode[])
-              .filter((m) => staff || m === "in_app")
-              .map((m) => (
-                <option key={m} value={m}>
-                  {modeLabels[m]}
-                </option>
+        {staff ? (
+          <div className="composerVia">
+            <div className="segmented" role="group" aria-label="Send via">
+              {(
+                [
+                  ["in_app", "Relay"],
+                  ["email", "Email"],
+                  ["sms", "Text"],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={"segment" + (mode === m ? " active" : "")}
+                  aria-pressed={mode === m}
+                  onClick={() => {
+                    setMode(m);
+                    key.current = crypto.randomUUID();
+                  }}
+                >
+                  {label}
+                </button>
               ))}
-          </select>
-        </label>
+            </div>
+            <label className="composerLog">
+              <span className="srOnly">Log activity</span>
+              <select
+                aria-label="Log activity"
+                value={log ? mode : ""}
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  setMode(e.target.value as Mode);
+                  key.current = crypto.randomUUID();
+                }}
+              >
+                <option value="">Log activity…</option>
+                {(Object.keys(modeLabels) as Mode[]).filter(isLog).map((m) => (
+                  <option key={m} value={m}>
+                    {modeLabels[m]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
         <label>
           Saved reply
           <select
@@ -765,13 +793,17 @@ export function Inbox({
     }, 200);
     return () => clearTimeout(timer);
   }, [api, find, newMessage, userId]);
+  const openRequest = useRef(0);
   const openThread = useCallback(
     async (id: string) => {
+      const mine = ++openRequest.current;
       setSelected(id);
       setNewMessage(null);
       setViewError("");
       try {
         const result = await api<ThreadView>("threads/" + id);
+        // A slower earlier click must never replace a newer one.
+        if (mine !== openRequest.current) return;
         setView(result);
         await api(`threads/${id}/read`, {});
         setThreads((old) =>
@@ -781,6 +813,7 @@ export function Inbox({
         );
         onUnreadChanged();
       } catch (e) {
+        if (mine !== openRequest.current) return;
         if (e instanceof ApiError && e.status === 401) onAuthError(e);
         setView(null);
         setViewError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
@@ -861,39 +894,45 @@ export function Inbox({
           <NotePencilIcon {...icon} /> New message
         </button>
       </div>
-      <div className="inboxTabs" role="group" aria-label="Filter conversations">
-        {Object.keys(tabLabels).map((tab) => {
-          const active = unreadOnly ? "unread" : channel || "all";
-          return (
-            <button
-              key={tab}
-              type="button"
-              className={"inboxTab" + (active === tab ? " active" : "")}
-              aria-pressed={active === tab}
-              onClick={() => {
-                setUnreadOnly(tab === "unread");
-                setChannel(tab === "all" || tab === "unread" ? "" : tab);
-              }}
-            >
-              {tabLabels[tab]}
-            </button>
-          );
-        })}
-      </div>
       <p className="srOnly" role="status">
         {status}
       </p>
       {managing && (
-        <SavedReplies
-          replies={replies.replies}
-          canShare={replies.can_share}
-          onChanged={loadReplies}
-          onClose={() => setManaging(false)}
-          onAuthError={onAuthError}
-        />
+        <Modal label="Saved replies" onClose={() => setManaging(false)}>
+          <SavedReplies
+            replies={replies.replies}
+            canShare={replies.can_share}
+            onChanged={loadReplies}
+            onClose={() => setManaging(false)}
+            onAuthError={onAuthError}
+          />
+        </Modal>
       )}
       <div className={"inboxLayout" + (hasDetail ? " hasDetail" : "")}>
         <div className="inboxList">
+          <div
+            className="inboxTabs"
+            role="group"
+            aria-label="Filter conversations"
+          >
+            {Object.keys(tabLabels).map((tab) => {
+              const active = unreadOnly ? "unread" : channel || "all";
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  className={"inboxTab" + (active === tab ? " active" : "")}
+                  aria-pressed={active === tab}
+                  onClick={() => {
+                    setUnreadOnly(tab === "unread");
+                    setChannel(tab === "all" || tab === "unread" ? "" : tab);
+                  }}
+                >
+                  {tabLabels[tab]}
+                </button>
+              );
+            })}
+          </div>
           {error && (
             <div className="alert error" role="alert">
               {describe(error)}
@@ -1042,14 +1081,54 @@ export function Inbox({
                       value={find}
                       placeholder="Type a name to find someone…"
                       onChange={(e) => setFind(e.target.value)}
+                      onKeyDown={(e) => {
+                        const list = e.currentTarget
+                          .closest("fieldset")
+                          ?.querySelectorAll<HTMLButtonElement>(
+                            ".pickList button",
+                          );
+                        if (e.key === "ArrowDown" && list?.length) {
+                          e.preventDefault();
+                          list[0].focus();
+                        }
+                        if (e.key === "Enter") {
+                          // Enter picks the first match instead of submitting.
+                          e.preventDefault();
+                          list?.[0]?.click();
+                        }
+                      }}
                     />
                   </label>
-                  <ul className="pickList">
-                    {people
+                  <ul
+                    className="pickList"
+                    aria-label="Matching people"
+                    onKeyDown={(e) => {
+                      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+                      const items = [
+                        ...e.currentTarget.querySelectorAll<HTMLButtonElement>(
+                          "button",
+                        ),
+                      ];
+                      const at = items.indexOf(
+                        document.activeElement as HTMLButtonElement,
+                      );
+                      e.preventDefault();
+                      items[
+                        Math.max(
+                          0,
+                          Math.min(
+                            items.length - 1,
+                            at + (e.key === "ArrowDown" ? 1 : -1),
+                          ),
+                        )
+                      ]?.focus();
+                    }}
+                  >
+                    {(find.trim() ? people : [])
                       .filter(
                         (p) => !newMessage.to.some((x) => x.key === p.key),
                       )
-                      .slice(0, 6)
+                      .slice(0, 8)
                       .map((p) => (
                         <li key={p.key}>
                           <button

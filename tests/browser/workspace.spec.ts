@@ -629,3 +629,79 @@ test("organization: tabs, a filterable people list and search", async ({
     page.getByRole("heading", { name: "Invite teammates" }),
   ).toBeVisible();
 });
+
+test("inbox: filter tabs sit in the conversation column, and the newest click wins", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Inbox/ }).click();
+  const list = page.locator(".inboxList");
+  const tabs = list.getByRole("group", { name: "Filter conversations" });
+  await expect(tabs).toBeVisible();
+  for (const name of ["All", "Unread", "Relay", "Email", "Texts", "Calls"])
+    await expect(tabs.getByRole("button", { name, exact: true })).toBeVisible();
+  const [t, l] = await Promise.all([tabs.boundingBox(), list.boundingBox()]);
+  expect(t!.x).toBeGreaterThanOrEqual(l!.x - 1);
+  expect(t!.x + t!.width).toBeLessThanOrEqual(l!.x + l!.width + 1);
+  // The back button is for phones only.
+  await expect(
+    page.getByRole("button", { name: "All conversations" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "New message" }).click();
+  await expect(
+    page.getByRole("button", { name: "All conversations" }),
+  ).toBeHidden();
+  // Enter in the people search adds the first match.
+  await page.getByRole("searchbox", { name: "Find people" }).fill("Jordan");
+  await expect(
+    page.getByRole("list", { name: "Matching people" }),
+  ).toBeVisible();
+  await page.getByRole("searchbox", { name: "Find people" }).press("Enter");
+  await expect(
+    page.getByRole("button", { name: /^Remove Jordan/ }),
+  ).toBeVisible();
+});
+
+test("reports: pressed range, KPIs that open their loads, sortable table", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Reports", exact: true }).click();
+  const region = page.getByRole("region", { name: "Reports" });
+  const range = region.getByRole("group", { name: "Date range" });
+  await expect(
+    range.getByRole("button", { name: "Last 30 days" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await range.getByRole("button", { name: "Last 7 days" }).click();
+  await expect(
+    range.getByRole("button", { name: "Last 7 days" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await range.getByRole("button", { name: "Last 90 days" }).click();
+  await expect(region.getByText("Report loaded")).toBeAttached();
+  // A custom range reveals the date fields.
+  await range.getByRole("button", { name: "Custom" }).click();
+  await expect(region.getByLabel("From")).toBeVisible();
+  // Sorting is announced on the header.
+  const header = region.getByRole("columnheader", { name: "Carrier" });
+  await header.getByRole("button").click();
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await header.getByRole("button").click();
+  await expect(header).toHaveAttribute("aria-sort", "descending");
+  // One click from a number to the records behind it.
+  await region.getByRole("button", { name: /^Open exceptions: / }).click();
+  await expect(
+    page.getByRole("region", { name: "Exception queue" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Reports", exact: true }).click();
+  await region
+    .getByRole("button", { name: /^Delivered, no accepted POD/ })
+    .click();
+  await expect(page.locator(".loadSurface")).toBeVisible();
+  await page.getByRole("button", { name: "Reports", exact: true }).click();
+  await region.getByRole("button", { name: /^Booked: / }).click();
+  await expect(
+    page.getByRole("button", { name: "Ready to dispatch", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+});

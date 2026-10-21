@@ -989,8 +989,9 @@ test("inbox: message a driver from Contacts, driver sees unread and replies, cal
   ).toBeVisible();
   // Drivers cannot log calls or send email or texts.
   await expect(
-    driverInbox.getByRole("option", { name: "Send email" }),
+    driverInbox.getByRole("group", { name: "Send via" }),
   ).toHaveCount(0);
+  await expect(driverInbox.getByLabel("Log activity")).toHaveCount(0);
   await driverInbox.locator("textarea").fill("Confirmed, 8am.");
   await driverInbox.getByRole("button", { name: "Send" }).click();
   await expect(
@@ -1012,7 +1013,9 @@ test("inbox: message a driver from Contacts, driver sees unread and replies, cal
   await expect(
     inbox.getByRole("list", { name: "Messages" }).getByText("Confirmed, 8am."),
   ).toBeVisible();
-  await inbox.getByLabel("Action").selectOption({ label: "Log call I made" });
+  await inbox
+    .getByLabel("Log activity")
+    .selectOption({ label: "Log call I made" });
   await inbox.getByLabel("Notes").fill("Called Jordan; on the way.");
   await inbox.getByRole("button", { name: "Save to log" }).click();
   await expect(
@@ -1132,11 +1135,9 @@ test("inbox: attach a PDF to a message and download it as the recipient", async 
     composer.getByRole("button", { name: /Remove ratecon/ }),
   ).toBeVisible();
   // Email and text cannot carry files, so the control goes away.
-  await composer.getByLabel("Action").selectOption({ label: "Send email" });
+  await composer.getByRole("button", { name: "Email", exact: true }).click();
   await expect(composer.locator('input[type="file"]')).toHaveCount(0);
-  await composer
-    .getByLabel("Action")
-    .selectOption({ label: "Message in Relay" });
+  await composer.getByRole("button", { name: "Relay", exact: true }).click();
   await composer.getByRole("button", { name: "Send" }).click();
   await expect(
     inbox

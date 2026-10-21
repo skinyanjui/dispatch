@@ -1876,3 +1876,39 @@ select {
 .appShell .reportTile {
   padding: var(--space-3) var(--space-4);
 }
+
+/* ---- Inbox ---- */
+.appShell .inboxList > .inboxTabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--bg, #fff);
+}
+.appShell .composerVia {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.appShell .composerLog {
+  flex-direction: row;
+  width: auto;
+}
+@media (min-width: 1001px) {
+  .appShell .inboxDetail .backButton {
+    display: none;
+  }
+}
+.appShell .inboxList > .inboxTabs .inboxTab {
+  flex: 1 0 auto;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+.appShell .composerRow {
+  align-items: flex-end;
+}
