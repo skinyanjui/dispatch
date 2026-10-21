@@ -23,7 +23,7 @@ The authenticated workspace is at port 3000. QA sign-in accounts: `dispatcher@re
 
 Use one of the QA emails above with the **original `SEED_PASSWORD` used on first seed**. The login screen's “How do I get access?” lists QA account choices and explains administrator access. There is no public signup, password reset or default shared password. Changing `SEED_PASSWORD` and reseeding does not reset existing passwords. Do not publish your configured password in source control or chat.
 
-A hosted build alone does not create accounts. An administrator must configure `DATABASE_URL`, apply migrations and initialize a separate fictional QA database before those QA logins work. Provision real users through a future audited administration workflow; do not seed production. No hosted login or deployment is verified by the local checks below.
+A hosted build does not create accounts by default. Configure `DATABASE_URL` and use the Vercel build command below to apply migrations. Initialize a separate fictional QA database only with explicit QA setup. Provision real users through a future audited administration workflow; do not seed a database containing real operations. No hosted login or deployment is implied by local checks.
 
 ## Checks
 
@@ -39,7 +39,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Integration tests write fictional fixtures to the selected database. Use an isolated QA database, never production. CI creates a fresh PostgreSQL instance, migrates twice to verify repeatability, seeds, and runs all gates. Test fixture passwords are not production credentials.
+Integration tests write fictional fixtures to the selected database. Use an isolated QA database, never production. Deployment tests also require permission to create/drop disposable databases. CI creates a fresh PostgreSQL instance, migrates twice to verify repeatability, seeds, and runs all gates, including the Production build preparation path. Test fixture passwords are not production credentials.
 
 ## Server contracts
 
@@ -57,7 +57,22 @@ Writes require a same-origin Origin header. API responses distinguish validation
 
 The previous static build emitted `dist/`, while Vercel expected `public/`, causing STATIC_BUILD_NO_OUT_DIR. This version uses the **Next.js** framework and `.next` output via `vercel.json`. Set the Vercel project Root Directory to this repository root; clear conflicting build/output overrides in Project Settings. Node is pinned to 22.x to avoid automatic major upgrades.
 
-Before deploying the backend, configure an authenticated PostgreSQL connection as `DATABASE_URL`, run migrations through a controlled release job, and set `COOKIE_SECURE=true` and `APP_ORIGIN` to the canonical HTTPS origin. Do not run fictional seed against production. Builds do not require database access, but login and data operations do. No deployment is performed by these instructions.
+`vercel.json` installs build tools with `npm ci --include=dev` and runs **`npm run build:vercel`**. When Vercel sets `VERCEL_ENV=production`, this applies all pending migrations before compiling Next.js. Missing `DATABASE_URL` or failed migrations stop the build instead of releasing an app that cannot log in. Existing migrations are skipped under the database advisory lock. Preview/local builds skip database preparation, preventing a preview from changing a shared Production database. `npm run build` remains a database-independent compile for local use. Existing additive migrations can coexist with the previous app while a build runs; future incompatible schema changes still require a reviewed release plan.
+
+In **Vercel → dispatch → Settings → Environment Variables → Production**, configure `DATABASE_URL`, `APP_ORIGIN=https://dispatch-nine-pearl.vercel.app` (or your canonical origin), and `COOKIE_SECURE=true`. Redeploy after changing variables; running deployments do not pick up new values automatically. Successful build logs include `Migrations current` and `Production database preparation complete.` If an override still runs `npm run build`, change it to `npm run build:vercel` or clear it to use `vercel.json`.
+
+### Initialize the hosted fictional QA accounts
+
+For a dedicated QA database only, also add these **Production environment** variables in Vercel before redeploying:
+
+| Key | Value |
+| --- | --- |
+| `RELAY_QA_SEED` | `true` |
+| `SEED_PASSWORD` | Your chosen private QA password, at least 12 characters |
+
+The build then initializes the three QA logins and fictional carrier/load fixtures. Sign in as `dispatcher@relay.test` using that chosen password; the local workspace's password is not automatically copied to Vercel. Existing users, data and password hashes are preserved on repeat builds. You may remove `RELAY_QA_SEED` after initialization. Setting `SEED_PASSWORD` alone never creates accounts or resets passwords. Do not put either password or connection-string values in source control or chat. A Vercel environment named Production may host this fictional QA app; explicit QA setup must not target a database with real operations.
+
+**Login troubleshooting:** `relation "login_attempts" does not exist` means the database is reachable but migrations have not created the authentication table. Deploy the current code through `build:vercel` to apply migrations 001–003. `ECONNREFUSED 127.0.0.1:5432` on Vercel means the database configuration is missing or incorrectly points at localhost. `INVALID_CREDENTIALS` after successful migrations means the account/password is absent or different; initialize QA accounts as above or use the original seeded password. Never remove shared throttling or create tables inside login requests to bypass setup.
 
 ## Workspace and audit
 
