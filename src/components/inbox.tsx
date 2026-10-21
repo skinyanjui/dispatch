@@ -805,16 +805,37 @@ export function Inbox({
   };
   return (
     <section className="inbox" aria-label="Inbox">
-      <div className="directoryIntro">
-        <div>
-          <h2>Inbox</h2>
-          <p>
-            All your conversations in one place: messages, emails and texts you
-            send from Relay, plus any calls you jot down. Replies show up by
-            themselves when inbound delivery is set up; if not, just log them
-            here so the whole story stays together.
-          </p>
-        </div>
+      <div className="inboxBar">
+        <label className="directorySearch">
+          <MagnifyingGlassIcon size={16} aria-hidden="true" />
+          <span className="srOnly">Search conversations</span>
+          <input
+            type="search"
+            value={q}
+            maxLength={100}
+            placeholder="Search by subject, person or words…"
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </label>
+        <label>
+          <span className="srOnly">Channel</span>
+          <select value={channel} onChange={(e) => setChannel(e.target.value)}>
+            <option value="">All channels</option>
+            {(Object.keys(channelLabels) as Channel[]).map((c) => (
+              <option key={c} value={c}>
+                {channelLabels[c]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="filterCheck">
+          <input
+            type="checkbox"
+            checked={unreadOnly}
+            onChange={(e) => setUnreadOnly(e.target.checked)}
+          />
+          <span>Unread</span>
+        </label>
         <button
           className="primary"
           disabled={offline}
@@ -841,41 +862,6 @@ export function Inbox({
       )}
       <div className="inboxLayout">
         <div className="inboxList">
-          <div className="contactFilters">
-            <label className="directorySearch">
-              <MagnifyingGlassIcon size={16} aria-hidden="true" />
-              <span className="srOnly">Search conversations</span>
-              <input
-                type="search"
-                value={q}
-                maxLength={100}
-                placeholder="Search by subject, person or words…"
-                onChange={(e) => setQ(e.target.value)}
-              />
-            </label>
-            <label>
-              <span className="srOnly">Channel</span>
-              <select
-                value={channel}
-                onChange={(e) => setChannel(e.target.value)}
-              >
-                <option value="">All channels</option>
-                {(Object.keys(channelLabels) as Channel[]).map((c) => (
-                  <option key={c} value={c}>
-                    {channelLabels[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="setupCheckbox">
-              <input
-                type="checkbox"
-                checked={unreadOnly}
-                onChange={(e) => setUnreadOnly(e.target.checked)}
-              />
-              <span>Unread</span>
-            </label>
-          </div>
           {error && (
             <div className="alert error" role="alert">
               {describe(error)}
@@ -1122,6 +1108,10 @@ export function Inbox({
             <div className="directoryEmpty">
               <TrayIcon size={36} weight="light" aria-hidden="true" />
               <h3>Pick a conversation, or start a new one</h3>
+              <p>
+                Replies show up by themselves once inbound delivery is set up;
+                until then, log them by hand so the whole story stays together.
+              </p>
             </div>
           )}
         </div>

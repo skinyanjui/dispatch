@@ -227,3 +227,56 @@ test("API rejects oversized input and responses prevent caching and framing", as
   expect(anonymous.headers()["cache-control"]).toContain("no-store");
   expect(anonymous.headers()["x-frame-options"]).toBe("DENY");
 });
+
+for (const [label, size] of [
+  ["desktop", { width: 1440, height: 900 }],
+  ["phone", { width: 390, height: 844 }],
+] as const) {
+  test(`page headers line up with their content on ${label}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    const login = await page.request.post("/api/login", {
+      headers: { Origin: "http://localhost:3000" },
+      data: {
+        email: "dispatcher@relay.test",
+        password: process.env.SEED_PASSWORD,
+      },
+    });
+    expect(login.status()).toBe(200);
+    await page.goto("/");
+    await expect(page.locator(".kanban")).toBeVisible();
+    for (const name of ["Inbox", "Carriers", "Billing", "Reports"]) {
+      if (label === "phone")
+        await page
+          .getByRole("button", { name: "Open navigation", exact: true })
+          .click();
+      const nav =
+        label === "phone"
+          ? page.getByRole("dialog", { name: "Workspace navigation" })
+          : page.getByRole("navigation").first();
+      await nav.getByRole("button", { name, exact: true }).first().click();
+      await expect(
+        page.getByRole("heading", { name, exact: true, level: 1 }),
+      ).toBeVisible();
+      const edges = await page.evaluate(() => {
+        const main = document.querySelector("main.workspace")!;
+        const box = main.getBoundingClientRect();
+        const pad = getComputedStyle(main);
+        const title = document
+          .querySelector("header.topbar h1")!
+          .getBoundingClientRect();
+        const block = main.firstElementChild!.getBoundingClientRect();
+        return {
+          contentLeft: box.left + parseFloat(pad.paddingLeft),
+          title: title.left,
+          block: block.left,
+          overflow: document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+      expect(edges.title, name + " title").toBeCloseTo(edges.contentLeft, 0);
+      expect(edges.block, name + " content").toBeCloseTo(edges.contentLeft, 0);
+      expect(edges.overflow, name + " overflow").toBe(false);
+    }
+  });
+}

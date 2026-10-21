@@ -1,0 +1,231 @@
+/* Shared rhythm and control sizing for the signed-in app. Loaded last so it
+   settles conflicts between the older page stylesheets: one 4px spacing scale,
+   one control height and radius, and one page-intro row. Scoped to .appShell
+   so sign-in and onboarding pages keep their own layout. */
+.appShell {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --control-h: 34px;
+  --field-radius: 8px;
+}
+
+/* The header shares the page's side padding so titles and controls line up
+   with the content below at every width. */
+.appShell .topbar,
+.appShell .topbar.compact,
+.appShell .workspace {
+  padding-left: var(--space-5);
+  padding-right: var(--space-5);
+}
+
+/* Buttons and chips never wrap their label onto a second line. */
+.appShell button,
+.appShell .badge,
+.appShell .count {
+  white-space: nowrap;
+}
+
+/* Fields: one height and radius. Selects keep the native arrow. */
+.appShell select,
+.appShell
+  input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]) {
+  min-height: var(--control-h);
+  border-radius: var(--field-radius);
+}
+.appShell .directorySearch input,
+.appShell .search input {
+  min-height: 0;
+  border-radius: 0;
+}
+.appShell select {
+  padding-right: var(--space-2);
+  background-color: var(--panel);
+  border: 1px solid var(--border-strong);
+}
+.appShell input[type="checkbox"],
+.appShell input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+/* Search fields share the loads search shape: not a pill. */
+.appShell .directorySearch {
+  height: var(--control-h);
+  border-radius: var(--field-radius);
+  padding: 0 var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+}
+
+/* An inline checkbox filter, sized like the fields beside it. */
+.appShell .filterCheck {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Page intro: one row, one gap below, controls aligned to the right. */
+.appShell .directoryIntro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  margin: 0 0 var(--space-3);
+}
+.appShell .directoryIntro > div:first-child {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.appShell .directoryIntro p:not(.eyebrow) {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.appShell .directoryIntro > :not(:first-child) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Filter rows under an intro. */
+.appShell .contactFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+.appShell .contactFilters > label {
+  margin: 0;
+}
+.appShell .contactFilters select {
+  width: auto;
+}
+
+/* Section headings inside a page: space above, tight to what they introduce. */
+.appShell .reports h3,
+.appShell .carrierDirectory h3.sectionTitle {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+.appShell .reports .helpText {
+  margin: 0 0 var(--space-2);
+}
+.appShell .reportTiles {
+  margin: var(--space-2) 0 0;
+}
+
+/* Fieldsets with a legend (e.g. the invoice picker) pad like other panels. */
+.appShell fieldset.opsChecklist {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.appShell fieldset.opsChecklist legend {
+  padding: 0 var(--space-1);
+  font-weight: 600;
+}
+.appShell fieldset.opsChecklist .setupCheckbox {
+  margin: 0;
+  align-items: center;
+  gap: var(--space-2);
+  line-height: 1.4;
+}
+.appShell fieldset.opsChecklist .setupCheckbox input {
+  margin: 0;
+}
+
+/* Carrier directory rows: actions stay on one line and the row stays compact. */
+.appShell .directoryRow {
+  padding: var(--space-4) var(--space-4);
+}
+.appShell .directoryRowActions {
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+@media (min-width: 1001px) {
+  .appShell .directoryTableHeading,
+  .appShell .directoryRow {
+    grid-template-columns: minmax(0, 1fr) 120px 330px;
+  }
+}
+
+/* Inbox: one toolbar row, then two panes that fill the page and scroll alone. */
+.appShell .inbox {
+  display: grid;
+  gap: var(--space-3);
+}
+.appShell .inboxBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .inboxBar > label {
+  margin: 0;
+}
+.appShell .inboxBar .directorySearch {
+  flex: 1 1 260px;
+  width: auto;
+}
+.appShell .inboxBar .primary {
+  margin-left: auto;
+}
+.appShell .inboxLayout {
+  align-items: stretch;
+  gap: var(--space-4);
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+}
+.appShell .inboxList,
+.appShell .inboxDetail {
+  align-content: start;
+  max-height: calc(100dvh - 170px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.appShell .threadTop > svg {
+  flex: none;
+  width: 15px;
+}
+.appShell .threadItem {
+  padding: var(--space-2) var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  justify-items: stretch;
+  text-align: left;
+}
+.appShell .inboxDetail .directoryEmpty {
+  align-self: center;
+  justify-self: center;
+  margin-top: var(--space-6);
+  max-width: 44ch;
+  text-align: center;
+}
+@media (max-width: 800px) {
+  .appShell .inboxLayout {
+    grid-template-columns: 1fr;
+  }
+  .appShell .inboxList,
+  .appShell .inboxDetail {
+    max-height: none;
+  }
+  .appShell .inboxBar .primary {
+    margin-left: 0;
+    flex: 1 1 100%;
+  }
+}
