@@ -348,3 +348,40 @@ test("queue cursor does not duplicate records when a new load arrives", async ()
     /INVALID_CURSOR/,
   );
 });
+
+test("malformed stop counts produce validation errors without throwing", () => {
+  const data = input(carrierA);
+  for (const stops of [[], [data.stops[0]], [...data.stops, data.stops[1]]]) {
+    const result = createSchema.safeParse({ ...data, stops });
+    assert.equal(result.success, false);
+  }
+});
+
+test("opaque cursor dates reject impossible calendar and timezone values", async () => {
+  for (const at of [
+    "2026-02-30 10:00:00+00",
+    "2026-13-01 10:00:00+00",
+    "0000-01-01 10:00:00+00",
+    "2026-01-01 24:00:00+00",
+    "2026-01-01 10:00:00+24",
+  ]) {
+    const cursor = Buffer.from(
+      JSON.stringify({ at, id: randomUUID() }),
+    ).toString("base64url");
+    await assert.rejects(
+      listLoads(dispatcher, new URLSearchParams({ cursor })),
+      (error: unknown) =>
+        error instanceof Error && error.message === "INVALID_CURSOR",
+    );
+  }
+});
+
+test("duplicate query fields cannot bypass validation of the field actually queried", async () => {
+  const params = new URLSearchParams();
+  params.append("q", "x".repeat(101));
+  params.append("q", "valid");
+  await assert.rejects(
+    listLoads(dispatcher, params),
+    (error: unknown) => error instanceof Error && error.name === "ZodError",
+  );
+});

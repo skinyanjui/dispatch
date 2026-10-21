@@ -33,6 +33,7 @@ export const createSchema = z
   })
   .refine(
     (s) =>
+      s.stops.length === 2 &&
       s.stops[0].kind === "pickup" &&
       s.stops[1].kind === "delivery" &&
       Date.parse(s.stops[1].windowStart) >= Date.parse(s.stops[0].windowEnd),
@@ -164,8 +165,19 @@ export async function listLoads(user: string, params: URLSearchParams) {
             .string()
             .max(50)
             .regex(
-              /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/,
-            ),
+              /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-](?:0\d|1[0-5])(:[0-5]\d)?$/,
+            )
+            .refine((value) => {
+              // PostgreSQL text timestamps include a space and may omit offset
+              // minutes. Check actual calendar validity before a database cast.
+              const iso = value
+                .replace(" ", "T")
+                .replace(/([+-]\d{2})$/, "$1:00");
+              return (
+                Number(value.slice(0, 4)) > 0 &&
+                z.iso.datetime({ offset: true }).safeParse(iso).success
+              );
+            }),
           id: z.uuid(),
         })
         .parse(JSON.parse(Buffer.from(raw, "base64url").toString()));
@@ -173,26 +185,26 @@ export async function listLoads(user: string, params: URLSearchParams) {
       throw new HttpError(400, "INVALID_CURSOR");
     }
   }
-  z.object({
-    carrier_id: z.uuid().optional(),
-    status: z
-      .enum(["booked", "dispatched", "picked-up", "delivered"])
-      .optional(),
-    q: z.string().max(100).optional(),
-  }).parse(
-    Object.fromEntries(
-      [...params].filter(([key]) =>
-        ["carrier_id", "status", "q"].includes(key),
-      ),
-    ),
-  );
+  const filters = z
+    .object({
+      carrier_id: z.uuid().optional(),
+      status: z
+        .enum(["booked", "dispatched", "picked-up", "delivered"])
+        .optional(),
+      q: z.string().max(100).optional(),
+    })
+    .parse({
+      carrier_id: params.get("carrier_id") ?? undefined,
+      status: params.get("status") ?? undefined,
+      q: params.get("q") ?? undefined,
+    });
   const { rows } = await pool.query(
     `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=2) delivery FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND ($3::text IS NULL OR l.stage=$3) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
     [
       user,
-      params.get("carrier_id"),
-      params.get("status"),
-      params.get("q"),
+      filters.carrier_id ?? null,
+      filters.status ?? null,
+      filters.q ?? null,
       limit + 1,
       cursor?.at ?? null,
       cursor?.id ?? null,
