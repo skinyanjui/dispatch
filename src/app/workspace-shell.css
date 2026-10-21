@@ -20,7 +20,7 @@
 }
 .workspaceBreadcrumb {
   font-size: 9px;
-  color: #959b96;
+  color: #8a91a6;
   letter-spacing: 0.2px;
 }
 .appShell .topbar h1 {
@@ -34,7 +34,7 @@
 .appShell .viewToggle {
   margin-left: 8px;
   border: 0;
-  background: #f6f7f6;
+  background: #f5f6f8;
   border-radius: 7px;
   padding: 3px;
 }
@@ -43,7 +43,7 @@
   padding: 6px 10px;
 }
 .appShell .viewToggle button[aria-pressed="true"] {
-  border-color: #e5e8e5;
+  border-color: #e2e4eb;
   box-shadow: none;
 }
 .appShell .createButton {
@@ -59,14 +59,14 @@
 }
 .workspaceEnvironment {
   font-size: 9px;
-  color: #949b95;
+  color: #8990a6;
   display: flex;
   align-items: center;
   gap: 5px;
   white-space: nowrap;
 }
 .workspaceEnvironment > svg {
-  color: #7fb99b;
+  color: #788ac0;
 }
 .appShell .workspace {
   padding: 20px 26px 15px;
@@ -89,8 +89,8 @@
   border-radius: 25px;
   padding: 0 15px;
   gap: 9px;
-  background: #fdfefd;
-  border-color: #ecefec;
+  background: #fdfdfe;
+  border-color: #eaecf1;
   height: 40px;
 }
 .appShell .search input {
@@ -99,7 +99,7 @@
 }
 .appShell .search kbd {
   background: white;
-  border: 1px solid #e7ebe8;
+  border: 1px solid #e5e7ed;
   border-radius: 4px;
 }
 .appShell .toolbarRight > .iconButton {
@@ -109,11 +109,11 @@
   background: transparent;
   border-color: transparent;
   padding: 7px;
-  color: #828a84;
+  color: #757e97;
 }
 .appShell .toolbarMeta {
   font-size: 10px;
-  color: #939b94;
+  color: #8890a6;
 }
 .appShell .kanban {
   gap: 13px;
@@ -122,7 +122,7 @@
 .appShell .lane {
   min-height: calc(100dvh - 198px);
   background: #fefefe;
-  border-color: #e9eeea;
+  border-color: #e8eaf0;
   padding: 9px;
   border-radius: 9px;
 }
@@ -130,14 +130,14 @@
   padding: 6px 4px 16px;
 }
 .appShell .loadCard {
-  border-color: #e7ece8;
+  border-color: #e5e8ee;
   border-radius: 7px;
   padding: 14px 12px;
   box-shadow: none;
 }
 .appShell .loadCard:hover {
-  border-color: #adc8b7;
-  box-shadow: 0 2px 9px #34533c07;
+  border-color: #aab2cb;
+  box-shadow: 0 2px 9px #303a5707;
 }
 .appShell .cardTitle strong {
   font-size: 12px;
@@ -153,10 +153,10 @@
   font-size: 10px;
 }
 .appShell .cardTitle > svg {
-  color: #8c9b91;
+  color: #848ca3;
 }
 .appShell .cardBottom strong {
-  color: #607066;
+  color: #596177;
 }
 .appShell footer {
   font-size: 9px;
@@ -186,7 +186,7 @@
 }
 .directoryIntro p:not(.eyebrow) {
   font-size: 12px;
-  color: #808a82;
+  color: #747c96;
   line-height: 1.7;
 }
 .directorySearch {
@@ -196,8 +196,8 @@
   flex-direction: row;
   gap: 8px;
   width: 230px;
-  color: #8f9991;
-  background: #fafcfa;
+  color: #858da3;
+  background: #f9fafd;
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 0 12px;
@@ -223,7 +223,7 @@
   gap: 20px;
 }
 .directoryTableHeading {
-  color: #a0a8a1;
+  color: #979eb1;
   font-size: 10px;
   padding: 0 18px 15px;
 }
@@ -243,13 +243,13 @@
 .carrierMark {
   width: 40px;
   height: 40px;
-  border: 1px solid #e6ede7;
+  border: 1px solid #e4e7ef;
   border-radius: 8px;
-  background: #f8fbf8;
+  background: #f7f8fc;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #8caa97;
+  color: #8892ae;
 }
 .directoryCarrier h3 {
   font-size: 13px;
@@ -260,20 +260,20 @@
   display: block;
   margin-top: 6px;
   font-size: 10px;
-  color: #9aa49b;
+  color: #9298ac;
 }
 .roleLabel {
   font-size: 11px;
-  color: #7c8a80;
+  color: #727a94;
 }
 .directoryRow > .secondary {
   font-size: 11px;
-  color: #668372;
-  border-color: #e7ede8;
+  color: #626b87;
+  border-color: #e5e8ef;
 }
 .directoryNote {
   font-size: 11px;
-  color: #98a198;
+  color: #8f96aa;
   line-height: 1.7;
   padding: 24px 18px;
   margin-top: auto;
@@ -286,17 +286,17 @@
   flex-direction: column;
   gap: 16px;
   min-height: 330px;
-  color: #a3b2a7;
+  color: #9fa5b6;
   text-align: center;
 }
 .directoryEmpty h3 {
   font-size: 17px;
   font-weight: 500;
-  color: #5b6b60;
+  color: #555c71;
 }
 .directoryEmpty p {
   font-size: 12px;
-  color: #8b9a8f;
+  color: #838ba2;
 }
 
 @media (min-width: 1800px) {
@@ -536,9 +536,9 @@
 .scopeChip {
   display: flex;
   gap: 6px;
-  background: #f2f7f3;
-  border: 1px solid #dfebe2;
-  color: #60816c;
+  background: #f0f2f8;
+  border: 1px solid #dbe0ef;
+  color: #5c6685;
   font-size: 10px;
   padding: 6px 8px;
   max-width: 100%;

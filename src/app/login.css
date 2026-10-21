@@ -2,11 +2,12 @@
    floating card on a pale column. The blue belongs to these screens only; the
    app itself keeps its own palette. */
 .login {
-  --login-blue: #2f4cf5;
-  --login-blue-hover: #2440d8;
-  --login-ink: #0f1b3d;
-  --login-muted: #4a5578;
-  --login-line: #d5daec;
+  /* The same palette as the app (see :root in globals.css). */
+  --login-blue: var(--accent);
+  --login-blue-hover: var(--action-hover);
+  --login-ink: var(--ink);
+  --login-muted: var(--muted);
+  --login-line: var(--border-strong);
 }
 .authPage {
   min-height: 100dvh;

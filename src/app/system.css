@@ -1096,7 +1096,7 @@ select {
 }
 .appShell .opsFact dd {
   margin: 0;
-  color: var(--ink, #1f2a24);
+  color: var(--ink, #1e212b);
   font-weight: 550;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
@@ -1326,7 +1326,7 @@ select {
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
-  background: var(--sidebar-hover, #eef2ef);
+  background: var(--sidebar-hover, #edeef3);
   font-weight: 500;
   overflow-wrap: anywhere;
 }

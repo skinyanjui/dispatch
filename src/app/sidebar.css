@@ -196,7 +196,7 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 28px #18251f1f;
+  box-shadow: 0 8px 28px #161a271f;
   padding: 4px;
   display: grid;
   gap: 1px;
@@ -275,7 +275,7 @@
   background: var(--sidebar-bg);
   height: 100%;
   width: min(280px, calc(100vw - 48px));
-  box-shadow: 10px 0 40px #152b2020;
+  box-shadow: 10px 0 40px #12192e20;
 }
 @media (max-width: 1000px) {
   .appShell,
