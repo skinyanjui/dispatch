@@ -493,3 +493,59 @@ for (const [label, size] of [
     await scan("Load details");
   });
 }
+
+test("keyboard: Escape closes one dialog at a time and focus returns", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  const card = page.locator(".lane.booked .loadCard").first();
+  const label = await card.getAttribute("aria-label");
+  await card.focus();
+  await page.keyboard.press("Enter");
+  const details = page.getByRole("dialog", { name: "Load details" });
+  await expect(details).toBeVisible();
+  await details.getByRole("button", { name: "Edit load", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit load", exact: true });
+  await expect(edit).toBeVisible();
+  // Escape closes only the top dialog and puts focus back on its button.
+  await page.keyboard.press("Escape");
+  await expect(edit).toHaveCount(0);
+  await expect(details).toBeVisible();
+  await expect(
+    details.getByRole("button", { name: "Edit load", exact: true }),
+  ).toBeFocused();
+  // The second Escape closes the drawer and focus returns to the load card.
+  await page.keyboard.press("Escape");
+  await expect(details).toHaveCount(0);
+  await expect(page.locator(`[aria-label="${label}"]`)).toBeFocused();
+});
+
+test("a failed load request says so instead of showing an empty board", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  let failing = true;
+  await page.route(/\/api\/loads(\?|$)/, (route) =>
+    failing
+      ? route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "SERVICE_UNAVAILABLE" }),
+        })
+      : route.continue(),
+  );
+  await page.goto("/");
+  const alert = page.getByRole("alert").filter({ hasText: "couldn't reach" });
+  await expect(alert).toBeVisible();
+  await expect(page.locator(".toolbarMeta")).toHaveText("Couldn't load");
+  await expect(page.locator(".laneEmpty").first()).toHaveText("Couldn't load");
+  await expect(page.getByText("No loads here")).toHaveCount(0);
+  // Retry brings the board back.
+  failing = false;
+  await alert.getByRole("button", { name: "Retry" }).click();
+  await expect(page.locator(".loadCard").first()).toBeVisible();
+  await expect(alert).toHaveCount(0);
+});

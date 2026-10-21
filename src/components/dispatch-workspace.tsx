@@ -87,6 +87,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(true),
+    [queueFailed, setQueueFailed] = useState(false),
     [q, setQ] = useState(""),
     [carrier, setCarrier] = useState(""),
     [status, setStatus] = useState(""),
@@ -235,11 +236,14 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         ) {
           setLoads(data.loads);
           setCursor(data.nextCursor);
+          setQueueFailed(false);
           setUpdated(new Date());
         }
       } catch (e) {
-        if (!controller.signal.aborted && request === queueRequest.current)
+        if (!controller.signal.aborted && request === queueRequest.current) {
+          setQueueFailed(true);
           handleError(e);
+        }
       } finally {
         if (!controller.signal.aborted && request === queueRequest.current)
           setLoading(false);
@@ -620,7 +624,9 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         <span className="toolbarMeta">
           {loading
             ? "Updating…"
-            : `${loads.length} load${loads.length === 1 ? "" : "s"}${cursor ? " · more available" : ""}`}
+            : queueFailed && !loads.length
+              ? "Couldn't load"
+              : `${loads.length} load${loads.length === 1 ? "" : "s"}${cursor ? " · more available" : ""}`}
         </span>
       </div>
       <div className="toolbarRight">
@@ -858,7 +864,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                           ))}
                           {!items.length && (
                             <div className="laneEmpty">
-                              {loading ? "Loading…" : "No loads here"}
+                              {loading
+                                ? "Loading…"
+                                : queueFailed
+                                  ? "Couldn't load"
+                                  : "No loads here"}
                             </div>
                           )}
                         </div>

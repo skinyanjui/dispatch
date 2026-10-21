@@ -1,6 +1,18 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { XIcon } from "@phosphor-icons/react";
+// The element that had focus just before a dialog opened. A disabled opener
+// loses focus while its data loads, so the browser alone cannot return to it.
+let lastFocused: HTMLElement | null = null;
+if (typeof document !== "undefined")
+  document.addEventListener(
+    "focusin",
+    (event) => {
+      if (event.target instanceof HTMLElement) lastFocused = event.target;
+    },
+    true,
+  );
+
 export function Modal({
   children,
   label,
@@ -13,8 +25,16 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
+    const opener = lastFocused;
     dialog?.showModal();
-    return () => dialog?.close();
+    return () => {
+      dialog?.close();
+      // Back to where the person was once the page has settled.
+      requestAnimationFrame(() => {
+        if (opener?.isConnected && !(opener as HTMLButtonElement).disabled)
+          opener.focus();
+      });
+    };
   }, []);
   return (
     <dialog
@@ -23,6 +43,8 @@ export function Modal({
       aria-label={label}
       onCancel={(event) => {
         event.preventDefault();
+        // React would otherwise bubble Escape to a dialog this one sits in.
+        event.stopPropagation();
         onClose();
       }}
     >
