@@ -16,6 +16,7 @@ import {
 } from "@/lib/onboarding";
 import {
   createLoad,
+  attentionLoads,
   listLoads,
   detail,
   mutate,
@@ -729,6 +730,10 @@ async function handle(req: NextRequest) {
         );
     }
     if (path[0] === "loads") {
+      if (path.length === 2 && path[1] === "attention" && req.method === "GET")
+        return NextResponse.json(
+          await attentionLoads(user.id, req.nextUrl.searchParams),
+        );
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(
           await listLoads(user.id, req.nextUrl.searchParams),

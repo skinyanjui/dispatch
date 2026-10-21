@@ -14,6 +14,8 @@ import {
   type StopEvent,
   type TimedStop,
 } from "./stop-timing";
+import { withSummaries } from "./load-summary";
+import { attentionKeys, byUrgency } from "./attention";
 const timezone = z.string().refine((s) => {
   try {
     new Intl.DateTimeFormat("en", { timeZone: s });
@@ -94,7 +96,8 @@ export async function scoped(
     [id, user, write, allowDriverWrite],
   );
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
-  if (write && !allowCancelled && rows[0].cancelled_at) throw new HttpError(409, "LOAD_CANCELLED");
+  if (write && !allowCancelled && rows[0].cancelled_at)
+    throw new HttpError(409, "LOAD_CANCELLED");
   return rows[0];
 }
 export async function event(
@@ -234,11 +237,12 @@ export async function listLoads(user: string, params: URLSearchParams) {
       cursor?.id ?? null,
     ],
   );
+  const page = rows.slice(0, limit).map(({ cursor_at, ...load }) => {
+    void cursor_at;
+    return load;
+  });
   return {
-    loads: rows.slice(0, limit).map(({ cursor_at, ...load }) => {
-      void cursor_at;
-      return load;
-    }),
+    loads: await withSummaries(pool, page),
     nextCursor:
       rows.length > limit
         ? Buffer.from(
@@ -248,6 +252,49 @@ export async function listLoads(user: string, params: URLSearchParams) {
             }),
           ).toString("base64url")
         : null,
+  };
+}
+/**
+ * Every load in the viewer's scope that needs attention, most urgent first,
+ * with counts per reason. The same carrier/driver visibility as the list.
+ */
+type LoadRow = {
+  id: string;
+  stage: string;
+  cancelled_at: string | null;
+} & Record<string, unknown>;
+export async function attentionLoads(user: string, params: URLSearchParams) {
+  const carrier = z
+    .uuid()
+    .optional()
+    .parse(params.get("carrier_id") ?? undefined);
+  const cap = 300;
+  const { rows } = await pool.query(
+    `SELECT l.*,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id ORDER BY sequence DESC LIMIT 1) delivery,(SELECT count(*)::int FROM load_stops WHERE load_id=l.id) stop_count
+    FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1
+    LEFT JOIN load_assignments a ON a.load_id=l.id
+    WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2)
+      AND l.cancelled_at IS NULL AND (l.stage<>'delivered' OR l.created_at>now()-interval '60 days')
+    ORDER BY l.created_at DESC,l.id LIMIT $3`,
+    [user, carrier ?? null, cap],
+  );
+  const flagged = (await withSummaries(pool, rows as LoadRow[]))
+    .filter((l) => l.summary.attention.level !== "ok")
+    .sort(byUrgency);
+  const counts = Object.fromEntries(
+    attentionKeys.map((key) => [
+      key,
+      flagged.filter((l) =>
+        l.summary.attention.reasons.some((r) => r.key === key),
+      ).length,
+    ]),
+  ) as Record<(typeof attentionKeys)[number], number>;
+  return {
+    counts,
+    total: flagged.length,
+    scanned: rows.length,
+    truncated: rows.length === cap,
+    loads: flagged.slice(0, 100),
   };
 }
 export async function detail(user: string, id: string) {

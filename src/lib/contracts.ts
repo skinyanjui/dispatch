@@ -1,3 +1,4 @@
+import type { LoadSummary } from "./attention";
 import type { TimedStop } from "./stop-timing";
 import type { DocumentSlot } from "./compliance";
 import type { ExceptionSuggestion, LoadException } from "./exception-rules";
@@ -66,6 +67,8 @@ export type Load = {
   pickup: string;
   delivery: string;
   stop_count?: number;
+  /** Driver, next stop, paperwork and what needs attention (ADR 0029). */
+  summary?: LoadSummary;
   version: number;
   created_at: string;
   source: string;

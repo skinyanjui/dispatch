@@ -71,6 +71,71 @@ async function openLoad(page: Page, reference: string) {
   return dialog;
 }
 
+test("the board answers the usual questions without opening a load", async ({
+  page,
+}) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const reference = "ANSWER-" + randomUUID().slice(0, 6);
+  const soon = Date.now() + 2 * 3600000;
+  const created = await page.request.post("/api/loads", {
+    headers: { ...origin, "Idempotency-Key": randomUUID() },
+    data: {
+      carrierId: carrier,
+      reference,
+      source: "Fictional answers QA",
+      amountMinor: 250000,
+      stops: [
+        {
+          kind: "pickup",
+          address: "Chicago, IL",
+          timezone: "America/Chicago",
+          windowStart: new Date(soon).toISOString(),
+          windowEnd: new Date(soon + 3600000).toISOString(),
+        },
+        {
+          kind: "delivery",
+          address: "Nashville, TN",
+          timezone: "America/Chicago",
+          windowStart: new Date(soon + 86400000).toISOString(),
+          windowEnd: new Date(soon + 90000000).toISOString(),
+        },
+      ],
+    },
+  });
+  expect(created.status()).toBe(201);
+  // Actions a person must take before each answer is on screen.
+  let actions = 0;
+  await page.goto("/");
+  const card = page.getByRole("button", { name: new RegExp("^" + reference) });
+  // "What is next for this load, who has it, how is its paperwork?"
+  await expect(card).toContainText(/Pickup in (1h|2h)/);
+  await expect(card).toContainText("No driver");
+  await expect(card).toContainText("Docs 0/3");
+  expect(actions, "answers are visible on arrival").toBe(0);
+  // "What needs me right now?" is one glance, and one click to act on it.
+  const strip = page.getByRole("region", { name: "Needs attention" });
+  await expect(strip).toContainText("need attention");
+  const chips = strip.getByRole("group", { name: "Show only" });
+  await expect(
+    chips.getByRole("button", { name: /^Next 4 hours/ }),
+  ).toBeVisible();
+  actions++;
+  await chips.getByRole("button", { name: /^Next 4 hours/ }).click();
+  await expect(card).toBeVisible();
+  await expect(
+    chips.getByRole("button", { name: /^Next 4 hours/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  // Only loads in that group remain on the board.
+  for (const other of await page.locator(".loadCard").all())
+    await expect(other.locator(".cardStep")).toContainText(/Pickup|window|due/);
+  expect(actions, "the attention list takes one click").toBe(1);
+  await strip.getByRole("button", { name: "Show all loads" }).click();
+  await expect(
+    chips.getByRole("button", { name: /^Next 4 hours/ }),
+  ).toHaveAttribute("aria-pressed", "false");
+});
+
 test("AI reading: an admin opts in, a dispatcher reads a rate confirmation and checks the suggestions", async ({
   page,
 }) => {

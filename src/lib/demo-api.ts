@@ -31,6 +31,7 @@ import {
 } from "./compliance";
 import { suggestExceptions, type LoadException } from "./exception-rules";
 import { isExtractable, promptVersion, sampleSuggestions } from "./extraction";
+import { attentionKeys, byUrgency, summarize } from "./attention";
 import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
@@ -407,6 +408,39 @@ export function createDemoApi() {
         Date.now(),
       ),
       exception_owners: owners(l.carrier_id),
+    };
+  };
+  /** The same answers the server gives, computed from the demo's own data. */
+  const withSummary = (l: Load): Load => {
+    const docs = Object.fromEntries(
+      slots(loadDocumentTypes, (d) => d.load_id === l.id).map((slot) => [
+        slot.type,
+        slot.status,
+      ]),
+    ) as Parameters<typeof summarize>[0]["docs"];
+    return {
+      ...l,
+      summary: summarize(
+        {
+          stage: l.stage,
+          cancelled: Boolean(l.cancelled_at),
+          driver_name: l.assignment?.name ?? null,
+          stops: (l.stops || []).map((stop) => ({
+            kind: stop.kind,
+            address: stop.address,
+            window_start: stop.window_start,
+            window_end: stop.window_end,
+            timezone: stop.timezone,
+            arrived: stop.arrived,
+            departed: stop.departed,
+          })),
+          docs,
+          exceptions: state.exceptions
+            .filter((e) => e.load_id === l.id && e.status !== "resolved")
+            .map((e) => ({ due_at: e.due_at ?? null })),
+        },
+        Date.now(),
+      ),
     };
   };
   const exceptionRequest = (
@@ -1279,6 +1313,36 @@ export function createDemoApi() {
           (state.viewer.role !== "driver" ||
             l.assignment?.driver_id === (state.viewer.driver_id || driver)),
       );
+      if (p.length === 2 && p[1] === "attention" && !body) {
+        const flagged = visible
+          .filter(
+            (l) =>
+              !l.cancelled_at &&
+              (!url.searchParams.get("carrier_id") ||
+                l.carrier_id === url.searchParams.get("carrier_id")),
+          )
+          .map(withSummary)
+          .filter((l) => l.summary!.attention.level !== "ok")
+          .sort((a, b) =>
+            byUrgency(
+              a as { summary: NonNullable<Load["summary"]> },
+              b as { summary: NonNullable<Load["summary"]> },
+            ),
+          );
+        return {
+          counts: Object.fromEntries(
+            attentionKeys.map((key) => [
+              key,
+              flagged.filter((l) =>
+                l.summary!.attention.reasons.some((r) => r.key === key),
+              ).length,
+            ]),
+          ),
+          total: flagged.length,
+          truncated: false,
+          loads: flagged.slice(0, 100),
+        };
+      }
       if (p.length === 1 && !body) {
         const records = visible.filter(
           (l) =>
@@ -1296,7 +1360,7 @@ export function createDemoApi() {
         );
         const offset = Number(url.searchParams.get("cursor") || 0);
         return {
-          loads: records.slice(offset, offset + 25),
+          loads: records.slice(offset, offset + 25).map(withSummary),
           nextCursor: records.length > offset + 25 ? String(offset + 25) : null,
         };
       }
