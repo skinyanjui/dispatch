@@ -21,6 +21,13 @@ import {
   recordCheckIn,
   auditDenied,
 } from "@/lib/loads";
+import {
+  uploadDocument,
+  documentContent,
+  reviewDocument,
+  carrierDocuments,
+} from "@/lib/documents";
+import { maxDocumentBytes } from "@/lib/compliance";
 export const runtime = "nodejs";
 function withSession(res: NextResponse, token: string) {
   res.cookies.set("relay_session", token, {
@@ -34,14 +41,7 @@ function withSession(res: NextResponse, token: string) {
   });
   return res;
 }
-async function readJson(req: NextRequest): Promise<unknown> {
-  if (
-    !req.headers
-      .get("content-type")
-      ?.toLowerCase()
-      .startsWith("application/json")
-  )
-    throw new HttpError(415, "JSON_REQUIRED");
+async function readBody(req: NextRequest, limit: number) {
   const reader = req.body?.getReader();
   if (!reader) throw new HttpError(400, "INVALID_JSON");
   let size = 0;
@@ -51,7 +51,7 @@ async function readJson(req: NextRequest): Promise<unknown> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 65536) {
+      if (size > limit) {
         await reader.cancel();
         throw new HttpError(413, "REQUEST_TOO_LARGE");
       }
@@ -60,7 +60,48 @@ async function readJson(req: NextRequest): Promise<unknown> {
   } finally {
     reader.releaseLock();
   }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  return Buffer.concat(chunks);
+}
+async function readJson(req: NextRequest): Promise<unknown> {
+  if (
+    !req.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .startsWith("application/json")
+  )
+    throw new HttpError(415, "JSON_REQUIRED");
+  return JSON.parse((await readBody(req, 65536)).toString("utf8"));
+}
+// The byte cap applies before multipart parsing, so oversized uploads stop
+// streaming early. 64 KiB allows for form boundaries and metadata fields.
+async function readUpload(req: NextRequest) {
+  const type = req.headers.get("content-type") || "";
+  if (!type.toLowerCase().startsWith("multipart/form-data"))
+    throw new HttpError(415, "MULTIPART_REQUIRED");
+  let form: FormData;
+  try {
+    const body = await readBody(req, maxDocumentBytes + 65536);
+    form = await new Response(new Uint8Array(body), {
+      headers: { "content-type": type },
+    }).formData();
+  } catch (e) {
+    if (e instanceof HttpError && e.code === "REQUEST_TOO_LARGE")
+      throw new HttpError(413, "FILE_TOO_LARGE");
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(400, "INVALID_UPLOAD");
+  }
+  const fields: Record<string, string> = {};
+  let file: { name: string; bytes: Buffer } | null = null;
+  for (const [name, value] of form.entries()) {
+    if (typeof value === "string") fields[name] = value;
+    else if (name === "file" && !file)
+      file = {
+        name: value.name,
+        bytes: Buffer.from(await value.arrayBuffer()),
+      };
+    else throw new HttpError(400, "INVALID_UPLOAD");
+  }
+  return { fields, file };
 }
 async function handle(req: NextRequest) {
   let actor: string | undefined;
@@ -181,6 +222,41 @@ async function handle(req: NextRequest) {
           { status: 201 },
         );
     }
+    if (path[0] === "documents") {
+      if (path.length === 1 && req.method === "POST") {
+        const upload = await readUpload(req);
+        return NextResponse.json(
+          await uploadDocument(user.id, upload.fields, upload.file),
+          { status: 201 },
+        );
+      }
+      const versionId = z.uuid().parse(path[1]);
+      if (path.length === 3 && path[2] === "content" && req.method === "GET") {
+        const file = await documentContent(user.id, versionId);
+        return new NextResponse(new Uint8Array(file.content), {
+          headers: {
+            "Content-Type": file.content_type,
+            "Content-Length": String(file.content.length),
+            "Content-Disposition": `attachment; filename="document"; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "sandbox; default-src 'none'",
+          },
+        });
+      }
+      if (path.length === 3 && path[2] === "review" && req.method === "POST")
+        return NextResponse.json(
+          await reviewDocument(user.id, versionId, await readJson(req)),
+        );
+    }
+    if (
+      path[0] === "carriers" &&
+      path.length === 3 &&
+      path[2] === "documents" &&
+      req.method === "GET"
+    )
+      return NextResponse.json(
+        await carrierDocuments(user.id, z.uuid().parse(path[1])),
+      );
     if (path[0] === "loads") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(

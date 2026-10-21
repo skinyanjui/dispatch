@@ -8,7 +8,8 @@ import {
   PlusIcon,
   BuildingsIcon,
 } from "@phosphor-icons/react";
-import type { CarrierSetup, Context } from "@/lib/contracts";
+import type { CarrierDocuments, CarrierSetup, Context } from "@/lib/contracts";
+import { maxDocumentBytes } from "@/lib/compliance";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { Modal } from "./modal";
 
@@ -40,6 +41,39 @@ export function CarrierOnboarding({
       name: string;
     } | null>(null),
     [copied, setCopied] = useState(false);
+  const agreementUpload = useRef<{ signature: string; key: string } | null>(
+    null,
+  );
+  // Upload the signed agreement as a versioned document, then return the
+  // version that the dispatcher is verifying. Re-submitting identical bytes
+  // reuses the current version instead of creating a duplicate.
+  async function uploadAgreement(carrierId: string, file: File) {
+    if (file.size > maxDocumentBytes) throw new ApiError(413, "FILE_TOO_LARGE");
+    const signature = [file.name, file.size, file.lastModified].join("|");
+    if (agreementUpload.current?.signature !== signature)
+      agreementUpload.current = { signature, key: crypto.randomUUID() };
+    const body = new FormData();
+    body.set("carrier_id", carrierId);
+    body.set("type", "dispatch_agreement");
+    body.set("idempotency_key", agreementUpload.current.key);
+    body.set("file", file);
+    try {
+      return (await api<{ version_id: string }>("documents", body)).version_id;
+    } catch (e) {
+      if (
+        !(e instanceof ApiError && e.message === "DUPLICATE_DOCUMENT_VERSION")
+      )
+        throw e;
+      const docs = await api<CarrierDocuments>(
+        "carriers/" + carrierId + "/documents",
+      );
+      const current = docs.slots.find(
+        (s) => s.type === "dispatch_agreement",
+      )?.current;
+      if (!current) throw e;
+      return current.id;
+    }
+  }
   const heading = useRef<HTMLHeadingElement>(null),
     pending = useRef<{
       signature: string;
@@ -395,9 +429,17 @@ export function CarrierOnboarding({
                   e.preventDefault();
                   const f = new FormData(e.currentTarget);
                   act(async () => {
+                    const file = f.get("agreement_file");
+                    if (!(file instanceof File) || !file.size)
+                      throw new ApiError(400, "FILE_REQUIRED");
+                    const versionId = await uploadAgreement(
+                      data.carrier.id,
+                      file,
+                    );
                     await save(
                       "onboarding/carriers/" + data.carrier.id + "/agreement",
                       {
+                        document_version_id: versionId,
                         reference: String(f.get("reference")),
                         effective_date: String(f.get("effective")),
                         through_date: String(f.get("through")),
@@ -409,19 +451,33 @@ export function CarrierOnboarding({
                         "onboarding/carriers/" + data.carrier.id,
                       ),
                     );
+                    agreementUpload.current = null;
                     setStep("team");
-                    setNotice("Agreement review saved.");
+                    setNotice("Agreement file stored and review saved.");
                   });
                 }}
               >
                 <fieldset disabled={busy} className="setupFields">
                   <legend className="srOnly">Dispatch agreement</legend>
                   <label>
-                    Signed agreement reference
+                    Signed agreement file
+                    <input
+                      name="agreement_file"
+                      type="file"
+                      accept="application/pdf,image/png,image/jpeg"
+                      required
+                    />
+                    <small>
+                      PDF, PNG or JPEG up to 4 MB. The file is stored as an
+                      immutable version and linked to this review.
+                    </small>
+                  </label>
+                  <label>
+                    Agreement reference
                     <input name="reference" required maxLength={300} />
                     <small>
-                      Use the reference or location of the signed agreement in
-                      your records. No file is uploaded here.
+                      Contract number or title, for example “Dispatch services
+                      agreement 2026”.
                     </small>
                   </label>
                   <div className="formGrid">
@@ -491,6 +547,13 @@ export function CarrierOnboarding({
                   ? "Agreement active"
                   : "Agreement review needed"}
               </span>
+              {data.agreement && (
+                <small className="setupAgreementFile">
+                  {data.agreement.document
+                    ? "File on record: " + data.agreement.document.filename
+                    : "Reference only — no agreement file on record"}
+                </small>
+              )}
               <button
                 className="textButton"
                 disabled={busy}

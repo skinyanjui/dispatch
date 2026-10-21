@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool, transaction } from "./db";
 import { HttpError, digest } from "./auth";
+import { loadDocumentSlots } from "./documents";
 const timezone = z.string().refine((s) => {
   try {
     new Intl.DateTimeFormat("en", { timeZone: s });
@@ -47,7 +48,7 @@ export async function auditDenied(user: string, resource: string) {
     resource,
   ]);
 }
-async function member(
+export async function member(
   c: PoolClient,
   user: string,
   carrier: string,
@@ -61,7 +62,7 @@ async function member(
     throw new HttpError(404, "NOT_FOUND");
   return rows[0];
 }
-async function scoped(
+export async function scoped(
   c: PoolClient,
   user: string,
   id: string,
@@ -79,7 +80,7 @@ async function scoped(
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
   return rows[0];
 }
-async function event(
+export async function event(
   c: PoolClient,
   user: string,
   load: { id: string; carrier_id: string },
@@ -102,7 +103,7 @@ async function event(
     load.id,
   ]);
 }
-async function requireAgreement(c: PoolClient, carrierId: string) {
+export async function requireAgreement(c: PoolClient, carrierId: string) {
   const auth = await c.query(
     "SELECT 1 FROM carrier_dispatch_authorizations WHERE carrier_id=$1 AND verified_at<=now() AND effective_at<=now() AND expires_at>now() FOR SHARE",
     [carrierId],
@@ -261,6 +262,7 @@ export async function detail(user: string, id: string) {
       events_truncated: events.rows.length > 100,
       assignment: assignment.rows[0] ?? null,
       check_ins: checkIns.rows,
+      documents: await loadDocumentSlots(c, id),
     };
   });
 }

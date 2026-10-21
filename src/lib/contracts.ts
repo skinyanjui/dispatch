@@ -1,3 +1,4 @@
+import type { DocumentSlot } from "./compliance";
 export const stages = [
   "booked",
   "dispatched",
@@ -50,6 +51,7 @@ export type Load = {
   events_truncated?: boolean;
   assignment?: { name: string; driver_id: string } | null;
   check_ins?: CheckIn[];
+  documents?: DocumentSlot[];
 };
 export type Context = {
   user: { name: string };
@@ -73,6 +75,7 @@ export type CarrierSetup = {
     expires_at: string;
     verified_at: string;
     current: boolean;
+    document?: { version_id: string; filename: string } | null;
   } | null;
   drivers: {
     id: string;
@@ -85,3 +88,15 @@ export type CarrierSetup = {
   can_verify: boolean;
 };
 export type Queue = { loads: Load[]; nextCursor: string | null };
+export type CarrierDocuments = {
+  carrier_id: string;
+  can_review: boolean;
+  agreement: {
+    agreement_ref: string;
+    effective_at: string;
+    expires_at: string;
+    document_version_id: string | null;
+    current: boolean;
+  } | null;
+  slots: DocumentSlot[];
+};

@@ -15,12 +15,14 @@ export function CarrierDirectory({
   context,
   onViewLoads,
   onSetup,
+  onDocuments,
   onAdd,
   busy = false,
 }: {
   context: Context;
   onViewLoads: (carrier: string) => void;
   onSetup?: (carrier: string) => void;
+  onDocuments?: (carrier: string) => void;
   onAdd?: () => void;
   busy?: boolean;
 }) {
@@ -83,6 +85,16 @@ export function CarrierDirectory({
                     onClick={() => onSetup(c.id)}
                   >
                     Manage setup
+                  </button>
+                )}
+                {c.role !== "driver" && onDocuments && (
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => onDocuments(c.id)}
+                    aria-label={`Documents for ${c.name}`}
+                  >
+                    Documents
                   </button>
                 )}
                 <button className="secondary" onClick={() => onViewLoads(c.id)}>

@@ -33,6 +33,19 @@ const messages: Record<string, string> = {
   DRIVER_CARRIER_MISMATCH: "Choose a driver authorized by this carrier.",
   CHECK_IN_TIME_OUT_OF_RANGE:
     "Use an observed time within the last 30 days and no more than five minutes ahead.",
+  FILE_REQUIRED: "Choose a file to upload.",
+  FILE_TOO_LARGE: "Files must be 4 MB or smaller. Compress or split the scan.",
+  UNSUPPORTED_FILE_TYPE: "Upload a PDF, PNG or JPEG file.",
+  INVALID_UPLOAD: "The upload could not be read. Choose the file again.",
+  DUPLICATE_DOCUMENT_VERSION:
+    "This exact file is already the current version. No new version was added.",
+  DOCUMENT_SUPERSEDED:
+    "A newer version was uploaded. Refresh to review the latest file.",
+  DISPATCHER_REVIEW_REQUIRED: "Only a dispatcher can review this document.",
+  DOCUMENT_UNAVAILABLE:
+    "The file could not be retrieved. Its record is retained; please retry.",
+  AGREEMENT_FILE_UNAVAILABLE:
+    "Upload the signed agreement again; the selected file is no longer current.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };
@@ -52,15 +65,16 @@ export async function api<T>(
 ): Promise<T> {
   let response: Response;
   try {
+    const form = body instanceof FormData;
     response = await fetch("/api/" + path, {
       method: body ? "POST" : "GET",
       headers: body
         ? {
-            "Content-Type": "application/json",
+            ...(form ? {} : { "Content-Type": "application/json" }),
             ...(key ? { "Idempotency-Key": key } : {}),
           }
         : {},
-      body: body ? JSON.stringify(body) : undefined,
+      body: form ? body : body ? JSON.stringify(body) : undefined,
       cache: "no-store",
       signal,
     });

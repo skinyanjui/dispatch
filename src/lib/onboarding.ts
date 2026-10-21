@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool, transaction } from "./db";
 import { digest, hashNewPassword, HttpError } from "./auth";
+import { insertReview } from "./documents";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const email = z
@@ -36,7 +37,7 @@ const timezone = z
     }
   });
 
-async function carrierAccess(
+export async function carrierAccess(
   c: PoolClient,
   user: string,
   id: string,
@@ -51,7 +52,7 @@ async function carrierAccess(
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
   return rows[0];
 }
-async function emit(
+export async function emit(
   c: PoolClient,
   user: string,
   id: string,
@@ -144,6 +145,7 @@ export async function carrierSetup(user: string, id: string) {
     );
     const agreements = await c.query(
       `SELECT agreement_ref,effective_at,expires_at,verified_at,
+      (SELECT json_build_object('version_id',v.id,'filename',v.filename) FROM document_versions v WHERE v.id=document_version_id) document,
       (verified_at<=now() AND effective_at<=now() AND expires_at>now()) current
       FROM carrier_dispatch_authorizations WHERE carrier_id=$1 ORDER BY (verified_at<=now() AND effective_at<=now() AND expires_at>now()) DESC,expires_at DESC LIMIT 1`,
       [id],
@@ -210,6 +212,7 @@ export async function saveAgreement(user: string, id: string, input: unknown) {
       effective_date: z.iso.date(),
       through_date: z.iso.date(),
       confirmed: z.literal(true),
+      document_version_id: z.uuid().optional(),
     })
     .strict()
     .parse(input);
@@ -227,9 +230,30 @@ export async function saveAgreement(user: string, id: string, input: unknown) {
       "carrier.agreement",
       { id, ...data },
       async () => {
+        if (data.document_version_id) {
+          // Only the latest uploaded agreement version for this carrier can be
+          // verified; the review and authorization commit together.
+          const file = await c.query(
+            `SELECT v.id,v.carrier_id FROM document_versions v JOIN documents d ON d.id=v.document_id
+            WHERE v.id=$1 AND v.carrier_id=$2 AND d.type='dispatch_agreement' AND d.load_id IS NULL
+              AND v.version=(SELECT max(version) FROM document_versions WHERE document_id=d.id)`,
+            [data.document_version_id, id],
+          );
+          if (!file.rows[0])
+            throw new HttpError(422, "AGREEMENT_FILE_UNAVAILABLE");
+          await insertReview(c, user, file.rows[0], "accepted", "");
+        }
         await c.query(
-          "INSERT INTO carrier_dispatch_authorizations(id,carrier_id,agreement_ref,verified_at,effective_at,expires_at,verified_by) VALUES($1,$2,$3,now(),$4,$5,$6)",
-          [randomUUID(), id, data.reference, effective, expires, user],
+          "INSERT INTO carrier_dispatch_authorizations(id,carrier_id,agreement_ref,verified_at,effective_at,expires_at,verified_by,document_version_id) VALUES($1,$2,$3,now(),$4,$5,$6,$7)",
+          [
+            randomUUID(),
+            id,
+            data.reference,
+            effective,
+            expires,
+            user,
+            data.document_version_id ?? null,
+          ],
         );
         await c.query(
           "UPDATE carrier_profiles SET step='team',version=version+1,updated_at=now() WHERE carrier_id=$1",
@@ -239,6 +263,7 @@ export async function saveAgreement(user: string, id: string, input: unknown) {
           reference: data.reference,
           effective_date: data.effective_date,
           through_date: data.through_date,
+          document_version_id: data.document_version_id ?? null,
         });
         return { id };
       },

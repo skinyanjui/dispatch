@@ -1,9 +1,21 @@
 import type { CarrierSetup, Load, Context } from "./contracts";
+import {
+  carrierDocumentTypes,
+  cleanFilename,
+  documentStatus,
+  driverUploadTypes,
+  loadDocumentTypes,
+  maxDocumentBytes,
+  todayUtc,
+  type DocumentSlot,
+  type DocumentType,
+  type DocumentVersion,
+} from "./compliance";
 import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
 // password. Shared production components provide the interface and controls.
-const storageKey = "relay-current-demo-v1";
+const storageKey = "relay-current-demo-v2";
 type Role = "dispatcher" | "carrier-manager" | "driver";
 type Invite = {
   token: string;
@@ -15,7 +27,16 @@ type Invite = {
   expires_at: string;
   used: boolean;
 };
+// Demo files keep metadata only; file contents never leave the browser and
+// are not retained.
+type DemoDocument = DocumentVersion & {
+  document_id: string;
+  carrier_id: string;
+  load_id: string | null;
+  type: DocumentType;
+};
 type State = {
+  documents: DemoDocument[];
   carriers: CarrierSetup[];
   loads: Load[];
   invites: Invite[];
@@ -124,7 +145,30 @@ function fixtures(): State {
       recorded_at: new Date(Date.now() - 20 * 60000).toISOString(),
     },
   ];
+  const documents: DemoDocument[] = [
+    {
+      id: "77777777-7777-4777-8777-777777777771",
+      document_id: "77777777-7777-4777-8777-777777777770",
+      carrier_id: loads[3].carrier_id,
+      load_id: loads[3].id,
+      type: "rate_confirmation",
+      version: 1,
+      filename: "sample-rate-confirmation.pdf",
+      content_type: "application/pdf",
+      size_bytes: 48213,
+      expires_on: null,
+      uploaded_at: now(),
+      uploader_name: "Alex Morgan",
+      review: {
+        decision: "accepted",
+        note: "",
+        reviewer_name: "Alex Morgan",
+        created_at: now(),
+      },
+    },
+  ];
   return {
+    documents,
     carriers,
     loads,
     invites: [],
@@ -197,6 +241,100 @@ export function createDemoApi() {
       { id: crypto.randomUUID(), type, created_at: now() },
     ];
   };
+  const slots = (
+    types: readonly DocumentType[],
+    match: (d: DemoDocument) => boolean,
+  ): DocumentSlot[] =>
+    types.map((type) => {
+      const history = state.documents
+        .filter((d) => d.type === type && match(d))
+        .sort((a, b) => b.version - a.version);
+      return {
+        type,
+        document_id: history[0]?.document_id ?? null,
+        status: documentStatus(history[0] ?? null, todayUtc()),
+        current: history[0] ?? null,
+        history: history.slice(0, 10),
+      };
+    });
+  const withDocuments = (l: Load): Load => ({
+    ...l,
+    documents: slots(loadDocumentTypes, (d) => d.load_id === l.id),
+  });
+  const documentRequest = (path: string[], body: unknown) => {
+    if (path.length === 1 && body instanceof FormData) {
+      const field = (name: string) => String(body.get(name) || "");
+      const type = field("type") as DocumentType;
+      const file = body.get("file");
+      if (!(file instanceof File) || !file.size) fail("FILE_REQUIRED", 400);
+      const upload = file as File;
+      if (upload.size > maxDocumentBytes) fail("FILE_TOO_LARGE", 413);
+      const loadId = field("load_id") || null;
+      if (loadId) {
+        const l =
+          state.loads.find(
+            (v) =>
+              v.id === loadId &&
+              allowed().some((c) => c.carrier.id === v.carrier_id) &&
+              (state.viewer.role !== "driver" ||
+                (driverUploadTypes.includes(type) &&
+                  v.assignment?.driver_id ===
+                    (state.viewer.driver_id || driver))),
+          ) || fail("NOT_FOUND", 404);
+        event(l, "document.uploaded");
+      } else writable(field("carrier_id"));
+      const previous = state.documents
+        .filter(
+          (d) =>
+            d.type === type &&
+            d.carrier_id === field("carrier_id") &&
+            d.load_id === loadId,
+        )
+        .sort((a, b) => b.version - a.version)[0];
+      const version: DemoDocument = {
+        id: crypto.randomUUID(),
+        document_id: previous?.document_id || crypto.randomUUID(),
+        carrier_id: field("carrier_id"),
+        load_id: loadId,
+        type,
+        version: (previous?.version || 0) + 1,
+        filename: cleanFilename(upload.name),
+        content_type: upload.type || "application/pdf",
+        size_bytes: upload.size,
+        expires_on: field("expires_on") || null,
+        uploaded_at: now(),
+        uploader_name: state.viewer.name,
+        review: null,
+      };
+      state.documents.push(version);
+      return {
+        document_id: version.document_id,
+        version_id: version.id,
+        version: version.version,
+      };
+    }
+    const target =
+      state.documents.find((d) => d.id === path[1]) || fail("NOT_FOUND", 404);
+    if (path[2] === "review" && body) {
+      writable(target.carrier_id);
+      if (state.viewer.role !== "dispatcher")
+        fail("DISPATCHER_REVIEW_REQUIRED", 403);
+      const input = body as {
+        decision: "accepted" | "rejected";
+        note?: string;
+      };
+      target.review = {
+        decision: input.decision,
+        note: input.note || "",
+        reviewer_name: state.viewer.name,
+        created_at: now(),
+      };
+      const l = state.loads.find((v) => v.id === target.load_id);
+      if (l) event(l, "document.reviewed");
+      return { version_id: target.id, decision: input.decision };
+    }
+    return fail("NOT_FOUND", 404);
+  };
   const implementation = async (
     path: string,
     body?: unknown,
@@ -205,6 +343,25 @@ export function createDemoApi() {
     const p = url.pathname.split("/").filter(Boolean);
     const data = body as Record<string, unknown>;
     if (path === "me") return context();
+    if (p[0] === "documents") return documentRequest(p, body);
+    if (p[0] === "carriers" && p[2] === "documents" && !body) {
+      const c = writable(p[1]);
+      const agreementFile = state.documents
+        .filter((d) => d.carrier_id === p[1] && d.type === "dispatch_agreement")
+        .find((d) => d.review?.decision === "accepted");
+      return {
+        carrier_id: p[1],
+        can_review: state.viewer.role === "dispatcher",
+        agreement: c.agreement && {
+          ...c.agreement,
+          document_version_id: agreementFile?.id ?? null,
+        },
+        slots: slots(
+          carrierDocumentTypes,
+          (d) => d.carrier_id === p[1] && !d.load_id,
+        ),
+      };
+    }
     if (p[0] === "loads") {
       const visible = state.loads.filter(
         (l) =>
@@ -275,7 +432,7 @@ export function createDemoApi() {
         return l;
       }
       const l = visible.find((v) => v.id === p[1]) || fail("NOT_FOUND", 404);
-      if (!body) return l;
+      if (!body) return withDocuments(l);
       if (l.version !== data?.version) fail("VERSION_CONFLICT", 409);
       if (p[2] === "check-ins") {
         l.check_ins = [
@@ -387,6 +544,16 @@ export function createDemoApi() {
       }
       if (p[3] === "agreement") {
         writable(p[2], true);
+        const file = state.documents.find(
+          (d) => d.id === data!.document_version_id,
+        );
+        if (file)
+          file.review = {
+            decision: "accepted",
+            note: "",
+            reviewer_name: state.viewer.name,
+            created_at: now(),
+          };
         c.agreement = {
           agreement_ref: String(data!.reference),
           effective_at: String(data!.effective_date) + "T00:00:00Z",
@@ -394,6 +561,9 @@ export function createDemoApi() {
             Date.parse(String(data!.through_date) + "T00:00:00Z") + 86400000,
           ).toISOString(),
           verified_at: now(),
+          document: file
+            ? { version_id: file.id, filename: file.filename }
+            : null,
           current:
             Date.parse(String(data!.effective_date)) <= Date.now() &&
             Date.parse(String(data!.through_date)) + 86400000 > Date.now(),

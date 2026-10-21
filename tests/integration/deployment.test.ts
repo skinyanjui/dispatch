@@ -1,7 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
 import { verifyPassword } from "../../src/lib/auth";
@@ -59,7 +59,10 @@ test("Production preparation migrates an empty database, repeats safely and neve
       (
         await db.query("SELECT version FROM schema_migrations ORDER BY version")
       ).rows.map((r) => r.version),
-      ["001", "002", "003", "004"],
+      (await readdir(new URL("../../db/", import.meta.url)))
+        .filter((name) => /^\d{3}_.*\.sql$/.test(name))
+        .map((name) => name.slice(0, 3))
+        .sort(),
     );
     assert.equal((await db.query("SELECT 1 FROM login_attempts")).rowCount, 0);
     assert.equal((await db.query("SELECT 1 FROM check_ins")).rowCount, 0);

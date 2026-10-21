@@ -1,0 +1,126 @@
+/* Documents, exceptions, billing, account and notification views. Uses the
+   shared global tokens only. */
+.docPanel,
+.opsList {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 22px;
+}
+.docSlot,
+.opsCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: var(--panel);
+  display: grid;
+  gap: 8px;
+}
+.docHeading,
+.opsCardHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.docHeading h4,
+.opsCardHeading h4 {
+  margin: 0;
+  font-size: 13px;
+  flex: 1;
+  min-width: 140px;
+}
+.docVersion {
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+}
+.docVersion small,
+.opsMeta {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.docVersion a {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.docHistory summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--accent);
+}
+.docHistory .docVersion {
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+.docActions,
+.opsActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.docForm,
+.opsForm {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.docForm label,
+.opsForm label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.docForm small,
+.opsForm small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.docForm button,
+.opsForm button {
+  justify-self: start;
+}
+.docStatus,
+.opsPill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.docStatus.accepted,
+.opsPill.good {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+.docStatus.rejected,
+.docStatus.expired,
+.docStatus.missing,
+.opsPill.bad {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error);
+}
+.docStatus.pending_review,
+.docStatus.expiring,
+.opsPill.warn {
+  background: #fff8e6;
+  border-color: #f0e2b8;
+  color: #7a5a00;
+}
+.setupAgreementFile {
+  color: var(--muted);
+  font-size: 11px;
+  flex-basis: 100%;
+}

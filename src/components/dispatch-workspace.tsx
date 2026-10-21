@@ -28,6 +28,9 @@ import {
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
 import { LoadCheckIns } from "@/components/load-check-ins";
+import { DocumentPanel } from "@/components/document-panel";
+import { CarrierDocumentsDialog } from "@/components/carrier-documents";
+import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
 import {
   stages,
@@ -44,6 +47,8 @@ const eventLabels: Record<string, string> = {
   "load.assign": "Driver assigned",
   "load.milestones": "Milestone recorded",
   "load.check-in": "Manual check-in recorded",
+  "document.uploaded": "Document uploaded",
+  "document.reviewed": "Document reviewed",
 };
 
 function appointmentLabel(start: string, end: string, timezone: string) {
@@ -82,7 +87,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [filters, setFilters] = useState(false),
     [updated, setUpdated] = useState<Date | null>(null),
     [section, setSection] = useState<WorkspaceSection>("loads"),
-    [setupCarrier, setSetupCarrier] = useState<string | null>(null);
+    [setupCarrier, setSetupCarrier] = useState<string | null>(null),
+    [docsCarrier, setDocsCarrier] = useState<string | null>(null);
   const search = useRef<HTMLInputElement>(null),
     createRequest = useRef<{ payload: string; key: string } | null>(null),
     revision = useRef(0),
@@ -875,6 +881,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             busy={busy || offline}
             onAdd={() => setSetupCarrier("new")}
             onSetup={setSetupCarrier}
+            onDocuments={setDocsCarrier}
             onViewLoads={(id) => {
               setSection("loads");
               filterChange({ carrier: id, status: "", q: "" });
@@ -900,6 +907,18 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           </span>
         </footer>
       </main>
+      {docsCarrier && (
+        <CarrierDocumentsDialog
+          carrierId={docsCarrier}
+          carrierName={
+            context.carriers.find((c) => c.id === docsCarrier)?.name || ""
+          }
+          demo={demo}
+          offline={offline}
+          onClose={() => setDocsCarrier(null)}
+          onAuthError={handleError}
+        />
+      )}
       {setupCarrier && (
         <CarrierOnboarding
           demo={demo}
@@ -1105,6 +1124,27 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   await refreshAfterSave("Manual check-in recorded.");
                 });
                 return result;
+              }}
+            />
+            <h3>Documents</h3>
+            <p className="helpText">
+              Paperwork readiness is tracked separately from the shipment
+              milestone and from billing.
+            </p>
+            <DocumentPanel
+              slots={selected.documents || []}
+              carrierId={selected.carrier_id}
+              loadId={selected.id}
+              canUpload={(type) =>
+                !offline &&
+                (selectedRole !== "driver" || driverUploadTypes.includes(type))
+              }
+              canReview={selectedRole === "dispatcher" && !offline}
+              downloads={!demo}
+              disabled={busy || offline}
+              onChanged={async (message) => {
+                setSelected(await api<Load>("loads/" + selected.id));
+                setNotice(message);
               }}
             />
             <h3>Activity timeline</h3>
