@@ -652,9 +652,7 @@ test("an owner invites a dispatcher, who joins from the private link and sees on
   const joinPage = await invitee.newPage();
   await joinPage.goto(link);
   await expect(joinPage.getByText("invited you as a dispatcher")).toBeVisible();
-  await joinPage
-    .getByLabel("Password", { exact: true })
-    .fill("fictional-browser-password");
+  await joinPage.getByLabel("Password").fill("fictional-browser-password");
   await joinPage.getByRole("button", { name: "Join workspace" }).click();
   await expect(
     joinPage.getByRole("heading", { name: "Welcome aboard." }),
@@ -1029,5 +1027,5 @@ test("friendly wording: wrong password and the show-password option", async ({
     "text",
   );
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("alert")).toContainText("don't match");
+  await expect(page.locator(".alert.error")).toContainText("don't match");
 });
