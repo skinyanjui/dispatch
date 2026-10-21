@@ -37,8 +37,13 @@ test("current demo shares app workflows, saves locally and never calls authentic
   await expect(
     setup.getByRole("heading", { name: "Confirm dispatch authority." }),
   ).toBeVisible();
+  await setup.getByLabel("Signed agreement file").setInputFiles({
+    name: "demo-agreement.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n% fictional demo agreement\n%%EOF\n"),
+  });
   await setup
-    .getByLabel("Signed agreement reference")
+    .getByLabel("Agreement reference")
     .fill("Demo-only agreement reference");
   await setup.getByRole("checkbox").check();
   await setup

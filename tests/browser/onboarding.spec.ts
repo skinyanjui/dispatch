@@ -40,8 +40,13 @@ async function newCarrier(page: Page, email: string, name: string) {
   return { dialog, id };
 }
 async function agreement(dialog: ReturnType<Page["getByRole"]>) {
+  await dialog.getByLabel("Signed agreement file").setInputFiles({
+    name: "signed-agreement.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n% fictional browser QA agreement\n%%EOF\n"),
+  });
   await dialog
-    .getByLabel("Signed agreement reference")
+    .getByLabel("Agreement reference")
     .fill("Fictional browser signed agreement");
   await dialog.getByRole("checkbox").check();
   await dialog
@@ -50,6 +55,7 @@ async function agreement(dialog: ReturnType<Page["getByRole"]>) {
   await expect(
     dialog.getByRole("heading", { name: "Bring your team in." }),
   ).toBeVisible();
+  await expect(dialog).toContainText("File on record: signed-agreement.pdf");
 }
 test("a lost driver invitation response preserves its private link and creates one pending driver", async ({
   page,

@@ -506,7 +506,8 @@ export function BillingWorkspace({
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [selected, setSelected] = useState<string[]>([]),
-    [fee, setFee] = useState("8");
+    [fee, setFee] = useState("8"),
+    [allLoads, setAllLoads] = useState(false);
   const retry = useRetryKey();
   const load = useCallback(async () => {
     if (!carrierId) return;
@@ -565,6 +566,10 @@ export function BillingWorkspace({
     preview = "";
   }
   const disabled = busy || offline;
+  // Delivered loads and any load with a packet need billing attention.
+  const billable = (data?.loads || []).filter(
+    (l) => allLoads || l.stage === "delivered" || l.packet,
+  );
   return (
     <section className="carrierDirectory" aria-label="Billing and payments">
       <div className="directoryIntro">
@@ -619,9 +624,17 @@ export function BillingWorkspace({
               The carrier&apos;s invoice to the broker or shipper. Proceeds
               belong to the carrier; receipts are recorded as reported.
             </p>
+            <label className="setupCheckbox">
+              <input
+                type="checkbox"
+                checked={allLoads}
+                onChange={(e) => setAllLoads(e.target.checked)}
+              />
+              <span>Show loads not yet delivered</span>
+            </label>
             <div className="opsList">
-              {data.loads.length ? (
-                data.loads.map((row) => (
+              {billable.length ? (
+                billable.map((row) => (
                   <PacketCard
                     key={row.id}
                     row={row}
@@ -630,7 +643,11 @@ export function BillingWorkspace({
                   />
                 ))
               ) : (
-                <p className="helpText">No loads for this carrier yet.</p>
+                <p className="helpText">
+                  {allLoads
+                    ? "No loads for this carrier yet."
+                    : "No delivered loads or packets yet."}
+                </p>
               )}
             </div>
           </div>

@@ -244,7 +244,11 @@ function Slot({
               <input name="expires_on" type="date" required />
             </label>
           )}
-          <button className="secondary" disabled={disabled || busy}>
+          <button
+            className="secondary"
+            disabled={disabled || busy}
+            aria-label={`Upload ${label}`}
+          >
             <UploadSimpleIcon size={15} aria-hidden="true" />
             {busy ? "Uploading…" : "Upload"}
           </button>
