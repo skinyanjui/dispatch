@@ -5,13 +5,15 @@ export const optionalKinds = [
   "document_reminder",
   "insurance_reminder",
   "exception_overdue",
+  "message_received",
 ] as const;
 export type OptionalKind = (typeof optionalKinds)[number];
 export type NotificationKind =
   | OptionalKind
   | "invitation"
   | "password_reset"
-  | "email_verification";
+  | "email_verification"
+  | "message";
 export const notificationLabels: Record<NotificationKind, string> = {
   invitation: "Invitations",
   password_reset: "Password reset",
@@ -21,6 +23,8 @@ export const notificationLabels: Record<NotificationKind, string> = {
   document_reminder: "Missing POD reminders",
   insurance_reminder: "Insurance expiry reminders",
   exception_overdue: "Overdue exception reminders",
+  message_received: "New messages in my inbox",
+  message: "Messages sent from Relay",
 };
 export type NotificationLogEntry = {
   id: string;

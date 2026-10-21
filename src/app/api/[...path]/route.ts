@@ -52,6 +52,17 @@ import {
   saveProfile,
 } from "@/lib/account";
 import {
+  createSavedReply,
+  deleteSavedReply,
+  getThread,
+  listSavedReplies,
+  listThreads,
+  markRead,
+  sendMessage,
+  unreadCount,
+  updateSavedReply,
+} from "@/lib/messaging";
+import {
   archiveContact,
   createContact,
   directory,
@@ -491,6 +502,49 @@ async function handle(req: NextRequest) {
           await readJson(req),
         ),
       );
+    if (path[0] === "threads") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await listThreads(user.id, req.nextUrl.searchParams),
+        );
+      const threadId = z.uuid().parse(path[1]);
+      if (path.length === 2 && req.method === "GET")
+        return NextResponse.json(await getThread(user.id, threadId));
+      if (path.length === 3 && path[2] === "read" && req.method === "POST")
+        return NextResponse.json(await markRead(user.id, threadId));
+    }
+    if (path[0] === "messages" && path.length === 1 && req.method === "POST")
+      return NextResponse.json(
+        await sendMessage(
+          user.id,
+          await readJson(req),
+          req.headers.get("origin") || undefined,
+        ),
+        { status: 201 },
+      );
+    if (
+      path[0] === "inbox" &&
+      path[1] === "unread" &&
+      path.length === 2 &&
+      req.method === "GET"
+    )
+      return NextResponse.json(await unreadCount(user.id));
+    if (path[0] === "saved-replies") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(await listSavedReplies(user.id));
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await createSavedReply(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const replyId = z.uuid().parse(path[1]);
+      if (path.length === 2 && req.method === "POST")
+        return NextResponse.json(
+          await updateSavedReply(user.id, replyId, await readJson(req)),
+        );
+      if (path.length === 3 && path[2] === "delete" && req.method === "POST")
+        return NextResponse.json(await deleteSavedReply(user.id, replyId));
+    }
     if (path[0] === "contacts") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(

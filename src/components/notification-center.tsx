@@ -81,8 +81,10 @@ export function NotificationCenter({
       setBusy(false);
     }
   }
-  const visibleKinds = optionalKinds.filter((k) =>
-    driverOnly ? k === "assignment" : k !== "assignment",
+  const visibleKinds = optionalKinds.filter(
+    (k) =>
+      k === "message_received" ||
+      (driverOnly ? k === "assignment" : k !== "assignment"),
   );
   return (
     <section className="carrierDirectory" aria-label="Notifications">

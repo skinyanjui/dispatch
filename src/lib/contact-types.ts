@@ -35,6 +35,8 @@ export type DirectoryEntry = {
   phone: string;
   notes?: string;
   favorite: boolean;
+  /** True when this person agreed to receive texts from us. */
+  sms_ok: boolean;
   /** External contacts only. */
   contact?: {
     id: string;
@@ -43,6 +45,7 @@ export type DirectoryEntry = {
     carrier_id: string | null;
     version: number;
     editable: boolean;
+    sms_consent_note: string;
   };
 };
 /** Keeps dialable characters only, for tel: and sms: links. */

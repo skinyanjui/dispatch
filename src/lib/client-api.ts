@@ -112,6 +112,13 @@ const messages: Record<string, string> = {
   ALREADY_MEMBER: "This person already has that access.",
   CARRIER_NOT_IN_ORGANIZATION: "Choose carriers from this organization.",
   OWNER_NOT_REMOVABLE: "Owners can't be removed here.",
+  RECIPIENT_CHANNEL_UNAVAILABLE:
+    "Some recipients can't receive this kind of message (no account, email address, or text consent). Choose another channel or remove them.",
+  SMS_UNAVAILABLE:
+    "Text messaging isn't set up on this server. Log a text you sent from your phone instead.",
+  THREAD_SCOPE_UNKNOWN: "Choose a carrier or load for this conversation.",
+  LOG_TIME_OUT_OF_RANGE:
+    "Use a time within the last 90 days and no more than five minutes ahead.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

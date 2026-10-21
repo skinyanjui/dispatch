@@ -37,12 +37,22 @@ export const contactFields = z
     phone: z.string().trim().max(40).default(""),
     notes: z.string().trim().max(1000).default(""),
     carrier_id: z.uuid().nullable().default(null),
+    // Recorded only when the contact actually agreed to receive texts.
+    sms_consent: z.boolean().default(false),
+    sms_consent_note: z.string().trim().max(300).default(""),
   })
   .strict()
   .refine((d) => d.email !== "" || d.phone !== "", {
     message: "Add an email address or a phone number",
     path: ["email"],
-  });
+  })
+  .refine(
+    (d) => !d.sms_consent || (d.phone !== "" && d.sms_consent_note !== ""),
+    {
+      message: "Record their phone number and how they agreed to texts",
+      path: ["sms_consent_note"],
+    },
+  );
 
 type Access = {
   dispatchCarriers: string[];
@@ -50,7 +60,7 @@ type Access = {
   driverCarriers: string[];
   organizations: string[]; // organizations with dispatcher or admin access
 };
-async function access(
+export async function access(
   c: PoolClient | typeof pool,
   user: string,
 ): Promise<Access> {
@@ -106,7 +116,10 @@ export function parseDirectoryFilters(params: URLSearchParams) {
 }
 
 /** Every entry the caller may see that matches the filters, unpaged. */
-async function collect(user: string, f: z.infer<typeof directoryFilters>) {
+export async function collect(
+  user: string,
+  f: z.infer<typeof directoryFilters>,
+) {
   const a = await access(pool, user);
   const q = f.q || null;
   const digits = q ? digitsOf(q) : null;
@@ -142,7 +155,7 @@ async function collect(user: string, f: z.infer<typeof directoryFilters>) {
 
   if (!f.group || f.group === "team") {
     const rows = await run(
-      `SELECT u.id,u.name,u.email,u.phone,m.role,c.id carrier_id,c.name carrier_name
+      `SELECT u.id,u.name,u.email,u.phone,u.sms_opt_in_at,m.role,c.id carrier_id,c.name carrier_name
       FROM memberships m JOIN users u ON u.id=m.user_id JOIN carriers c ON c.id=m.carrier_id
       WHERE m.carrier_id=ANY($1::uuid[]) AND m.role IN ('dispatcher','carrier-manager') AND u.id<>$2
       ${match(["u.name", "u.email", "u.phone"], q)}`,
@@ -158,13 +171,15 @@ async function collect(user: string, f: z.infer<typeof directoryFilters>) {
         email: r.email,
         phone: r.phone,
         favorite: false,
+        sms_ok: r.sms_opt_in_at !== null,
       });
   }
   const seesDrivers = [...a.dispatchCarriers, ...a.managerCarriers];
   if ((!f.group || f.group === "driver") && seesDrivers.length) {
     const rows = await run(
       `SELECT d.id,d.name,d.onboarding_status,c.id carrier_id,c.name carrier_name,
-        COALESCE(NULLIF(d.contact_email,''),u.email,'') email,COALESCE(NULLIF(d.phone,''),u.phone,'') phone
+        COALESCE(NULLIF(d.contact_email,''),u.email,'') email,COALESCE(NULLIF(d.phone,''),u.phone,'') phone,
+        u.sms_opt_in_at
       FROM drivers d JOIN carriers c ON c.id=d.carrier_id
       LEFT JOIN memberships mm ON mm.driver_id=d.id LEFT JOIN users u ON u.id=mm.user_id
       WHERE d.carrier_id=ANY($1::uuid[]) AND d.onboarding_status<>'removed' AND (u.id IS NULL OR u.id<>$2)
@@ -182,6 +197,7 @@ async function collect(user: string, f: z.infer<typeof directoryFilters>) {
         email: r.email,
         phone: r.phone,
         favorite: false,
+        sms_ok: r.sms_opt_in_at !== null,
       });
   }
   if ((!f.group || f.group === "carrier") && a.dispatchCarriers.length) {
@@ -202,6 +218,7 @@ async function collect(user: string, f: z.infer<typeof directoryFilters>) {
         email: r.email,
         phone: r.phone,
         favorite: false,
+        sms_ok: false,
       });
   }
   if (
@@ -234,6 +251,7 @@ async function collect(user: string, f: z.infer<typeof directoryFilters>) {
         phone: r.phone,
         notes: r.notes,
         favorite: false,
+        sms_ok: r.sms_consent_at !== null,
         contact: {
           id: r.id,
           kind: r.kind as ContactKind,
@@ -241,6 +259,7 @@ async function collect(user: string, f: z.infer<typeof directoryFilters>) {
           carrier_id: r.carrier_id,
           version: r.version,
           editable,
+          sms_consent_note: r.sms_consent_note,
         },
       });
     }
@@ -371,8 +390,8 @@ export async function createContact(user: string, input: unknown) {
     }
     const id = randomUUID();
     await c.query(
-      `INSERT INTO contacts(id,organization_id,carrier_id,kind,name,company,email,phone,notes,created_by,idempotency_key,request_hash)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      `INSERT INTO contacts(id,organization_id,carrier_id,kind,name,company,email,phone,notes,created_by,idempotency_key,request_hash,sms_consent_at,sms_consent_by,sms_consent_note)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CASE WHEN $13::boolean THEN now() END,CASE WHEN $13::boolean THEN $10::uuid END,$14)`,
       [
         id,
         org,
@@ -386,6 +405,8 @@ export async function createContact(user: string, input: unknown) {
         user,
         idempotency_key,
         hash,
+        fields.sms_consent,
+        fields.sms_consent ? fields.sms_consent_note : "",
       ],
     );
     await c.query(
@@ -426,6 +447,11 @@ export async function updateContact(user: string, id: string, input: unknown) {
       await writeScope(c, user, fields.carrier_id, current.organization_id);
     await c.query(
       `UPDATE contacts SET kind=$2,name=$3,company=$4,email=$5,phone=$6,notes=$7,carrier_id=$8,
+      -- Consent belongs to a phone number: it is kept only while the number
+      -- is unchanged, and otherwise must be re-recorded.
+      sms_consent_at=CASE WHEN $9::boolean THEN (CASE WHEN sms_consent_at IS NOT NULL AND phone=$6 THEN sms_consent_at ELSE now() END) END,
+      sms_consent_by=CASE WHEN $9::boolean THEN (CASE WHEN sms_consent_at IS NOT NULL AND phone=$6 THEN sms_consent_by ELSE $10::uuid END) END,
+      sms_consent_note=CASE WHEN $9::boolean THEN $11 ELSE '' END,
       version=version+1,updated_at=now() WHERE id=$1`,
       [
         id,
@@ -436,6 +462,9 @@ export async function updateContact(user: string, id: string, input: unknown) {
         fields.phone,
         fields.notes,
         fields.carrier_id,
+        fields.sms_consent,
+        user,
+        fields.sms_consent ? fields.sms_consent_note : "",
       ],
     );
     await c.query(

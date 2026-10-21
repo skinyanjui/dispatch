@@ -17,6 +17,7 @@ export type Email = {
   to: string;
   subject: string;
   text: string;
+  replyTo?: string;
 };
 export class PermanentDeliveryError extends Error {}
 export type Transport = {
@@ -56,6 +57,7 @@ function resendTransport(apiKey: string, from: string): Transport {
           to: [email.to],
           subject: email.subject,
           text: email.text,
+          ...(email.replyTo ? { reply_to: email.replyTo } : {}),
         }),
         signal: AbortSignal.timeout(10000),
       });
@@ -98,20 +100,22 @@ export type Message = {
   dedupe: string;
   subject: string;
   text: string;
+  replyTo?: string;
 };
 async function insert(
   c: PoolClient,
   message: Message,
   recipient: { id: string | null; email: string },
-) {
+): Promise<string> {
   const sealed = encrypt(message.text);
+  const id = randomUUID();
   // Without an encryption key the message is recorded as suppressed so the
   // gap is visible in the delivery log instead of silently dropped.
-  await c.query(
-    `INSERT INTO notifications(id,organization_id,recipient_user_id,recipient_email,kind,subject,body_ciphertext,dedupe_key,status,last_error)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(dedupe_key) DO NOTHING`,
+  const inserted = await c.query(
+    `INSERT INTO notifications(id,organization_id,recipient_user_id,recipient_email,kind,subject,body_ciphertext,dedupe_key,status,last_error,reply_to)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(dedupe_key) DO NOTHING RETURNING id`,
     [
-      randomUUID(),
+      id,
       message.organization,
       recipient.id,
       recipient.email,
@@ -121,15 +125,22 @@ async function insert(
       message.dedupe,
       sealed ? "pending" : "suppressed",
       sealed ? null : "RELAY_DATA_KEY is not configured",
+      message.replyTo ?? null,
     ],
   );
+  if (inserted.rows[0]) return inserted.rows[0].id as string;
+  const existing = await c.query(
+    "SELECT id FROM notifications WHERE dedupe_key=$1",
+    [message.dedupe],
+  );
+  return existing.rows[0].id as string;
 }
 export async function enqueueForEmail(
   c: PoolClient,
   email: string,
   message: Message,
 ) {
-  await insert(c, message, { id: null, email });
+  return insert(c, message, { id: null, email });
 }
 export async function enqueueForUser(
   c: PoolClient,
@@ -137,7 +148,9 @@ export async function enqueueForUser(
   message: Message,
 ) {
   const { rows } = await c.query("SELECT email FROM users WHERE id=$1", [user]);
-  if (rows[0]) await insert(c, message, { id: user, email: rows[0].email });
+  return rows[0]
+    ? insert(c, message, { id: user, email: rows[0].email })
+    : null;
 }
 export function appOrigin(requestOrigin?: string) {
   return process.env.APP_ORIGIN || requestOrigin || "http://localhost:3000";
@@ -189,6 +202,7 @@ export async function deliverDue(limit = 20) {
         to: n.recipient_email,
         subject: n.subject,
         text: decrypt(n.body_ciphertext),
+        replyTo: n.reply_to ?? undefined,
       });
       await pool.query(
         "UPDATE notifications SET status='sent',sent_at=now(),attempts=attempts+1,body_ciphertext=NULL,locked_until=NULL,provider=$2,provider_message_id=$3,last_error=NULL WHERE id=$1",
