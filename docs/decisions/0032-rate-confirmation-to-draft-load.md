@@ -1,0 +1,25 @@
+# 0032 — Rate confirmation to draft load
+
+Status: accepted, 2026-10-22. Builds on ADR 0028 (AI document reading) and the load-creation rules in ADR 0003/0011. Touches booking authority and third-party processing.
+
+## Decision
+
+A dispatcher can start a load from a broker's **rate confirmation**: in **New load**, choose the file ("Fill from a rate confirmation"), and the Create load form fills in the reference, broker, agreed rate and up to four stops with local appointment times. It is the most repeated typing in the product, and it is advice only.
+
+**The model drafts a form; it never books.** The reading returns suggested values. A person reviews every field in the normal Create load form, edits what is wrong, and submits through the existing `POST /api/loads`, which still requires a carrier with a **current verified written dispatch agreement**, optimistic idempotency, audit and events. Nothing is created, assigned, dispatched, rated or invoiced by the reading. Reading is refused up front for a carrier with no verified agreement (`CARRIER_AUTHORIZATION_REQUIRED`), so no money is spent on a load that could not be booked.
+
+**Checks are plain code, not model judgement.** `src/lib/rate-draft.ts` (pure, shared by server, browser and demo) maps the reading to form values and flags what to look at: low or medium confidence, values not found, the first stop forced to a pickup and the last to a delivery (with a note), appointments out of order or in the past, fewer than two stops. **Time zones are never decided by the model**: they come from the state in the address (Central assumed with a flag when none is found) and are always shown as "check". Money stays integer cents until display (`centsToDollars`, no floating point). Each flagged field shows what the file said (a quote) next to the input so the person can compare.
+
+**The original file becomes the load's rate confirmation through the normal upload.** The server keeps **no bytes** from the reading. The browser keeps the file; after the load is created it uploads the same file as the load's `rate_confirmation` document through the existing scanned, versioned, idempotent document pipeline (it stays pending a person's review, like any upload). If the attach fails, the dialog stays open and pressing Create again replays the load (same idempotency key) and retries the upload (stable attach key); the person sees `ATTACH_FAILED` explaining that the load exists. This keeps one authoritative document pipeline and avoids a second file store.
+
+**Provenance.** `rate_confirmation_reads` (migration 027, expand-only) records who read which file (name, SHA-256, size), with provider, model, prompt version, tokens, cost and the extracted fields, and links the load that was created from it (`load_id`, set in the same transaction as the load via `readId`; unique, so one reading starts one load). A reading belonging to someone else, to another carrier, or already used is `NOT_FOUND`/`READ_ALREADY_USED` and the load is not created. Audit actions: `ai.rate_read.requested/completed/failed/used`.
+
+**Consent, cost and safety reuse ADR 0028.** Same organization switch (AI document reading) and the same shared monthly limit, which now also counts rate confirmation readings and the assistant. A worst-case cost is held under an advisory lock before the call and replaced by the actual cost; one reading runs at a time per person; a reading left running past five minutes is failed; refusals and unusable answers keep their hold, outages release it. The file is **malware-scanned before it is sent** when a scanner is configured (infected files are logged and never sent). Results are validated against a strict schema (appointments `YYYY-MM-DDTHH:mm`, whole cents) before they are stored; an invalid answer is a failed reading, not a draft. The prompt says the file is untrusted data. Idempotency-Key: `idempotency_key` in the form; the same key and file replays the stored result, a different file under the same key is `IDEMPOTENCY_CONFLICT`.
+
+**Who.** The people who can create a load for the carrier: its dispatchers and carrier managers (drivers, other carriers and other organizations get `NOT_FOUND`). Only organization owners/admins can turn AI reading on; if it is off, an admin sees a **Turn on AI reading** button in the dialog and everyone else sees a plain note. Files up to 4 MB through the app server.
+
+**Demo.** The browser-only demo fills the form with labelled sample values (no AI, no network).
+
+## Not done
+
+Reading several rate confirmations at once; creating the load without a person reviewing the form; appointment windows (the form has one appointment per stop, so the start of the window is used); matching the broker to a saved contact; reading emails or attachments from a mailbox; files over 4 MB; accuracy measurement on real documents (tests use a fixture provider and a stand-in client, so extraction quality on real paperwork is unmeasured and must be checked by people before relying on it).

@@ -92,6 +92,11 @@ test("assistant: an admin turns it on with a button, asks, and opens a source", 
   const log = page.getByRole("log", { name: "Conversation" });
   await expect(log).toContainText("loads need attention");
   await expect(log).toContainText("no AI used");
+  // A long-lived database has many loads needing attention, so look this one
+  // up by its reference.
+  await page.getByLabel("Your question").fill(`Where is ${reference}?`);
+  await page.keyboard.press("Enter");
+  await expect(log).toContainText(`${reference} (`);
   // Sources are real records; one click opens the load.
   const chip = page
     .getByRole("group", { name: "Sources" })

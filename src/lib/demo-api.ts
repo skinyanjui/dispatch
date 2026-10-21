@@ -8,6 +8,7 @@ import type {
 import { feeMinor } from "./entry";
 import type { ContactKind, DirectoryEntry } from "./contact-types";
 import { demoAnswer, demoTurn } from "./demo-assistant";
+import { rateDraft } from "./rate-draft";
 import {
   prospectsRequest,
   seedProspects,
@@ -1158,6 +1159,32 @@ export function createDemoApi() {
     if (p[0] === "documents") return documentRequest(p, body);
     if (p[0] === "extractions" && body) return extractionRequest(p);
     if (p[0] === "contacts") return contactsRequest(p, data, url);
+    if (p[0] === "rate-confirmations") {
+      // The demo reads nothing: it fills the form with labelled sample values.
+      if (state.viewer.role === "driver") fail("NOT_FOUND", 404);
+      if (p[1] === "status")
+        return {
+          available: true,
+          enabled: true,
+          can_enable: false,
+          organization_id: org,
+          provider: "fixture",
+        };
+      if (p[1] === "read" && body instanceof FormData) {
+        const picked = body.get("file");
+        return {
+          id: crypto.randomUUID(),
+          status: "succeeded",
+          error_code: null,
+          filename:
+            picked instanceof File ? picked.name : "rate-confirmation.pdf",
+          provider: "fixture",
+          model: "fixture",
+          draft: rateDraft(sampleSuggestions("rate_confirmation_load")),
+        };
+      }
+      return fail("NOT_FOUND", 404);
+    }
     if (p[0] === "assistant") {
       if (state.viewer.role !== "dispatcher") fail("NOT_FOUND", 404);
       if (p.length === 1)

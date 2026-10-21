@@ -174,6 +174,10 @@ const messages: Record<string, string> = {
     "Please confirm the earlier text didn't arrive before sending it again.",
   AI_NOT_ENABLED:
     "AI reading is off for this organization. An owner or admin can turn it on in Organization settings.",
+  ATTACH_FAILED:
+    "The load was created, but the rate confirmation couldn't be attached. Press Create again to retry the upload.",
+  READ_ALREADY_USED:
+    "That rate confirmation already started a load. Start over with the file to create another.",
   ASSISTANT_NOT_ENABLED:
     "The assistant is off for this organization. An owner or admin can turn it on in Organization settings.",
   AI_UNAVAILABLE:

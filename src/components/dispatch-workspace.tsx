@@ -40,6 +40,12 @@ import { AccountSettings } from "@/components/account-settings";
 import { ContactsDirectory } from "@/components/contacts-directory";
 import { Prospects } from "@/components/prospects";
 import { Assistant } from "@/components/assistant";
+import {
+  DraftNote,
+  RateConfirmationFill,
+  type FilledDraft,
+} from "@/components/rate-confirmation-fill";
+import { uploadDocumentFile } from "@/lib/upload-client";
 import { Inbox, type Compose } from "@/components/inbox";
 import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
@@ -130,6 +136,9 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [recoveryNotice, setRecoveryNotice] = useState("");
   const search = useRef<HTMLInputElement>(null),
     createRequest = useRef<{ payload: string; key: string } | null>(null),
+    [filled, setFilled] = useState<FilledDraft | null>(null),
+    [formKey, setFormKey] = useState(0),
+    [createCarrier, setCreateCarrier] = useState(""),
     revision = useRef(0),
     active = useRef(false),
     queueRequest = useRef(0);
@@ -324,6 +333,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     createRequest.current = null;
     setError("");
     setExtraStops([]);
+    setFilled(null);
+    setFormKey((k) => k + 1);
+    setCreateCarrier(
+      carrier || context?.carriers.find((c) => c.role !== "driver")?.id || "",
+    );
     setCreating(true);
   }
   function showQueue(value: string) {
@@ -1403,7 +1417,31 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             <p className="formIntro">
               Record a booked load for an authorized carrier.
             </p>
+            {createCarrier && (
+              <RateConfirmationFill
+                key={createCarrier}
+                carrierId={createCarrier}
+                offline={offline}
+                filled={filled}
+                onFilled={(f) => {
+                  setFilled(f);
+                  setExtraStops(
+                    Array.from(
+                      { length: Math.max(0, f.draft.stops.length - 2) },
+                      () => "stop" + crypto.randomUUID(),
+                    ),
+                  );
+                  setFormKey((k) => k + 1);
+                }}
+                onClear={() => {
+                  setFilled(null);
+                  setExtraStops([]);
+                  setFormKey((k) => k + 1);
+                }}
+              />
+            )}
             <form
+              key={formKey}
               onSubmit={(e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
@@ -1413,6 +1451,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                     reference: f.get("reference"),
                     source: f.get("source"),
                     amountMinor: dollarsToMinor(String(f.get("amount"))),
+                    ...(filled ? { readId: filled.read.id } : {}),
                     stops: ["pickup", ...extraStops, "delivery"].map((key) => {
                       const zone = String(f.get(key + "Zone"));
                       const instant = appointmentToInstant(
@@ -1437,8 +1476,34 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                       payload,
                       key: crypto.randomUUID(),
                     };
-                  await api("loads", data, createRequest.current.key);
+                  const created = await api<{ id: string }>(
+                    "loads",
+                    data,
+                    createRequest.current.key,
+                  );
+                  if (filled) {
+                    // The reading only drafted the form; the original file
+                    // becomes the load's rate confirmation, through the
+                    // normal scanned, versioned upload. If that fails the
+                    // dialog stays open and Create retries both steps safely.
+                    try {
+                      await uploadDocumentFile(
+                        api,
+                        {
+                          carrier_id: String(data.carrierId),
+                          load_id: created.id,
+                          type: "rate_confirmation",
+                          idempotency_key: filled.attachKey,
+                        },
+                        filled.file,
+                        { demo },
+                      );
+                    } catch {
+                      throw new ApiError(502, "ATTACH_FAILED");
+                    }
+                  }
                   createRequest.current = null;
+                  setFilled(null);
                   setCreating(false);
                   await refreshAfterSave("Booked load created.");
                 });
@@ -1449,7 +1514,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 <select
                   name="carrier"
                   required
-                  defaultValue={carrier || undefined}
+                  value={createCarrier}
+                  onChange={(e) => {
+                    setCreateCarrier(e.target.value);
+                    // A reading belongs to one carrier; the values stay.
+                    setFilled(null);
+                  }}
                 >
                   {context.carriers
                     .filter((c) => c.role !== "driver")
@@ -1470,8 +1540,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                     name="reference"
                     maxLength={100}
                     placeholder="e.g. RL-1048"
+                    defaultValue={filled?.draft.reference}
                     required
                   />
+                  <DraftNote draft={filled?.draft ?? null} field="reference" />
                 </label>
                 <label>
                   Agreed rate (USD)
@@ -1481,9 +1553,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                       name="amount"
                       inputMode="decimal"
                       placeholder="2500.00"
+                      defaultValue={filled?.draft.amount}
                       required
                     />
                   </span>
+                  <DraftNote draft={filled?.draft ?? null} field="amount" />
                 </label>
               </div>
               <label>
@@ -1492,84 +1566,117 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   name="source"
                   maxLength={100}
                   placeholder="Broker or confirmation reference"
+                  defaultValue={filled?.draft.source}
                   required
                 />
+                <DraftNote draft={filled?.draft ?? null} field="source" />
               </label>
-              {["pickup", ...extraStops, "delivery"].map((kind, i) => (
-                <fieldset key={kind}>
-                  <legend>
-                    <span aria-hidden="true">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {kind === "pickup" || kind === "delivery"
-                      ? kind
-                      : `Stop ${i + 1}`}
-                  </legend>
-                  {kind !== "pickup" && kind !== "delivery" && (
-                    <div className="formGrid">
-                      <label>
-                        Stop type
-                        <select name={kind + "Kind"} defaultValue="delivery">
-                          <option value="pickup">Pickup</option>
-                          <option value="delivery">Delivery</option>
-                        </select>
-                      </label>
-                      <button
-                        type="button"
-                        className="textButton"
-                        aria-label={`Remove stop ${i + 1}`}
-                        onClick={() =>
-                          setExtraStops((s) => s.filter((v) => v !== kind))
-                        }
-                      >
-                        Remove stop
-                      </button>
-                    </div>
-                  )}
-                  <label>
-                    Address
-                    <input
-                      name={kind}
-                      maxLength={500}
-                      placeholder={
-                        kind === "delivery"
-                          ? "Delivery facility and city"
-                          : "Facility and city"
-                      }
-                      required
-                    />
-                  </label>
-                  <div className="formGrid">
+              {["pickup", ...extraStops, "delivery"].map((kind, i) => {
+                const stopDraft =
+                  filled?.draft.stops[
+                    kind === "delivery" ? filled.draft.stops.length - 1 : i
+                  ];
+                return (
+                  <fieldset key={kind}>
+                    <legend>
+                      <span aria-hidden="true">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      {kind === "pickup" || kind === "delivery"
+                        ? kind
+                        : `Stop ${i + 1}`}
+                    </legend>
+                    {kind !== "pickup" && kind !== "delivery" && (
+                      <div className="formGrid">
+                        <label>
+                          Stop type
+                          <select
+                            name={kind + "Kind"}
+                            defaultValue={
+                              filled?.draft.stops[i]?.kind ?? "delivery"
+                            }
+                          >
+                            <option value="pickup">Pickup</option>
+                            <option value="delivery">Delivery</option>
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          className="textButton"
+                          aria-label={`Remove stop ${i + 1}`}
+                          onClick={() =>
+                            setExtraStops((s) => s.filter((v) => v !== kind))
+                          }
+                        >
+                          Remove stop
+                        </button>
+                      </div>
+                    )}
                     <label>
-                      Appointment
+                      Address
                       <input
-                        name={kind + "Time"}
-                        type="datetime-local"
+                        name={kind}
+                        maxLength={500}
+                        placeholder={
+                          kind === "delivery"
+                            ? "Delivery facility and city"
+                            : "Facility and city"
+                        }
+                        defaultValue={
+                          filled?.draft.stops[
+                            kind === "delivery"
+                              ? filled.draft.stops.length - 1
+                              : i
+                          ]?.address
+                        }
                         required
                       />
+                      <DraftNote
+                        draft={filled?.draft ?? null}
+                        field={`stop${i + 1}_address`}
+                      />
                     </label>
-                    <label>
-                      Time zone
-                      <select
-                        name={kind + "Zone"}
-                        defaultValue="America/Chicago"
-                      >
-                        <option value="America/New_York">Eastern</option>
-                        <option value="America/Chicago">Central</option>
-                        <option value="America/Denver">Mountain</option>
-                        <option value="America/Phoenix">Arizona</option>
-                        <option value="America/Los_Angeles">Pacific</option>
-                        <option value="America/Anchorage">Alaska</option>
-                        <option value="Pacific/Honolulu">Hawaii</option>
-                      </select>
-                    </label>
-                  </div>
-                  <p className="helpText">
-                    Enter the appointment in this stop’s selected local time
-                    zone.
-                  </p>
-                </fieldset>
-              ))}
+                    <div className="formGrid">
+                      <label>
+                        Appointment
+                        <input
+                          name={kind + "Time"}
+                          type="datetime-local"
+                          defaultValue={stopDraft?.appointment}
+                          required
+                        />
+                        <DraftNote
+                          draft={filled?.draft ?? null}
+                          field={`stop${i + 1}_appointment`}
+                        />
+                      </label>
+                      <label>
+                        Time zone
+                        <select
+                          name={kind + "Zone"}
+                          defaultValue={stopDraft?.zone ?? "America/Chicago"}
+                        >
+                          <option value="America/New_York">Eastern</option>
+                          <option value="America/Chicago">Central</option>
+                          <option value="America/Denver">Mountain</option>
+                          <option value="America/Phoenix">Arizona</option>
+                          <option value="America/Los_Angeles">Pacific</option>
+                          <option value="America/Anchorage">Alaska</option>
+                          <option value="Pacific/Honolulu">Hawaii</option>
+                        </select>
+                        <DraftNote
+                          draft={filled?.draft ?? null}
+                          field={`stop${i + 1}_zone`}
+                        />
+                      </label>
+                    </div>
+                    <p className="helpText">
+                      Enter the appointment in this stop’s selected local time
+                      zone.
+                    </p>
+                  </fieldset>
+                );
+              })}
               {extraStops.length < 8 && (
                 <button
                   type="button"
