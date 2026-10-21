@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { UsersIcon } from "@phosphor-icons/react";
+import { StaffInvites } from "./staff-invites";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { Context } from "@/lib/contracts";
 
@@ -247,13 +248,42 @@ export function OrganizationSettings({
                     verified={a.email_verified}
                     mfa={a.mfa_enabled}
                   />
+                  {data.role === "owner" && a.role !== "owner" && (
+                    <button
+                      className="textButton"
+                      disabled={busy}
+                      aria-label={`Remove administrator ${a.name}`}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Remove ${a.name} as an administrator? Their carrier access is unchanged.`,
+                          )
+                        )
+                          void act(async () => {
+                            await api(
+                              "organizations/" + data.id + "/admins/remove",
+                              { user_id: a.id, reason: "Removed by owner" },
+                            );
+                            return `${a.name} is no longer an administrator.`;
+                          });
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               ))}
               <small className="opsMeta">
-                New organizations and additional administrators are set up by
-                your Relay operator (see the README).
+                New organizations are created by your Relay operator (see the
+                README). Invite teammates below.
               </small>
             </article>
+            <StaffInvites
+              organizationId={data.id}
+              isOwner={data.role === "owner"}
+              carriers={carriers}
+              onAuthError={onAuthError}
+            />
             {carriers.map(([carrierId, carrierName]) => (
               <article className="opsCard" key={carrierId}>
                 <div className="opsCardHeading">

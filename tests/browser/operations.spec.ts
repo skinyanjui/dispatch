@@ -618,3 +618,59 @@ test("files over 4 MB upload directly to the bucket and retry with the same key"
   expect(sessionBodies[0].sha256).toMatch(/^[a-f0-9]{64}$/);
   expect(sessionBodies[0].size_bytes).toBe(5 * 1024 * 1024 + 9);
 });
+
+test("an owner invites a dispatcher, who joins from the private link and sees only chosen carriers", async ({
+  page,
+  browser,
+}) => {
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("button", { name: "Organization", exact: true }).click();
+  const email = `dispatcher-${randomUUID().slice(0, 8)}@relay.test`;
+  const card = page.getByRole("article", { name: "Team invitations" });
+  await card.getByRole("button", { name: "Invite", exact: true }).click();
+  const form = card.getByRole("form", { name: "Invite teammate" });
+  await form.getByLabel("Name").fill("Taylor Dispatch");
+  await form.getByLabel("Email").fill(email);
+  const boxes = form.getByRole("checkbox");
+  for (let i = (await boxes.count()) - 1; i > 0; i--)
+    await boxes.nth(i).uncheck();
+  await form.getByRole("button", { name: "Create invitation" }).click();
+  const link = await card
+    .getByRole("textbox", { name: "Invitation link" })
+    .inputValue();
+  expect(link).toMatch(/\/join#[a-f0-9]{64}$/);
+  await expect(card).toContainText("Taylor Dispatch");
+  await expect(card).toContainText("Dispatcher");
+
+  const invitee = await browser.newContext({
+    baseURL: "http://localhost:3000",
+  });
+  const joinPage = await invitee.newPage();
+  await joinPage.goto(link);
+  await expect(joinPage.getByText("invited you as a dispatcher")).toBeVisible();
+  await joinPage.getByLabel("Password").fill("fictional-browser-password");
+  await joinPage.getByRole("button", { name: "Join workspace" }).click();
+  await expect(
+    joinPage.getByRole("heading", { name: "Welcome aboard." }),
+  ).toBeVisible();
+  await joinPage.getByRole("link", { name: "Open workspace" }).click();
+  await expect(
+    joinPage.getByRole("button", { name: "Account menu" }),
+  ).toBeVisible();
+  const me = await (await joinPage.request.get("/api/me")).json();
+  expect(me.carriers).toHaveLength(1);
+  expect(me.carriers[0].role).toBe("dispatcher");
+  expect(
+    me.organizations.filter((o: { role?: string }) => o.role),
+  ).toHaveLength(0);
+  await invitee.close();
+  // The used link is gone from the pending list.
+  await page.reload();
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("button", { name: "Organization", exact: true }).click();
+  await expect(
+    page.getByRole("article", { name: "Team invitations" }),
+  ).not.toContainText(email);
+});

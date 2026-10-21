@@ -6,7 +6,7 @@ import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
 type Invitation = {
   name: string;
   email: string;
-  role: "driver" | "carrier-manager";
+  role: "driver" | "carrier-manager" | "dispatcher" | "admin";
   carrier_name: string;
   account_exists: boolean;
   signed_in: boolean;
@@ -50,30 +50,48 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
             <p className="setupIntro">
               {invitation?.role === "driver"
                 ? "Your assigned loads and check-ins are in one place. Your dispatcher will handle booking and assignments."
-                : "Your carrier workspace is ready. Invite drivers when you are ready to bring the team in."}
+                : invitation?.role === "dispatcher" ||
+                    invitation?.role === "admin"
+                  ? "Your dispatch workspace is ready. Loads, exceptions and messages for your carriers are one click away."
+                  : "Your carrier workspace is ready. Invite drivers when you are ready to bring the team in."}
             </p>
             <a
               className="primary full setupLink"
               href={
                 (demo ? "/demo" : "/") +
-                (invitation?.role === "driver" ? "" : "?view=carriers")
+                (invitation?.role === "carrier-manager" ? "?view=carriers" : "")
               }
             >
               {invitation?.role === "driver"
                 ? "Open my loads"
-                : "Open carrier workspace"}
+                : invitation?.role === "dispatcher" ||
+                    invitation?.role === "admin"
+                  ? "Open workspace"
+                  : "Open carrier workspace"}
               <ArrowRightIcon size={16} />
             </a>
           </>
         ) : invitation ? (
           <>
             <p className="eyebrow">
-              {invitation.role === "driver" ? "DRIVER SETUP" : "CARRIER SETUP"}
+              {invitation.role === "driver"
+                ? "DRIVER SETUP"
+                : invitation.role === "carrier-manager"
+                  ? "CARRIER SETUP"
+                  : "TEAM SETUP"}
             </p>
             <h1>One step to join.</h1>
             <p className="setupIntro">
-              {invitation.carrier_name} invited you as a{" "}
-              {invitation.role === "driver" ? "driver" : "carrier manager"}.
+              {invitation.carrier_name} invited you as{" "}
+              {
+                {
+                  driver: "a driver",
+                  "carrier-manager": "a carrier manager",
+                  dispatcher: "a dispatcher",
+                  admin: "an administrator",
+                }[invitation.role]
+              }
+              .
             </p>
             <div className="joinIdentity">
               <strong>{invitation.name}</strong>
@@ -158,7 +176,9 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
                     </small>
                   </label>
                 )}
-                {invitation.role === "driver" && (
+                {(invitation.role === "driver" ||
+                  invitation.role === "dispatcher" ||
+                  invitation.role === "admin") && (
                   <details className="setupOptional">
                     <summary>Contact details · optional</summary>
                     <label>

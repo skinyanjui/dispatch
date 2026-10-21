@@ -361,7 +361,7 @@ export async function completeMfaLogin(input: unknown) {
 
 export async function accountSummary(user: string) {
   const { rows } = await pool.query(
-    `SELECT u.name,u.email,u.email_verified_at IS NOT NULL email_verified,u.mfa_enabled_at IS NOT NULL mfa_enabled,
+    `SELECT u.name,u.email,u.phone,u.email_verified_at IS NOT NULL email_verified,u.mfa_enabled_at IS NOT NULL mfa_enabled,
       (SELECT count(*)::int FROM mfa_recovery_codes WHERE user_id=u.id AND used_at IS NULL) recovery_codes_remaining,
       (SELECT COALESCE(json_agg(json_build_object('id',o.id,'name',o.name,'role',om.role) ORDER BY o.name),'[]')
         FROM organization_members om JOIN organizations o ON o.id=om.organization_id WHERE om.user_id=u.id) organizations
@@ -369,6 +369,23 @@ export async function accountSummary(user: string) {
     [user],
   );
   return { ...rows[0], mfa_available: encryptionAvailable() };
+}
+
+export async function saveProfile(user: string, input: unknown) {
+  const data = z
+    .object({
+      name: z.string().trim().min(1).max(120),
+      phone: z.string().trim().max(40).default(""),
+    })
+    .strict()
+    .parse(input);
+  await pool.query("UPDATE users SET name=$2,phone=$3 WHERE id=$1", [
+    user,
+    data.name,
+    data.phone,
+  ]);
+  await audit(user, "profile.updated", user);
+  return { ok: true };
 }
 
 // ---------- Organization setup and team ----------

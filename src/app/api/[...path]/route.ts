@@ -49,7 +49,14 @@ import {
   requestEmailVerification,
   requestPasswordReset,
   saveOrganization,
+  saveProfile,
 } from "@/lib/account";
+import {
+  inviteStaff,
+  listStaffInvites,
+  removeOrganizationAdmin,
+  revokeStaffInvite,
+} from "@/lib/staff";
 import {
   deliverDue,
   notificationLog,
@@ -404,6 +411,10 @@ async function handle(req: NextRequest) {
               req.cookies.get("relay_session")?.value || "",
             ),
           );
+        if (route === "profile")
+          return NextResponse.json(
+            await saveProfile(user.id, await readJson(req)),
+          );
         if (route === "verify-email/request")
           return NextResponse.json(
             await requestEmailVerification(
@@ -427,6 +438,33 @@ async function handle(req: NextRequest) {
       const org = z.uuid().parse(path[1]);
       if (path.length === 2 && req.method === "GET")
         return NextResponse.json(await organization(user.id, org));
+      if (path[2] === "invites") {
+        if (path.length === 3 && req.method === "GET")
+          return NextResponse.json(await listStaffInvites(user.id, org));
+        if (path.length === 3 && req.method === "POST")
+          return NextResponse.json(
+            await inviteStaff(
+              user.id,
+              org,
+              await readJson(req),
+              req.headers.get("origin") || undefined,
+            ),
+            { status: 201 },
+          );
+        if (path.length === 5 && path[4] === "revoke" && req.method === "POST")
+          return NextResponse.json(
+            await revokeStaffInvite(user.id, org, z.uuid().parse(path[3])),
+          );
+      }
+      if (
+        path.length === 4 &&
+        path[2] === "admins" &&
+        path[3] === "remove" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await removeOrganizationAdmin(user.id, org, await readJson(req)),
+        );
       if (path.length === 3 && path[2] === "profile" && req.method === "POST")
         return NextResponse.json(
           await saveOrganization(user.id, org, await readJson(req)),

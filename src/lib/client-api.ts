@@ -108,6 +108,10 @@ const messages: Record<string, string> = {
   UPLOAD_CHECKSUM_MISMATCH:
     "The stored file doesn't match the selected file. Choose the file again.",
   UPLOAD_EXPIRED: "This upload expired. Choose the file again to restart it.",
+  OWNER_REQUIRED: "Only an organization owner can do that.",
+  ALREADY_MEMBER: "This person already has that access.",
+  CARRIER_NOT_IN_ORGANIZATION: "Choose carriers from this organization.",
+  OWNER_NOT_REMOVABLE: "Owners can't be removed here.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

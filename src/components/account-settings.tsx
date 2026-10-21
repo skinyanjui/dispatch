@@ -6,6 +6,7 @@ import { ApiError, describe, useApi } from "@/lib/client-api";
 type Account = {
   name: string;
   email: string;
+  phone?: string;
   email_verified: boolean;
   mfa_enabled: boolean;
   mfa_available: boolean;
@@ -82,6 +83,45 @@ export function AccountSettings({
       {account && (
         <div className="billingColumns">
           <div className="opsList">
+            <form
+              className="opsCard opsForm"
+              aria-label="Profile"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                void act(async () => {
+                  await api("account/profile", {
+                    name: String(f.get("name")).trim(),
+                    phone: String(f.get("phone")).trim(),
+                  });
+                  return "Profile saved.";
+                });
+              }}
+            >
+              <h4>Profile</h4>
+              <label>
+                Name
+                <input
+                  name="name"
+                  required
+                  maxLength={120}
+                  defaultValue={account.name}
+                />
+              </label>
+              <label>
+                Phone <small>(shown to teammates so they can reach you)</small>
+                <input
+                  name="phone"
+                  type="tel"
+                  maxLength={40}
+                  autoComplete="tel"
+                  defaultValue={account.phone || ""}
+                />
+              </label>
+              <button className="secondary" disabled={busy}>
+                Save profile
+              </button>
+            </form>
             <article className="opsCard">
               <div className="opsCardHeading">
                 <h4>Email address</h4>

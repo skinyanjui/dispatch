@@ -5,6 +5,7 @@ import { pool, transaction } from "./db";
 import { digest, hashNewPassword, HttpError } from "./auth";
 import { insertReview } from "./documents";
 import { appOrigin, enqueueForEmail } from "./notifications";
+import { acceptStaffInvite, inspectStaffInvite, isStaffInvite } from "./staff";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const email = z
@@ -76,7 +77,7 @@ export async function emit(
     id,
   ]);
 }
-async function once(
+export async function once(
   c: PoolClient,
   user: string,
   idempotencyKey: string,
@@ -437,6 +438,8 @@ export async function inspectInvite(
   user?: { id: string; email: string },
 ) {
   const data = z.object({ token }).strict().parse(input);
+  const staff = await inspectStaffInvite(data.token, user);
+  if (staff) return staff;
   const { rows } = await pool.query(
     `SELECT i.name,i.email,i.role,i.expires_at,c.name carrier_name,
     EXISTS(SELECT 1 FROM users u WHERE u.email=i.email) account_exists
@@ -461,6 +464,7 @@ export async function acceptInvite(
     })
     .strict()
     .parse(input);
+  if (await isStaffInvite(data.token)) return acceptStaffInvite(data, user);
   return transaction(async (c) => {
     const target = await c.query(
       "SELECT carrier_id FROM onboarding_invites WHERE token_hash=$1",
