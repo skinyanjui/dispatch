@@ -38,6 +38,7 @@ import { ExceptionQueue } from "@/components/exception-queue";
 import { BillingWorkspace } from "@/components/billing-workspace";
 import { NotificationCenter } from "@/components/notification-center";
 import { AccountSettings } from "@/components/account-settings";
+import { ContactsDirectory } from "@/components/contacts-directory";
 import { OrganizationSettings } from "@/components/organization-settings";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
@@ -1027,6 +1028,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               )}
             </section>
           </>
+        ) : section === "contacts" ? (
+          <ContactsDirectory offline={offline} onAuthError={handleError} />
         ) : section === "account" ? (
           <AccountSettings onAuthError={handleError} />
         ) : section === "organization" ? (

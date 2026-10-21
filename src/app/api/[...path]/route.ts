@@ -52,6 +52,13 @@ import {
   saveProfile,
 } from "@/lib/account";
 import {
+  archiveContact,
+  createContact,
+  directory,
+  setFavorite,
+  updateContact,
+} from "@/lib/contacts";
+import {
   inviteStaff,
   listStaffInvites,
   removeOrganizationAdmin,
@@ -484,6 +491,32 @@ async function handle(req: NextRequest) {
           await readJson(req),
         ),
       );
+    if (path[0] === "contacts") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await directory(user.id, req.nextUrl.searchParams),
+        );
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await createContact(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      if (path.length === 2 && path[1] === "favorites" && req.method === "POST")
+        return NextResponse.json(
+          await setFavorite(user.id, await readJson(req)),
+        );
+      if (path.length >= 2 && req.method === "POST") {
+        const contactId = z.uuid().parse(path[1]);
+        if (path.length === 2)
+          return NextResponse.json(
+            await updateContact(user.id, contactId, await readJson(req)),
+          );
+        if (path.length === 3 && path[2] === "archive")
+          return NextResponse.json(
+            await archiveContact(user.id, contactId, await readJson(req)),
+          );
+      }
+    }
     if (path[0] === "notifications") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(await notificationLog(user.id));

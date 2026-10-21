@@ -6,6 +6,7 @@ import type {
   Load,
 } from "./contracts";
 import { feeMinor } from "./entry";
+import type { ContactKind, DirectoryEntry } from "./contact-types";
 import {
   stopTimeError,
   type StopEvent,
@@ -33,7 +34,7 @@ import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
 // password. Shared production components provide the interface and controls.
-const storageKey = "relay-current-demo-v3";
+const storageKey = "relay-current-demo-v4";
 type Role = "dispatcher" | "carrier-manager" | "driver";
 type Invite = {
   token: string;
@@ -54,6 +55,8 @@ type DemoDocument = DocumentVersion & {
   type: DocumentType;
 };
 type State = {
+  contacts: DirectoryEntry[];
+  favorites: string[];
   notifications: NotificationLogEntry[];
   preferences: Record<OptionalKind, boolean>;
   packets: Record<string, BillingPacket>;
@@ -222,6 +225,28 @@ function fixtures(): State {
     carriers,
     loads,
     invites: [],
+    favorites: [],
+    contacts: [
+      {
+        key: "contact:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+        group: "external",
+        name: "Morgan Brooks",
+        detail: "Sample Freight Brokers · Broker",
+        carriers: [],
+        email: "morgan@broker.example.test",
+        phone: "(555) 010-0142",
+        notes: "Fictional sample contact.",
+        favorite: false,
+        contact: {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+          kind: "broker",
+          company: "Sample Freight Brokers",
+          carrier_id: null,
+          version: 1,
+          editable: true,
+        },
+      },
+    ],
     notifications: [],
     preferences: Object.fromEntries(
       optionalKinds.map((k) => [k, true]),
@@ -675,6 +700,169 @@ export function createDemoApi() {
     event(l, "billing.carrier_receipt_recorded");
     return { id: packet.receipts.at(-1)!.id };
   };
+  const contactsRequest = (
+    path: string[],
+    body: Record<string, unknown> | undefined,
+    url: URL,
+  ) => {
+    const role = state.viewer.role;
+    const person = (
+      key: string,
+      group: DirectoryEntry["group"],
+      name: string,
+      detail: string,
+      email: string,
+      phone: string,
+    ): DirectoryEntry => ({
+      key,
+      group,
+      name,
+      detail,
+      carriers: allowed().map((c) => ({
+        id: c.carrier.id,
+        name: c.carrier.name,
+      })),
+      email,
+      phone,
+      favorite: state.favorites.includes(key),
+    });
+    if (path[1] === "favorites" && body) {
+      const key = String(body.key);
+      state.favorites = state.favorites.filter((k) => k !== key);
+      if (body.favorite) state.favorites.push(key);
+      return { key, favorite: !!body.favorite };
+    }
+    const writer = role !== "driver";
+    if (path.length === 1 && body) {
+      if (!writer) fail("NOT_FOUND", 404);
+      const id = crypto.randomUUID();
+      state.contacts.push({
+        key: "contact:" + id,
+        group: "external",
+        name: String(body.name),
+        detail: [body.company, String(body.kind)].filter(Boolean).join(" · "),
+        carriers: [],
+        email: String(body.email || ""),
+        phone: String(body.phone || ""),
+        notes: String(body.notes || ""),
+        favorite: false,
+        contact: {
+          id,
+          kind: body.kind as ContactKind,
+          company: String(body.company || ""),
+          carrier_id: (body.carrier_id as string) || null,
+          version: 1,
+          editable: true,
+        },
+      });
+      return { id, version: 1 };
+    }
+    if (path.length >= 2 && body) {
+      const found =
+        state.contacts.find((c) => c.contact?.id === path[1]) ||
+        fail("NOT_FOUND", 404);
+      if (path[2] === "archive")
+        state.contacts = state.contacts.filter((c) => c !== found);
+      else {
+        Object.assign(found, {
+          name: String(body.name),
+          email: String(body.email || ""),
+          phone: String(body.phone || ""),
+          notes: String(body.notes || ""),
+        });
+        found.contact!.version++;
+      }
+      return { ok: true };
+    }
+    const team: DirectoryEntry[] = [];
+    if (role !== "dispatcher")
+      team.push(
+        person(
+          "user:alex",
+          "team",
+          "Alex Morgan",
+          "Dispatcher",
+          "alex@example.test",
+          "(555) 010-0100",
+        ),
+      );
+    if (role !== "carrier-manager")
+      team.push(
+        person(
+          "user:casey",
+          "team",
+          "Casey Lane",
+          "Carrier manager",
+          "casey@example.test",
+          "(555) 010-0111",
+        ),
+      );
+    const drivers =
+      role === "driver"
+        ? []
+        : allowed().flatMap((c) =>
+            c.drivers.map((d) => ({
+              ...person(
+                "driver:" + d.id,
+                "driver",
+                d.name,
+                "Driver",
+                d.email || "",
+                d.phone || "(555) 010-0122",
+              ),
+              carriers: [{ id: c.carrier.id, name: c.carrier.name }],
+            })),
+          );
+    const carriers =
+      role === "dispatcher"
+        ? allowed().map((c) => ({
+            ...person(
+              "carrier:" + c.carrier.id,
+              "carrier",
+              c.carrier.name,
+              "Carrier · " + (c.profile?.contact_name || ""),
+              c.profile?.contact_email || "",
+              c.profile?.phone || "",
+            ),
+            carriers: [{ id: c.carrier.id, name: c.carrier.name }],
+          }))
+        : [];
+    const externals = role === "driver" ? [] : state.contacts;
+    const q = (url.searchParams.get("q") || "").toLowerCase();
+    const digits = q.replace(/\D/g, "");
+    const group = url.searchParams.get("group");
+    const entries = [...team, ...drivers, ...carriers, ...externals]
+      .map((e) => ({ ...e, favorite: state.favorites.includes(e.key) }))
+      .filter(
+        (e) =>
+          (!group || e.group === group) &&
+          (url.searchParams.get("favorites") !== "true" || e.favorite) &&
+          (!q ||
+            `${e.name} ${e.detail} ${e.email} ${e.phone}`
+              .toLowerCase()
+              .includes(q) ||
+            (digits.length >= 3 &&
+              e.phone.replace(/\D/g, "").includes(digits))),
+      )
+      .sort(
+        (a, b) =>
+          Number(b.favorite) - Number(a.favorite) ||
+          a.name.localeCompare(b.name),
+      );
+    return {
+      entries,
+      truncated: false,
+      can_add: writer,
+      carriers: allowed().map((c) => ({
+        id: c.carrier.id,
+        name: c.carrier.name,
+        organization_id: org,
+      })),
+      manager_carriers:
+        role === "carrier-manager" ? allowed().map((c) => c.carrier.id) : [],
+      organizations: role === "dispatcher" ? [org] : [],
+    };
+  };
   const implementation = async (
     path: string,
     body?: unknown,
@@ -684,6 +872,7 @@ export function createDemoApi() {
     const data = body as Record<string, unknown>;
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
+    if (p[0] === "contacts") return contactsRequest(p, data, url);
     if (p[0] === "account") {
       if (!body && p.length === 1)
         return {

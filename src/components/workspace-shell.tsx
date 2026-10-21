@@ -17,6 +17,7 @@ import {
   GearSixIcon,
   ListIcon,
   CaretUpDownIcon,
+  AddressBookIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
@@ -27,7 +28,8 @@ export type WorkspaceSection =
   | "billing"
   | "notifications"
   | "account"
-  | "organization";
+  | "organization"
+  | "contacts";
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
@@ -38,6 +40,7 @@ export const sectionTitles: Record<
   notifications: "Notifications",
   account: "Account",
   organization: "Organization",
+  contacts: "Contacts",
 };
 export function Brand() {
   return (
@@ -147,6 +150,7 @@ export function WorkspaceShell({
   }[] = [
     { key: "loads", label: "Loads", Icon: TruckIcon, show: true },
     { key: "exceptions", label: "Exceptions", Icon: WarningIcon, show: true },
+    { key: "contacts", label: "Contacts", Icon: AddressBookIcon, show: true },
     {
       key: "carriers",
       label: "Carriers",

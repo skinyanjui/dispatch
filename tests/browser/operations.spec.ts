@@ -674,3 +674,95 @@ test("an owner invites a dispatcher, who joins from the private link and sees on
     page.getByRole("article", { name: "Team invitations" }),
   ).not.toContainText(email);
 });
+
+test("contacts: search by phone digits, add a broker, quick actions and favorites", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contacts", exact: true }).click();
+  const region = page.getByRole("region", { name: "Contacts" });
+  const unique = randomUUID().slice(0, 6);
+  await region.getByRole("button", { name: "Add contact" }).click();
+  const form = region.getByRole("form", { name: "Add contact" });
+  await form.getByLabel("Name").fill("Riley Broker " + unique);
+  await form.getByLabel("Company").fill("Browser Test Brokerage");
+  await form
+    .getByLabel("Phone")
+    .fill("(214) 555-0" + String(Math.floor(100 + Math.random() * 899)));
+  await form.getByLabel("Email").fill(`riley-${unique}@broker.test`);
+  const phone = await form.getByLabel("Phone").inputValue();
+  await form.getByRole("button", { name: "Add contact" }).click();
+  const row = region.getByRole("article", {
+    name: new RegExp("Riley Broker " + unique),
+  });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("Browser Test Brokerage · Broker");
+  // Quick connect links open on the user's own device.
+  const digits = phone.replace(/\D/g, "");
+  await expect(row.getByRole("link", { name: /^Call Riley/ })).toHaveAttribute(
+    "href",
+    "tel:" + digits,
+  );
+  await expect(row.getByRole("link", { name: /^Text Riley/ })).toHaveAttribute(
+    "href",
+    "sms:" + digits,
+  );
+  await expect(row.getByRole("link", { name: /^Email Riley/ })).toHaveAttribute(
+    "href",
+    `mailto:riley-${unique}@broker.test`,
+  );
+  // Search finds it by company, by email and by differently formatted digits.
+  const search = region.getByRole("searchbox", { name: "Search contacts" });
+  for (const term of [
+    "Browser Test Brokerage",
+    `riley-${unique}`,
+    digits.slice(3),
+  ]) {
+    await search.fill(term);
+    await expect(
+      region.getByRole("article", {
+        name: new RegExp("Riley Broker " + unique),
+      }),
+    ).toBeVisible();
+  }
+  await search.fill("zzz-no-such-person");
+  await expect(
+    region.getByRole("heading", { name: "No matching contacts" }),
+  ).toBeVisible();
+  await search.fill("");
+  // Favorites move to the top and persist.
+  await region
+    .getByRole("button", {
+      name: new RegExp("Add Riley Broker " + unique + " to favorites"),
+    })
+    .click();
+  await expect(
+    region.getByText("Favorites", { exact: true }).first(),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Contacts", exact: true }).click();
+  await region.getByLabel("Favorites").check();
+  await expect(
+    region.getByRole("article", { name: new RegExp("Riley Broker " + unique) }),
+  ).toBeVisible();
+});
+
+test("a driver can reach dispatch from Contacts but sees no brokers or other drivers", async ({
+  page,
+}) => {
+  await login(page, "driver@relay.test");
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contacts", exact: true }).click();
+  const region = page.getByRole("region", { name: "Contacts" });
+  await expect(
+    region.getByRole("article", { name: /Alex Morgan, Dispatcher/ }),
+  ).toBeVisible();
+  await expect(region.getByRole("button", { name: "Add contact" })).toHaveCount(
+    0,
+  );
+  await expect(region.getByRole("article", { name: /Broker/ })).toHaveCount(0);
+  await expect(region.getByRole("article", { name: /, Driver/ })).toHaveCount(
+    0,
+  );
+});

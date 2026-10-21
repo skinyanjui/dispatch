@@ -228,3 +228,171 @@
 .stopActions .textButton {
   font-size: 12px;
 }
+.contactFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.contactFilters > label {
+  margin: 0;
+}
+.contactFilters select {
+  width: auto;
+  min-height: 32px;
+}
+.contactFilters .directorySearch {
+  flex: 1 1 260px;
+  width: auto;
+}
+.contactList {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+.contactList:empty {
+  display: none;
+}
+.contactRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+.contactRow + .contactRow {
+  border-top: 1px solid var(--border);
+}
+.contactMain {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.contactMain strong {
+  font-weight: 500;
+  font-size: 13px;
+}
+.contactLines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.contactActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.iconAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 7px;
+  color: var(--subtle);
+  background: transparent;
+  border: 0;
+}
+.iconAction:hover {
+  background: var(--sidebar-hover);
+  color: var(--ink);
+}
+.iconAction.starred {
+  color: #c08a00;
+}
+.contactFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.contactFilters > label {
+  margin: 0;
+}
+.contactFilters select {
+  width: auto;
+  min-height: 32px;
+}
+.contactFilters .directorySearch {
+  flex: 1 1 260px;
+  width: auto;
+}
+.contactList {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+.contactList:empty {
+  display: none;
+}
+.contactRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+.contactRow + .contactRow {
+  border-top: 1px solid var(--border);
+}
+.contactMain {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.contactMain strong {
+  font-weight: 500;
+  font-size: 13px;
+}
+.contactLines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.contactActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.iconAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 7px;
+  color: var(--subtle);
+  background: transparent;
+  border: 0;
+}
+.iconAction:hover {
+  background: var(--sidebar-hover);
+  color: var(--ink);
+}
+.iconAction.starred {
+  color: #c08a00;
+}
+.contactMore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 14px;
+}
+.contactMore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 14px;
+}
