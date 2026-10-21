@@ -26,6 +26,8 @@
     "url": "git+https://github.com/skinyanjui/dispatch.git"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
+    "@phosphor-icons/react": "^2.1.10",
     "next": "^16.4.2",
     "pg": "^8.23.1",
     "react": "^19.3.1",

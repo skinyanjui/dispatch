@@ -38,7 +38,7 @@ Integration tests write fictional fixtures to the selected database. Use an isol
 ## Server contracts
 
 - `POST /api/login`, `POST /api/logout`, `GET /api/me`: opaque, hashed server sessions (12-hour expiry). HttpOnly, SameSite Strict cookies; Secure defaults on in production. Local HTTP production-mode testing can explicitly use `COOKIE_SECURE=false`; deployed HTTPS must use true.
-- `GET /api/loads?carrier_id=&status=&q=&cursor=`: carrier/assigned-driver scope, 25-record pages.
+- `GET /api/loads?carrier_id=&status=&q=&cursor=`: carrier/assigned-driver scope, 25-record pages with an opaque cursor.
 - `POST /api/loads`: `Idempotency-Key` required; carrierId, reference, source, integer amountMinor and two ordered stops (pickup/delivery), each with address, IANA timezone and ISO-offset windowStart/windowEnd. Verified effective dispatch agreement required.
 - `GET /api/loads/:id`: scoped load, stops, assignment, append-only timeline.
 - `POST /api/loads/:id/assign`: driverId + expected version; same carrier enforced in app and database.
@@ -52,8 +52,14 @@ The previous static build emitted `dist/`, while Vercel expected `public/`, caus
 
 Before deploying the backend, configure an authenticated PostgreSQL connection as `DATABASE_URL`, run migrations through a controlled release job, and set `COOKIE_SECURE=true` and `APP_ORIGIN` to the canonical HTTPS origin. Do not run fictional seed against production. Builds do not require database access, but login and data operations do. No deployment is performed by these instructions.
 
+## Workspace and audit
+
+The light Board/List workspace adapts the user-supplied macro.com screenshot: compact toolbar, stage columns, bordered cards, restrained colors and a slide-over load inspector. Views share server-backed records; cards do not drag loads into a new status. Use Filter for carrier/milestone scope and Command/Ctrl+K to focus search. Counters reflect the records currently shown. Session expiry clears the workspace and returns to sign-in. Retrying a failed create preserves the idempotency key for unchanged entries.
+
+See [application audit](docs/audits/2026-10-20-application-audit.md) for findings, browser evidence, fixes and limitations, and [visual QA](design-qa.md) for the screenshot adaptation review. Migration 002 adds shared login-attempt storage and indexes; migrate before starting the updated server. Assignment now requires a current verified carrier dispatch agreement. Existing idempotency retries remain valid after an agreement expires because they do not create or assign new freight.
+
 ## Current limits and next work
 
-This is a reviewable foundation, not a completed production TMS. Stop entry currently supports one pickup and one delivery, and the UI captures appointment instants. Sessions support login/logout; invitations, password reset, MFA and session cleanup are not implemented. Login throttling is process-local and must be replaced with shared throttling before multiple instances. Carrier agreements, users and memberships are provisioned through QA seed only; add audited administrative workflows before real use. Database tenant filtering is application-enforced, with relational assignment constraints; independent security review and database role separation are still needed. Event/audit triggers prevent updates/deletes by ordinary statements, not privileged database administrators. No uploads, exceptions, invoicing, outbox worker, monitoring integration or live tracking is implemented. Queue statistics describe the current loaded page.
+This is a reviewable foundation, not a completed production TMS. Stop entry currently supports one pickup and one delivery. Enter appointments in each stop’s selected local time zone; ambiguous or nonexistent daylight saving times are rejected. Rates are entered in dollars and converted to integer cents without floating point. Sessions support login/logout; invitations, password reset, MFA and session cleanup are not implemented. Login throttling is shared through PostgreSQL (eight attempts per identity per minute); add trusted edge/IP controls to limit distributed abuse and account lockout before public rollout. Carrier agreements, users and memberships are provisioned through QA seed only; add audited administrative workflows before real use. Database tenant filtering is application-enforced, with relational assignment constraints; independent security review and database role separation are still needed. Event/audit triggers prevent updates/deletes by ordinary statements, not privileged database administrators. No uploads, exceptions, invoicing, outbox worker, monitoring integration or live tracking is implemented. Queue statistics describe the current loaded page.
 
 See `docs/build-plan.md`, `docs/product-requirements.md`, and `docs/decisions/0002-foundation.md` for design context and remaining phases. Static prototype documentation is retained in `docs/prototype-readme.md`.

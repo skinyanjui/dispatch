@@ -1,56 +1,68 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from "react";
-type Load = {
-  id: string;
-  reference: string;
-  carrier_id: string;
-  carrier_name: string;
-  stage: string;
-  amount_minor: string;
-  pickup: string;
-  delivery: string;
-  version: number;
-  stops?: {
-    kind: string;
-    address: string;
-    window_start: string;
-    timezone: string;
-  }[];
-  events?: { id: string; type: string; created_at: string }[];
-  assignment?: { name: string } | null;
+import {
+  SquaresFourIcon,
+  ListIcon,
+  PlusCircleIcon,
+  MagnifyingGlassIcon,
+  FunnelSimpleIcon,
+  ArrowClockwiseIcon,
+  ArrowRightIcon,
+  ArrowDownIcon,
+  BuildingsIcon,
+  TruckIcon,
+  StackIcon,
+  SignOutIcon,
+  XIcon,
+  CircleIcon,
+  CheckIcon,
+  ArrowUpRightIcon,
+  ClockIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react";
+import { Modal } from "@/components/modal";
+import {
+  stages,
+  stageLabels,
+  type Load,
+  type Context,
+  type Queue,
+} from "@/lib/contracts";
+import { dollarsToMinor, appointmentToInstant, formatMoney } from "@/lib/entry";
+
+const messages: Record<string, string> = {
+  VERSION_CONFLICT:
+    "Someone updated this load. Refresh its details to review the latest version before retrying.",
+  INVALID_CREDENTIALS: "Email or password is incorrect.",
+  SERVICE_UNAVAILABLE: "The workspace is unavailable. Please retry.",
+  CARRIER_AUTHORIZATION_REQUIRED:
+    "This carrier needs a verified, current dispatch agreement before booking or assignment.",
+  DUPLICATE_REFERENCE: "This carrier already has a load with that reference.",
+  ASSIGN_DRIVER_FIRST: "Assign an authorized driver before dispatching.",
+  VALIDATION_ERROR:
+    "Check your entries. Pickup must precede delivery, and both appointments need a valid time zone.",
+  TRY_AGAIN_LATER: "Too many sign-in attempts. Please try again in one minute.",
+  NOT_FOUND: "This load is unavailable or outside your access.",
+  AUTH_REQUIRED: "Please sign in to continue.",
+  SESSION_EXPIRED: "Your session expired. Sign in again to continue.",
+  INVALID_CURSOR: "This queue has changed. Refresh the view.",
+  DRIVER_CARRIER_MISMATCH: "Choose a driver authorized by this carrier.",
 };
-type Context = {
-  user: { name: string };
-  carriers: { id: string; name: string; role: string }[];
-  drivers: { id: string; name: string; carrier_id: string }[];
-};
-function explainError(code: string) {
-  return (
-    (
-      {
-        VERSION_CONFLICT:
-          "This load changed. Close and reopen its details, then try again.",
-        INVALID_CREDENTIALS: "Email or password is incorrect.",
-        SERVICE_UNAVAILABLE:
-          "The service is unavailable. Check your connection and retry.",
-        CARRIER_AUTHORIZATION_REQUIRED:
-          "This carrier needs a verified, effective dispatch agreement before booking.",
-        DUPLICATE_REFERENCE:
-          "This carrier already has a load with that reference.",
-        ASSIGN_DRIVER_FIRST: "Assign an authorized driver before dispatching.",
-        VALIDATION_ERROR:
-          "Check the load details: pickup must precede delivery, the time zone must be valid, and the rate must be whole cents.",
-        TRY_AGAIN_LATER:
-          "Too many sign-in attempts. Please try again in a minute.",
-        NOT_FOUND: "This record is unavailable or outside your carrier access.",
-        AUTH_REQUIRED: "Please sign in to continue.",
-        SESSION_EXPIRED: "Your session expired. Please sign in again.",
-      } as Record<string, string>
-    )[code] || code
-  );
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    code: string,
+  ) {
+    super(code);
+  }
 }
-async function api(path: string, body?: unknown, key?: string) {
-  const r = await fetch("/api/" + path, {
+async function api<T>(
+  path: string,
+  body?: unknown,
+  key?: string,
+  signal?: AbortSignal,
+): Promise<T> {
+  const response = await fetch("/api/" + path, {
     method: body ? "POST" : "GET",
     headers: body
       ? {
@@ -60,129 +72,212 @@ async function api(path: string, body?: unknown, key?: string) {
       : {},
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
+    signal,
   });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || "Request failed");
-  return data;
+  const data = await response.json();
+  if (!response.ok)
+    throw new ApiError(response.status, data.error || "SERVICE_UNAVAILABLE");
+  return data as T;
 }
-function Modal({
-  children,
-  label,
-  onClose,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog?.showModal();
-    return () => dialog?.close();
-  }, []);
+function describe(error: string) {
+  return messages[error] || error;
+}
+function Brand() {
   return (
-    <dialog ref={ref} className="overlay" aria-label={label} onCancel={onClose}>
-      {children}
-    </dialog>
+    <span className="brand">
+      <StackIcon size={21} weight="bold" aria-hidden="true" />
+      relay<span className="brandPeriod">.</span>
+    </span>
   );
 }
+const eventLabels: Record<string, string> = {
+  "load.created": "Load created",
+  "load.assign": "Driver assigned",
+  "load.milestones": "Milestone recorded",
+};
+
 export default function Workspace() {
   const [context, setContext] = useState<Context | null>(null),
     [ready, setReady] = useState(false),
     [loads, setLoads] = useState<Load[]>([]),
     [selected, setSelected] = useState<Load | null>(null),
     [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(true),
     [q, setQ] = useState(""),
     [carrier, setCarrier] = useState(""),
     [status, setStatus] = useState(""),
     [creating, setCreating] = useState(false),
     [cursor, setCursor] = useState<string | null>(null),
-    [offline, setOffline] = useState(false);
+    [offline, setOffline] = useState(false),
+    [view, setView] = useState<"board" | "list">("board"),
+    [filters, setFilters] = useState(false),
+    [updated, setUpdated] = useState<Date | null>(null);
+  const search = useRef<HTMLInputElement>(null),
+    createRequest = useRef<{ payload: string; key: string } | null>(null),
+    revision = useRef(0),
+    active = useRef(false);
+  const query = useCallback(
+    () =>
+      new URLSearchParams({
+        ...(q ? { q } : {}),
+        ...(carrier ? { carrier_id: carrier } : {}),
+        ...(status ? { status } : {}),
+      }),
+    [q, carrier, status],
+  );
+  const handleError = useCallback((e: unknown) => {
+    if (e instanceof ApiError && e.status === 401) {
+      active.current = false;
+      setContext(null);
+      setSelected(null);
+      setCreating(false);
+      setLoads([]);
+      setQ("");
+      setCarrier("");
+      setStatus("");
+      setCursor(null);
+    }
+    setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
+  }, []);
   const refresh = useCallback(async () => {
-    const d = await api(
-      "loads?" +
-        new URLSearchParams({
-          ...(q ? { q } : {}),
-          ...(carrier ? { carrier_id: carrier } : {}),
-          ...(status ? { status } : {}),
-        }),
-    );
-    setLoads(d.loads);
-    setCursor(d.nextCursor);
-  }, [q, carrier, status]);
+    const version = revision.current;
+    const data = await api<Queue>("loads?" + query());
+    if (version !== revision.current || !active.current) return;
+    setLoads(data.loads);
+    setCursor(data.nextCursor);
+    setUpdated(new Date());
+    setLoading(false);
+  }, [query]);
   useEffect(() => {
-    api("me")
-      .then(setContext)
+    api<Context>("me")
+      .then((c) => {
+        active.current = true;
+        setContext(c);
+      })
       .catch((e) => {
         if (e.message !== "AUTH_REQUIRED" && e.message !== "SESSION_EXPIRED")
-          setError(e.message);
+          handleError(e);
       })
       .finally(() => setReady(true));
-    const off = () => setOffline(!navigator.onLine);
-    window.addEventListener("online", off);
-    window.addEventListener("offline", off);
-    return () => {
-      window.removeEventListener("online", off);
-      window.removeEventListener("offline", off);
+    const connection = () => setOffline(!navigator.onLine);
+    const keyboard = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        search.current?.focus();
+      }
     };
-  }, []);
+    const timer = setTimeout(connection, 0);
+    window.addEventListener("online", connection);
+    window.addEventListener("offline", connection);
+    window.addEventListener("keydown", keyboard);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("online", connection);
+      window.removeEventListener("offline", connection);
+      window.removeEventListener("keydown", keyboard);
+    };
+  }, [handleError]);
   useEffect(() => {
     if (!context) return;
     const controller = new AbortController();
-    fetch(
-      "/api/loads?" +
-        new URLSearchParams({
-          ...(q ? { q } : {}),
-          ...(carrier ? { carrier_id: carrier } : {}),
-          ...(status ? { status } : {}),
-        }),
-      { signal: controller.signal, cache: "no-store" },
-    )
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error);
-        return data;
-      })
-      .then((d) => {
-        setLoads(d.loads);
-        setCursor(d.nextCursor);
-      })
-      .catch((e) => {
-        if (e.name !== "AbortError") setError(e.message);
-      });
-    return () => controller.abort();
-  }, [context, q, carrier, status]);
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await api<Queue>(
+          "loads?" + query(),
+          undefined,
+          undefined,
+          controller.signal,
+        );
+        if (!controller.signal.aborted) {
+          setLoads(data.loads);
+          setCursor(data.nextCursor);
+          setUpdated(new Date());
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) handleError(e);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 180);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [context, query, handleError]);
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       await fn();
     } catch (e) {
-      setError((e as Error).message);
+      handleError(e);
     } finally {
       setBusy(false);
     }
   }
-  async function open(id: string) {
-    await act(async () => setSelected(await api("loads/" + id)));
+  function filterChange(fn: () => void) {
+    revision.current++;
+    setLoading(true);
+    fn();
   }
+  async function open(id: string) {
+    await act(async () => setSelected(await api<Load>("loads/" + id)));
+  }
+  async function logout() {
+    await act(async () => {
+      await api("logout", {});
+      active.current = false;
+      revision.current++;
+      setContext(null);
+      setLoads([]);
+      setSelected(null);
+      setCreating(false);
+      setQ("");
+      setCarrier("");
+      setStatus("");
+      setCursor(null);
+    });
+  }
+  const errorPanel = error ? (
+    <div className="alert error" role="alert">
+      <WarningCircleIcon size={18} aria-hidden="true" />
+      <span>{describe(error)}</span>
+      {context && !selected && !creating && (
+        <button
+          className="textButton"
+          disabled={busy}
+          onClick={() => act(refresh)}
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  ) : null;
   if (!ready)
     return (
       <main className="loading" role="status">
-        Opening dispatch workspace…
+        Opening your workspace…
       </main>
     );
   if (!context)
     return (
       <main className="login">
-        <div className="brand">
-          ▰ relay<span>DISPATCH OPERATIONS</span>
-        </div>
-        <section>
-          <p className="eyebrow">YOUR OPERATIONS, IN SYNC</p>
-          <h1>Welcome back.</h1>
-          <p>Sign in to your carrier workspace.</p>
+        <Brand />
+        <section className="loginPanel">
+          <p className="eyebrow">DISPATCH, WITH CLARITY</p>
+          <h1>
+            Everything in motion.
+            <br />
+            All in one place.
+          </h1>
+          <p className="loginDescription">
+            Sign in to your dispatch workspace.
+          </p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -192,7 +287,9 @@ export default function Workspace() {
                   email: f.get("email"),
                   password: f.get("password"),
                 });
-                setContext(await api("me"));
+                const c = await api<Context>("me");
+                active.current = true;
+                setContext(c);
               });
             }}
           >
@@ -203,6 +300,7 @@ export default function Workspace() {
                 type="email"
                 autoComplete="username"
                 required
+                maxLength={254}
               />
             </label>
             <label>
@@ -212,146 +310,147 @@ export default function Workspace() {
                 type="password"
                 autoComplete="current-password"
                 required
+                maxLength={256}
               />
             </label>
-            <button disabled={busy}>Sign in →</button>
+            <button className="primary full" disabled={busy || offline}>
+              {busy ? "Signing in…" : "Sign in"}
+              <ArrowRightIcon size={16} aria-hidden="true" />
+            </button>
           </form>
-          {error && (
-            <p role="alert" className="error">
-              {explainError(error)}
-            </p>
-          )}
-          <small>
-            Local QA uses fictional data.{" "}
-            <a href="/demo.html">Explore the original demo ↗</a>
-          </small>
+          {errorPanel}
+          <p className="loginFoot">
+            Fictional QA data. No live freight connections.
+            <br />
+            <a href="/demo.html">
+              Explore original demo{" "}
+              <ArrowUpRightIcon size={12} aria-hidden="true" />
+            </a>
+          </p>
         </section>
+        <span className="loginBottom">
+          A little less busywork. A lot more visibility.
+        </span>
       </main>
     );
   const canWrite = context.carriers.some((c) => c.role !== "driver");
   const selectedRole = context.carriers.find(
     (c) => c.id === selected?.carrier_id,
   )?.role;
+  const selectedCarrier = context.carriers.find(
+    (c) => c.id === selected?.carrier_id,
+  )?.name;
+  const filterCount = Number(Boolean(carrier)) + Number(Boolean(status));
+  const nextStage = selected
+    ? stages[stages.indexOf(selected.stage) + 1]
+    : undefined;
+  const controls = (
+    <div className="toolbar">
+      <div className="toolbarLeft">
+        <button
+          className={"secondary " + (filters ? "isSelected" : "")}
+          aria-expanded={filters}
+          onClick={() => setFilters(!filters)}
+        >
+          <FunnelSimpleIcon size={16} aria-hidden="true" />
+          Filter
+          {filterCount > 0 && <span className="count">{filterCount}</span>}
+        </button>
+        <span className="toolbarMeta">
+          {loading
+            ? "Updating…"
+            : `${loads.length} load${loads.length === 1 ? "" : "s"}${cursor ? " · more available" : ""}`}
+        </span>
+      </div>
+      <div className="toolbarRight">
+        <label className="search">
+          <MagnifyingGlassIcon size={17} aria-hidden="true" />
+          <span className="srOnly">Search loads</span>
+          <input
+            ref={search}
+            value={q}
+            onChange={(e) => filterChange(() => setQ(e.target.value))}
+            placeholder="Search reference…"
+            maxLength={100}
+          />
+          <kbd aria-hidden="true">⌘ K</kbd>
+        </label>
+        <button
+          className="iconButton"
+          disabled={busy || loading || offline}
+          aria-label="Refresh loads"
+          onClick={() => act(refresh)}
+        >
+          <ArrowClockwiseIcon size={18} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
   return (
     <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          ▰ relay<span>DISPATCH OPERATIONS</span>
-        </div>
-        <p className="navlabel">WORKSPACE</p>
-        <button
-          className="nav active"
-          onClick={() => {
-            setStatus("");
-            setSelected(null);
-          }}
-        >
-          ▦ &nbsp; Dispatch board
-        </button>
-        <a className="nav" href="/demo.html">
-          ↗ &nbsp; Original demo
-        </a>
-        <div className="sidebarBottom">
-          <span className="avatar">{context.user.name[0]}</span>
-          <strong>
-            {context.user.name}
-            <small>Carrier workspace</small>
-          </strong>
-          <button
-            aria-label="Sign out"
-            onClick={() =>
-              act(async () => {
-                await api("logout", {});
-                setContext(null);
-                setSelected(null);
-              })
-            }
-          >
-            ↪
-          </button>
-        </div>
-      </aside>
-      <main className="workspace">
-        <header>
-          <div>
-            <p className="eyebrow">OPERATIONS / DISPATCH</p>
-            <h1>
-              Dispatch board<span className="live">● QA environment</span>
-            </h1>
-            <p>Every load. Every milestone. One clear view.</p>
-          </div>
-          {canWrite && (
-            <button onClick={() => setCreating(true)}>＋ Create load</button>
-          )}
-        </header>
-        <div className="qa">
-          FICTIONAL QA WORKSPACE{" "}
-          <span>Local data · no live tracking or external integrations</span>
-        </div>
-        {offline && (
-          <p role="alert" className="error">
-            Offline — displayed information may be stale. Reconnect and refresh.
-          </p>
-        )}
-        {error && (
-          <div role="alert" className="error">
-            {explainError(error)}{" "}
-            <button onClick={() => act(refresh)}>Retry</button>
-          </div>
-        )}
-        <section className="stats">
-          <article>
-            <span>VISIBLE LOADS</span>
-            <strong>{loads.length}</strong>
-            <small>Current queue page</small>
-          </article>
-          <article>
-            <span>AWAITING DISPATCH</span>
-            <strong>{loads.filter((l) => l.stage === "booked").length}</strong>
-            <small>Ready for next action</small>
-          </article>
-          <article>
-            <span>IN TRANSIT</span>
-            <strong>
-              {loads.filter((l) => l.stage === "picked-up").length}
-            </strong>
-            <small>Pickup recorded</small>
-          </article>
-          <article>
-            <span>DELIVERED</span>
-            <strong>
-              {loads.filter((l) => l.stage === "delivered").length}
-            </strong>
-            <small>Documents tracked separately</small>
-          </article>
-        </section>
-        <section className="board">
-          <div className="boardTop">
-            <h2>
-              Load workspace <span>{loads.length}</span>
-            </h2>
+      <a className="skipLink" href="#main">
+        Skip to loads
+      </a>
+      <header className="topbar">
+        <div className="topbarLeft">
+          <Brand />
+          <span className="separator" aria-hidden="true">
+            /
+          </span>
+          <h1>Dispatch board</h1>
+          <div className="viewToggle" role="group" aria-label="Load view">
             <button
-              className="secondary"
-              disabled={busy}
-              onClick={() => act(refresh)}
+              aria-pressed={view === "board"}
+              onClick={() => setView("board")}
             >
-              ↻ Refresh
+              <SquaresFourIcon size={15} aria-hidden="true" />
+              Board
+            </button>
+            <button
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+            >
+              <ListIcon size={16} aria-hidden="true" />
+              List
             </button>
           </div>
-          <div className="filters">
-            <label className="search">
-              Search loads
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search reference…"
-              />
-            </label>
+        </div>
+        <div className="topbarRight">
+          {canWrite && (
+            <button
+              className="createButton"
+              disabled={offline}
+              onClick={() => {
+                createRequest.current = null;
+                setError("");
+                setCreating(true);
+              }}
+            >
+              <PlusCircleIcon size={18} aria-hidden="true" />
+              Create load
+            </button>
+          )}
+          <span className="userName">{context.user.name}</span>
+          <button
+            className="iconButton"
+            aria-label="Sign out"
+            disabled={busy}
+            onClick={logout}
+          >
+            <SignOutIcon size={19} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      <main id="main" className="workspace">
+        {controls}
+        {filters && (
+          <div className="filterPanel">
             <label>
               Carrier
               <select
+                aria-label="Carrier"
                 value={carrier}
-                onChange={(e) => setCarrier(e.target.value)}
+                onChange={(e) => filterChange(() => setCarrier(e.target.value))}
               >
                 <option value="">All authorized carriers</option>
                 {context.carriers.map((c) => (
@@ -364,135 +463,317 @@ export default function Workspace() {
             <label>
               Milestone
               <select
+                aria-label="Milestone"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => filterChange(() => setStatus(e.target.value))}
               >
                 <option value="">All milestones</option>
-                {["booked", "dispatched", "picked-up", "delivered"].map((s) => (
-                  <option key={s}>{s}</option>
+                {stages.map((s) => (
+                  <option key={s} value={s}>
+                    {stageLabels[s]}
+                  </option>
                 ))}
               </select>
             </label>
-          </div>
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>LOAD / CARRIER</th>
-                  <th>ROUTE</th>
-                  <th>MILESTONE</th>
-                  <th>AGREED RATE</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {loads.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      <button className="loadLink" onClick={() => open(l.id)}>
-                        {l.reference}
-                      </button>
-                      <small>{l.carrier_name}</small>
-                    </td>
-                    <td>
-                      {l.pickup}
-                      <small>↓ &nbsp; {l.delivery}</small>
-                    </td>
-                    <td>
-                      <span className={"badge " + l.stage}>
-                        {l.stage.replace("-", " ")}
-                      </span>
-                    </td>
-                    <td>
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                      }).format(Number(l.amount_minor) / 100)}
-                    </td>
-                    <td>
-                      <button
-                        className="secondary"
-                        onClick={() => open(l.id)}
-                        aria-label={"Open " + l.reference}
-                      >
-                        →
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {!loads.length && (
-            <div className="empty">
-              <h3>No loads in this view</h3>
-              <p>
-                Try another filter or create a load for an authorized carrier.
-              </p>
-            </div>
-          )}
-          {cursor && (
             <button
-              className="secondary"
+              className="textButton"
               onClick={() =>
-                act(async () => {
-                  const d = await api(
-                    "loads?" +
-                      new URLSearchParams({
-                        cursor,
-                        ...(q ? { q } : {}),
-                        ...(carrier ? { carrier_id: carrier } : {}),
-                        ...(status ? { status } : {}),
-                      }),
-                  );
-                  setLoads([...loads, ...d.loads]);
-                  setCursor(d.nextCursor);
+                filterChange(() => {
+                  setCarrier("");
+                  setStatus("");
+                  setQ("");
                 })
               }
             >
-              Load more
+              Clear filters
             </button>
+          </div>
+        )}
+        {offline && (
+          <div className="alert error" role="alert">
+            Offline — this view may be stale. Reconnect, then refresh.
+          </div>
+        )}
+        {!selected && !creating && errorPanel}
+        <div className="srOnly" role="status" aria-live="polite">
+          {loading ? "Loading loads" : `${loads.length} loads shown`}
+          {notice && ". " + notice}
+        </div>
+        {notice && (
+          <div className="alert success">
+            <CheckIcon size={17} aria-hidden="true" />
+            {notice}
+          </div>
+        )}
+        <section
+          className="loadSurface"
+          aria-label="Load workspace"
+          aria-busy={loading}
+        >
+          {view === "board" ? (
+            <div className="kanban">
+              {stages.map((stage) => {
+                const items = loads.filter((l) => l.stage === stage);
+                return (
+                  <section
+                    className={"lane " + stage}
+                    key={stage}
+                    aria-label={stageLabels[stage] + " loads"}
+                  >
+                    <div className="laneHeading">
+                      <CircleIcon weight="fill" size={9} aria-hidden="true" />
+                      <h2>{stageLabels[stage]}</h2>
+                      <span className="laneCount">{items.length}</span>
+                    </div>
+                    <div className="laneCards">
+                      {items.map((load) => (
+                        <button
+                          className="loadCard"
+                          key={load.id}
+                          onClick={() => open(load.id)}
+                          aria-label={load.reference}
+                          disabled={busy || loading}
+                        >
+                          <span className="cardTitle">
+                            <TruckIcon size={17} aria-hidden="true" />
+                            <strong title={load.reference}>
+                              {load.reference}
+                            </strong>
+                            <ArrowUpRightIcon
+                              size={14}
+                              className="cardArrow"
+                              aria-hidden="true"
+                            />
+                          </span>
+                          <span className="cardCarrier">
+                            <BuildingsIcon size={13} aria-hidden="true" />
+                            {load.carrier_name}
+                          </span>
+                          <span className="cardRoute">
+                            <span>{load.pickup || "Pickup not recorded"}</span>
+                            <ArrowDownIcon size={12} aria-hidden="true" />
+                            <span>
+                              {load.delivery || "Delivery not recorded"}
+                            </span>
+                          </span>
+                          <span className="cardBottom">
+                            <span>
+                              {new Date(load.created_at).toLocaleDateString(
+                                "en-US",
+                                { month: "short", day: "numeric" },
+                              )}
+                            </span>
+                            <strong>{formatMoney(load.amount_minor)}</strong>
+                          </span>
+                        </button>
+                      ))}
+                      {!items.length && (
+                        <div className="laneEmpty">
+                          {loading ? "Loading…" : "No loads here"}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <table>
+                <caption className="srOnly">
+                  Authorized loads and their milestones
+                </caption>
+                <thead>
+                  <tr>
+                    <th>Load / carrier</th>
+                    <th>Route</th>
+                    <th>Milestone</th>
+                    <th>Agreed rate</th>
+                    <th>
+                      <span className="srOnly">Open load</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loads.map((l) => (
+                    <tr key={l.id}>
+                      <td>
+                        <button
+                          className="loadLink"
+                          onClick={() => open(l.id)}
+                          disabled={busy || loading}
+                        >
+                          {l.reference}
+                        </button>
+                        <small>{l.carrier_name}</small>
+                      </td>
+                      <td>
+                        {l.pickup}
+                        <small>
+                          <ArrowDownIcon size={11} aria-hidden="true" />
+                          {l.delivery}
+                        </small>
+                      </td>
+                      <td>
+                        <span className={"badge " + l.stage}>
+                          <CircleIcon
+                            size={7}
+                            weight="fill"
+                            aria-hidden="true"
+                          />
+                          {stageLabels[l.stage]}
+                        </span>
+                      </td>
+                      <td className="money">{formatMoney(l.amount_minor)}</td>
+                      <td>
+                        <button
+                          className="iconButton"
+                          onClick={() => open(l.id)}
+                          aria-label={"Open " + l.reference}
+                          disabled={busy || loading}
+                        >
+                          <ArrowUpRightIcon size={17} aria-hidden="true" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!loads.length && (
+                <div className="empty">
+                  <MagnifyingGlassIcon size={24} aria-hidden="true" />
+                  <h2>
+                    {loading ? "Loading your queue…" : "No matching loads"}
+                  </h2>
+                  <p>Try another search or clear your filters.</p>
+                </div>
+              )}
+            </div>
+          )}
+          {cursor && (
+            <div className="pagination">
+              <button
+                className="secondary"
+                disabled={busy || loading || offline}
+                onClick={() =>
+                  act(async () => {
+                    const version = revision.current;
+                    const params = query();
+                    params.set("cursor", cursor);
+                    const data = await api<Queue>("loads?" + params);
+                    if (version !== revision.current || !active.current) return;
+                    setLoads((old) => [
+                      ...old,
+                      ...data.loads.filter(
+                        (l) => !old.some((x) => x.id === l.id),
+                      ),
+                    ]);
+                    setCursor(data.nextCursor);
+                  })
+                }
+              >
+                Load more
+                <ArrowDownIcon size={14} aria-hidden="true" />
+              </button>
+              <small>Counts reflect the loads shown.</small>
+            </div>
           )}
         </section>
         <footer>
-          RELAY WORKSPACE{" "}
+          <span className="qa">
+            <CircleIcon size={6} weight="fill" aria-hidden="true" />
+            Fictional QA workspace<span className="footerDivider">·</span>No
+            live tracking or integrations
+          </span>
           <span>
-            Tracking, document uploads, and financial workflows are not
-            connected in this foundation.
+            {updated &&
+              `Updated ${updated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`}
+            <a href="/demo.html">
+              Original demo
+              <ArrowUpRightIcon size={12} aria-hidden="true" />
+            </a>
           </span>
         </footer>
       </main>
       {selected && (
-        <Modal label="Load details" onClose={() => setSelected(null)}>
+        <Modal
+          label="Load details"
+          onClose={() => {
+            if (!busy) {
+              setSelected(null);
+              setError("");
+            }
+          }}
+        >
           <section className="inspector">
-            <button
-              autoFocus
-              className="close secondary"
-              onClick={() => setSelected(null)}
-            >
-              Close ✕
-            </button>
-            <p className="eyebrow">LOAD WORKSPACE</p>
-            <h2>{selected.reference}</h2>
-            <span className="badge">{selected.stage}</span>
+            <div className="inspectorHeader">
+              <p className="eyebrow">LOAD WORKSPACE</p>
+              <button
+                autoFocus
+                className="iconButton"
+                aria-label="Close load details"
+                disabled={busy}
+                onClick={() => {
+                  setSelected(null);
+                  setError("");
+                }}
+              >
+                <XIcon size={20} aria-hidden="true" />
+              </button>
+            </div>
+            <h2 className="detailTitle">{selected.reference}</h2>
+            <p className="detailCarrier">
+              <BuildingsIcon size={15} aria-hidden="true" />
+              {selectedCarrier}
+            </p>
+            <span className={"badge " + selected.stage}>
+              <CircleIcon size={7} weight="fill" aria-hidden="true" />
+              {stageLabels[selected.stage]}
+            </span>
+            <div className="detailFacts">
+              <div>
+                <small>Agreed rate</small>
+                <strong>{formatMoney(selected.amount_minor)}</strong>
+              </div>
+              <div>
+                <small>Booking source</small>
+                <span>{selected.source}</span>
+              </div>
+            </div>
             <h3>Route & appointments</h3>
-            {selected.stops?.map((s, i) => (
-              <article className="stop" key={i}>
-                <small>{s.kind.toUpperCase()}</small>
-                <strong>{s.address}</strong>
-                <p>
-                  {new Date(s.window_start).toLocaleString("en-US", {
-                    timeZone: s.timezone,
-                  })}{" "}
-                  · {s.timezone}
-                </p>
-              </article>
-            ))}
+            <div className="stops">
+              {selected.stops?.map((s, i) => (
+                <article className="stop" key={i}>
+                  <span className="stopIndex">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <small>{s.kind}</small>
+                    <strong>{s.address}</strong>
+                    <p>
+                      <ClockIcon size={13} aria-hidden="true" />
+                      {new Date(s.window_start).toLocaleString("en-US", {
+                        timeZone: s.timezone,
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    <span className="stopZone">{s.timezone}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
             <h3>Driver assignment</h3>
-            <p>{selected.assignment?.name || "No driver assigned"}</p>
-            {selectedRole !== "driver" && (
+            <div className="assignedDriver">
+              <TruckIcon size={18} aria-hidden="true" />
+              <span>{selected.assignment?.name || "No driver assigned"}</span>
+            </div>
+            {selectedRole !== "driver" && selected.stage !== "delivered" && (
               <>
                 <form
+                  className="assignForm"
                   onSubmit={(e) => {
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
@@ -501,14 +782,19 @@ export default function Workspace() {
                         version: selected.version,
                         driverId: f.get("driver"),
                       });
-                      setSelected(await api("loads/" + selected.id));
+                      setSelected(await api<Load>("loads/" + selected.id));
                       await refresh();
+                      setNotice("Driver assignment saved.");
                     });
                   }}
                 >
                   <label>
-                    Authorized driver
-                    <select name="driver" required>
+                    <span className="srOnly">Authorized driver</span>
+                    <select
+                      name="driver"
+                      required
+                      defaultValue={selected.assignment?.driver_id || ""}
+                    >
                       <option value="">Choose driver</option>
                       {context.drivers
                         .filter((d) => d.carrier_id === selected.carrier_id)
@@ -519,102 +805,138 @@ export default function Workspace() {
                         ))}
                     </select>
                   </label>
-                  <button disabled={busy || selected.stage === "delivered"}>
+                  <button className="secondary" disabled={busy || offline}>
                     Assign driver
                   </button>
                 </form>
-                {selected.stage !== "delivered" && (
+                {nextStage && (
                   <button
-                    disabled={busy}
+                    className="primary full nextMilestone"
+                    disabled={busy || offline || !selected.assignment}
                     onClick={() =>
                       act(async () => {
-                        const stage = [
-                          "booked",
-                          "dispatched",
-                          "picked-up",
-                          "delivered",
-                        ][
-                          [
-                            "booked",
-                            "dispatched",
-                            "picked-up",
-                            "delivered",
-                          ].indexOf(selected.stage) + 1
-                        ];
                         await api("loads/" + selected.id + "/milestones", {
                           version: selected.version,
-                          stage,
+                          stage: nextStage,
                         });
-                        setSelected(await api("loads/" + selected.id));
+                        setSelected(await api<Load>("loads/" + selected.id));
                         await refresh();
+                        setNotice("Milestone recorded.");
                       })
                     }
                   >
-                    Record next milestone →
+                    Record next milestone
+                    <ArrowRightIcon size={15} aria-hidden="true" />
+                    <small>{stageLabels[nextStage]}</small>
                   </button>
                 )}
               </>
             )}
-            <h3>Activity timeline</h3>
-            {selected.events?.length ? (
-              selected.events.map((e) => (
-                <p className="event" key={e.id}>
-                  {{
-                    "load.created": "Load created",
-                    "load.assign": "Driver assigned",
-                    "load.milestones": "Milestone recorded",
-                  }[e.type] || e.type}
-                  <small>{new Date(e.created_at).toLocaleString()}</small>
-                </p>
-              ))
-            ) : (
-              <p>Imported QA fixture · no operational events yet.</p>
-            )}
-            {error && (
-              <p role="alert" className="error">
-                {explainError(error)}
+            {selectedRole === "driver" && (
+              <p className="helpText">
+                You can view loads assigned to you. Contact dispatch for
+                changes.
               </p>
             )}
+            {errorPanel}
+            {error === "VERSION_CONFLICT" && (
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() => open(selected.id)}
+              >
+                Refresh load details
+              </button>
+            )}
+            <h3>Activity timeline</h3>
+            <div className="timeline">
+              {selected.events?.length ? (
+                selected.events.map((e) => (
+                  <p className="event" key={e.id}>
+                    <CircleIcon size={7} weight="fill" aria-hidden="true" />
+                    {eventLabels[e.type] || "Load updated"}
+                    <small>{new Date(e.created_at).toLocaleString()}</small>
+                  </p>
+                ))
+              ) : (
+                <p className="helpText">
+                  Imported fictional fixture. No operational events recorded
+                  yet.
+                </p>
+              )}
+            </div>
+            <p className="detailFoot">
+              Delivery does not mark documents or invoices complete.
+            </p>
           </section>
         </Modal>
       )}
       {creating && (
-        <Modal label="Create load" onClose={() => setCreating(false)}>
+        <Modal
+          label="Create load"
+          onClose={() => {
+            if (!busy) {
+              setCreating(false);
+              setError("");
+            }
+          }}
+        >
           <section className="inspector">
-            <button
-              autoFocus
-              className="close secondary"
-              onClick={() => setCreating(false)}
-            >
-              Close ✕
-            </button>
-            <p className="eyebrow">NEW BOOKED LOAD</p>
-            <h2>Start with a clear route.</h2>
+            <div className="inspectorHeader">
+              <p className="eyebrow">NEW BOOKED LOAD</p>
+              <button
+                autoFocus
+                className="iconButton"
+                aria-label="Close create load"
+                disabled={busy}
+                onClick={() => {
+                  setCreating(false);
+                  setError("");
+                }}
+              >
+                <XIcon size={20} aria-hidden="true" />
+              </button>
+            </div>
+            <h2 className="detailTitle">A clear start.</h2>
+            <p className="formIntro">
+              Record a booked load for an authorized carrier.
+            </p>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
-                const data = {
-                  carrierId: f.get("carrier"),
-                  reference: f.get("reference"),
-                  source: f.get("source"),
-                  amountMinor: Number(f.get("amount")),
-                  stops: ["pickup", "delivery"].map((kind) => ({
-                    kind,
-                    address: f.get(kind),
-                    timezone: f.get("timezone"),
-                    windowStart: new Date(
-                      String(f.get(kind + "Time")),
-                    ).toISOString(),
-                    windowEnd: new Date(
-                      String(f.get(kind + "Time")),
-                    ).toISOString(),
-                  })),
-                };
                 act(async () => {
-                  await api("loads", data, crypto.randomUUID());
+                  const data = {
+                    carrierId: f.get("carrier"),
+                    reference: f.get("reference"),
+                    source: f.get("source"),
+                    amountMinor: dollarsToMinor(String(f.get("amount"))),
+                    stops: ["pickup", "delivery"].map((kind) => {
+                      const zone = String(f.get(kind + "Zone"));
+                      const instant = appointmentToInstant(
+                        String(f.get(kind + "Time")),
+                        zone,
+                      );
+                      return {
+                        kind,
+                        address: f.get(kind),
+                        timezone: zone,
+                        windowStart: instant,
+                        windowEnd: instant,
+                      };
+                    }),
+                  };
+                  const payload = JSON.stringify(data);
+                  if (createRequest.current?.payload !== payload)
+                    createRequest.current = {
+                      payload,
+                      key: crypto.randomUUID(),
+                    };
+                  await api("loads", data, createRequest.current.key);
+                  createRequest.current = null;
                   setCreating(false);
                   await refresh();
+                  setNotice("Booked load created.");
                 });
               }}
             >
@@ -629,47 +951,113 @@ export default function Workspace() {
                       </option>
                     ))}
                 </select>
+                <span className="helpText">
+                  A current verified dispatch agreement is required.
+                </span>
               </label>
-              <label>
-                Load reference
-                <input name="reference" maxLength={100} required />
-              </label>
+              <div className="formGrid">
+                <label>
+                  Load reference
+                  <input
+                    name="reference"
+                    maxLength={100}
+                    placeholder="e.g. RL-1048"
+                    required
+                  />
+                </label>
+                <label>
+                  Agreed rate (USD)
+                  <span className="currencyInput">
+                    <span aria-hidden="true">$</span>
+                    <input
+                      name="amount"
+                      inputMode="decimal"
+                      placeholder="2500.00"
+                      required
+                    />
+                  </span>
+                </label>
+              </div>
               <label>
                 Booking source / rate confirmation reference
-                <input name="source" required />
-              </label>
-              <label>
-                Agreed rate (USD cents)
-                <input type="number" name="amount" min="0" step="1" required />
-              </label>
-              <label>
-                IANA time zone
                 <input
-                  name="timezone"
-                  defaultValue="America/Chicago"
+                  name="source"
+                  maxLength={100}
+                  placeholder="Broker or confirmation reference"
                   required
                 />
               </label>
-              {["pickup", "delivery"].map((s) => (
-                <fieldset key={s}>
-                  <legend>{s}</legend>
+              {["pickup", "delivery"].map((kind, i) => (
+                <fieldset key={kind}>
+                  <legend>
+                    <span aria-hidden="true">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    {kind}
+                  </legend>
                   <label>
                     Address
-                    <input name={s} required />
+                    <input
+                      name={kind}
+                      maxLength={500}
+                      placeholder={
+                        kind === "pickup"
+                          ? "Pickup facility and city"
+                          : "Delivery facility and city"
+                      }
+                      required
+                    />
                   </label>
-                  <label>
-                    Appointment (your browser time zone)
-                    <input name={s + "Time"} type="datetime-local" required />
-                  </label>
+                  <div className="formGrid">
+                    <label>
+                      Appointment
+                      <input
+                        name={kind + "Time"}
+                        type="datetime-local"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Time zone
+                      <select
+                        name={kind + "Zone"}
+                        defaultValue="America/Chicago"
+                      >
+                        <option value="America/New_York">Eastern</option>
+                        <option value="America/Chicago">Central</option>
+                        <option value="America/Denver">Mountain</option>
+                        <option value="America/Phoenix">Arizona</option>
+                        <option value="America/Los_Angeles">Pacific</option>
+                        <option value="America/Anchorage">Alaska</option>
+                        <option value="Pacific/Honolulu">Hawaii</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p className="helpText">
+                    Enter the appointment in this stop’s selected local time
+                    zone.
+                  </p>
                 </fieldset>
               ))}
-              <button disabled={busy}>Create booked load</button>
+              {errorPanel}
+              <div className="formActions">
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setCreating(false);
+                    setError("");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button className="primary" disabled={busy || offline}>
+                  {busy ? "Saving…" : "Create booked load"}
+                  <ArrowRightIcon size={15} aria-hidden="true" />
+                </button>
+              </div>
             </form>
-            {error && (
-              <p role="alert" className="error">
-                {explainError(error)}
-              </p>
-            )}
           </section>
         </Modal>
       )}
