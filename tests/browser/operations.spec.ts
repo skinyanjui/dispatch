@@ -371,3 +371,127 @@ test("demo shows exceptions, billing and notifications without calling the serve
   ).toBeVisible();
   expect(apiRequests).toEqual([]);
 });
+
+test("multi-stop: add an intermediate stop and see every stop in order", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "New load" }).first().click();
+  const modal = page.getByRole("dialog", { name: "Create load" });
+  const reference = "MS-UI-" + randomUUID().slice(0, 8);
+  await modal.getByLabel("Load reference").fill(reference);
+  await modal.getByLabel("Agreed rate (USD)").fill("4100");
+  await modal
+    .getByLabel("Booking source / rate confirmation reference")
+    .fill("Fictional multi-stop browser QA");
+  await modal
+    .getByRole("button", { name: "Add stop before final delivery" })
+    .click();
+  const fill = async (name: string, address: string, time: string) => {
+    const group = modal.getByRole("group", { name, exact: true });
+    await group.getByLabel("Address").fill(address);
+    await group.getByLabel("Appointment").fill(time);
+  };
+  await fill("pickup", "Chicago, IL", "2026-11-20T08:00");
+  await modal
+    .getByRole("group", { name: "Stop 2", exact: true })
+    .getByLabel("Stop type")
+    .selectOption("delivery");
+  await fill("Stop 2", "Indianapolis, IN", "2026-11-20T13:00");
+  await fill("delivery", "Louisville, KY", "2026-11-20T18:00");
+  await modal.getByRole("button", { name: "Create booked load" }).click();
+  await expect(modal).not.toBeVisible();
+  await page.getByRole("textbox", { name: "Search loads" }).fill(reference);
+  const card = page.getByRole("button", { name: new RegExp("^" + reference) });
+  await expect(card).toContainText("Louisville, KY · 3 stops");
+  await card.click();
+  const dialog = page.getByRole("dialog", { name: "Load details" });
+  await expect(dialog.locator(".stop")).toHaveCount(3);
+  await expect(dialog.locator(".stop").nth(1)).toContainText(
+    "Indianapolis, IN",
+  );
+});
+
+test("check-ins can be corrected and retracted while the original stays on record", async ({
+  page,
+}) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "AMEND");
+  const report = await page.request.post(`/api/loads/${load.id}/check-ins`, {
+    headers: origin,
+    data: {
+      version: 1,
+      location: "Jolliet, IL",
+      note: "",
+      observed_at: new Date(Date.now() - 20 * 60000).toISOString(),
+      idempotency_key: randomUUID(),
+    },
+  });
+  expect(report.status()).toBe(201);
+  const dialog = await openLoad(page, load.reference);
+  await dialog
+    .getByRole("button", { name: "Correct check-in at Jolliet, IL" })
+    .click();
+  const form = dialog.getByRole("form", { name: "Correct check-in" });
+  await form.getByLabel("Corrected location").fill("Joliet, IL");
+  await form.getByLabel("Reason").fill("City misspelled");
+  await form.getByRole("button", { name: "Save correction" }).click();
+  const corrected = dialog.getByRole("article", {
+    name: "Check-in: Joliet, IL",
+  });
+  await expect(corrected).toContainText("Corrected");
+  await expect(corrected).toContainText("Originally reported as Jolliet, IL");
+  await expect(corrected).toContainText("City misspelled");
+  await dialog
+    .getByRole("button", { name: "Retract check-in at Joliet, IL" })
+    .click();
+  const retract = dialog.getByRole("form", { name: "Retract check-in" });
+  await retract.getByLabel("Reason").fill("Reported on the wrong load");
+  await retract.getByRole("button", { name: "Retract report" }).click();
+  await expect(dialog.getByText("Retracted check-ins (1)")).toBeVisible();
+  await expect(
+    dialog.locator(".event").filter({ hasText: "Check-in retracted" }),
+  ).toHaveCount(1);
+});
+
+test("older activity loads on demand without duplicates", async ({ page }) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "HIST");
+  let version = 1;
+  for (let i = 0; i < 105; i++) {
+    const r = await page.request.post(`/api/loads/${load.id}/check-ins`, {
+      headers: origin,
+      data: {
+        version,
+        location: "Mile " + i,
+        note: "",
+        observed_at: new Date(Date.now() - (300 - i) * 60000).toISOString(),
+        idempotency_key: randomUUID(),
+      },
+    });
+    version = (await r.json()).version;
+  }
+  const dialog = await openLoad(page, load.reference);
+  await expect(dialog.locator(".event")).toHaveCount(100);
+  await dialog.getByRole("button", { name: "Show older activity" }).click();
+  await expect(dialog.locator(".event")).toHaveCount(106);
+  await expect(
+    dialog.getByRole("button", { name: "Show older activity" }),
+  ).toHaveCount(0);
+  await expect(dialog.locator(".event").first()).toContainText("Load created");
+  await dialog.getByText(/Previous check-ins/).click();
+  // 105 reports: the newest 50, then two older pages (50 and 5).
+  const more = dialog.getByRole("button", { name: "Show older check-ins" });
+  await more.click();
+  await expect(
+    dialog.getByRole("article", { name: "Check-in: Mile 5", exact: true }),
+  ).toBeVisible();
+  await more.click();
+  await expect(more).toHaveCount(0);
+  await expect(
+    dialog.getByRole("article", { name: "Check-in: Mile 0", exact: true }),
+  ).toBeVisible();
+});

@@ -248,7 +248,9 @@ test("a saved load stays acknowledged when the queue refresh fails", async ({
   await expect(
     page.getByText("Booked load created.", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("unavailable");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "unavailable",
+  );
   failRefresh = false;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(

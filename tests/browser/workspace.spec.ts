@@ -39,8 +39,12 @@ test("anonymous API rejected and current demo remains public", async ({
   const res = await request.get("/api/loads");
   expect(res.status()).toBe(401);
   await page.goto("/demo.html");
-  await expect(page.getByRole("complementary",{name:"Interactive demo"})).toBeVisible();
-  await expect(page.getByRole("heading",{name:"All loads",exact:true})).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "Interactive demo" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "All loads", exact: true }),
+  ).toBeVisible();
 });
 
 test("create, assign, dispatch, reject cross-origin writes and revoke session", async ({
