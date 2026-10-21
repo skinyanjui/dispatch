@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import {
   PlusCircleIcon,
   MagnifyingGlassIcon,
-  FunnelSimpleIcon,
   ArrowClockwiseIcon,
   ArrowRightIcon,
   PlusIcon,
@@ -94,7 +93,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [creating, setCreating] = useState(false),
     [cursor, setCursor] = useState<string | null>(null),
     [offline, setOffline] = useState(false),
-    [filters, setFilters] = useState(false),
     [updated, setUpdated] = useState<Date | null>(null),
     [section, setSection] = useState<WorkspaceSection>("loads"),
     [setupCarrier, setSetupCarrier] = useState<string | null>(null),
@@ -605,22 +603,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
   const selectedCarrier = context.carriers.find(
     (c) => c.id === selected?.carrier_id,
   )?.name;
-  const filterCount = Number(Boolean(carrier)) + Number(Boolean(status));
   const nextStage = selected
     ? stages[stages.indexOf(selected.stage) + 1]
     : undefined;
   const controls = (
     <div className="toolbar">
       <div className="toolbarLeft">
-        <button
-          className={"secondary " + (filters ? "isSelected" : "")}
-          aria-expanded={filters}
-          onClick={() => setFilters(!filters)}
-        >
-          <FunnelSimpleIcon size={16} aria-hidden="true" />
-          Filter
-          {filterCount > 0 && <span className="count">{filterCount}</span>}
-        </button>
         <span className="toolbarMeta">
           {loading
             ? "Updating…"
@@ -700,48 +688,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         )}
         {section === "loads" ? (
           <>
-            {filters && (
-              <div className="filterPanel">
-                <label>
-                  Carrier
-                  <select
-                    aria-label="Carrier"
-                    value={carrier}
-                    onChange={(e) => filterChange({ carrier: e.target.value })}
-                  >
-                    <option value="">All authorized carriers</option>
-                    {context.carriers.map((c) => (
-                      <option value={c.id} key={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Milestone
-                  <select
-                    aria-label="Milestone"
-                    value={status}
-                    onChange={(e) => filterChange({ status: e.target.value })}
-                  >
-                    <option value="">All milestones</option>
-                    {stages.map((s) => (
-                      <option key={s} value={s}>
-                        {stageLabels[s]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  className="textButton"
-                  onClick={() =>
-                    filterChange({ carrier: "", status: "", q: "" })
-                  }
-                >
-                  Clear filters
-                </button>
-              </div>
-            )}
             {carrier && (
               <div
                 className="appliedFilters"
@@ -1001,10 +947,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           <span>
             {updated &&
               `Updated ${updated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`}
-            <a href={demo ? "/" : "/demo"}>
-              {demo ? "Open Relay" : "Interactive demo"}
-              <ArrowUpRightIcon size={12} aria-hidden="true" />
-            </a>
           </span>
         </footer>
       </main>

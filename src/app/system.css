@@ -923,3 +923,12 @@ select {
   justify-self: stretch;
   background: var(--panel);
 }
+
+/* Report filters: the quick ranges sit on the same line as the fields. */
+.appShell .reportFilters {
+  align-items: flex-end;
+}
+.appShell .reportFilters .textButton {
+  min-height: var(--control-h);
+  padding-block: 0;
+}

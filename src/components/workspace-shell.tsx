@@ -216,15 +216,18 @@ export function WorkspaceShell({
               <span className="navLabel">New load</span>
             </button>
           )}
-          <button
-            className="sidebarItem"
-            title="Search loads"
-            onClick={() => go(onSearch)}
-          >
-            <MagnifyingGlassIcon {...icon} />
-            <span className="navLabel">Search loads</span>
-            {!compact && <kbd aria-hidden="true">⌘K</kbd>}
-          </button>
+          {/* On Loads the search box is already in the header. */}
+          {section !== "loads" && (
+            <button
+              className="sidebarItem"
+              title="Search loads"
+              onClick={() => go(onSearch)}
+            >
+              <MagnifyingGlassIcon {...icon} />
+              <span className="navLabel">Search loads</span>
+              {!compact && <kbd aria-hidden="true">⌘K</kbd>}
+            </button>
+          )}
         </div>
         <nav className="sidebarPages" aria-label="Workspace navigation">
           {pages

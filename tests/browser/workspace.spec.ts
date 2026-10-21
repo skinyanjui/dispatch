@@ -128,11 +128,17 @@ test("Board, filters, keyboard search and session recovery", async ({
     page.getByRole("button", { name: "List", exact: true }),
   ).toHaveCount(0);
   await expect(page.getByRole("table")).toHaveCount(0);
-  await page.getByRole("button", { name: "Filter", exact: false }).click();
-  await expect(page.getByLabel("Carrier", { exact: true })).toBeVisible();
+  // Each action has one home: no Filter panel, no second search entry.
+  await expect(
+    page.getByRole("button", { name: "Filter", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Search loads", exact: true }),
+  ).toHaveCount(0);
   await page
-    .getByLabel("Carrier", { exact: true })
-    .selectOption({ label: "Blue Ridge Transport" });
+    .getByRole("navigation", { name: "Carrier scope" })
+    .getByRole("button", { name: "Blue Ridge Transport", exact: true })
+    .click();
   await page.keyboard.press("Control+k");
   await expect(
     page.getByRole("textbox", { name: "Search loads" }),

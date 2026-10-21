@@ -66,10 +66,6 @@ test("clearing empty filters and repeating All loads never strand the queue load
   const refresh = page.getByRole("button", { name: "Refresh loads" });
   await expect(workspace).toHaveAttribute("aria-busy", "false");
 
-  await page.getByRole("button", { name: "Filter", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Clear filters", exact: true })
-    .click();
   await expect(workspace).toHaveAttribute("aria-busy", "false");
   await expect(refresh).toBeEnabled();
 

@@ -158,7 +158,7 @@ export function Reports({
           <DownloadSimpleIcon size={15} aria-hidden="true" /> Export loads (CSV)
         </a>
       </div>
-      <div className="contactFilters">
+      <div className="contactFilters reportFilters">
         <label>
           From
           <input
