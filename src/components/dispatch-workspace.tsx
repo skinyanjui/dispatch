@@ -40,6 +40,7 @@ import { NotificationCenter } from "@/components/notification-center";
 import { AccountSettings } from "@/components/account-settings";
 import { ContactsDirectory } from "@/components/contacts-directory";
 import { Inbox, type Compose } from "@/components/inbox";
+import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
 import { OrganizationSettings } from "@/components/organization-settings";
 import { driverUploadTypes } from "@/lib/compliance";
@@ -957,7 +958,9 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                                 weight="fill"
                                 aria-hidden="true"
                               />
-                              {l.cancelled_at ? "Cancelled" : stageLabels[l.stage]}
+                              {l.cancelled_at
+                                ? "Cancelled"
+                                : stageLabels[l.stage]}
                             </span>
                           </td>
                           {!driverOnly && (
@@ -1053,6 +1056,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               setCompose({ to: [entry] });
               setSection("inbox");
             }}
+          />
+        ) : section === "reports" ? (
+          <Reports
+            carriers={context.carriers.filter((c) => c.role !== "driver")}
+            onAuthError={handleError}
           />
         ) : section === "inbox" ? (
           <Inbox
@@ -1181,7 +1189,9 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             </p>
             <span className={"badge " + selected.stage}>
               <CircleIcon size={7} weight="fill" aria-hidden="true" />
-              {selected.cancelled_at ? "Cancelled" : stageLabels[selected.stage]}
+              {selected.cancelled_at
+                ? "Cancelled"
+                : stageLabels[selected.stage]}
             </span>
             <div className="detailFacts">
               <div>

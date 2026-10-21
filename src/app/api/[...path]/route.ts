@@ -36,6 +36,7 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import { loadsCsv, reportOverview } from "@/lib/reports";
 import { receiveEmail, receiveSms } from "@/lib/inbound";
 import { appOrigin } from "@/lib/notifications";
 import { attachmentContent, uploadAttachment } from "@/lib/message-attachments";
@@ -548,6 +549,23 @@ async function handle(req: NextRequest) {
       return NextResponse.json(
         await resendText(user.id, z.uuid().parse(path[1]), await readJson(req)),
       );
+    if (path[0] === "reports" && req.method === "GET") {
+      if (path.length === 1)
+        return NextResponse.json(
+          await reportOverview(user.id, req.nextUrl.searchParams),
+        );
+      if (path.length === 2 && path[1] === "loads.csv") {
+        const file = await loadsCsv(user.id, req.nextUrl.searchParams);
+        return new NextResponse(file.csv, {
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${file.filename}"`,
+            "X-Content-Type-Options": "nosniff",
+            ...(file.truncated ? { "X-Relay-Truncated": "true" } : {}),
+          },
+        });
+      }
+    }
     if (path[0] === "message-attachments") {
       if (path.length === 1 && req.method === "POST")
         return NextResponse.json(

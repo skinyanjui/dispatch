@@ -48,7 +48,7 @@ type Message = {
   id: string;
   channel: Channel;
   direction: "in" | "out";
-  source: "relay" | "logged";
+  source: "relay" | "logged" | "inbound";
   body: string;
   counterpart: string;
   occurred_at: string;

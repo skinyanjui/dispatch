@@ -952,3 +952,34 @@ test("inbox: attach a PDF to a message and download it as the recipient", async 
   expect(download.headers()["content-type"]).toBe("application/pdf");
   await other.close();
 });
+
+test("reports: KPIs for a carrier, range presets and CSV export link", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Reports", exact: true }).click();
+  const region = page.getByRole("region", { name: "Reports" });
+  await expect(region.getByText("Freight value")).toBeVisible();
+  await expect(region.getByRole("table").first()).toBeVisible();
+  await region.getByRole("button", { name: "Last 7 days" }).click();
+  await expect(region.getByText("Report loaded")).toBeAttached();
+  const href = await region
+    .getByRole("link", { name: /Export loads/ })
+    .getAttribute("href");
+  expect(href).toContain("/api/reports/loads.csv?from=");
+  const csv = await page.request.get(href!);
+  expect(csv.status()).toBe(200);
+  expect(await csv.text()).toMatch(/^Reference,Carrier,Status/);
+});
+
+test("a driver has no Reports page and the API refuses them", async ({
+  page,
+}) => {
+  await login(page, "driver@relay.test");
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Reports", exact: true }),
+  ).toHaveCount(0);
+  expect((await page.request.get("/api/reports")).status()).toBe(404);
+});

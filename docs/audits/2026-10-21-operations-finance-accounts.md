@@ -111,5 +111,6 @@ Reviewed as a dispatcher, a driver and a carrier manager: what is missing day to
 
 - **Added:** dispatcher/admin invitations ([ADR 0016](../decisions/0016-staff-invitations.md)); a searchable Contacts directory with quick connect ([ADR 0017](../decisions/0017-contacts-directory.md)); an Inbox with Relay messages, email, consent-gated text, hand-logged calls, unread badge, search and saved replies ([ADR 0018](../decisions/0018-inbox-and-messaging.md)).
 - **Found while testing:** a thread stores a driver as `user:`, but the directory lists them as `driver:`, so a dispatcher replying to a driver-started thread got `NOT_FOUND` and the composer showed email, text and log options to drivers who are not allowed to use them. Both are fixed and covered by tests.
-- **Still missing (not built):** editing or cancelling a load after booking; reporting and dashboards; inbound email/SMS and provider STOP handling; resending a failed text; attachments in messages; calendar/appointment reminders to drivers.
+- **Closed in the next round:** load edit and cancel, reporting, inbound email/text with STOP handling, resending failed texts, message attachments, and driver appointment reminders (ADRs 0019–0024).
+- **Still missing:** inbound attachments, MMS, per-tenant phone numbers, provider adapters for inbound email, cost/profitability reporting, abandoned-upload cleanup, and a 15-minute scheduler for two-hour reminders.
 - **Not verified live:** no email or SMS provider is configured here. Texts are tested against an in-process fake provider; the demo never sends.

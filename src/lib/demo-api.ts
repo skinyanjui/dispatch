@@ -1073,6 +1073,97 @@ export function createDemoApi() {
       p[0] === "saved-replies"
     )
       return messagingRequest(p, data, url);
+    if (p[0] === "reports") {
+      if (state.viewer.role === "driver") fail("NOT_FOUND", 404);
+      const carrierFilter = url.searchParams.get("carrier_id");
+      const scoped = state.loads.filter(
+        (l) =>
+          allowed().some((c) => c.carrier.id === l.carrier_id) &&
+          (!carrierFilter || l.carrier_id === carrierFilter),
+      );
+      const live = scoped.filter((l) => !l.cancelled_at);
+      const timing = (kind: string) => {
+        let measured = 0,
+          onTime = 0,
+          notReported = 0;
+        for (const l of live)
+          for (const s of l.stops || [])
+            if (s.kind === kind) {
+              if (s.arrived) {
+                measured++;
+                if (new Date(s.arrived.occurred_at) <= new Date(s.window_end))
+                  onTime++;
+              } else if (new Date(s.window_end) < new Date()) notReported++;
+            }
+        return {
+          measured,
+          on_time: onTime,
+          not_reported: notReported,
+          on_time_pct: measured
+            ? Math.round((onTime / measured) * 1000) / 10
+            : null,
+        };
+      };
+      const open = state.exceptions.filter(
+        (x) =>
+          x.status !== "resolved" && scoped.some((l) => l.id === x.load_id),
+      );
+      const sum = (rows: Load[]) =>
+        String(rows.reduce((n, l) => n + Number(l.amount_minor), 0));
+      return {
+        range: {
+          from: url.searchParams.get("from") || "",
+          to: url.searchParams.get("to") || "",
+          carrier_id: carrierFilter,
+        },
+        generated_at: now(),
+        loads: {
+          loads: live.length,
+          cancelled: scoped.length - live.length,
+          booked: live.filter((l) => l.stage === "booked").length,
+          dispatched: live.filter((l) => l.stage === "dispatched").length,
+          picked_up: live.filter((l) => l.stage === "picked-up").length,
+          delivered: live.filter((l) => l.stage === "delivered").length,
+          freight_minor: sum(live),
+        },
+        timing: { pickup: timing("pickup"), delivery: timing("delivery") },
+        exceptions: {
+          opened: state.exceptions.filter((x) =>
+            scoped.some((l) => l.id === x.load_id),
+          ).length,
+          open_now: open.length,
+          overdue: open.filter(
+            (x) => x.due_at && new Date(x.due_at) < new Date(),
+          ).length,
+          by_type: [],
+        },
+        delivered_without_pod: 0,
+        carriers: allowed()
+          .filter((c) => !carrierFilter || c.carrier.id === carrierFilter)
+          .map((c) => {
+            const rows = scoped.filter((l) => l.carrier_id === c.carrier.id);
+            const liveRows = rows.filter((l) => !l.cancelled_at);
+            return {
+              id: c.carrier.id,
+              name: c.carrier.name,
+              loads: liveRows.length,
+              cancelled: rows.length - liveRows.length,
+              delivered: liveRows.filter((l) => l.stage === "delivered").length,
+              freight_minor: sum(liveRows),
+              open_exceptions: open.filter((x) => x.carrier_id === c.carrier.id)
+                .length,
+            };
+          }),
+        weekly: [],
+        dispatch_invoices: null,
+        carrier_freight_billing: {
+          submitted: 0,
+          billed_minor: "0",
+          received_minor: "0",
+          outstanding_minor: "0",
+        },
+      };
+    }
     if (p[0] === "message-attachments" || p[0] === "message-deliveries")
       fail("DEMO_UNAVAILABLE", 409);
     if (p[0] === "account") {
