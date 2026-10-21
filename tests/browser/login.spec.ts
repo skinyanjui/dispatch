@@ -193,3 +193,51 @@ test("Terms and Privacy pages exist, say they are drafts, and are accessible", a
   await page.getByRole("link", { name: "Back to sign in" }).click();
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("request access submits one generic confirmation and is accessible", async ({
+  page,
+}) => {
+  await page.route("**/api/me", (route) =>
+    route.fulfill({ status: 401, json: { error: "AUTH_REQUIRED" } }),
+  );
+  await page.goto("/");
+  await expect(page.getByText("Invitation-only workspace")).toHaveCount(0);
+  await page.getByRole("link", { name: "Request access" }).first().click();
+  await expect(page).toHaveURL(/\/request-access$/);
+  await expect(
+    page.getByRole("heading", { name: "Request access", level: 1 }),
+  ).toBeVisible();
+  await scan(page, "request access desktop");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await scan(page, "request access phone");
+
+  let posted: Record<string, unknown> | null = null;
+  await page.route("**/api/access-requests", async (route) => {
+    posted = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { ok: true } });
+  });
+  await page.getByLabel("Your name").fill("Fictional Owner");
+  await page.getByLabel("Work email").fill("owner@example.test");
+  await page.getByLabel("Company").fill("Fictional Freight LLC");
+  await page.getByRole("button", { name: /Request access|Send/ }).click();
+  // The terms box is required, so nothing is sent until it is checked.
+  expect(posted).toBeNull();
+  await page.getByLabel(/I have read the/).check();
+  await page.getByRole("button", { name: /Request access|Send/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Request received" }),
+  ).toBeVisible();
+  expect(posted).toMatchObject({
+    email: "owner@example.test",
+    terms_accepted: true,
+    website: "",
+  });
+  await expect(page.getByText("Nothing has been created yet.")).toBeVisible();
+  await page.getByRole("link", { name: /Back to sign in/ }).click();
+  await expect(page).toHaveURL(/\/$/);
+});

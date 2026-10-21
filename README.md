@@ -21,7 +21,7 @@ The authenticated workspace is at port 3000. QA sign-in accounts: `dispatcher@re
 
 ### Signing in
 
-Use one of the QA emails above with the **original `SEED_PASSWORD` used on first seed**. The login screen's “How do I get access?” lists QA account choices and explains administrator access. There is no public signup, password reset or default shared password. Changing `SEED_PASSWORD` and reseeding does not reset existing passwords. Do not publish your configured password in source control or chat.
+Use one of the QA emails above with the **original `SEED_PASSWORD` used on first seed**. The login screen's “How do I get access?” lists QA account choices and explains administrator access. There is no open signup or default shared password. People ask for access at `/request-access`; an operator approves with `npm run access:list` / `access:approve -- <id>` / `access:decline -- <id> "reason"`, which prints a private link to set the password. Changing `SEED_PASSWORD` and reseeding does not reset existing passwords. Do not publish your configured password in source control or chat.
 
 A hosted build does not create accounts by default. Configure `DATABASE_URL` and use the Vercel build command below to apply migrations. Initialize a separate fictional QA database only with explicit QA setup. Carrier managers and drivers can now activate through private, carrier-scoped invitations. Initial dispatcher/organization administration still requires controlled provisioning. Do not seed a database containing real operations. No hosted login or deployment is implied by local checks.
 

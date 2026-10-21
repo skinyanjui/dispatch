@@ -20,6 +20,9 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "org:create": "tsx scripts/create-organization.ts",
+    "access:list": "tsx scripts/access-requests.ts list",
+    "access:approve": "tsx scripts/access-requests.ts approve",
+    "access:decline": "tsx scripts/access-requests.ts decline",
     "documents:migrate-storage": "tsx scripts/migrate-document-storage.ts",
     "demo": "node scripts/dev.mjs",
     "build:demo": "node scripts/build.mjs"

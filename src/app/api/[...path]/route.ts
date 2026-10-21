@@ -95,6 +95,7 @@ import {
   setFavorite,
   updateContact,
 } from "@/lib/contacts";
+import { submitAccessRequest } from "@/lib/access-requests";
 import { rateReadStatus, readRateConfirmation } from "@/lib/rate-reads";
 import { ask, assistantState, getConversation } from "@/lib/assistant";
 import {
@@ -276,6 +277,10 @@ async function handle(req: NextRequest) {
         done.remember,
       );
     }
+    if (req.method === "POST" && path.join("/") === "access-requests")
+      return NextResponse.json(await submitAccessRequest(await readJson(req)), {
+        status: 202,
+      });
     if (req.method === "POST" && path.join("/") === "password-reset/request")
       return NextResponse.json(
         await requestPasswordReset(

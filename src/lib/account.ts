@@ -81,8 +81,10 @@ export async function completePasswordReset(input: unknown) {
     );
     if (!rows[0]) throw new HttpError(410, "TOKEN_UNAVAILABLE");
     const user = rows[0].user_id;
+    // The link was emailed to the address on file, so using it also proves the
+    // person controls that address.
     await c.query(
-      "UPDATE users SET password_hash=$2,password_changed_at=now() WHERE id=$1",
+      "UPDATE users SET password_hash=$2,password_changed_at=now(),email_verified_at=COALESCE(email_verified_at,now()) WHERE id=$1",
       [user, hash],
     );
     // Every outstanding reset link and every session ends with the reset.

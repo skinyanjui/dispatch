@@ -7,15 +7,18 @@ import { LoginHero } from "@/components/login-hero";
 export function AuthLayout({
   children,
   className = "",
+  topRight,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Replaces the note at the top right of the page. */
+  topRight?: React.ReactNode;
 }) {
   return (
     <main className={"login authPage " + className}>
       <LoginHero />
       <div className="authSide">
-        <p className="authTop">Invitation-only workspace</p>
+        <p className="authTop">{topRight ?? "Invitation-only workspace"}</p>
         <div className="authCard">{children}</div>
       </div>
     </main>

@@ -416,7 +416,13 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     );
   if (!context)
     return (
-      <AuthLayout>
+      <AuthLayout
+        topRight={
+          <>
+            New to Relay? <a href="/request-access">Request access</a>
+          </>
+        }
+      >
         <section className="loginPanel">
           <h1>Sign in</h1>
           <p className="loginDescription">
@@ -623,10 +629,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             <summary>How do I get access?</summary>
             <p>
               Open your private invitation to create an account and choose a
-              password. Ask your carrier contact or dispatcher for a link.
-              Public signup is not available; new dispatch organizations are set
-              up by an administrator. Use “Forgot password?” to reset a password
-              by email.
+              password. Ask your carrier contact or dispatcher for a link. New
+              dispatch organizations are approved by an administrator:{" "}
+              <a href="/request-access">request access</a> and you will hear
+              back. Use “Forgot password?” to reset a password by email.
             </p>
             <p>
               For the fictional QA workspace, use{" "}
