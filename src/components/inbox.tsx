@@ -150,6 +150,21 @@ const ChannelIcon = ({ channel }: { channel: Channel }) =>
   ) : (
     <TrayIcon {...icon} />
   );
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("") || "•";
+const tabLabels: Record<string, string> = {
+  all: "All",
+  unread: "Unread",
+  in_app: "Relay",
+  email: "Email",
+  sms: "Texts",
+  call: "Calls",
+};
 const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
     month: "short",
@@ -830,25 +845,6 @@ export function Inbox({
             onChange={(e) => setQ(e.target.value)}
           />
         </label>
-        <label>
-          <span className="srOnly">Channel</span>
-          <select value={channel} onChange={(e) => setChannel(e.target.value)}>
-            <option value="">All channels</option>
-            {(Object.keys(channelLabels) as Channel[]).map((c) => (
-              <option key={c} value={c}>
-                {channelLabels[c]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filterCheck">
-          <input
-            type="checkbox"
-            checked={unreadOnly}
-            onChange={(e) => setUnreadOnly(e.target.checked)}
-          />
-          <span>Unread</span>
-        </label>
         <button
           className="primary"
           disabled={offline}
@@ -860,6 +856,25 @@ export function Inbox({
         >
           <NotePencilIcon {...icon} /> New message
         </button>
+      </div>
+      <div className="inboxTabs" role="group" aria-label="Filter conversations">
+        {Object.keys(tabLabels).map((tab) => {
+          const active = unreadOnly ? "unread" : channel || "all";
+          return (
+            <button
+              key={tab}
+              type="button"
+              className={"inboxTab" + (active === tab ? " active" : "")}
+              aria-pressed={active === tab}
+              onClick={() => {
+                setUnreadOnly(tab === "unread");
+                setChannel(tab === "all" || tab === "unread" ? "" : tab);
+              }}
+            >
+              {tabLabels[tab]}
+            </button>
+          );
+        })}
       </div>
       <p className="srOnly" role="status">
         {status}
@@ -917,24 +932,31 @@ export function Inbox({
                   aria-current={selected === t.id ? "true" : undefined}
                   onClick={() => void openThread(t.id)}
                 >
-                  <span className="threadTop">
-                    {t.last && <ChannelIcon channel={t.last.channel} />}
-                    <strong>{t.subject}</strong>
-                    {t.unread && <span className="srOnly">Unread</span>}
-                    <time dateTime={t.last_message_at}>
-                      {when(t.last_message_at)}
-                    </time>
+                  <span className="avatar" aria-hidden="true">
+                    {initials(t.with_names[0] ?? userName)}
                   </span>
-                  <small>
-                    {t.with_names.join(", ") || "Just you"}
-                    {t.load_reference && ` · ${t.load_reference}`}
-                  </small>
-                  {t.last && (
-                    <small className="threadPreview">
-                      {t.last.direction === "in" ? "← " : ""}
-                      {t.last.preview}
-                    </small>
-                  )}
+                  <span className="threadBody">
+                    <span className="threadTop">
+                      <strong className="threadFrom">
+                        {t.with_names.join(", ") || "Just you"}
+                      </strong>
+                      {t.unread && <span className="srOnly">Unread</span>}
+                      <time dateTime={t.last_message_at}>
+                        {when(t.last_message_at)}
+                      </time>
+                    </span>
+                    <span className="threadSubject">
+                      {t.last && <ChannelIcon channel={t.last.channel} />}
+                      <span>{t.subject}</span>
+                    </span>
+                    {t.last && (
+                      <small className="threadPreview">
+                        {t.last.direction === "in" ? "← " : ""}
+                        {t.last.preview}
+                        {t.load_reference && ` · ${t.load_reference}`}
+                      </small>
+                    )}
+                  </span>
                 </button>
               </li>
             ))}
@@ -1069,7 +1091,15 @@ export function Inbox({
                     }
                   >
                     <div className="messageMeta">
-                      <ChannelIcon channel={m.channel} />
+                      <span className="avatar small" aria-hidden="true">
+                        {initials(
+                          m.direction === "in"
+                            ? m.counterpart || "Received"
+                            : m.sender_user_id === userId
+                              ? "You"
+                              : m.sender_name,
+                        )}
+                      </span>
                       <strong>
                         {m.direction === "in"
                           ? m.counterpart || "Received"
@@ -1077,7 +1107,8 @@ export function Inbox({
                             ? "You"
                             : m.sender_name}
                       </strong>
-                      <span>
+                      <span className="messageVia">
+                        <ChannelIcon channel={m.channel} />
                         {channelLabels[m.channel]}
                         {m.source === "logged" && " · logged by hand"}
                         {m.source === "inbound" && " · received"}

@@ -323,7 +323,7 @@ test("edit and cancel open as drawers lined up with load details", async ({
   }
 });
 
-test("inbox: filters stay readable and phones get a back button", async ({
+test("inbox: tabs filter like an email client and phones get a back button", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -335,12 +335,17 @@ test("inbox: filters stay readable and phones get a back button", async ({
     .click();
   await expect(page.locator(".threadItem").first()).toBeVisible();
   await page.locator(".threadItem").first().click();
-  const box = async (locator: Locator) => (await locator.boundingBox())!;
-  const check = await box(page.locator(".filterCheck input"));
-  const label = await box(page.locator(".filterCheck span"));
-  const button = await box(page.getByRole("button", { name: "New message" }));
-  expect(check.width).toBeLessThanOrEqual(20);
-  expect(label.x + label.width).toBeLessThanOrEqual(button.x);
+  const tabs = page.getByRole("group", { name: "Filter conversations" });
+  await expect(
+    tabs.getByRole("button", { name: "All", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await tabs.getByRole("button", { name: "Unread", exact: true }).click();
+  await expect(
+    tabs.getByRole("button", { name: "Unread", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await tabs.getByRole("button", { name: "All", exact: true }).click();
+  await expect(page.locator(".threadItem").first()).toBeVisible();
+  await page.locator(".threadItem").first().click();
   // The composer stays on screen under a long conversation.
   await expect(page.getByRole("button", { name: "Send" })).toBeInViewport();
 

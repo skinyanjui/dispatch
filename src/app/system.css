@@ -81,8 +81,13 @@
   margin: 0 0 var(--space-3);
 }
 .appShell .directoryIntro > div:first-child {
-  flex: 1 1 320px;
+  flex: 1 1 auto;
   min-width: 0;
+}
+@media (min-width: 761px) {
+  .appShell .directoryIntro > div:first-child {
+    flex-basis: 320px;
+  }
 }
 .appShell .directoryIntro p:not(.eyebrow) {
   margin: 0;
@@ -203,8 +208,11 @@
   width: 15px;
 }
 .appShell .threadItem {
-  padding: var(--space-2) var(--space-3);
-  grid-template-columns: minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3);
   justify-content: stretch;
   justify-items: stretch;
   text-align: left;
@@ -350,17 +358,6 @@
   gap: var(--space-2);
   padding-right: var(--space-1);
 }
-.appShell .message {
-  max-width: min(85%, 640px);
-}
-.appShell .message.out {
-  align-self: flex-end;
-  background: var(--accent-soft);
-  border-color: var(--accent-soft-hover);
-}
-.appShell .message.in {
-  align-self: flex-start;
-}
 .appShell .composerRow {
   align-items: flex-end;
 }
@@ -390,9 +387,6 @@
 .appShell .composerRow label {
   margin: 0;
 }
-.appShell .messageList > :first-child {
-  margin-top: auto;
-}
 @media (max-width: 800px) {
   .appShell .inboxDetail {
     height: auto;
@@ -401,5 +395,186 @@
   .appShell .inboxDetail > .messageList {
     flex: none;
     max-height: 45dvh;
+  }
+}
+
+/* Inbox as an email client: tabs, dense rows, flat messages. */
+.appShell .inboxTabs {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+}
+.appShell .inboxTab {
+  flex: none;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .inboxTab:hover {
+  color: var(--ink);
+  background: transparent;
+}
+.appShell .inboxTab.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.appShell .threadList {
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.appShell .threadList li + li .threadItem {
+  border-top: 1px solid var(--border);
+}
+.appShell .threadItem {
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  position: relative;
+}
+.appShell .threadItem:hover {
+  background: var(--soft);
+}
+.appShell .threadItem.active {
+  background: var(--accent-soft);
+}
+.appShell .threadItem.unread::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.appShell .threadItem .threadTop::after {
+  display: none;
+}
+.appShell .avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.appShell .avatar.small {
+  width: 26px;
+  height: 26px;
+  font-size: 10.5px;
+}
+.appShell .threadBody {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.appShell .threadFrom {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.appShell .threadItem.unread .threadFrom,
+.appShell .threadItem.unread .threadSubject {
+  font-weight: 600;
+}
+.appShell .threadSubject {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--ink);
+}
+.appShell .threadSubject > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appShell .threadSubject > svg {
+  flex: none;
+  color: var(--subtle);
+}
+.appShell .message {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: var(--space-3) 0;
+}
+.appShell .message.in {
+  background: transparent;
+}
+.appShell .message .messageMeta {
+  gap: var(--space-2);
+  font-size: 12px;
+}
+.appShell .message .messageMeta strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.appShell .messageVia {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+}
+.appShell .message p {
+  margin: var(--space-2) 0 0 calc(26px + var(--space-2));
+  font-size: 13px;
+  line-height: 1.55;
+}
+.appShell .message > ul {
+  margin-left: calc(26px + var(--space-2));
+}
+.appShell .messageList {
+  gap: 0;
+}
+
+/* File pickers match other buttons. */
+.appShell input[type="file"]::file-selector-button {
+  min-height: 30px;
+  margin-right: var(--space-3);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--control-radius);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Comfortable tap targets on phones. */
+@media (max-width: 760px) {
+  .appShell .textButton,
+  .appShell button.secondary,
+  .appShell .inboxTab {
+    min-height: 40px;
+  }
+}
+
+.appShell .formGrid {
+  align-items: end;
+}
+@media (max-width: 760px) {
+  .appShell .directoryIntro > :not(:first-child) {
+    width: 100%;
+  }
+  .appShell .directoryIntro > :not(:first-child) .primary {
+    flex: 1 1 auto;
   }
 }
