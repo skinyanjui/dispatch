@@ -23,6 +23,9 @@ Develop Relay, a production-ready carrier-agent freight dispatch management syst
 ## Immediate task
 Read `docs/codex-tasks.md` and `docs/build-plan.md`. First deliver Phase 1 foundation as a reviewable PR: database schema, tested carrier RBAC, authenticated sessions, load creation/list/detail APIs and a production UI derived from the demo. Leave demo accessible as a separate route or static reference during migration.
 
+## Repository workflow
+- The user requires changes to be committed on `main`. Work in the existing checkout; fetch and preserve remote changes, run the relevant checks, commit on `main`, and push validated changes to `origin/main` without force-pushing. Keep credentials, dependencies and generated build outputs untracked.
+
 ## CI gate
 Lint, typecheck, tests, build, plus integration/migration/authorization and browser tests when added. If an area cannot be tested yet, state the gap explicitly rather than claiming production-readiness.
 

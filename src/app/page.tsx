@@ -11,8 +11,6 @@ import {
   ArrowDownIcon,
   BuildingsIcon,
   TruckIcon,
-  StackIcon,
-  SignOutIcon,
   XIcon,
   CircleIcon,
   CheckIcon,
@@ -21,6 +19,13 @@ import {
   WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "@/components/modal";
+import {
+  WorkspaceShell,
+  Brand,
+  queueTitle,
+  type WorkspaceSection,
+} from "@/components/workspace-shell";
+import { CarrierDirectory } from "@/components/carrier-directory";
 import {
   stages,
   stageLabels,
@@ -62,33 +67,42 @@ async function api<T>(
   key?: string,
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch("/api/" + path, {
-    method: body ? "POST" : "GET",
-    headers: body
-      ? {
-          "Content-Type": "application/json",
-          ...(key ? { "Idempotency-Key": key } : {}),
-        }
-      : {},
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-    signal,
-  });
-  const data = await response.json();
+  let response: Response;
+  try {
+    response = await fetch("/api/" + path, {
+      method: body ? "POST" : "GET",
+      headers: body
+        ? {
+            "Content-Type": "application/json",
+            ...(key ? { "Idempotency-Key": key } : {}),
+          }
+        : {},
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal,
+    });
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") throw e;
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new ApiError(
+      response.status === 401 ? 401 : 503,
+      response.status === 401 ? "SESSION_EXPIRED" : "SERVICE_UNAVAILABLE",
+    );
+  }
   if (!response.ok)
-    throw new ApiError(response.status, data.error || "SERVICE_UNAVAILABLE");
+    throw new ApiError(
+      response.status,
+      typeof data?.error === "string" ? data.error : "SERVICE_UNAVAILABLE",
+    );
   return data as T;
 }
 function describe(error: string) {
   return messages[error] || error;
-}
-function Brand() {
-  return (
-    <span className="brand">
-      <StackIcon size={21} weight="bold" aria-hidden="true" />
-      relay<span className="brandPeriod">.</span>
-    </span>
-  );
 }
 const eventLabels: Record<string, string> = {
   "load.created": "Load created",
@@ -113,11 +127,13 @@ export default function Workspace() {
     [offline, setOffline] = useState(false),
     [view, setView] = useState<"board" | "list">("board"),
     [filters, setFilters] = useState(false),
-    [updated, setUpdated] = useState<Date | null>(null);
+    [updated, setUpdated] = useState<Date | null>(null),
+    [section, setSection] = useState<WorkspaceSection>("loads");
   const search = useRef<HTMLInputElement>(null),
     createRequest = useRef<{ payload: string; key: string } | null>(null),
     revision = useRef(0),
-    active = useRef(false);
+    active = useRef(false),
+    queueRequest = useRef(0);
   const query = useCallback(
     () =>
       new URLSearchParams({
@@ -138,17 +154,34 @@ export default function Workspace() {
       setCarrier("");
       setStatus("");
       setCursor(null);
+      setNotice("");
+      setUpdated(null);
+      queueRequest.current++;
+      setSection("loads");
     }
     setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
   }, []);
   const refresh = useCallback(async () => {
-    const version = revision.current;
-    const data = await api<Queue>("loads?" + query());
-    if (version !== revision.current || !active.current) return;
-    setLoads(data.loads);
-    setCursor(data.nextCursor);
-    setUpdated(new Date());
-    setLoading(false);
+    const version = revision.current,
+      request = ++queueRequest.current;
+    setLoading(true);
+    try {
+      const data = await api<Queue>("loads?" + query());
+      if (
+        request !== queueRequest.current ||
+        version !== revision.current ||
+        !active.current
+      )
+        return;
+      setLoads(data.loads);
+      setCursor(data.nextCursor);
+      setUpdated(new Date());
+    } catch (e) {
+      if (request === queueRequest.current && version === revision.current)
+        throw e;
+    } finally {
+      if (request === queueRequest.current) setLoading(false);
+    }
   }, [query]);
   useEffect(() => {
     api<Context>("me")
@@ -164,8 +197,9 @@ export default function Workspace() {
     const connection = () => setOffline(!navigator.onLine);
     const keyboard = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        if (!search.current || document.querySelector("dialog[open]")) return;
         e.preventDefault();
-        search.current?.focus();
+        search.current.focus();
       }
     };
     const timer = setTimeout(connection, 0);
@@ -182,7 +216,9 @@ export default function Workspace() {
   useEffect(() => {
     if (!context) return;
     const controller = new AbortController();
+    const request = ++queueRequest.current;
     const timer = setTimeout(async () => {
+      if (request !== queueRequest.current) return;
       setLoading(true);
       setError("");
       try {
@@ -192,15 +228,21 @@ export default function Workspace() {
           undefined,
           controller.signal,
         );
-        if (!controller.signal.aborted) {
+        if (
+          !controller.signal.aborted &&
+          request === queueRequest.current &&
+          active.current
+        ) {
           setLoads(data.loads);
           setCursor(data.nextCursor);
           setUpdated(new Date());
         }
       } catch (e) {
-        if (!controller.signal.aborted) handleError(e);
+        if (!controller.signal.aborted && request === queueRequest.current)
+          handleError(e);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted && request === queueRequest.current)
+          setLoading(false);
       }
     }, 180);
     return () => {
@@ -220,11 +262,46 @@ export default function Workspace() {
       setBusy(false);
     }
   }
-  function filterChange(fn: () => void) {
+  function filterChange(
+    patch: Partial<{ q: string; carrier: string; status: string }>,
+  ) {
+    const next = { q, carrier, status, ...patch };
+    if (next.q === q && next.carrier === carrier && next.status === status)
+      return;
     revision.current++;
+    queueRequest.current++;
     setLoading(true);
-    fn();
+    setQ(next.q);
+    setCarrier(next.carrier);
+    setStatus(next.status);
   }
+  function createLoad() {
+    if (busy || offline || selected || creating) return;
+    createRequest.current = null;
+    setError("");
+    setCreating(true);
+  }
+  function focusSearch() {
+    setSection("loads");
+    requestAnimationFrame(() => search.current?.focus());
+  }
+  function showQueue(value: string) {
+    setSection("loads");
+    filterChange({ status: value });
+  }
+  function showCarrier(value: string) {
+    setSection("loads");
+    filterChange({ carrier: value });
+  }
+  async function refreshAfterSave(message: string) {
+    setNotice(message);
+    try {
+      await refresh();
+    } catch (e) {
+      handleError(e);
+    }
+  }
+
   async function open(id: string) {
     await act(async () => setSelected(await api<Load>("loads/" + id)));
   }
@@ -233,6 +310,8 @@ export default function Workspace() {
       await api("logout", {});
       active.current = false;
       revision.current++;
+      queueRequest.current++;
+      setSection("loads");
       setContext(null);
       setLoads([]);
       setSelected(null);
@@ -241,6 +320,7 @@ export default function Workspace() {
       setCarrier("");
       setStatus("");
       setCursor(null);
+      setUpdated(null);
     });
   }
   const errorPanel = error ? (
@@ -369,7 +449,7 @@ export default function Workspace() {
           <input
             ref={search}
             value={q}
-            onChange={(e) => filterChange(() => setQ(e.target.value))}
+            onChange={(e) => filterChange({ q: e.target.value })}
             placeholder="Search reference…"
             maxLength={100}
           />
@@ -387,298 +467,354 @@ export default function Workspace() {
     </div>
   );
   return (
-    <div className="shell">
-      <a className="skipLink" href="#main">
-        Skip to loads
-      </a>
+    <WorkspaceShell
+      context={context}
+      section={section}
+      status={status}
+      carrier={carrier}
+      busy={busy}
+      offline={offline}
+      onSection={setSection}
+      onQueue={showQueue}
+      onCarrier={showCarrier}
+      onSearch={focusSearch}
+      onCreate={createLoad}
+      onLogout={logout}
+    >
       <header className="topbar">
         <div className="topbarLeft">
-          <Brand />
-          <span className="separator" aria-hidden="true">
-            /
-          </span>
-          <h1>Dispatch board</h1>
-          <div className="viewToggle" role="group" aria-label="Load view">
-            <button
-              aria-pressed={view === "board"}
-              onClick={() => setView("board")}
-            >
-              <SquaresFourIcon size={15} aria-hidden="true" />
-              Board
-            </button>
-            <button
-              aria-pressed={view === "list"}
-              onClick={() => setView("list")}
-            >
-              <ListIcon size={16} aria-hidden="true" />
-              List
-            </button>
+          <div className="headingGroup">
+            <p className="workspaceBreadcrumb">Dispatch workspace</p>
+            <h1>{section === "carriers" ? "Carriers" : queueTitle(status)}</h1>
           </div>
+          {section === "loads" && (
+            <div className="viewToggle" role="group" aria-label="Load view">
+              <button
+                aria-pressed={view === "board"}
+                onClick={() => setView("board")}
+              >
+                <SquaresFourIcon size={15} aria-hidden="true" />
+                Board
+              </button>
+              <button
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                <ListIcon size={16} aria-hidden="true" />
+                List
+              </button>
+            </div>
+          )}
         </div>
         <div className="topbarRight">
           {canWrite && (
             <button
               className="createButton"
-              disabled={offline}
-              onClick={() => {
-                createRequest.current = null;
-                setError("");
-                setCreating(true);
-              }}
+              disabled={offline || busy}
+              onClick={createLoad}
             >
               <PlusCircleIcon size={18} aria-hidden="true" />
               Create load
             </button>
           )}
-          <span className="userName">{context.user.name}</span>
-          <button
-            className="iconButton"
-            aria-label="Sign out"
-            disabled={busy}
-            onClick={logout}
-          >
-            <SignOutIcon size={19} aria-hidden="true" />
-          </button>
+          <span className="workspaceEnvironment">
+            <CircleIcon weight="fill" size={6} aria-hidden="true" />
+            Local QA
+          </span>
         </div>
       </header>
       <main id="main" className="workspace">
-        {controls}
-        {filters && (
-          <div className="filterPanel">
-            <label>
-              Carrier
-              <select
-                aria-label="Carrier"
-                value={carrier}
-                onChange={(e) => filterChange(() => setCarrier(e.target.value))}
-              >
-                <option value="">All authorized carriers</option>
-                {context.carriers.map((c) => (
-                  <option value={c.id} key={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Milestone
-              <select
-                aria-label="Milestone"
-                value={status}
-                onChange={(e) => filterChange(() => setStatus(e.target.value))}
-              >
-                <option value="">All milestones</option>
-                {stages.map((s) => (
-                  <option key={s} value={s}>
-                    {stageLabels[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="textButton"
-              onClick={() =>
-                filterChange(() => {
-                  setCarrier("");
-                  setStatus("");
-                  setQ("");
-                })
-              }
-            >
-              Clear filters
-            </button>
-          </div>
-        )}
-        {offline && (
-          <div className="alert error" role="alert">
-            Offline — this view may be stale. Reconnect, then refresh.
-          </div>
-        )}
-        {!selected && !creating && errorPanel}
-        <div className="srOnly" role="status" aria-live="polite">
-          {loading ? "Loading loads" : `${loads.length} loads shown`}
-          {notice && ". " + notice}
-        </div>
-        {notice && (
-          <div className="alert success">
-            <CheckIcon size={17} aria-hidden="true" />
-            {notice}
-          </div>
-        )}
-        <section
-          className="loadSurface"
-          aria-label="Load workspace"
-          aria-busy={loading}
-        >
-          {view === "board" ? (
-            <div className="kanban">
-              {stages.map((stage) => {
-                const items = loads.filter((l) => l.stage === stage);
-                return (
-                  <section
-                    className={"lane " + stage}
-                    key={stage}
-                    aria-label={stageLabels[stage] + " loads"}
+        {section === "loads" ? (
+          <>
+            {controls}
+            {filters && (
+              <div className="filterPanel">
+                <label>
+                  Carrier
+                  <select
+                    aria-label="Carrier"
+                    value={carrier}
+                    onChange={(e) => filterChange({ carrier: e.target.value })}
                   >
-                    <div className="laneHeading">
-                      <CircleIcon weight="fill" size={9} aria-hidden="true" />
-                      <h2>{stageLabels[stage]}</h2>
-                      <span className="laneCount">{items.length}</span>
-                    </div>
-                    <div className="laneCards">
-                      {items.map((load) => (
-                        <button
-                          className="loadCard"
-                          key={load.id}
-                          onClick={() => open(load.id)}
-                          aria-label={load.reference}
-                          disabled={busy || loading}
-                        >
-                          <span className="cardTitle">
-                            <TruckIcon size={17} aria-hidden="true" />
-                            <strong title={load.reference}>
-                              {load.reference}
-                            </strong>
-                            <ArrowUpRightIcon
-                              size={14}
-                              className="cardArrow"
-                              aria-hidden="true"
-                            />
-                          </span>
-                          <span className="cardCarrier">
-                            <BuildingsIcon size={13} aria-hidden="true" />
-                            {load.carrier_name}
-                          </span>
-                          <span className="cardRoute">
-                            <span>{load.pickup || "Pickup not recorded"}</span>
-                            <ArrowDownIcon size={12} aria-hidden="true" />
-                            <span>
-                              {load.delivery || "Delivery not recorded"}
-                            </span>
-                          </span>
-                          <span className="cardBottom">
-                            <span>
-                              {new Date(load.created_at).toLocaleDateString(
-                                "en-US",
-                                { month: "short", day: "numeric" },
-                              )}
-                            </span>
-                            <strong>{formatMoney(load.amount_minor)}</strong>
-                          </span>
-                        </button>
-                      ))}
-                      {!items.length && (
-                        <div className="laneEmpty">
-                          {loading ? "Loading…" : "No loads here"}
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                );
-              })}
+                    <option value="">All authorized carriers</option>
+                    {context.carriers.map((c) => (
+                      <option value={c.id} key={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Milestone
+                  <select
+                    aria-label="Milestone"
+                    value={status}
+                    onChange={(e) => filterChange({ status: e.target.value })}
+                  >
+                    <option value="">All milestones</option>
+                    {stages.map((s) => (
+                      <option key={s} value={s}>
+                        {stageLabels[s]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="textButton"
+                  onClick={() =>
+                    filterChange({ carrier: "", status: "", q: "" })
+                  }
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+            {carrier && (
+              <div
+                className="appliedFilters"
+                aria-label="Active carrier filter"
+              >
+                <button
+                  className="scopeChip"
+                  onClick={() => filterChange({ carrier: "" })}
+                  aria-label="Clear carrier filter"
+                >
+                  <BuildingsIcon size={13} aria-hidden="true" />
+                  <span>
+                    {context.carriers.find((c) => c.id === carrier)?.name ||
+                      "Selected carrier"}
+                  </span>
+                  <XIcon size={12} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+            {offline && (
+              <div className="alert error" role="alert">
+                Offline — this view may be stale. Reconnect, then refresh.
+              </div>
+            )}
+            {!selected && !creating && errorPanel}
+            <div className="srOnly" role="status" aria-live="polite">
+              {loading ? "Loading loads" : `${loads.length} loads shown`}
+              {notice && ". " + notice}
             </div>
-          ) : (
-            <div className="tableWrap">
-              <table>
-                <caption className="srOnly">
-                  Authorized loads and their milestones
-                </caption>
-                <thead>
-                  <tr>
-                    <th>Load / carrier</th>
-                    <th>Route</th>
-                    <th>Milestone</th>
-                    <th>Agreed rate</th>
-                    <th>
-                      <span className="srOnly">Open load</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loads.map((l) => (
-                    <tr key={l.id}>
-                      <td>
-                        <button
-                          className="loadLink"
-                          onClick={() => open(l.id)}
-                          disabled={busy || loading}
-                        >
-                          {l.reference}
-                        </button>
-                        <small>{l.carrier_name}</small>
-                      </td>
-                      <td>
-                        {l.pickup}
-                        <small>
-                          <ArrowDownIcon size={11} aria-hidden="true" />
-                          {l.delivery}
-                        </small>
-                      </td>
-                      <td>
-                        <span className={"badge " + l.stage}>
+            {notice && (
+              <div className="alert success">
+                <CheckIcon size={17} aria-hidden="true" />
+                {notice}
+              </div>
+            )}
+            <section
+              className="loadSurface"
+              aria-label="Load workspace"
+              aria-busy={loading}
+            >
+              {view === "board" ? (
+                <div className="kanban">
+                  {stages.map((stage) => {
+                    const items = loads.filter((l) => l.stage === stage);
+                    return (
+                      <section
+                        className={"lane " + stage}
+                        key={stage}
+                        aria-label={stageLabels[stage] + " loads"}
+                      >
+                        <div className="laneHeading">
                           <CircleIcon
-                            size={7}
                             weight="fill"
+                            size={9}
                             aria-hidden="true"
                           />
-                          {stageLabels[l.stage]}
-                        </span>
-                      </td>
-                      <td className="money">{formatMoney(l.amount_minor)}</td>
-                      <td>
-                        <button
-                          className="iconButton"
-                          onClick={() => open(l.id)}
-                          aria-label={"Open " + l.reference}
-                          disabled={busy || loading}
-                        >
-                          <ArrowUpRightIcon size={17} aria-hidden="true" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!loads.length && (
-                <div className="empty">
-                  <MagnifyingGlassIcon size={24} aria-hidden="true" />
-                  <h2>
-                    {loading ? "Loading your queue…" : "No matching loads"}
-                  </h2>
-                  <p>Try another search or clear your filters.</p>
+                          <h2>{stageLabels[stage]}</h2>
+                          <span className="laneCount">{items.length}</span>
+                        </div>
+                        <div className="laneCards">
+                          {items.map((load) => (
+                            <button
+                              className="loadCard"
+                              key={load.id}
+                              onClick={() => open(load.id)}
+                              aria-label={`${load.reference} · ${load.carrier_name || "Carrier"}`}
+                              disabled={busy || loading}
+                            >
+                              <span className="cardTitle">
+                                <TruckIcon size={17} aria-hidden="true" />
+                                <strong title={load.reference}>
+                                  {load.reference}
+                                </strong>
+                                <ArrowUpRightIcon
+                                  size={14}
+                                  className="cardArrow"
+                                  aria-hidden="true"
+                                />
+                              </span>
+                              <span className="cardCarrier">
+                                <BuildingsIcon size={13} aria-hidden="true" />
+                                {load.carrier_name}
+                              </span>
+                              <span className="cardRoute">
+                                <span>
+                                  {load.pickup || "Pickup not recorded"}
+                                </span>
+                                <ArrowDownIcon size={12} aria-hidden="true" />
+                                <span>
+                                  {load.delivery || "Delivery not recorded"}
+                                </span>
+                              </span>
+                              <span className="cardBottom">
+                                <span>
+                                  {new Date(load.created_at).toLocaleDateString(
+                                    "en-US",
+                                    { month: "short", day: "numeric" },
+                                  )}
+                                </span>
+                                <strong>
+                                  {formatMoney(load.amount_minor)}
+                                </strong>
+                              </span>
+                            </button>
+                          ))}
+                          {!items.length && (
+                            <div className="laneEmpty">
+                              {loading ? "Loading…" : "No loads here"}
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="tableWrap">
+                  <table>
+                    <caption className="srOnly">
+                      Authorized loads and their milestones
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th>Load / carrier</th>
+                        <th>Route</th>
+                        <th>Milestone</th>
+                        <th>Agreed rate</th>
+                        <th>
+                          <span className="srOnly">Open load</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loads.map((l) => (
+                        <tr key={l.id}>
+                          <td>
+                            <button
+                              className="loadLink"
+                              onClick={() => open(l.id)}
+                              disabled={busy || loading}
+                            >
+                              {l.reference}
+                            </button>
+                            <small>{l.carrier_name}</small>
+                          </td>
+                          <td>
+                            {l.pickup}
+                            <small>
+                              <ArrowDownIcon size={11} aria-hidden="true" />
+                              {l.delivery}
+                            </small>
+                          </td>
+                          <td>
+                            <span className={"badge " + l.stage}>
+                              <CircleIcon
+                                size={7}
+                                weight="fill"
+                                aria-hidden="true"
+                              />
+                              {stageLabels[l.stage]}
+                            </span>
+                          </td>
+                          <td className="money">
+                            {formatMoney(l.amount_minor)}
+                          </td>
+                          <td>
+                            <button
+                              className="iconButton"
+                              onClick={() => open(l.id)}
+                              aria-label={"Open " + l.reference}
+                              disabled={busy || loading}
+                            >
+                              <ArrowUpRightIcon size={17} aria-hidden="true" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!loads.length && (
+                    <div className="empty">
+                      <MagnifyingGlassIcon size={24} aria-hidden="true" />
+                      <h2>
+                        {loading ? "Loading your queue…" : "No matching loads"}
+                      </h2>
+                      <p>Try another search or clear your filters.</p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-          {cursor && (
-            <div className="pagination">
-              <button
-                className="secondary"
-                disabled={busy || loading || offline}
-                onClick={() =>
-                  act(async () => {
-                    const version = revision.current;
-                    const params = query();
-                    params.set("cursor", cursor);
-                    const data = await api<Queue>("loads?" + params);
-                    if (version !== revision.current || !active.current) return;
-                    setLoads((old) => [
-                      ...old,
-                      ...data.loads.filter(
-                        (l) => !old.some((x) => x.id === l.id),
-                      ),
-                    ]);
-                    setCursor(data.nextCursor);
-                  })
-                }
-              >
-                Load more
-                <ArrowDownIcon size={14} aria-hidden="true" />
-              </button>
-              <small>Counts reflect the loads shown.</small>
-            </div>
-          )}
-        </section>
+              {cursor && (
+                <div className="pagination">
+                  <button
+                    className="secondary"
+                    disabled={busy || loading || offline}
+                    onClick={() =>
+                      act(async () => {
+                        const version = revision.current,
+                          request = ++queueRequest.current;
+                        const params = query();
+                        params.set("cursor", cursor);
+                        let data: Queue;
+                        try {
+                          data = await api<Queue>("loads?" + params);
+                        } catch (e) {
+                          if (
+                            request === queueRequest.current &&
+                            version === revision.current &&
+                            active.current
+                          )
+                            throw e;
+                          return;
+                        }
+                        if (
+                          version !== revision.current ||
+                          request !== queueRequest.current ||
+                          !active.current
+                        )
+                          return;
+                        setLoads((old) => [
+                          ...old,
+                          ...data.loads.filter(
+                            (l) => !old.some((x) => x.id === l.id),
+                          ),
+                        ]);
+                        setCursor(data.nextCursor);
+                      })
+                    }
+                  >
+                    Load more
+                    <ArrowDownIcon size={14} aria-hidden="true" />
+                  </button>
+                  <small>Counts reflect the loads shown.</small>
+                </div>
+              )}
+            </section>
+          </>
+        ) : (
+          <CarrierDirectory
+            context={context}
+            onViewLoads={(id) => {
+              setSection("loads");
+              filterChange({ carrier: id, status: "", q: "" });
+            }}
+          />
+        )}
         <footer>
           <span className="qa">
             <CircleIcon size={6} weight="fill" aria-hidden="true" />
@@ -782,9 +918,9 @@ export default function Workspace() {
                         version: selected.version,
                         driverId: f.get("driver"),
                       });
-                      setSelected(await api<Load>("loads/" + selected.id));
-                      await refresh();
                       setNotice("Driver assignment saved.");
+                      setSelected(await api<Load>("loads/" + selected.id));
+                      await refreshAfterSave("Driver assignment saved.");
                     });
                   }}
                 >
@@ -819,9 +955,9 @@ export default function Workspace() {
                           version: selected.version,
                           stage: nextStage,
                         });
-                        setSelected(await api<Load>("loads/" + selected.id));
-                        await refresh();
                         setNotice("Milestone recorded.");
+                        setSelected(await api<Load>("loads/" + selected.id));
+                        await refreshAfterSave("Milestone recorded.");
                       })
                     }
                   >
@@ -836,6 +972,11 @@ export default function Workspace() {
               <p className="helpText">
                 You can view loads assigned to you. Contact dispatch for
                 changes.
+              </p>
+            )}
+            {notice && (
+              <p className="inlineNotice" role="status">
+                {notice}
               </p>
             )}
             {errorPanel}
@@ -935,14 +1076,17 @@ export default function Workspace() {
                   await api("loads", data, createRequest.current.key);
                   createRequest.current = null;
                   setCreating(false);
-                  await refresh();
-                  setNotice("Booked load created.");
+                  await refreshAfterSave("Booked load created.");
                 });
               }}
             >
               <label>
                 Carrier
-                <select name="carrier" required>
+                <select
+                  name="carrier"
+                  required
+                  defaultValue={carrier || undefined}
+                >
                   {context.carriers
                     .filter((c) => c.role !== "driver")
                     .map((c) => (
@@ -1061,6 +1205,6 @@ export default function Workspace() {
           </section>
         </Modal>
       )}
-    </div>
+    </WorkspaceShell>
   );
 }

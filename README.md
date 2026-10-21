@@ -54,9 +54,11 @@ Before deploying the backend, configure an authenticated PostgreSQL connection a
 
 ## Workspace and audit
 
-The light Board/List workspace adapts the user-supplied macro.com screenshot: compact toolbar, stage columns, bordered cards, restrained colors and a slide-over load inspector. Views share server-backed records; cards do not drag loads into a new status. Use Filter for carrier/milestone scope and Command/Ctrl+K to focus search. Counters reflect the records currently shown. Session expiry clears the workspace and returns to sign-in. Retrying a failed create preserves the idempotency key for unchanged entries.
+The light workspace adapts the user-supplied Macro references: a narrow icon rail, a contextual Dispatch sidebar, stage queues, carrier scope, and Board/List views with a slide-over load inspector. The carrier directory shows your current memberships and roles, supports search, and opens scoped loads. Collapse the sidebar for more room; on narrow screens, Open navigation brings up a drawer. Views share server-backed records; cards do not drag loads into a new status. Use Filter for carrier/milestone scope and Command/Ctrl+K to focus search. Counters reflect the records currently shown. Session expiry clears the workspace and returns to sign-in. Retrying a failed create preserves the idempotency key for unchanged entries.
 
-See [application audit](docs/audits/2026-10-20-application-audit.md) for findings, browser evidence, fixes and limitations, and [visual QA](design-qa.md) for the screenshot adaptation review. Migration 002 adds shared login-attempt storage and indexes; migrate before starting the updated server. Assignment now requires a current verified carrier dispatch agreement. Existing idempotency retries remain valid after an agreement expires because they do not create or assign new freight.
+See the [follow-up audit and navigation evidence](docs/audits/2026-10-20-follow-up-audit.md), [initial application audit](docs/audits/2026-10-20-application-audit.md) for findings, browser evidence, fixes and limitations, and [visual QA](design-qa.md) for the screenshot adaptation review. Migration 002 adds shared login-attempt storage and indexes; migrate before starting the updated server. Assignment now requires a current verified carrier dispatch agreement. Existing idempotency retries remain valid after an agreement expires because they do not create or assign new freight.
+
+Changes are committed on `main` after relevant checks and pushed to `origin/main`, preserving remote history. This project preference is recorded in `AGENTS.md`.
 
 ## Current limits and next work
 

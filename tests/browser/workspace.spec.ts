@@ -7,20 +7,20 @@ test("authenticated queue, details and mobile layout", async ({ page }) => {
     .fill(process.env.SEED_PASSWORD!);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
-    page.getByRole("heading", { name: "Dispatch board" }),
+    page.getByRole("heading", { name: "All loads", exact: true }),
   ).toBeVisible();
   await page.getByPlaceholder("Search reference…").fill("RL-101");
   await expect(
-    page.getByRole("button", { name: "RL-101", exact: true }),
+    page.getByRole("button", { name: /^RL-101(?: ·|$)/ }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "RL-101", exact: true }).click();
+  await page.getByRole("button", { name: /^RL-101(?: ·|$)/ }).click();
   await expect(
     page.getByRole("dialog", { name: "Load details" }),
   ).toContainText("Chicago, IL");
   await page.getByRole("button", { name: "Close" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("heading", { name: "Dispatch board" }),
+    page.getByRole("heading", { name: "All loads", exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: "artifacts/mobile-workspace.png",
@@ -76,7 +76,7 @@ test("create, assign, dispatch, reject cross-origin writes and revoke session", 
   await modal.getByRole("button", { name: "Create booked load" }).click();
   await expect(modal).not.toBeVisible();
   await page.getByPlaceholder("Search reference…").fill(reference);
-  await page.getByRole("button", { name: reference, exact: true }).click();
+  await page.getByRole("button", { name: reference, exact: false }).click();
   const details = page.getByRole("dialog", { name: "Load details" });
   await details.getByLabel("Authorized driver").selectOption({ index: 1 });
   await details
@@ -132,7 +132,7 @@ test("Board/List, filters, keyboard search and session recovery", async ({
   ).toBeFocused();
   await page.getByRole("textbox", { name: "Search loads" }).fill("RL-101");
   await expect(
-    page.getByRole("button", { name: "RL-101", exact: true }),
+    page.getByRole("button", { name: /^RL-101(?: ·|$)/ }),
   ).toBeVisible();
   await page.route("**/api/loads?*", (route) =>
     route.fulfill({
@@ -144,7 +144,7 @@ test("Board/List, filters, keyboard search and session recovery", async ({
   await page.getByRole("button", { name: "Refresh loads" }).click();
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "RL-101", exact: true }),
+    page.getByRole("button", { name: /^RL-101(?: ·|$)/ }),
   ).toHaveCount(0);
 });
 
