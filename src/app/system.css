@@ -1912,3 +1912,108 @@ select {
 .appShell .composerRow {
   align-items: flex-end;
 }
+
+/* ---- Carriers ---- */
+.appShell .carrierStats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.appShell .carrierStat {
+  display: grid;
+  gap: 0;
+  min-width: 112px;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.appShell .carrierStat strong {
+  font-size: 20px;
+}
+.appShell .carrierStat small {
+  color: var(--muted);
+}
+.appShell .carrierStat.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.appShell .carrierSort {
+  margin-left: auto;
+  align-self: center;
+  width: auto;
+}
+.appShell .carrierList .directoryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+@media (min-width: 1101px) {
+  .appShell .carrierList .directoryRow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 2.2fr) auto;
+  }
+}
+.appShell .carrierFacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+.appShell .carrierAuth {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.appShell .carrierMetric {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+}
+.appShell button.carrierMetric:not(:disabled):hover strong {
+  color: var(--accent);
+}
+.appShell .carrierMetric strong {
+  font-size: 16px;
+}
+.appShell .carrierMetric small {
+  color: var(--muted);
+}
+.appShell .carrierMetric.attention strong {
+  color: #b42318;
+}
+.appShell .skeletonLine {
+  display: block;
+  width: 220px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1f3fb, #e6eaf8, #f1f3fb);
+}
+.appShell .directoryRowActions {
+  flex-wrap: wrap;
+}
+.appShell .carrierStat,
+.appShell .carrierMetric {
+  justify-items: start;
+  text-align: left;
+}
+.appShell .directoryCarrier .roleLabel {
+  display: block;
+  text-align: left;
+  color: var(--muted);
+}
+.appShell .directoryCarrier > div {
+  text-align: left;
+}
+@media (max-width: 700px) {
+  .appShell .carrierList .directoryRowActions .secondary {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

@@ -1129,6 +1129,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             context={context}
             busy={busy || offline}
             onAdd={() => setSetupCarrier("new")}
+            onAuthError={handleError}
+            onOpenExceptions={() => setSection("exceptions")}
             onSetup={setSetupCarrier}
             onDocuments={setDocsCarrier}
             onViewLoads={(id) => {
