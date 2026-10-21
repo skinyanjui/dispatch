@@ -604,10 +604,13 @@ export function CarrierOnboarding({
                     </button>
                   </>
                 ) : (
-                  <p className="setupIntro">
-                    Add a contact under Edit company to invite a carrier
-                    manager.
-                  </p>
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => setStep("company")}
+                  >
+                    Add a contact to invite a carrier manager
+                  </button>
                 )}
               </div>
             )}

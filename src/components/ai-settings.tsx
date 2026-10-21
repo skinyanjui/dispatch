@@ -7,6 +7,7 @@ type Status = {
   available: boolean;
   provider: { name: string; model: string } | null;
   enabled: boolean;
+  assistant_enabled: boolean;
   monthly_limit_cents: number;
   spent_cents: number;
   version: number;
@@ -23,6 +24,7 @@ export function AiSettings({
   const api = useApi();
   const [status, setStatus] = useState<Status | null>(null),
     [enabled, setEnabled] = useState(false),
+    [assistant, setAssistant] = useState(false),
     [limit, setLimit] = useState("10"),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
@@ -30,6 +32,7 @@ export function AiSettings({
   const apply = useCallback((data: Status) => {
     setStatus(data);
     setEnabled(data.enabled);
+    setAssistant(data.assistant_enabled);
     setLimit(String(data.monthly_limit_cents / 100));
   }, []);
   const fail = useCallback(
@@ -71,6 +74,7 @@ export function AiSettings({
       await api(`organizations/${organizationId}/ai`, {
         version: status.version,
         enabled,
+        assistant_enabled: assistant,
         monthly_limit_cents: cents,
       });
       apply(await api<Status>(`organizations/${organizationId}/ai`));
@@ -118,6 +122,22 @@ export function AiSettings({
             />
             <span>Allow AI reading for this organization</span>
           </label>
+          <label className="aiConsent">
+            <input
+              type="checkbox"
+              checked={assistant}
+              disabled={
+                busy || (!status.available && !status.assistant_enabled)
+              }
+              onChange={(e) => setAssistant(e.target.checked)}
+            />
+            <span>Allow the dispatch assistant</span>
+          </label>
+          <small>
+            The assistant answers questions about loads, billing, prospects and
+            contacts. It can only read, and what it looks up for a question is
+            sent to the model provider.
+          </small>
           <label>
             Monthly limit (USD)
             <input

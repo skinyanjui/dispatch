@@ -26,7 +26,7 @@ Relay can ask Claude to **read one uploaded document** and suggest values for a 
 
 ## What this does not do
 
-It does not book, accept, price, invoice, reallocate or move money, and it does not read freight documents on its own: every reading is requested by a person. Accuracy on real paperwork has **not** been measured here; `npm run ai:eval` runs the synthetic fixtures against the live model and reports field accuracy and cost, and must be run, with the key and an explicit `--yes`, before relying on it.
+It does not book, accept, price, invoice, reallocate or move money, and it does not read freight documents on its own: every reading is requested by a person. Accuracy on real paperwork has **not** been measured here; no evaluation script against the live model exists yet. Tests use a stand-in client and the fixture provider, so field accuracy on real documents is unknown and should be measured by people before the readings are relied on.
 
 ## Rollback
 

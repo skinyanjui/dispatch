@@ -7,6 +7,7 @@ import type {
 } from "./contracts";
 import { feeMinor } from "./entry";
 import type { ContactKind, DirectoryEntry } from "./contact-types";
+import { demoAnswer, demoTurn } from "./demo-assistant";
 import {
   prospectsRequest,
   seedProspects,
@@ -1157,6 +1158,35 @@ export function createDemoApi() {
     if (p[0] === "documents") return documentRequest(p, body);
     if (p[0] === "extractions" && body) return extractionRequest(p);
     if (p[0] === "contacts") return contactsRequest(p, data, url);
+    if (p[0] === "assistant") {
+      if (state.viewer.role !== "dispatcher") fail("NOT_FOUND", 404);
+      if (p.length === 1)
+        return {
+          available: true,
+          enabled: true,
+          organization_id: org,
+          provider: { name: "fixture", model: "fixture" },
+          conversations: [],
+        };
+      if (p[1] === "ask" && data) {
+        const question = String(data.question || "").trim();
+        if (!question) fail("VALIDATION_ERROR", 400);
+        const result = demoAnswer(
+          question,
+          state.loads,
+          (state.prospects ||= seedProspects()).prospects.filter(
+            (x) => !x.archived,
+          ),
+          new Date().toISOString().slice(0, 10),
+        );
+        return {
+          conversation_id:
+            (data.conversation_id as string) || crypto.randomUUID(),
+          turn: demoTurn(question, result),
+        };
+      }
+      return fail("NOT_FOUND", 404);
+    }
     if (p[0] === "prospects")
       return prospectsRequest(
         (state.prospects ||= seedProspects()),

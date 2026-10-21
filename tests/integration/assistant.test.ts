@@ -174,10 +174,14 @@ test("tools refuse carriers outside the organization and never write", async () 
     runTool(t.dispatcher, t.organization, "delete_everything", {}),
     /Unknown tool/,
   );
+  // Counted for this organization only, so parallel test files cannot move them.
   const counts = async () =>
     (
       await pool.query(
-        "SELECT (SELECT count(*) FROM loads) l,(SELECT count(*) FROM prospects) p,(SELECT count(*) FROM dispatch_invoices) i",
+        `SELECT (SELECT count(*) FROM loads l JOIN carriers c ON c.id=l.carrier_id WHERE c.organization_id=$1) l,
+          (SELECT count(*) FROM prospects WHERE organization_id=$1) p,
+          (SELECT count(*) FROM dispatch_invoices i JOIN carriers c ON c.id=i.carrier_id WHERE c.organization_id=$1) i`,
+        [t.organization],
       )
     ).rows[0];
   const before = await counts();

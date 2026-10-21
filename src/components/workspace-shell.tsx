@@ -19,6 +19,7 @@ import {
   CaretUpDownIcon,
   AddressBookIcon,
   HandshakeIcon,
+  SparkleIcon,
   TrayIcon,
   ChartBarIcon,
 } from "@phosphor-icons/react";
@@ -34,6 +35,7 @@ export type WorkspaceSection =
   | "organization"
   | "contacts"
   | "prospects"
+  | "assistant"
   | "inbox"
   | "reports";
 export const sectionTitles: Record<
@@ -48,6 +50,7 @@ export const sectionTitles: Record<
   organization: "Organization",
   contacts: "Contacts",
   prospects: "Prospects",
+  assistant: "Assistant",
   inbox: "Inbox",
   reports: "Reports",
 };
@@ -177,6 +180,12 @@ export function WorkspaceShell({
       key: "prospects",
       label: "Prospects",
       Icon: HandshakeIcon,
+      show: !driverOnly && orgStaff,
+    },
+    {
+      key: "assistant",
+      label: "Assistant",
+      Icon: SparkleIcon,
       show: !driverOnly && orgStaff,
     },
     { key: "billing", label: "Billing", Icon: ReceiptIcon, show: !driverOnly },

@@ -11,11 +11,13 @@ import { severityClass, when } from "./load-exceptions";
 
 export function ExceptionQueue({
   onOpenLoad,
+  onShowLoads,
   onAuthError,
   driverOnly,
   revision,
 }: {
   revision: number;
+  onShowLoads: () => void;
   onOpenLoad: (id: string) => void;
   onAuthError: (e: unknown) => void;
   driverOnly: boolean;
@@ -165,9 +167,10 @@ export function ExceptionQueue({
         <div className="directoryEmpty">
           <WarningIcon size={40} weight="light" aria-hidden="true" />
           <h3>No exceptions match</h3>
-          <p>
-            Flag one from a load&apos;s details when something needs follow-up.
-          </p>
+          <p>Exceptions are raised on a load.</p>
+          <button className="secondary" onClick={onShowLoads}>
+            Choose a load
+          </button>
         </div>
       )}
       {truncated && (

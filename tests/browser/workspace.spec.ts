@@ -491,6 +491,7 @@ for (const [label, size] of [
       "Contacts",
       "Carriers",
       "Prospects",
+      "Assistant",
       "Billing",
       "Reports",
     ])

@@ -1,4 +1,5 @@
 "use client";
+import { LoginHero } from "@/components/login-hero";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import {
@@ -37,6 +38,7 @@ import { NotificationCenter } from "@/components/notification-center";
 import { AccountSettings } from "@/components/account-settings";
 import { ContactsDirectory } from "@/components/contacts-directory";
 import { Prospects } from "@/components/prospects";
+import { Assistant } from "@/components/assistant";
 import { Inbox, type Compose } from "@/components/inbox";
 import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
@@ -609,6 +611,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         <span className="loginBottom">
           A little less busywork. A lot more visibility.
         </span>
+        <LoginHero />
       </main>
     );
   const canWrite = context.carriers.some((c) => c.role !== "driver");
@@ -888,6 +891,27 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               setSection("inbox");
             }}
           />
+        ) : section === "assistant" ? (
+          <Assistant
+            offline={offline}
+            isAdmin={(context.organizations || []).some((o) => o.role)}
+            onAuthError={handleError}
+            onOpen={(source) => {
+              if (source.kind === "load") void open(source.id);
+              else
+                setSection(
+                  (
+                    {
+                      prospect: "prospects",
+                      contact: "contacts",
+                      carrier: "carriers",
+                      invoice: "billing",
+                      exception: "exceptions",
+                    } as const
+                  )[source.kind],
+                );
+            }}
+          />
         ) : section === "prospects" ? (
           <Prospects
             offline={offline}
@@ -936,6 +960,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             driverOnly={driverOnly}
             onAuthError={handleError}
             onOpenLoad={(id) => void open(id)}
+            onShowLoads={() => setSection("loads")}
           />
         ) : (
           <CarrierDirectory
@@ -1107,9 +1132,18 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   {nextStage && (
                     <button
                       className="primary full nextMilestone"
-                      disabled={busy || offline || !selected.assignment}
-                      onClick={() =>
-                        act(async () => {
+                      disabled={busy || offline}
+                      onClick={() => {
+                        // Blocked on a driver: the button leads there.
+                        if (!selected.assignment) {
+                          document
+                            .querySelector<HTMLSelectElement>(
+                              ".assignForm select",
+                            )
+                            ?.focus();
+                          return;
+                        }
+                        void act(async () => {
                           await api("loads/" + selected.id + "/milestones", {
                             version: selected.version,
                             stage: nextStage,
@@ -1117,10 +1151,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                           setNotice("Milestone recorded.");
                           setSelected(await api<Load>("loads/" + selected.id));
                           await refreshAfterSave("Milestone recorded.");
-                        })
-                      }
+                        });
+                      }}
                     >
-                      Record next milestone
+                      {selected.assignment
+                        ? "Record next milestone"
+                        : "Choose a driver to continue"}
                       <ArrowRightIcon size={15} aria-hidden="true" />
                       <small>{stageLabels[nextStage]}</small>
                     </button>

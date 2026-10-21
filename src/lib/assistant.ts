@@ -37,7 +37,19 @@ async function orgFor(
   wanted?: string,
 ) {
   const orgs = (await access(c, user)).organizations;
-  const org = wanted ?? orgs[0];
+  if (wanted) {
+    if (!orgs.includes(wanted)) throw new HttpError(404, "NOT_FOUND");
+    return wanted;
+  }
+  // Without a choice, the organization they administer comes first, so the
+  // person who can turn the assistant on sees the same organization.
+  const admin = await c.query(
+    "SELECT organization_id FROM organization_members WHERE user_id=$1 ORDER BY created_at,organization_id LIMIT 1",
+    [user],
+  );
+  const org =
+    (admin.rows[0]?.organization_id as string | undefined) ??
+    [...orgs].sort()[0];
   if (!org || !orgs.includes(org)) throw new HttpError(404, "NOT_FOUND");
   return org;
 }

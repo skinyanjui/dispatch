@@ -851,16 +851,156 @@ fieldset label:last-child {
 }
 .login {
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 52px 24px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  justify-items: center;
+  padding: 36px 24px 22px;
+  background: #fff;
+}
+.login > .brand {
+  justify-self: start;
 }
 .loginPanel {
-  width: 360px;
+  width: 380px;
   max-width: 100%;
   margin: auto 0;
-  padding: 55px 0;
+  padding: 40px 0;
+}
+.loginHero {
+  display: none;
+}
+@media (min-width: 900px) {
+  .login {
+    grid-template-columns: minmax(420px, 1fr) minmax(0, 1.1fr);
+    grid-template-rows: auto 1fr auto;
+    column-gap: 0;
+    padding: 0;
+  }
+  .login > .brand {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 32px 0 0 clamp(32px, 6vw, 88px);
+  }
+  .login > .loginPanel {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+    margin: auto 0;
+    padding: 40px 24px 40px clamp(32px, 6vw, 88px);
+    box-sizing: content-box;
+  }
+  .login > .loginBottom {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: start;
+    margin: 0 0 22px clamp(32px, 6vw, 88px);
+  }
+  .loginHero {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: stretch;
+    justify-self: stretch;
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 56px clamp(32px, 5vw, 80px);
+    color: #fff;
+    background:
+      radial-gradient(circle at 12% 8%, #22d3a6 0, transparent 38%),
+      radial-gradient(circle at 92% 92%, #3b82f6 0, transparent 46%),
+      linear-gradient(150deg, #087f5b 0%, #0b6b8a 52%, #1d4ed8 100%);
+  }
+  .loginHero::before,
+  .loginHero::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    background: rgb(255 255 255 / 0.09);
+  }
+  .loginHero::before {
+    width: 380px;
+    height: 380px;
+    right: -120px;
+    top: -120px;
+  }
+  .loginHero::after {
+    width: 260px;
+    height: 260px;
+    left: -80px;
+    bottom: -90px;
+  }
+  .heroInner {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+  }
+  .heroEyebrow {
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c9f7e6;
+  }
+  .loginHero h2 {
+    margin: 0 0 32px;
+    font-size: clamp(28px, 3vw, 40px);
+    line-height: 1.15;
+    font-weight: 650;
+    letter-spacing: -0.8px;
+    text-align: left;
+  }
+  .loginHero ul {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .loginHero li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #eaf6ff;
+  }
+  .loginHero li svg {
+    flex: none;
+    margin-top: 2px;
+    color: #7ff0c8;
+  }
+  .loginHero li strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 15px;
+    font-weight: 650;
+    color: #fff;
+  }
+}
+/* Vibrant, accessible actions and links on the white sign-in side. */
+.login .primary {
+  background: #14c98a;
+  color: #052e22;
+  font-weight: 650;
+  box-shadow: 0 6px 16px -8px #14c98a;
+}
+.login .primary:hover {
+  background: #0fb67b;
+}
+.login .eyebrow {
+  color: #08795a;
+  font-weight: 650;
+}
+.login .loginFoot a,
+.login .loginAccess summary,
+.login .textButton {
+  color: #08795a;
 }
 .loginPanel h1 {
   font-size: 31px;
@@ -879,7 +1019,7 @@ fieldset label:last-child {
 }
 .loginFoot {
   color: var(--muted);
-  text-align: center;
+  text-align: left;
   font-size: 10px;
   line-height: 1.9;
 }
@@ -1182,4 +1322,12 @@ fieldset label:last-child {
 }
 .laneEmpty {
   color: var(--muted);
+}
+.login .textButton {
+  padding-left: 0;
+}
+@media (max-width: 899px) {
+  .login > .loginBottom {
+    justify-self: start;
+  }
 }

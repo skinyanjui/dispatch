@@ -1,4 +1,5 @@
 "use client";
+import { LoginHero } from "@/components/login-hero";
 import { useEffect, useState } from "react";
 import { Brand } from "@/components/workspace-shell";
 import { useApi, ApiError, describe } from "@/lib/client-api";
@@ -250,6 +251,7 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
         )}
       </section>
       <p className="loginBottom">A simpler start. A clearer handoff.</p>
+      <LoginHero />
     </main>
   );
 }

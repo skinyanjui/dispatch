@@ -1,4 +1,5 @@
 "use client";
+import { LoginHero } from "@/components/login-hero";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
@@ -113,6 +114,7 @@ export function ResetPasswordPage() {
           </form>
         )}
       </section>
+      <LoginHero />
     </main>
   );
 }
@@ -161,6 +163,7 @@ export function VerifyEmailPage() {
           </>
         )}
       </section>
+      <LoginHero />
     </main>
   );
 }
