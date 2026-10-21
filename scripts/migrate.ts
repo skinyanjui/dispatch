@@ -6,14 +6,16 @@ try {
     await c.query(
       "CREATE TABLE IF NOT EXISTS schema_migrations(version text PRIMARY KEY)",
     );
-    for (const version of ["001", "002"]) {
+    for (const [version, filename] of [
+      ["001", "001_foundation.sql"],
+      ["002", "002_auth_controls.sql"],
+      ["003", "003_manual_check_ins.sql"],
+    ]) {
       const exists = await c.query(
         "SELECT 1 FROM schema_migrations WHERE version=$1",
         [version],
       );
       if (!exists.rowCount) {
-        const filename =
-          version === "001" ? "001_foundation.sql" : "002_auth_controls.sql";
         await c.query(
           await readFile(new URL("../db/" + filename, import.meta.url), "utf8"),
         );

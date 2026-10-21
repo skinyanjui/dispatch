@@ -11,6 +11,22 @@ export const stageLabels: Record<Stage, string> = {
   "picked-up": "In transit",
   delivered: "Delivered",
 };
+export type CheckIn = {
+  id: string;
+  location: string;
+  note: string;
+  source: "manual";
+  observed_at: string;
+  recorded_at: string;
+  actor_name: string;
+};
+export type CheckInInput = {
+  version: number;
+  location: string;
+  note: string;
+  observed_at: string;
+  idempotency_key: string;
+};
 export type Load = {
   id: string;
   reference: string;
@@ -31,7 +47,9 @@ export type Load = {
     timezone: string;
   }[];
   events?: { id: string; type: string; created_at: string }[];
+  events_truncated?: boolean;
   assignment?: { name: string; driver_id: string } | null;
+  check_ins?: CheckIn[];
 };
 export type Context = {
   user: { name: string };

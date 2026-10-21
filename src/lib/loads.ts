@@ -61,14 +61,20 @@ async function member(
     throw new HttpError(404, "NOT_FOUND");
   return rows[0];
 }
-async function scoped(c: PoolClient, user: string, id: string, write = false) {
+async function scoped(
+  c: PoolClient,
+  user: string,
+  id: string,
+  write = false,
+  allowDriverWrite = false,
+) {
   const { rows } = await c.query(
     `SELECT l.* FROM loads l
     JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$2
-    WHERE l.id=$1 AND ($3::boolean=false OR m.role<>'driver')
+    WHERE l.id=$1 AND ($3::boolean=false OR m.role<>'driver' OR $4::boolean)
       AND (m.role<>'driver' OR EXISTS(SELECT 1 FROM load_assignments a WHERE a.load_id=l.id AND a.driver_id=m.driver_id))
     ${write ? "FOR UPDATE OF l" : ""}`,
-    [id, user, write],
+    [id, user, write, allowDriverWrite],
   );
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
   return rows[0];
@@ -234,19 +240,105 @@ export async function detail(user: string, id: string) {
       [id],
     );
     const events = await c.query(
-      "SELECT id,type,payload,created_at FROM load_events WHERE load_id=$1 ORDER BY created_at",
+      "SELECT id,type,payload,created_at FROM load_events WHERE load_id=$1 ORDER BY created_at DESC,id DESC LIMIT 101",
       [id],
     );
     const assignment = await c.query(
       "SELECT a.*,d.name FROM load_assignments a JOIN drivers d ON d.id=a.driver_id WHERE load_id=$1",
       [id],
     );
+    const checkIns = await c.query(
+      `SELECT ci.id,ci.location,ci.note,ci.source,ci.observed_at,ci.recorded_at,u.name actor_name
+       FROM check_ins ci JOIN users u ON u.id=ci.actor_id
+       WHERE ci.load_id=$1 AND ci.carrier_id=$2
+       ORDER BY ci.observed_at DESC,ci.recorded_at DESC,ci.id DESC LIMIT 50`,
+      [id, load.carrier_id],
+    );
     return {
       ...load,
       stops: stops.rows,
-      events: events.rows,
+      events: events.rows.slice(0, 100).reverse(),
+      events_truncated: events.rows.length > 100,
       assignment: assignment.rows[0] ?? null,
+      check_ins: checkIns.rows,
     };
+  });
+}
+export const checkInSchema = z
+  .object({
+    version: z.number().int().positive(),
+    location: z.string().trim().min(1).max(160),
+    note: z.string().trim().max(1000).default(""),
+    observed_at: z.iso.datetime({ offset: true }),
+    idempotency_key: z.uuid().transform((value) => value.toLowerCase()),
+  })
+  .strict();
+
+export async function recordCheckIn(user: string, id: string, input: unknown) {
+  const data = checkInSchema.parse(input);
+  return transaction(async (c) => {
+    const load = await scoped(c, user, id, true, true);
+    // Recheck after taking the load lock: an assignment or membership may have
+    // changed while this statement waited for a concurrent writer to commit.
+    const membership = await member(c, user, load.carrier_id);
+    if (membership.role === "driver") {
+      const assigned = await c.query(
+        "SELECT 1 FROM load_assignments WHERE load_id=$1 AND driver_id=$2",
+        [id, membership.driver_id],
+      );
+      if (!assigned.rowCount) throw new HttpError(404, "NOT_FOUND");
+    }
+    await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+      user + ":check-in:" + data.idempotency_key,
+    ]);
+    const { idempotency_key, ...observation } = data;
+    const hash = digest(JSON.stringify({ load_id: load.id, ...observation }));
+    const old = await c.query(
+      "SELECT id,load_id,load_version,request_hash FROM check_ins WHERE actor_id=$1 AND idempotency_key=$2",
+      [user, idempotency_key],
+    );
+    if (old.rows[0]) {
+      if (old.rows[0].request_hash !== hash)
+        throw new HttpError(409, "IDEMPOTENCY_CONFLICT");
+      return {
+        id: old.rows[0].load_id,
+        version: old.rows[0].load_version,
+        check_in_id: old.rows[0].id,
+      };
+    }
+    if (load.version !== data.version)
+      throw new HttpError(409, "VERSION_CONFLICT");
+    const observedAt = Date.parse(data.observed_at);
+    const now = Date.now();
+    if (observedAt > now + 5 * 60_000 || observedAt < now - 30 * 86_400_000)
+      throw new HttpError(422, "CHECK_IN_TIME_OUT_OF_RANGE");
+    const checkInId = randomUUID();
+    const version = load.version + 1;
+    await c.query(
+      `INSERT INTO check_ins(id,load_id,carrier_id,actor_id,location,note,observed_at,load_version,idempotency_key,request_hash)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [
+        checkInId,
+        id,
+        load.carrier_id,
+        user,
+        data.location,
+        data.note,
+        data.observed_at,
+        version,
+        idempotency_key,
+        hash,
+      ],
+    );
+    await c.query("UPDATE loads SET version=$2 WHERE id=$1", [id, version]);
+    await event(c, user, load, "load.check-in", {
+      check_in_id: checkInId,
+      source: "manual",
+      location: data.location,
+      note: data.note,
+      observed_at: data.observed_at,
+    });
+    return { id, version, check_in_id: checkInId };
   });
 }
 export async function mutate(

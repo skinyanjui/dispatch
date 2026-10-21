@@ -19,6 +19,12 @@ npm run dev
 
 The authenticated workspace is at port 3000. QA sign-in accounts: `dispatcher@relay.test` (both carriers), `carrier@relay.test` (Blue Ridge only), and `driver@relay.test` (assigned Blue Ridge loads only). All use the password you supplied during first seed. Reseeding preserves existing records and passwords. Never seed a production database. Original interactive demo: `/demo.html`, also `npm run demo` on port 4173. Demo storage is browser-only and independent of backend records.
 
+### Signing in
+
+Use one of the QA emails above with the **original `SEED_PASSWORD` used on first seed**. The login screen's “How do I get access?” lists QA account choices and explains administrator access. There is no public signup, password reset or default shared password. Changing `SEED_PASSWORD` and reseeding does not reset existing passwords. Do not publish your configured password in source control or chat.
+
+A hosted build alone does not create accounts. An administrator must configure `DATABASE_URL`, apply migrations and initialize a separate fictional QA database before those QA logins work. Provision real users through a future audited administration workflow; do not seed production. No hosted login or deployment is verified by the local checks below.
+
 ## Checks
 
 ```sh
@@ -40,9 +46,10 @@ Integration tests write fictional fixtures to the selected database. Use an isol
 - `POST /api/login`, `POST /api/logout`, `GET /api/me`: opaque, hashed server sessions (12-hour expiry). HttpOnly, SameSite Strict cookies; Secure defaults on in production. Local HTTP production-mode testing can explicitly use `COOKIE_SECURE=false`; deployed HTTPS must use true.
 - `GET /api/loads?carrier_id=&status=&q=&cursor=`: carrier/assigned-driver scope, 25-record pages with an opaque cursor.
 - `POST /api/loads`: `Idempotency-Key` required; carrierId, reference, source, integer amountMinor and two ordered stops (pickup/delivery), each with address, IANA timezone and ISO-offset windowStart/windowEnd. Verified effective dispatch agreement required.
-- `GET /api/loads/:id`: scoped load, stops, assignment, append-only timeline.
+- `GET /api/loads/:id`: scoped load, stops, assignment, latest 50 check-ins by observation time, and latest 100 activity events (chronological within that window). `events_truncated` explicitly marks omitted older events; all history remains stored.
 - `POST /api/loads/:id/assign`: driverId + expected version; same carrier enforced in app and database.
-- `POST /api/loads/:id/milestones`: stage + expected version; booked → dispatched → picked-up → delivered. Assigned driver required. Drivers are read-only in this release.
+- `POST /api/loads/:id/milestones`: stage + expected version; booked → dispatched → picked-up → delivered. Assigned driver required. Drivers cannot assign or change milestones.
+- `POST /api/loads/:id/check-ins`: `{version, location, note?, observed_at, idempotency_key}`. Location is 1–160 characters, note up to 1,000, time is an ISO datetime with offset from the last 30 days through five minutes ahead, and key is a UUID. Authenticated dispatchers/managers may record within their carrier scope; drivers may record only on currently assigned loads. Source is always `manual`; actor and receipt time come from the server. Retries retain the original payload, version and key. Observations increment version and append event/outbox/audit records without changing the shipment milestone.
 
 Writes require a same-origin Origin header. API responses distinguish validation (400), missing session (401), forbidden origin (403), inaccessible/unknown object (404), conflict (409), invalid domain operation (422), throttling (429), and dependency outage (503). Mutation version conflicts require refreshing details before retrying. No carrier transfer operation exists. Carrier-manager and dispatcher can write within explicit memberships. Outbox records are persisted but no external consumer or delivery is enabled.
 
@@ -54,9 +61,11 @@ Before deploying the backend, configure an authenticated PostgreSQL connection a
 
 ## Workspace and audit
 
-The light workspace adapts the user-supplied Macro references: a narrow icon rail, a contextual Dispatch sidebar, stage queues, carrier scope, and Board/List views with a slide-over load inspector. The carrier directory shows your current memberships and roles, supports search, and opens scoped loads. Collapse the sidebar for more room; on narrow screens, Open navigation brings up a drawer. Views share server-backed records; cards do not drag loads into a new status. Use Filter for carrier/milestone scope and Command/Ctrl+K to focus search. Counters reflect the records currently shown. Session expiry clears the workspace and returns to sign-in. Retrying a failed create preserves the idempotency key for unchanged entries.
+The light workspace adapts the user-supplied Macro references: a narrow icon rail, a contextual Dispatch sidebar, stage queues, carrier scope, and Board/List views with a slide-over load inspector. Global design tokens give login, forms, dialogs, notifications and workspace views the same typography, white surfaces, mint actions and focus states. The carrier directory shows your current memberships and roles, supports search, and opens scoped loads. Collapse the sidebar for more room; on narrow screens, Open navigation brings up a drawer. Views share server-backed records; cards do not drag loads into a new status. Use Filter for carrier/milestone scope and Command/Ctrl+K to focus search. Counters reflect the records currently shown. Session expiry clears the workspace and returns to sign-in. Retrying a failed create preserves the idempotency key for unchanged entries.
 
-See the [follow-up audit and navigation evidence](docs/audits/2026-10-20-follow-up-audit.md), [initial application audit](docs/audits/2026-10-20-application-audit.md) for findings, browser evidence, fixes and limitations, and [visual QA](design-qa.md) for the screenshot adaptation review. Migration 002 adds shared login-attempt storage and indexes; migrate before starting the updated server. Assignment now requires a current verified carrier dispatch agreement. Existing idempotency retries remain valid after an agreement expires because they do not create or assign new freight.
+Open a load and choose **Add check-in** to record an approximate location, observed local time/zone and optional handoff note. The inspector separates observation and recording times and names the reporter. Reports older than two hours are labeled stale; age labels update every minute. This is a visible freshness convention, not an operational SLA or live tracking. Earlier observations entered later do not displace a newer observation. History is immutable; editing/correction and older-history pagination remain future work.
+
+See the [operational audit and global design evidence](docs/audits/2026-10-21-operational-audit.md), [previous follow-up audit](docs/audits/2026-10-20-follow-up-audit.md), [initial application audit](docs/audits/2026-10-20-application-audit.md), and [visual QA](design-qa.md). Migration 002 adds shared login-attempt storage; **003 adds immutable check-ins. Run `npm run db:migrate` with the QA database environment before starting this version.** Assignment requires a current verified carrier dispatch agreement. Existing idempotency retries remain valid after an agreement expires because they do not create or assign new freight.
 
 Changes are committed on `main` after relevant checks and pushed to `origin/main`, preserving remote history. This project preference is recorded in `AGENTS.md`.
 

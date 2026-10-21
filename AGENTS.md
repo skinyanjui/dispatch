@@ -16,6 +16,7 @@ Develop Relay, a production-ready carrier-agent freight dispatch management syst
 - Require a carrier with verified written dispatch authorization before any booked load can be created or assigned; never implicitly transfer booked freight across carriers.
 - External side effects require clear consent, idempotency, retries with bounded backoff, failure visibility, and an audit record.
 - Support keyboard use, accessible labels, screen-reader status messages, mobile layout and clear empty/loading/error/retry states.
+- Apply the user-selected Macro-inspired minimal light design globally: shared tokens, typography, neutral surfaces, mint actions and consistent focus/error states on login, navigation, forms, dialogs and operational views. Keep the separate original demo as a historical reference.
 - Keep original uploaded documents immutable or versioned, with provenance and access/retention controls.
 - Treat AI as a human-reviewed assistant for probabilistic tasks, not an authority for booking, rate confirmations, invoicing or funds movement.
 - Each change must include code, DB migration (where applicable), tests, docs and operational updates, in atomic commits.

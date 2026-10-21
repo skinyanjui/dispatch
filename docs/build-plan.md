@@ -1,6 +1,6 @@
 # Relay Dispatch TMS — Build plan
 
-**Stage:** Interactive browser prototype, not production software. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
+**Current stage:** Authenticated, carrier-scoped foundation with persistent load creation, assignment, milestones and manual check-ins. The operational MVP remains incomplete; exceptions, documents, finances and integrations are pending. The prototype workflows below remain a historical reference. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
 
 ## What works in the prototype
 

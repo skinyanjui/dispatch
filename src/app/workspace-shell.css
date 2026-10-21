@@ -1,13 +1,5 @@
 /* Macro-inspired navigation: icon rail, contextual sidebar, then the work surface. */
 .appShell {
-  --canvas: #fff;
-  --panel: #fff;
-  --ink: #252726;
-  --muted: #777a78;
-  --border: #eceeec;
-  --soft: #f5f6f5;
-  --accent: #19694f;
-  --amber: #d9f3e9;
   display: grid;
   grid-template-columns: 60px 224px minmax(0, 1fr);
   background: var(--canvas);
@@ -246,14 +238,14 @@
 }
 .appShell .createButton {
   font-weight: 500;
-  background: #d5f2e6;
-  color: #236b50;
+  background: var(--accent-soft);
+  color: var(--accent);
   border-radius: 18px;
   padding: 8px 12px;
   font-size: 11px;
 }
 .appShell .createButton:hover {
-  background: #c1e9d8;
+  background: var(--accent-soft-hover);
 }
 .workspaceEnvironment {
   font-size: 9px;
@@ -418,7 +410,7 @@
   font-size: 11px;
 }
 .directorySearch:focus-within {
-  outline: 2px solid #81b69b;
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
 .directorySearch input:focus-visible {
@@ -808,8 +800,8 @@
 .inlineNotice {
   font-size: 12px;
   line-height: 1.6;
-  color: #4c805e;
-  background: #f1f8f3;
+  color: var(--success);
+  background: var(--success-bg);
   padding: 10px 12px;
   border-radius: 6px;
   margin: 16px 0 10px;
@@ -818,10 +810,10 @@
 .appShell a:focus-visible,
 .appShell input:focus-visible,
 .appShell select:focus-visible {
-  outline-color: #4d8e6a;
+  outline-color: var(--focus);
 }
 .appShell .search:focus-within {
-  outline-color: #4d8e6a;
+  outline-color: var(--focus);
 }
 .appliedFilters {
   display: flex;
@@ -850,15 +842,15 @@
 .workspaceEnvironment,
 .appShell .toolbarMeta,
 .sidebarAccount small {
-  color: #707b72;
+  color: var(--muted);
 }
 .roleLabel {
-  color: #606e64;
+  color: var(--muted);
 }
 .directoryCarrier small,
 .directoryNote {
-  color: #707f74;
+  color: var(--muted);
 }
 .directoryIntro p:not(.eyebrow) {
-  color: #67766b;
+  color: var(--muted);
 }

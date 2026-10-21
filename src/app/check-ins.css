@@ -1,0 +1,147 @@
+.checkIns {
+  margin: 26px 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.checkInHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.inspector .checkInHeading h3 {
+  margin: 0;
+}
+.checkInHeading button {
+  padding: 6px 9px;
+  font-size: 11px;
+}
+.checkInHelp {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.checkInEmpty {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 22px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.checkInForm fieldset {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--soft);
+}
+.checkInForm .formGrid {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+.checkInForm .optionalLabel {
+  display: inline;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 10px;
+  margin-top: -5px;
+}
+.checkInForm textarea {
+  resize: vertical;
+  min-height: 70px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 11px;
+  font: inherit;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--panel);
+  width: 100%;
+  outline-offset: 4px;
+}
+.checkInForm textarea:focus-visible {
+  outline: 2px solid var(--focus);
+}
+.checkInActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.checkInFormError {
+  color: var(--error);
+  font-size: 12px;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.checkInReport {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.checkInLocation {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+.checkInLocation > svg {
+  color: var(--accent);
+}
+.checkInLocation strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+}
+.checkInStale {
+  color: #865a17;
+  background: #faf1dc;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.checkInAge {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.checkInNote {
+  font-size: 12px;
+  margin-top: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.checkInProvenance {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.checkInProvenance > div {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 10px;
+}
+.checkInProvenance dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.checkInHistory summary {
+  cursor: pointer;
+  padding: 14px 0 0;
+  font-size: 11px;
+  color: var(--accent);
+}
+.checkInHistory summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}

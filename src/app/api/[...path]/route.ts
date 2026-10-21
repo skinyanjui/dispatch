@@ -7,6 +7,7 @@ import {
   listLoads,
   detail,
   mutate,
+  recordCheckIn,
   auditDenied,
 } from "@/lib/loads";
 export const runtime = "nodejs";
@@ -107,6 +108,11 @@ async function handle(req: NextRequest) {
       const id = z.uuid().parse(path[1]);
       if (path.length === 2 && req.method === "GET")
         return NextResponse.json(await detail(user.id, id));
+      if (path.length === 3 && path[2] === "check-ins" && req.method === "POST")
+        return NextResponse.json(
+          await recordCheckIn(user.id, id, await readJson(req)),
+          { status: 201 },
+        );
       if (
         path.length === 3 &&
         ["assign", "milestones"].includes(path[2]) &&

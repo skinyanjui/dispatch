@@ -26,6 +26,7 @@ import {
   type WorkspaceSection,
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
+import { LoadCheckIns } from "@/components/load-check-ins";
 import {
   stages,
   stageLabels,
@@ -45,13 +46,17 @@ const messages: Record<string, string> = {
   DUPLICATE_REFERENCE: "This carrier already has a load with that reference.",
   ASSIGN_DRIVER_FIRST: "Assign an authorized driver before dispatching.",
   VALIDATION_ERROR:
-    "Check your entries. Pickup must precede delivery, and both appointments need a valid time zone.",
+    "Check the required fields, dates, time zones and text limits before retrying.",
   TRY_AGAIN_LATER: "Too many sign-in attempts. Please try again in one minute.",
   NOT_FOUND: "This load is unavailable or outside your access.",
   AUTH_REQUIRED: "Please sign in to continue.",
   SESSION_EXPIRED: "Your session expired. Sign in again to continue.",
   INVALID_CURSOR: "This queue has changed. Refresh the view.",
   DRIVER_CARRIER_MISMATCH: "Choose a driver authorized by this carrier.",
+  CHECK_IN_TIME_OUT_OF_RANGE:
+    "Use an observed time within the last 30 days and no more than five minutes ahead.",
+  IDEMPOTENCY_CONFLICT:
+    "This retry differs from the original request. Refresh the details before recording a new report.",
 };
 class ApiError extends Error {
   constructor(
@@ -108,7 +113,23 @@ const eventLabels: Record<string, string> = {
   "load.created": "Load created",
   "load.assign": "Driver assigned",
   "load.milestones": "Milestone recorded",
+  "load.check-in": "Manual check-in recorded",
 };
+
+function appointmentLabel(start: string, end: string, timezone: string) {
+  const format = (value: string) =>
+    new Date(value).toLocaleString("en-US", {
+      timeZone: timezone,
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  return new Date(start).getTime() === new Date(end).getTime()
+    ? format(start)
+    : `${format(start)} – ${format(end)}`;
+}
 
 export default function Workspace() {
   const [context, setContext] = useState<Context | null>(null),
@@ -327,7 +348,7 @@ export default function Workspace() {
     <div className="alert error" role="alert">
       <WarningCircleIcon size={18} aria-hidden="true" />
       <span>{describe(error)}</span>
-      {context && !selected && !creating && (
+      {context && !selected && !creating && section === "loads" && (
         <button
           className="textButton"
           disabled={busy}
@@ -399,6 +420,21 @@ export default function Workspace() {
             </button>
           </form>
           {errorPanel}
+          <details className="loginAccess">
+            <summary>How do I get access?</summary>
+            <p>
+              Ask your workspace administrator for an account and password.
+              Self-service registration and password recovery are not available
+              yet.
+            </p>
+            <p>
+              For the fictional QA workspace, use{" "}
+              <strong>dispatcher@relay.test</strong>,{" "}
+              <strong>carrier@relay.test</strong>, or{" "}
+              <strong>driver@relay.test</strong> with the QA password set by
+              your administrator.
+            </p>
+          </details>
           <p className="loginFoot">
             Fictional QA data. No live freight connections.
             <br />
@@ -524,6 +560,18 @@ export default function Workspace() {
         </div>
       </header>
       <main id="main" className="workspace">
+        {offline && (
+          <div className="alert error" role="alert">
+            Offline — this view may be stale. Reconnect, then refresh.
+          </div>
+        )}
+        {!selected && !creating && errorPanel}
+        {!selected && !creating && notice && (
+          <div className="alert success" role="status">
+            <CheckIcon size={17} aria-hidden="true" />
+            {notice}
+          </div>
+        )}
         {section === "loads" ? (
           <>
             {controls}
@@ -588,22 +636,9 @@ export default function Workspace() {
                 </button>
               </div>
             )}
-            {offline && (
-              <div className="alert error" role="alert">
-                Offline — this view may be stale. Reconnect, then refresh.
-              </div>
-            )}
-            {!selected && !creating && errorPanel}
             <div className="srOnly" role="status" aria-live="polite">
               {loading ? "Loading loads" : `${loads.length} loads shown`}
-              {notice && ". " + notice}
             </div>
-            {notice && (
-              <div className="alert success">
-                <CheckIcon size={17} aria-hidden="true" />
-                {notice}
-              </div>
-            )}
             <section
               className="loadSurface"
               aria-label="Load workspace"
@@ -707,6 +742,7 @@ export default function Workspace() {
                           <td>
                             <button
                               className="loadLink"
+                              aria-label={`${l.reference} · ${l.carrier_name}`}
                               onClick={() => open(l.id)}
                               disabled={busy || loading}
                             >
@@ -738,7 +774,7 @@ export default function Workspace() {
                             <button
                               className="iconButton"
                               onClick={() => open(l.id)}
-                              aria-label={"Open " + l.reference}
+                              aria-label={`Open ${l.reference} · ${l.carrier_name}`}
                               disabled={busy || loading}
                             >
                               <ArrowUpRightIcon size={17} aria-hidden="true" />
@@ -888,13 +924,13 @@ export default function Workspace() {
                     <strong>{s.address}</strong>
                     <p>
                       <ClockIcon size={13} aria-hidden="true" />
-                      {new Date(s.window_start).toLocaleString("en-US", {
-                        timeZone: s.timezone,
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                      <span>
+                        {appointmentLabel(
+                          s.window_start,
+                          s.window_end,
+                          s.timezone,
+                        )}
+                      </span>
                     </p>
                     <span className="stopZone">{s.timezone}</span>
                   </div>
@@ -970,8 +1006,8 @@ export default function Workspace() {
             )}
             {selectedRole === "driver" && (
               <p className="helpText">
-                You can view loads assigned to you. Contact dispatch for
-                changes.
+                You can record manual check-ins for your assigned loads. Contact
+                dispatch for other changes.
               </p>
             )}
             {notice && (
@@ -980,7 +1016,7 @@ export default function Workspace() {
               </p>
             )}
             {errorPanel}
-            {error === "VERSION_CONFLICT" && (
+            {error && (
               <button
                 className="secondary"
                 disabled={busy}
@@ -989,7 +1025,50 @@ export default function Workspace() {
                 Refresh load details
               </button>
             )}
+            <LoadCheckIns
+              key={selected.id}
+              load={selected}
+              busy={busy}
+              offline={offline}
+              onRecord={async (input) => {
+                let result: "saved" | "retry" | "version-conflict" = "retry";
+                await act(async () => {
+                  let response: { version: number };
+                  try {
+                    response = await api<{ version: number }>(
+                      "loads/" + selected.id + "/check-ins",
+                      input,
+                    );
+                  } catch (e) {
+                    if (
+                      e instanceof ApiError &&
+                      e.message === "VERSION_CONFLICT"
+                    )
+                      result = "version-conflict";
+                    throw e;
+                  }
+                  result = "saved";
+                  setNotice("Manual check-in recorded.");
+                  setSelected(
+                    (current) =>
+                      current && {
+                        ...current,
+                        version: Math.max(current.version, response.version),
+                      },
+                  );
+                  setSelected(await api<Load>("loads/" + selected.id));
+                  await refreshAfterSave("Manual check-in recorded.");
+                });
+                return result;
+              }}
+            />
             <h3>Activity timeline</h3>
+            {selected.events_truncated && (
+              <p className="helpText">
+                Showing the latest 100 activity events. Earlier history is
+                retained.
+              </p>
+            )}
             <div className="timeline">
               {selected.events?.length ? (
                 selected.events.map((e) => (
