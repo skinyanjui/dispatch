@@ -82,6 +82,9 @@ import {
   listSavedReplies,
   listThreads,
   markRead,
+  isThreadAction,
+  setThreadState,
+  threadCounts,
   sendMessage,
   resendText,
   visibleThread,
@@ -710,11 +713,17 @@ async function handle(req: NextRequest) {
         return NextResponse.json(
           await listThreads(user.id, req.nextUrl.searchParams),
         );
+      if (path.length === 2 && path[1] === "counts" && req.method === "GET")
+        return NextResponse.json(await threadCounts(user.id));
       const threadId = z.uuid().parse(path[1]);
       if (path.length === 2 && req.method === "GET")
         return NextResponse.json(await getThread(user.id, threadId));
       if (path.length === 3 && path[2] === "read" && req.method === "POST")
         return NextResponse.json(await markRead(user.id, threadId));
+      if (path.length === 3 && req.method === "POST" && isThreadAction(path[2]))
+        return NextResponse.json(
+          await setThreadState(user.id, threadId, path[2]),
+        );
     }
     if (
       path[0] === "message-deliveries" &&

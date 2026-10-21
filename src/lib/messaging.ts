@@ -535,21 +535,37 @@ export const threadFilters = z
   .object({
     q: z.string().trim().max(100).optional(),
     filter: z.enum(["all", "unread"]).default("all"),
+    view: z.enum(["inbox", "archived", "trash"]).default("inbox"),
     channel: z.enum(channels).optional(),
     load_id: z.uuid().optional(),
     cursor: z.string().max(200).optional(),
   })
   .strict();
 
-const unreadSql = `EXISTS(
+// Unread: a message from someone else after you last read it, or marked unread
+// by you since you last read it (ADR 0035).
+const unreadSql = `(EXISTS(
   SELECT 1 FROM thread_participants me WHERE me.thread_id=t.id AND me.user_id=$1)
   AND EXISTS(SELECT 1 FROM messages m LEFT JOIN thread_reads r ON r.thread_id=t.id AND r.user_id=$1
-    WHERE m.thread_id=t.id AND m.sender_user_id IS DISTINCT FROM $1 AND m.occurred_at>COALESCE(r.last_read_at,'-infinity'))`;
+    WHERE m.thread_id=t.id AND m.sender_user_id IS DISTINCT FROM $1 AND m.occurred_at>COALESCE(r.last_read_at,'-infinity'))
+  OR EXISTS(SELECT 1 FROM thread_states s LEFT JOIN thread_reads r ON r.thread_id=s.thread_id AND r.user_id=s.user_id
+    WHERE s.thread_id=t.id AND s.user_id=$1 AND s.marked_unread_at>COALESCE(r.last_read_at,'-infinity')))`;
+
+// Archived or trashed only while nothing newer has arrived.
+const trashedSql = `EXISTS(SELECT 1 FROM thread_states s WHERE s.thread_id=t.id AND s.user_id=$1 AND s.trashed_at>=t.last_message_at)`;
+const archivedSql = `EXISTS(SELECT 1 FROM thread_states s WHERE s.thread_id=t.id AND s.user_id=$1 AND s.archived_at>=t.last_message_at)`;
+const inView = (view: string) =>
+  view === "trash"
+    ? trashedSql
+    : view === "archived"
+      ? `(${archivedSql} AND NOT ${trashedSql})`
+      : `(NOT ${archivedSql} AND NOT ${trashedSql})`;
 
 export async function listThreads(user: string, params: URLSearchParams) {
   const f = threadFilters.parse({
     q: params.get("q") ?? undefined,
     filter: params.get("filter") ?? undefined,
+    view: params.get("view") ?? undefined,
     channel: params.get("channel") ?? undefined,
     load_id: params.get("load_id") ?? undefined,
     cursor: params.get("cursor") ?? undefined,
@@ -580,6 +596,7 @@ export async function listThreads(user: string, params: URLSearchParams) {
         OR EXISTS(SELECT 1 FROM messages m WHERE m.thread_id=t.id AND m.body ILIKE $3))
       AND ($4::text IS NULL OR EXISTS(SELECT 1 FROM messages m WHERE m.thread_id=t.id AND m.channel=$4))
       AND ($5::boolean IS NOT TRUE OR (${unreadSql}))
+      AND ${inView(f.view)}
       AND ($6::timestamptz IS NULL OR (t.last_message_at,t.id)<($6,$7::uuid))
     ORDER BY t.last_message_at DESC,t.id DESC LIMIT 31`,
     [
@@ -610,10 +627,74 @@ export async function listThreads(user: string, params: URLSearchParams) {
 
 export async function unreadCount(user: string) {
   const { rows } = await pool.query(
-    `SELECT count(*)::int n FROM threads t WHERE ${visibleThread} AND (${unreadSql})`,
+    `SELECT count(*)::int n FROM threads t WHERE ${visibleThread} AND (${unreadSql}) AND ${inView("inbox")}`,
     [user],
   );
   return { unread: rows[0].n as number };
+}
+
+/** Badge numbers for the inbox tabs and views. */
+export async function threadCounts(user: string) {
+  const { rows } = await pool.query(
+    `SELECT
+      count(*) FILTER (WHERE ${inView("inbox")} AND (${unreadSql}))::int unread,
+      count(*) FILTER (WHERE ${inView("inbox")} AND (${unreadSql}) AND EXISTS(SELECT 1 FROM messages m WHERE m.thread_id=t.id AND m.channel='in_app'))::int in_app,
+      count(*) FILTER (WHERE ${inView("inbox")} AND (${unreadSql}) AND EXISTS(SELECT 1 FROM messages m WHERE m.thread_id=t.id AND m.channel='email'))::int email,
+      count(*) FILTER (WHERE ${inView("inbox")} AND (${unreadSql}) AND EXISTS(SELECT 1 FROM messages m WHERE m.thread_id=t.id AND m.channel='sms'))::int sms,
+      count(*) FILTER (WHERE ${inView("inbox")} AND (${unreadSql}) AND EXISTS(SELECT 1 FROM messages m WHERE m.thread_id=t.id AND m.channel='call'))::int call,
+      count(*) FILTER (WHERE ${inView("archived")})::int archived,
+      count(*) FILTER (WHERE ${inView("trash")})::int trash
+    FROM threads t WHERE ${visibleThread}`,
+    [user],
+  );
+  const r = rows[0];
+  return {
+    unread: r.unread as number,
+    by_channel: {
+      in_app: r.in_app as number,
+      email: r.email as number,
+      sms: r.sms as number,
+      call: r.call as number,
+    },
+    archived: r.archived as number,
+    trash: r.trash as number,
+  };
+}
+
+const threadActions = {
+  unread: "marked_unread_at=now()",
+  archive:
+    "archived_at=GREATEST(now(),(SELECT last_message_at FROM threads WHERE id=$1))",
+  unarchive: "archived_at=NULL",
+  trash:
+    "trashed_at=GREATEST(now(),(SELECT last_message_at FROM threads WHERE id=$1))",
+  restore: "trashed_at=NULL",
+} as const;
+export type ThreadAction = keyof typeof threadActions;
+export const isThreadAction = (v: string): v is ThreadAction =>
+  Object.hasOwn(threadActions, v);
+
+/** Personal, idempotent state changes. Other participants are unaffected. */
+export async function setThreadState(
+  user: string,
+  id: string,
+  action: ThreadAction,
+) {
+  return transaction(async (c) => {
+    await lockThread(c, user, id);
+    const set = threadActions[action];
+    const column = set.split("=")[0];
+    await c.query(
+      `INSERT INTO thread_states(thread_id,user_id,${column}) VALUES($1,$2,NULL)
+      ON CONFLICT(thread_id,user_id) DO NOTHING`,
+      [id, user],
+    );
+    await c.query(
+      `UPDATE thread_states SET ${set} WHERE thread_id=$1 AND user_id=$2`,
+      [id, user],
+    );
+    return { ok: true };
+  });
 }
 
 export async function getThread(user: string, id: string) {
@@ -659,6 +740,10 @@ export async function markRead(user: string, id: string) {
     await lockThread(c, user, id);
     await c.query(
       "INSERT INTO thread_reads(thread_id,user_id,last_read_at) VALUES($1,$2,now()) ON CONFLICT(thread_id,user_id) DO UPDATE SET last_read_at=now()",
+      [id, user],
+    );
+    await c.query(
+      "UPDATE thread_states SET marked_unread_at=NULL WHERE thread_id=$1 AND user_id=$2",
       [id, user],
     );
     return { ok: true };
