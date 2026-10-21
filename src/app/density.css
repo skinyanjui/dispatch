@@ -1,0 +1,230 @@
+/* Compact density and a calmer type scale, applied over component styles.
+   Text: 11px minimum, 13px body, 15px page titles, 20px record titles.
+   Weights: 400 body, 500 labels and emphasis, 600 titles only. */
+body {
+  font-size: 13px;
+  line-height: 1.45;
+}
+label {
+  gap: 5px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+input,
+select {
+  padding: 7px 10px;
+}
+textarea {
+  padding: 7px 10px;
+}
+.secondary {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+.primary {
+  padding: 7px 14px;
+  font-size: 12.5px;
+}
+.textButton {
+  padding: 4px 6px;
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.textButton:hover {
+  text-decoration: underline;
+  background: transparent;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  color: var(--subtle);
+}
+small {
+  font-size: 11.5px;
+}
+
+/* Page header: one title, no breadcrumb or environment badge. */
+.appShell .topbar {
+  height: 52px;
+  padding: 0 20px;
+}
+.appShell .topbar h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.appShell .viewToggle button {
+  font-size: 12px;
+  padding: 4px 9px;
+}
+.appShell .workspace {
+  padding: 12px 20px 14px;
+}
+.appShell .toolbar {
+  margin-bottom: 12px;
+}
+.appShell .search {
+  height: 34px;
+  border-radius: 8px;
+}
+.appShell .search input {
+  font-size: 13px;
+  padding: 6px 0;
+}
+.appShell .toolbarMeta,
+.appShell footer {
+  font-size: 11px;
+}
+
+/* Board: shorter cards with the route on one line. */
+.appShell .kanban {
+  gap: 10px;
+}
+.appShell .lane {
+  padding: 6px;
+  border-radius: 8px;
+}
+.appShell .laneHeading {
+  padding: 4px 4px 8px;
+}
+.laneHeading h2 {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.laneCards {
+  gap: 6px;
+}
+.appShell .loadCard {
+  padding: 10px 11px;
+}
+.cardTitle strong,
+.appShell .cardTitle strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.cardCarrier,
+.appShell .cardCarrier {
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+.cardRoute,
+.appShell .cardRoute {
+  grid-template-columns: minmax(0, auto) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.cardRoute > svg {
+  transform: rotate(-90deg);
+  margin: 0;
+}
+.cardBottom,
+.appShell .cardBottom {
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+
+/* Section pages: the top bar carries the title; intros stay short. */
+.directoryIntro {
+  margin: 0 0 14px;
+  gap: 16px;
+}
+.directoryIntro .eyebrow {
+  display: none;
+}
+.directoryIntro h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.directoryIntro p:not(.eyebrow) {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.carrierDirectory {
+  padding-top: 4px;
+}
+
+/* Record inspector. */
+.inspector {
+  padding: 16px 22px 24px;
+}
+.inspectorHeader {
+  margin-bottom: 10px;
+}
+.detailTitle {
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+.detailCarrier {
+  margin: 4px 0 10px;
+}
+.detailFacts {
+  padding: 12px 0;
+  margin-top: 12px;
+  gap: 12px;
+}
+.detailFacts strong {
+  font-size: 15px;
+}
+.inspector h3 {
+  font-size: 13px;
+  margin: 20px 0 8px;
+}
+.stop {
+  padding: 10px 12px;
+  gap: 10px;
+}
+.stop strong {
+  margin: 2px 0 4px;
+  font-size: 13px;
+}
+.stop small,
+.stopZone,
+.stop p,
+.stopIndex {
+  font-size: 11.5px;
+}
+.checkIns,
+.loadExceptions {
+  margin: 18px 0;
+  padding-top: 14px;
+}
+
+/* Cards and lists in operational views. */
+.docSlot,
+.opsCard {
+  padding: 9px 12px;
+  gap: 6px;
+}
+.docPanel,
+.opsList {
+  gap: 6px;
+  margin: 8px 0 16px;
+}
+.docHeading h4,
+.opsCardHeading h4 {
+  font-weight: 500;
+}
+.docStatus,
+.opsPill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 7px;
+}
+.docVersion small,
+.opsMeta {
+  font-size: 11.5px;
+}
+@media (max-width: 760px) {
+  .appShell .topbar {
+    min-height: 0;
+    padding: 12px 14px 4px;
+  }
+}

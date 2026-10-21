@@ -56,7 +56,7 @@ test("create, assign, dispatch, reject cross-origin writes and revoke session", 
     .getByLabel("Password", { exact: true })
     .fill(process.env.SEED_PASSWORD!);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.getByRole("button", { name: "Create load", exact: false }).click();
+  await page.getByRole("button", { name: "New load", exact: true }).click();
   const modal = page.getByRole("dialog", { name: "Create load" });
   const reference = "BROWSER-" + Date.now();
   await modal.getByLabel("Load reference").fill(reference);
@@ -102,6 +102,7 @@ test("create, assign, dispatch, reject cross-origin writes and revoke session", 
     data: {},
   });
   expect(rejected.status()).toBe(403);
+  await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(
     page.getByRole("heading", {
@@ -162,7 +163,7 @@ test("lost create response retries with the same idempotency key and exact entry
     .getByLabel("Password", { exact: true })
     .fill(process.env.SEED_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: false }).click();
-  await page.getByRole("button", { name: "Create load", exact: false }).click();
+  await page.getByRole("button", { name: "New load", exact: true }).click();
   const modal = page.getByRole("dialog", { name: "Create load" }),
     reference = "RETRY-" + Date.now();
   await modal.getByLabel("Load reference").fill(reference);

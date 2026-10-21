@@ -1,0 +1,310 @@
+/* Single navigation sidebar, modelled on Claude's: quiet surface, 16px
+   icons, one row per page, contextual sub-lists, account menu at the foot.
+   Collapsed, the same sidebar shrinks to icons; nothing is duplicated. */
+.appShell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  background: var(--canvas);
+  align-items: start;
+  min-height: 100dvh;
+}
+.appShell.sidebarCollapsed {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+.sidebarDock {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px;
+  gap: 2px;
+  min-width: 0;
+}
+.sidebarTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 4px 0 8px;
+  margin-bottom: 8px;
+}
+.sidebar .brand {
+  font-size: 15px;
+  gap: 6px;
+}
+.sidebarIcon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 7px;
+  color: var(--subtle);
+}
+.sidebarIcon:hover {
+  background: var(--sidebar-hover);
+  color: var(--ink);
+}
+.sidebarActions,
+.sidebarPages {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sidebarActions {
+  margin-bottom: 10px;
+}
+.sidebarItem {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  gap: 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  text-align: left;
+}
+.sidebarItem > svg {
+  flex-shrink: 0;
+  color: var(--subtle);
+}
+.sidebarItem:hover {
+  background: var(--sidebar-hover);
+}
+.sidebarItem.active {
+  background: var(--sidebar-active);
+  font-weight: 500;
+}
+.sidebarItem.active > svg {
+  color: var(--accent);
+}
+.sidebarItem.newLoad > svg {
+  color: var(--accent);
+}
+.sidebarItem kbd {
+  margin-left: auto;
+  font: 10px var(--font-sans);
+  color: var(--subtle);
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.sidebarContext {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  min-height: 0;
+}
+.sidebarContext nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sidebarLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--subtle);
+  padding: 0 8px 4px;
+}
+.sidebarSub {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
+}
+.sidebarSub:hover {
+  background: var(--sidebar-hover);
+}
+.sidebarSub.active {
+  background: var(--sidebar-active);
+  color: var(--ink);
+  font-weight: 500;
+}
+.sidebarSpacer {
+  flex: 1;
+}
+.accountArea {
+  position: relative;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.accountButton {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 6px;
+  border-radius: 8px;
+  text-align: left;
+}
+.accountButton:hover {
+  background: var(--sidebar-hover);
+}
+.accountButton > svg {
+  margin-left: auto;
+  color: var(--subtle);
+}
+.accountInitial {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+}
+.accountName {
+  min-width: 0;
+  display: grid;
+}
+.accountName strong {
+  font-size: 12.5px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.accountName small {
+  font-size: 11px;
+  color: var(--subtle);
+}
+.accountMenu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 6px);
+  min-width: 200px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px #18251f1f;
+  padding: 4px;
+  display: grid;
+  gap: 1px;
+  z-index: 20;
+}
+.accountMenu > button,
+.accountMenu > a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.accountMenu > button:hover,
+.accountMenu > a:hover {
+  background: var(--sidebar-hover);
+}
+.accountMenu svg {
+  color: var(--subtle);
+}
+.accountMenu hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 3px 0;
+}
+.accountMenuEmail {
+  font-size: 11px;
+  color: var(--subtle);
+  padding: 6px 8px 4px;
+}
+.sheetAccount {
+  display: grid;
+  gap: 1px;
+}
+/* Collapsed: icons only, labels stay available to assistive technology. */
+.sidebar.compact {
+  align-items: center;
+  padding-inline: 6px;
+}
+.sidebar.compact .sidebarTop {
+  padding: 0;
+  justify-content: center;
+}
+.sidebar.compact .sidebarItem {
+  width: 36px;
+  justify-content: center;
+  padding: 0;
+}
+.sidebar.compact .navLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.sidebar.compact .accountArea {
+  border-top: 0;
+}
+.sidebar.compact .accountButton {
+  width: 36px;
+  justify-content: center;
+  padding: 4px;
+}
+.sidebar.compact .accountMenu {
+  left: 0;
+  right: auto;
+}
+.mobileBar {
+  display: none;
+}
+.navigationSheet {
+  background: var(--sidebar-bg);
+  height: 100%;
+  width: min(280px, calc(100vw - 48px));
+  box-shadow: 10px 0 40px #152b2020;
+}
+@media (max-width: 1000px) {
+  .appShell,
+  .appShell.sidebarCollapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebarDock {
+    display: none;
+  }
+  .mobileBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    z-index: 5;
+  }
+  .mobileBar .brand {
+    font-size: 15px;
+  }
+}
+.mobileCreate {
+  margin-left: auto;
+  color: var(--accent);
+}
+.sidebarMore {
+  color: var(--subtle);
+}

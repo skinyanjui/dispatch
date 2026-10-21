@@ -270,10 +270,6 @@
 .directoryRow {
   grid-template-columns: minmax(0, 1fr) 145px 215px;
 }
-.iconRail button,
-.sidebarActions > button,
-.queueNav > button,
-.carrierNav > button,
 .roleLabel,
 .directoryEmpty p,
 .directoryEmpty h3,

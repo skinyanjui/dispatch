@@ -155,7 +155,7 @@ test("carrier directory reflects membership, supports search and opens carrier-s
   await expectReady(page);
   await page
     .getByRole("navigation", { name: "Workspace navigation" })
-    .getByRole("button", { name: "Carrier directory", exact: true })
+    .getByRole("button", { name: "Carriers", exact: true })
     .click();
   const directory = page.getByRole("region", {
     name: "Authorized carrier directory",
@@ -235,7 +235,7 @@ test("carrier directory reflects membership, supports search and opens carrier-s
   ).toHaveAttribute("aria-pressed", "true");
 });
 
-test("desktop sidebar can collapse and be restored through the icon rail", async ({
+test("desktop sidebar collapses to icons without duplicating pages and expands again", async ({
   page,
 }) => {
   await mockWorkspace(page);
@@ -247,11 +247,20 @@ test("desktop sidebar can collapse and be restored through the icon rail", async
     .getByRole("button", { name: "Collapse sidebar", exact: true })
     .click();
   await expect(queues).not.toBeVisible();
+  // Collapsed, each page is still reachable exactly once by its name.
+  const pages = page.getByRole("navigation", { name: "Workspace navigation" });
+  for (const name of ["Loads", "Exceptions", "Carriers", "Billing"])
+    await expect(pages.getByRole("button", { name, exact: true })).toHaveCount(
+      1,
+    );
   await page
-    .getByRole("navigation", { name: "Workspace navigation" })
-    .getByRole("button", { name: "Open navigation", exact: true })
+    .getByRole("button", { name: "Expand sidebar", exact: true })
     .click();
   await expect(queues).toBeVisible();
+  for (const name of ["Loads", "Exceptions", "Carriers", "Billing"])
+    await expect(page.getByRole("button", { name, exact: true })).toHaveCount(
+      1,
+    );
   await expect(
     page.getByRole("button", { name: "Collapse sidebar", exact: true }),
   ).toBeVisible();
@@ -266,7 +275,6 @@ test("mobile drawer selects a stage, closes and keeps the document within the vi
   await page.goto("/");
   await expectReady(page);
   await page
-    .getByRole("navigation", { name: "Workspace navigation" })
     .getByRole("button", { name: "Open navigation", exact: true })
     .click();
   const drawer = page.getByRole("dialog", { name: "Workspace navigation" });

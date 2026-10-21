@@ -2,6 +2,15 @@
 
 final result: passed
 
+## Compact shell revision — 2026-10-21
+
+The user asked for compact components, better font weights, lower cognitive load, and a Claude-inspired sidebar with smaller icons and no duplicated pages.
+
+- **Before:** the icon rail repeated four sidebar pages; the sidebar held 11 entries plus stage queues and every carrier; the top bar repeated Create load, a breadcrumb and a QA badge; text went down to 9px.
+- **After:** one sidebar with 16px icons. Each page is listed exactly once, and the same items stay as icons when collapsed. Queues and carriers appear only on Loads, capped at six with "Show all". Settings and Sign out live in the account menu. New load lives only in the sidebar (and as a single + in the phone header, where the sidebar is hidden). Text is at least 11px, weights are 400/500/600, controls are about 32px tall, and board cards show the route on one line.
+- **Evidence:** `docs/audits/evidence/compact-*.png` — desktop expanded, collapsed, account menu, load inspector, phone and phone navigation. 45 Chromium tests pass, including a test that each page appears once in both sidebar states. Phone layout keeps `scrollWidth` within the viewport.
+- The Macro notes below are kept as history.
+
 ## Current source and adaptation
 
 Primary visual target: the user's second Macro screenshot in this conversation, showing the light email workspace with an icon rail, contextual sidebar and a large main pane. Original image: 2880 × 1800; displayed by the client at 1996 × 1248. Browser chrome is outside the app target. Source CSS viewport and device pixel ratio are unknown. The first Macro Customers board screenshot remains the secondary target for stage columns and cards.

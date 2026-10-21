@@ -144,7 +144,7 @@ test("exceptions: flag with owner from a suggestion, work it from the queue and 
   await expect(suggestions).toHaveCount(0);
   await page.getByRole("button", { name: "Close load details" }).click();
 
-  await page.getByRole("button", { name: "Exception queue" }).click();
+  await page.getByRole("button", { name: "Exceptions", exact: true }).click();
   await page.getByLabel("Owner").selectOption("me");
   const row = page.getByRole("button", {
     name: `Open load ${load.reference} for exception Rate confirmation is missing`,
@@ -214,7 +214,7 @@ test("billing: carrier packet and Relay dispatch invoice stay separate", async (
     ).toBe(200);
   }
   await page.goto("/");
-  await page.getByRole("button", { name: "Billing and payments" }).click();
+  await page.getByRole("button", { name: "Billing", exact: true }).click();
   const packet = page.getByRole("article", {
     name: `Freight billing for ${load.reference}`,
   });
@@ -261,7 +261,7 @@ test("billing: carrier packet and Relay dispatch invoice stay separate", async (
   await login(page, "driver@relay.test");
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Billing and payments" }),
+    page.getByRole("button", { name: "Billing", exact: true }),
   ).toHaveCount(0);
   expect(
     (await page.request.get("/api/billing?carrier_id=" + carrier)).status(),
@@ -288,6 +288,7 @@ test("account: enroll two-step verification and sign in with a code", async ({
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("button", { name: "Account", exact: true }).click();
     await expect(page.getByText("Email address")).toBeVisible();
     await page
@@ -307,7 +308,8 @@ test("account: enroll two-step verification and sign in with a code", async ({
     await page
       .getByRole("button", { name: "I saved my recovery codes" })
       .click();
-    await page.getByRole("button", { name: "Sign out" }).first().click();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("button", { name: "Sign out" }).click();
 
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
@@ -354,17 +356,17 @@ test("demo shows exceptions, billing and notifications without calling the serve
     return route.abort();
   });
   await page.goto("/demo");
-  await page.getByRole("button", { name: "Exception queue" }).click();
+  await page.getByRole("button", { name: "Exceptions", exact: true }).click();
   await expect(
     page.getByText("Driver reports a two-hour weather delay"),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Billing and payments" }).click();
+  await page.getByRole("button", { name: "Billing", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Carrier freight billing" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Account menu" }).click();
   await page
     .getByRole("button", { name: "Notifications", exact: true })
-    .first()
     .click();
   await expect(
     page.getByText("Demo — nothing is sent from this device"),

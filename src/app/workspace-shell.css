@@ -1,195 +1,5 @@
-/* Macro-inspired navigation: icon rail, contextual sidebar, then the work surface. */
-.appShell {
-  display: grid;
-  grid-template-columns: 60px 224px minmax(0, 1fr);
-  background: var(--canvas);
-  align-items: start;
-  min-height: 100dvh;
-}
-.iconRail {
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  border-right: 1px solid var(--border);
-  padding: 16px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  z-index: 3;
-}
-.iconRail button,
-.iconRail > a {
-  width: 42px;
-  height: 42px;
-  padding: 9px;
-  color: #727674;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-}
-.iconRail .railBrand {
-  color: #202a26;
-  margin-bottom: 9px;
-}
-.iconRail .active {
-  background: #f0f3f1;
-  color: #202a26;
-}
-.iconRail button:hover,
-.iconRail > a:hover {
-  background: #f5f6f5;
-}
-.railSpacer {
-  flex: 1;
-}
-.railNavToggle {
-  display: none;
-}
-.contextSidebar {
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: #fff;
-  overflow: hidden;
-}
-.sidebarTitle {
-  height: 74px;
-  padding: 0 17px 0 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-shrink: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-.sidebarTitle .iconButton {
-  color: #8c908d;
-  padding: 4px;
-}
-.sidebarActions {
-  padding: 6px 12px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.sidebarActions > button {
-  justify-content: flex-start;
-  font-size: 12px;
-  color: #696e6b;
-  padding: 11px 10px;
-  text-align: left;
-}
-.sidebarActions kbd {
-  margin-left: auto;
-  background: white;
-  border: 1px solid var(--border);
-  font-size: 9px;
-}
-.sidebarLabel {
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.6px;
-  color: #8b908c;
-  padding: 0 10px;
-  margin-bottom: 10px;
-}
-.queueNav {
-  padding: 0 11px 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.queueNav > button,
-.carrierNav > button {
-  display: flex;
-  justify-content: flex-start;
-  gap: 10px;
-  text-align: left;
-  line-height: 1.3;
-  font-size: 12px;
-  padding: 10px;
-  border-radius: 7px;
-  color: #686e6a;
-  min-width: 0;
-}
-.queueNav > button.active {
-  background: #f0f2f1;
-  color: #2c332e;
-  font-weight: 500;
-}
-.queueNav > button > svg {
-  color: #8a908c;
-}
-.queueNav > button.active > svg {
-  color: #3e6152;
-}
-.carrierNav {
-  padding: 0 11px 15px;
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
-}
-.carrierNav > .sidebarLabel {
-  flex-shrink: 0;
-}
-.carrierNav > button {
-  flex-shrink: 0;
-  font-size: 11px;
-  gap: 8px;
-  padding: 9px 10px;
-}
-.carrierNav > button > span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.carrierNav > button.activeScope {
-  color: #2c5c48;
-  background: #f5f8f6;
-}
-.carrierNav > button > svg {
-  color: #8da99a;
-}
-.sidebarAccount {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.accountInitial {
-  background: #e9f2ed;
-  color: #4a735c;
-  border-radius: 50%;
-  font-size: 9px;
-  padding: 9px;
-  line-height: 1;
-  font-weight: 600;
-}
-.sidebarAccount strong {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
-}
-.sidebarAccount small {
-  display: block;
-  margin-top: 4px;
-  font-size: 9px;
-  color: #919792;
-}
+/* Work surface layout. The sidebar lives in sidebar.css. */
+
 .mainPane {
   display: flex;
   flex-direction: column;
@@ -354,18 +164,7 @@
 .appShell footer a {
   margin-left: 10px;
 }
-.sidebarCollapsed {
-  grid-template-columns: 60px minmax(0, 1fr);
-}
-.sidebarCollapsed .contextSidebar {
-  display: none;
-}
-.sidebarCollapsed .railNavToggle {
-  display: flex;
-}
-.mobileClose {
-  display: none;
-}
+
 .carrierDirectory {
   padding: 20px 0 0;
   min-height: calc(100dvh - 160px);
@@ -499,48 +298,8 @@
   font-size: 12px;
   color: #8b9a8f;
 }
-.navigationSheet {
-  background: #fff;
-  height: 100%;
-  width: min(286px, calc(100vw - 56px));
-  display: flex;
-  flex-direction: column;
-  box-shadow: 10px 0 40px #152b2020;
-  margin-left: 56px;
-}
-.navigationSheet .desktopSidebarToggle {
-  display: none;
-}
-.navigationSheet .mobileClose {
-  display: flex;
-}
-.navigationSheet .carrierNav {
-  flex: 1;
-}
-.navigationSheet .sidebarTitle {
-  height: 70px;
-}
+
 @media (min-width: 1800px) {
-  .appShell {
-    grid-template-columns: 64px 256px minmax(0, 1fr);
-  }
-  .sidebarCollapsed {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-  .sidebarTitle {
-    font-size: 17px;
-    height: 80px;
-  }
-  .queueNav > button {
-    font-size: 13px;
-    padding: 11px;
-  }
-  .sidebarActions > button {
-    font-size: 13px;
-  }
-  .carrierNav > button {
-    font-size: 12px;
-  }
   .appShell .topbar {
     height: 80px;
   }
@@ -567,15 +326,6 @@
   }
 }
 @media (max-width: 1150px) and (min-width: 1001px) {
-  .appShell {
-    grid-template-columns: 54px 190px minmax(0, 1fr);
-  }
-  .sidebarCollapsed {
-    grid-template-columns: 54px minmax(0, 1fr);
-  }
-  .iconRail {
-    padding-inline: 5px;
-  }
   .appShell .workspace {
     padding-inline: 18px;
   }
@@ -600,15 +350,7 @@
   .workspaceEnvironment {
     display: none;
   }
-  .sidebarTitle {
-    padding-left: 19px;
-  }
-  .queueNav > button {
-    font-size: 11px;
-  }
-  .carrierNav > button {
-    font-size: 10px;
-  }
+
   .directoryTableHeading,
   .directoryRow {
     grid-template-columns: minmax(0, 1fr) 120px 105px;
@@ -616,28 +358,6 @@
   }
 }
 @media (max-width: 1000px) {
-  .appShell,
-  .sidebarCollapsed {
-    grid-template-columns: 56px minmax(0, 1fr);
-  }
-  .appShell > .contextSidebar {
-    display: none;
-  }
-  .iconRail {
-    padding: 12px 6px;
-    height: 100dvh;
-  }
-  .iconRail button,
-  .iconRail > a {
-    width: 40px;
-    height: 42px;
-  }
-  .railNavToggle {
-    display: flex;
-  }
-  .appShell .mainPane {
-    grid-column: 2;
-  }
   .appShell .topbar {
     padding-inline: 20px;
   }
@@ -738,12 +458,7 @@
     font-size: 8px;
     gap: 5px;
   }
-  .iconRail {
-    gap: 8px;
-  }
-  .iconRail .railBrand {
-    margin-bottom: 3px;
-  }
+
   .directoryIntro {
     flex-direction: column;
     align-items: flex-start;
@@ -793,9 +508,6 @@
   .carrierDirectory {
     padding-top: 8px;
   }
-  .sidebarTitle {
-    font-size: 15px;
-  }
 }
 .inlineNotice {
   font-size: 12px;
@@ -836,12 +548,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Keep navigation and membership information readable on white. */
-.sidebarLabel,
 .workspaceBreadcrumb,
 .workspaceEnvironment,
-.appShell .toolbarMeta,
-.sidebarAccount small {
+.appShell .toolbarMeta {
   color: var(--muted);
 }
 .roleLabel {

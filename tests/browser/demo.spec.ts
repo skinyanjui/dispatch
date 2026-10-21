@@ -17,9 +17,7 @@ test("current demo shares app workflows, saves locally and never calls authentic
     page.getByRole("article", { name: "Check-in: Chattanooga, TN" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Close load details" }).click();
-  await page
-    .getByRole("button", { name: "Carrier directory", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await page.getByRole("button", { name: "Add carrier", exact: true }).click();
   const setup = page.getByRole("dialog", { name: "Carrier setup" });
   await setup
@@ -75,9 +73,7 @@ test("current demo shares app workflows, saves locally and never calls authentic
     "DemoPasswordNeverStored2026",
   );
   await page.getByLabel("Demo role").selectOption("dispatcher");
-  await page
-    .getByRole("button", { name: "Carrier directory", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Demo New Carrier", exact: true }),
   ).toBeVisible();
@@ -85,16 +81,12 @@ test("current demo shares app workflows, saves locally and never calls authentic
   await expect(
     page.getByRole("heading", { name: "All loads", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Carrier directory", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Demo New Carrier", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Reset demo", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Carrier directory", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Demo New Carrier", exact: true }),
   ).toHaveCount(0);
@@ -110,7 +102,7 @@ test("driver demo uses a focused mobile view and the legacy prototype stays acce
     page.getByRole("heading", { name: "My loads", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Carrier directory", exact: true }),
+    page.getByRole("button", { name: "Carriers", exact: true }),
   ).toHaveCount(0);
   expect(
     await page.evaluate(

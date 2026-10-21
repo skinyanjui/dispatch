@@ -67,7 +67,8 @@ test("a failed sign out remains visible in the carrier directory", async ({
   );
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Carrier directory" }).click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
+  await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   const main = page.getByRole("main");
   await expect(
@@ -76,6 +77,7 @@ test("a failed sign out remains visible in the carrier directory", async ({
   await expect(main.getByRole("alert")).toContainText(
     "The workspace is unavailable. Please retry.",
   );
+  await page.getByRole("button", { name: "Account menu" }).click();
   await expect(
     page.getByRole("button", { name: "Sign out", exact: true }),
   ).toBeEnabled();
@@ -100,7 +102,7 @@ test("creating a load from the carrier directory shows its saved acknowledgment"
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Carrier directory" }).click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await page.getByRole("button", { name: "New load", exact: true }).click();
   const modal = page.getByRole("dialog", { name: "Create load" });
   await modal.getByLabel("Load reference").fill(load.reference);

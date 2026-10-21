@@ -4,6 +4,8 @@ import "./workspace-shell.css";
 import "./check-ins.css";
 import "./operations.css";
 import "./onboarding.css";
+import "./sidebar.css";
+import "./density.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
   description: "Carrier-scoped freight dispatch operations",

@@ -110,7 +110,7 @@ test("a pending detail request disables Create and opens only one dialog", async
   await requestedDetail;
   try {
     await expect(
-      page.getByRole("button", { name: "Create load", exact: true }),
+      page.getByRole("button", { name: "New load", exact: true }),
     ).toBeDisabled();
     await expect(page.locator("dialog[open]")).toHaveCount(0);
   } finally {
@@ -164,9 +164,7 @@ test("an older initial queue response cannot erase a successfully created load",
   await page.goto("/");
   await requestedInitial;
   try {
-    await page
-      .getByRole("button", { name: "Create load", exact: true })
-      .click();
+    await page.getByRole("button", { name: "New load", exact: true }).click();
     const modal = await fillCreateForm(page, load.reference);
     await modal.getByRole("button", { name: "Create booked load" }).click();
     await expect(modal).not.toBeVisible();
@@ -241,7 +239,7 @@ test("a saved load stays acknowledged when the queue refresh fails", async ({
   await expect(
     page.getByRole("region", { name: "Load workspace" }),
   ).toHaveAttribute("aria-busy", "false");
-  await page.getByRole("button", { name: "Create load", exact: true }).click();
+  await page.getByRole("button", { name: "New load", exact: true }).click();
   const modal = await fillCreateForm(page, load.reference);
   await modal.getByRole("button", { name: "Create booked load" }).click();
   await expect(modal).not.toBeVisible();

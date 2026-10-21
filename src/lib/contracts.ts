@@ -82,7 +82,7 @@ export type Load = {
   exception_owners?: { id: string; name: string; role: string }[];
 };
 export type Context = {
-  user: { name: string; id?: string };
+  user: { name: string; id?: string; email?: string };
   carriers: { id: string; name: string; role: string }[];
   drivers: { id: string; name: string; carrier_id: string }[];
   organizations?: { id: string; name: string; role?: string | null }[];

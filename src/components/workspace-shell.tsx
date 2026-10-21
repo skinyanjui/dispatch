@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   StackIcon,
   TruckIcon,
@@ -9,16 +9,14 @@ import {
   SidebarSimpleIcon,
   PlusIcon,
   SignOutIcon,
-  CircleIcon,
   XIcon,
-  SquaresFourIcon,
-  NavigationArrowIcon,
-  CheckCircleIcon,
   WarningIcon,
   ReceiptIcon,
   BellIcon,
   UserCircleIcon,
   GearSixIcon,
+  ListIcon,
+  CaretUpDownIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
@@ -44,18 +42,26 @@ export const sectionTitles: Record<
 export function Brand() {
   return (
     <span className="brand">
-      <StackIcon size={21} weight="bold" aria-hidden="true" />
+      <StackIcon size={20} weight="bold" aria-hidden="true" />
       relay<span className="brandPeriod">.</span>
     </span>
   );
 }
 const queues = [
-  { value: "", label: "All loads", Icon: SquaresFourIcon },
-  { value: "booked", label: "Ready to dispatch", Icon: CircleIcon },
-  { value: "dispatched", label: "Dispatched", Icon: NavigationArrowIcon },
-  { value: "picked-up", label: "In transit", Icon: TruckIcon },
-  { value: "delivered", label: "Delivered", Icon: CheckCircleIcon },
+  { value: "", label: "All loads" },
+  { value: "booked", label: "Ready to dispatch" },
+  { value: "dispatched", label: "Dispatched" },
+  { value: "picked-up", label: "In transit" },
+  { value: "delivered", label: "Delivered" },
 ];
+const icon = { size: 16, "aria-hidden": true } as const;
+const collapseKey = "relay-sidebar-collapsed";
+
+/**
+ * One sidebar, modelled on Claude's: primary actions, each page exactly once,
+ * contextual sub-lists only for the current page, and personal settings
+ * behind the account menu. Collapsing keeps the same items as icons.
+ */
 export function WorkspaceShell({
   children,
   context,
@@ -86,261 +92,349 @@ export function WorkspaceShell({
   onLogout: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false),
-    [mobileOpen, setMobileOpen] = useState(false);
+    [mobileOpen, setMobileOpen] = useState(false),
+    [menuOpen, setMenuOpen] = useState(false),
+    [allCarriers, setAllCarriers] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Remembered per browser; storage may be unavailable.
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCollapsed(localStorage.getItem(collapseKey) === "true");
+    } catch {
+      /* default expanded */
+    }
+  }, []);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: Event) => {
+      if (
+        e instanceof KeyboardEvent
+          ? e.key === "Escape"
+          : !menuRef.current?.contains(e.target as Node)
+      )
+        setMenuOpen(false);
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => {
+      document.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", close);
+    };
+  }, [menuOpen]);
+  function toggle(next: boolean) {
+    setCollapsed(next);
+    try {
+      localStorage.setItem(collapseKey, String(next));
+    } catch {
+      /* not persisted */
+    }
+  }
   const driverOnly =
     context.carriers.length > 0 &&
     context.carriers.every((c) => c.role === "driver");
-  function navigate(fn: () => void) {
+  const isAdmin = (context.organizations || []).some((o) => o.role);
+  const initials = context.user.name
+    .split(" ")
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join("");
+  const pages: {
+    key: WorkspaceSection;
+    label: string;
+    Icon: typeof TruckIcon;
+    show: boolean;
+  }[] = [
+    { key: "loads", label: "Loads", Icon: TruckIcon, show: true },
+    { key: "exceptions", label: "Exceptions", Icon: WarningIcon, show: true },
+    {
+      key: "carriers",
+      label: "Carriers",
+      Icon: BuildingsIcon,
+      show: !driverOnly,
+    },
+    { key: "billing", label: "Billing", Icon: ReceiptIcon, show: !driverOnly },
+  ];
+  const go = (fn: () => void) => {
     fn();
     setMobileOpen(false);
-  }
-  const navigation = (
-    <>
-      <div className="sidebarTitle">
-        <span>{driverOnly ? "My workspace" : "Dispatch"}</span>
-        <button
-          className="iconButton desktopSidebarToggle"
-          aria-label="Collapse sidebar"
-          onClick={() => setCollapsed(true)}
-        >
-          <SidebarSimpleIcon size={17} aria-hidden="true" />
-        </button>
-        <button
-          className="iconButton mobileClose"
-          aria-label="Close navigation"
-          onClick={() => setMobileOpen(false)}
-        >
-          <XIcon size={19} aria-hidden="true" />
-        </button>
-      </div>
-      <div className="sidebarActions">
-        {context.carriers.some((c) => c.role !== "driver") && (
-          <button disabled={busy || offline} onClick={() => navigate(onCreate)}>
-            <PlusIcon size={17} aria-hidden="true" />
-            New load
-          </button>
-        )}
-        <button onClick={() => navigate(onSearch)}>
-          <MagnifyingGlassIcon size={17} aria-hidden="true" />
-          Search loads<kbd aria-hidden="true">⌘ K</kbd>
-        </button>
-      </div>
-      <nav className="queueNav" aria-label="Dispatch queues">
-        <p className="sidebarLabel">WORKSPACE</p>
-        {queues
-          .filter(
-            (q) =>
-              !driverOnly || ["", "picked-up", "delivered"].includes(q.value),
-          )
-          .map(({ value, label, Icon }) => (
+    setMenuOpen(false);
+  };
+
+  const sidebar = (sheet: boolean) => {
+    const compact = collapsed && !sheet;
+    return (
+      <div className={"sidebar" + (compact ? " compact" : "")}>
+        <div className="sidebarTop">
+          {compact ? (
             <button
-              key={value}
-              className={
-                section === "loads" && status === value ? "active" : ""
-              }
-              disabled={busy}
-              aria-current={
-                section === "loads" && status === value ? "page" : undefined
-              }
-              onClick={() => navigate(() => onQueue(value))}
+              className="sidebarIcon"
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              onClick={() => toggle(false)}
             >
-              <Icon size={17} aria-hidden="true" />
-              {driverOnly && value === "" ? "My loads" : label}
+              <SidebarSimpleIcon {...icon} />
             </button>
-          ))}
-        {!driverOnly && (
-          <button
-            className={section === "carriers" ? "active" : ""}
-            disabled={busy}
-            aria-current={section === "carriers" ? "page" : undefined}
-            onClick={() => navigate(() => onSection("carriers"))}
-          >
-            <BuildingsIcon size={17} aria-hidden="true" />
-            Carriers
-          </button>
-        )}
-        <button
-          className={section === "exceptions" ? "active" : ""}
-          disabled={busy}
-          aria-current={section === "exceptions" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("exceptions"))}
-        >
-          <WarningIcon size={17} aria-hidden="true" />
-          Exceptions
-        </button>
-        {!driverOnly && (
-          <button
-            className={section === "billing" ? "active" : ""}
-            disabled={busy}
-            aria-current={section === "billing" ? "page" : undefined}
-            onClick={() => navigate(() => onSection("billing"))}
-          >
-            <ReceiptIcon size={17} aria-hidden="true" />
-            Billing
-          </button>
-        )}
-        <button
-          className={section === "notifications" ? "active" : ""}
-          disabled={busy}
-          aria-current={section === "notifications" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("notifications"))}
-        >
-          <BellIcon size={17} aria-hidden="true" />
-          Notifications
-        </button>
-        <button
-          className={section === "account" ? "active" : ""}
-          disabled={busy}
-          aria-current={section === "account" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("account"))}
-        >
-          <UserCircleIcon size={17} aria-hidden="true" />
-          Account
-        </button>
-        {(context.organizations || []).some((o) => o.role) && (
-          <button
-            className={section === "organization" ? "active" : ""}
-            disabled={busy}
-            aria-current={section === "organization" ? "page" : undefined}
-            onClick={() => navigate(() => onSection("organization"))}
-          >
-            <GearSixIcon size={17} aria-hidden="true" />
-            Organization
-          </button>
-        )}
-      </nav>
-      {!driverOnly && (
-        <nav className="carrierNav" aria-label="Carrier scope">
-          <p className="sidebarLabel">CARRIER SCOPE</p>
-          <button
-            className={!carrier ? "activeScope" : ""}
-            aria-pressed={!carrier}
-            disabled={busy}
-            onClick={() => navigate(() => onCarrier(""))}
-          >
-            <CircleIcon size={8} weight="fill" aria-hidden="true" />
-            All authorized carriers
-          </button>
-          {context.carriers.map((c) => (
+          ) : (
+            <>
+              <Brand />
+              <button
+                className="sidebarIcon"
+                aria-label={sheet ? "Close navigation" : "Collapse sidebar"}
+                title={sheet ? "Close navigation" : "Collapse sidebar"}
+                onClick={() => (sheet ? setMobileOpen(false) : toggle(true))}
+              >
+                {sheet ? <XIcon {...icon} /> : <SidebarSimpleIcon {...icon} />}
+              </button>
+            </>
+          )}
+        </div>
+        <div className="sidebarActions">
+          {!driverOnly && (
             <button
-              className={carrier === c.id ? "activeScope" : ""}
-              key={c.id}
-              aria-pressed={carrier === c.id}
-              disabled={busy}
-              onClick={() => navigate(() => onCarrier(c.id))}
-              title={c.name}
+              className="sidebarItem newLoad"
+              disabled={busy || offline}
+              title="New load"
+              onClick={() => go(onCreate)}
             >
-              <BuildingsIcon size={15} aria-hidden="true" />
-              <span>{c.name}</span>
+              <PlusIcon {...icon} weight="bold" />
+              <span className="navLabel">New load</span>
             </button>
-          ))}
+          )}
+          <button
+            className="sidebarItem"
+            title="Search loads"
+            onClick={() => go(onSearch)}
+          >
+            <MagnifyingGlassIcon {...icon} />
+            <span className="navLabel">Search loads</span>
+            {!compact && <kbd aria-hidden="true">⌘K</kbd>}
+          </button>
+        </div>
+        <nav className="sidebarPages" aria-label="Workspace navigation">
+          {pages
+            .filter((p) => p.show)
+            .map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                className={"sidebarItem" + (section === key ? " active" : "")}
+                disabled={busy}
+                title={label}
+                aria-current={section === key ? "page" : undefined}
+                onClick={() =>
+                  go(() => (key === "loads" ? onQueue(status) : onSection(key)))
+                }
+              >
+                <Icon {...icon} weight={section === key ? "fill" : "regular"} />
+                <span className="navLabel">{label}</span>
+              </button>
+            ))}
         </nav>
-      )}
-      <div className="sidebarAccount">
-        <span className="accountInitial" aria-hidden="true">
-          {context.user.name
-            .split(" ")
-            .map((s) => s[0])
-            .slice(0, 2)
-            .join("")}
-        </span>
-        <div>
-          <strong>{context.user.name}</strong>
-          <small>
-            {driverOnly ? "Assigned loads only" : "Dispatch workspace"}
-          </small>
+        {!compact && section === "loads" && (
+          <div className="sidebarContext">
+            <nav aria-label="Dispatch queues">
+              <p className="sidebarLabel">Queues</p>
+              {queues
+                .filter(
+                  (q) =>
+                    !driverOnly ||
+                    ["", "picked-up", "delivered"].includes(q.value),
+                )
+                .map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={
+                      "sidebarSub" + (status === value ? " active" : "")
+                    }
+                    disabled={busy}
+                    aria-current={status === value ? "page" : undefined}
+                    onClick={() => go(() => onQueue(value))}
+                  >
+                    {driverOnly && value === "" ? "My loads" : label}
+                  </button>
+                ))}
+            </nav>
+            {!driverOnly && context.carriers.length > 1 && (
+              <nav aria-label="Carrier scope">
+                <p className="sidebarLabel">Carriers</p>
+                <button
+                  className={"sidebarSub" + (!carrier ? " active" : "")}
+                  aria-pressed={!carrier}
+                  disabled={busy}
+                  onClick={() => go(() => onCarrier(""))}
+                >
+                  All authorized carriers
+                </button>
+                {(allCarriers
+                  ? context.carriers
+                  : context.carriers.slice(0, 6)
+                ).map((c) => (
+                  <button
+                    className={
+                      "sidebarSub" + (carrier === c.id ? " active" : "")
+                    }
+                    key={c.id}
+                    aria-pressed={carrier === c.id}
+                    disabled={busy}
+                    title={c.name}
+                    onClick={() => go(() => onCarrier(c.id))}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+                {context.carriers.length > 6 && (
+                  <button
+                    className="sidebarSub sidebarMore"
+                    aria-expanded={allCarriers}
+                    onClick={() => setAllCarriers(!allCarriers)}
+                  >
+                    {allCarriers
+                      ? "Show fewer"
+                      : `Show all ${context.carriers.length}`}
+                  </button>
+                )}
+              </nav>
+            )}
+          </div>
+        )}
+        <div className="sidebarSpacer" />
+        <div className="accountArea" ref={sheet ? undefined : menuRef}>
+          {menuOpen && !sheet && (
+            <div className="accountMenu" aria-label="Account options">
+              <p className="accountMenuEmail">
+                {context.user.email || context.user.name}
+              </p>
+              <button onClick={() => go(() => onSection("account"))}>
+                <UserCircleIcon {...icon} />
+                Account
+              </button>
+              {isAdmin && (
+                <button onClick={() => go(() => onSection("organization"))}>
+                  <GearSixIcon {...icon} />
+                  Organization
+                </button>
+              )}
+              <button onClick={() => go(() => onSection("notifications"))}>
+                <BellIcon {...icon} />
+                Notifications
+              </button>
+              <a href="/demo">
+                <ArrowSquareOutIcon {...icon} />
+                Interactive demo
+              </a>
+              <hr />
+              <button disabled={busy} onClick={() => go(onLogout)}>
+                <SignOutIcon {...icon} />
+                Sign out
+              </button>
+            </div>
+          )}
+          {sheet ? (
+            <div className="sheetAccount">
+              {[
+                {
+                  key: "account",
+                  label: "Account",
+                  Icon: UserCircleIcon,
+                  show: true,
+                },
+                {
+                  key: "organization",
+                  label: "Organization",
+                  Icon: GearSixIcon,
+                  show: isAdmin,
+                },
+                {
+                  key: "notifications",
+                  label: "Notifications",
+                  Icon: BellIcon,
+                  show: true,
+                },
+              ]
+                .filter((i) => i.show)
+                .map(({ key, label, Icon }) => (
+                  <button
+                    key={key}
+                    className={
+                      "sidebarItem" + (section === key ? " active" : "")
+                    }
+                    onClick={() => go(() => onSection(key as WorkspaceSection))}
+                  >
+                    <Icon {...icon} />
+                    <span className="navLabel">{label}</span>
+                  </button>
+                ))}
+              <button
+                className="sidebarItem"
+                disabled={busy}
+                onClick={() => go(onLogout)}
+              >
+                <SignOutIcon {...icon} />
+                <span className="navLabel">Sign out</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              className="accountButton"
+              aria-label="Account menu"
+              aria-expanded={menuOpen}
+              title={context.user.name}
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <span className="accountInitial" aria-hidden="true">
+                {initials}
+              </span>
+              {!compact && (
+                <>
+                  <span className="accountName">
+                    <strong>{context.user.name}</strong>
+                    <small>
+                      {driverOnly ? "Driver" : "Dispatch workspace"}
+                    </small>
+                  </span>
+                  <CaretUpDownIcon size={14} aria-hidden="true" />
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
-    </>
-  );
+    );
+  };
+
   return (
     <div className={"shell appShell" + (collapsed ? " sidebarCollapsed" : "")}>
       <a className="skipLink" href="#main">
         Skip to workspace
       </a>
-      <nav className="iconRail" aria-label="Workspace navigation">
+      <aside className="sidebarDock">{sidebar(false)}</aside>
+      <div className="mobileBar">
         <button
-          className="railBrand"
-          disabled={busy}
-          aria-label="Relay load workspace"
-          onClick={() => navigate(() => onQueue(""))}
-        >
-          <StackIcon size={24} weight="bold" aria-hidden="true" />
-        </button>
-        <button
-          className="railNavToggle"
+          className="sidebarIcon"
           aria-label="Open navigation"
-          onClick={() => {
-            if (window.matchMedia("(max-width: 1000px)").matches)
-              setMobileOpen(true);
-            else setCollapsed(!collapsed);
-          }}
+          onClick={() => setMobileOpen(true)}
         >
-          <SidebarSimpleIcon size={22} aria-hidden="true" />
+          <ListIcon size={18} aria-hidden="true" />
         </button>
-        <button aria-label="Search loads" onClick={onSearch}>
-          <MagnifyingGlassIcon size={23} aria-hidden="true" />
-        </button>
-        <button
-          className={section === "loads" ? "active" : ""}
-          aria-label="Load workspace"
-          disabled={busy}
-          aria-current={section === "loads" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("loads"))}
-        >
-          <TruckIcon size={23} aria-hidden="true" />
-        </button>
+        <Brand />
         {!driverOnly && (
           <button
-            className={section === "carriers" ? "active" : ""}
-            aria-label="Carrier directory"
-            disabled={busy}
-            aria-current={section === "carriers" ? "page" : undefined}
-            onClick={() => navigate(() => onSection("carriers"))}
+            className="sidebarIcon mobileCreate"
+            aria-label="New load"
+            disabled={busy || offline}
+            onClick={onCreate}
           >
-            <BuildingsIcon size={23} aria-hidden="true" />
+            <PlusIcon size={18} aria-hidden="true" />
           </button>
         )}
-        <button
-          className={section === "exceptions" ? "active" : ""}
-          aria-label="Exception queue"
-          disabled={busy}
-          aria-current={section === "exceptions" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("exceptions"))}
-        >
-          <WarningIcon size={23} aria-hidden="true" />
-        </button>
-        {!driverOnly && (
-          <button
-            className={section === "billing" ? "active" : ""}
-            aria-label="Billing and payments"
-            disabled={busy}
-            aria-current={section === "billing" ? "page" : undefined}
-            onClick={() => navigate(() => onSection("billing"))}
-          >
-            <ReceiptIcon size={23} aria-hidden="true" />
-          </button>
-        )}
-        <div className="railSpacer" />
-        <a
-          href="/demo"
-          aria-label="Open interactive demo"
-          title="Interactive demo"
-        >
-          <ArrowSquareOutIcon size={21} aria-hidden="true" />
-        </a>
-        <button aria-label="Sign out" disabled={busy} onClick={onLogout}>
-          <SignOutIcon size={22} aria-hidden="true" />
-        </button>
-      </nav>
-      <aside className="contextSidebar">{navigation}</aside>
+      </div>
       <div className="mainPane">{children}</div>
       {mobileOpen && (
         <Modal
           label="Workspace navigation"
           onClose={() => setMobileOpen(false)}
         >
-          <aside className="navigationSheet">{navigation}</aside>
+          <aside className="navigationSheet">{sidebar(true)}</aside>
         </Modal>
       )}
     </div>

@@ -15,9 +15,7 @@ async function login(page: Page) {
 }
 async function newCarrier(page: Page, email: string, name: string) {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Carrier directory", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await page.getByRole("button", { name: "Add carrier", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Carrier setup" });
   await dialog.getByLabel("Company name", { exact: true }).fill(name);
@@ -213,10 +211,10 @@ test("dispatcher onboards a carrier, manager invites a driver, and the driver re
     driver.getByRole("heading", { name: "My loads", exact: true }),
   ).toBeVisible();
   await expect(
-    driver.getByRole("button", { name: "Create load", exact: true }),
+    driver.getByRole("button", { name: "New load", exact: true }),
   ).toHaveCount(0);
   await expect(
-    driver.getByRole("button", { name: "Carrier directory", exact: true }),
+    driver.getByRole("button", { name: "Carriers", exact: true }),
   ).toHaveCount(0);
   await expect(
     driver.getByRole("columnheader", { name: "Agreed rate" }),
@@ -300,9 +298,7 @@ test("a lost carrier creation response retries with the same key and resumes its
     } else await route.continue();
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Carrier directory", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await page.getByRole("button", { name: "Add carrier", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Carrier setup" });
   const name = "Retry Carrier " + randomUUID().slice(0, 8);

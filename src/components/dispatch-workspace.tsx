@@ -653,9 +653,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       <header className="topbar">
         <div className="topbarLeft">
           <div className="headingGroup">
-            <p className="workspaceBreadcrumb">
-              {driverOnly ? "Driver workspace" : "Dispatch workspace"}
-            </p>
             <h1>
               {section !== "loads"
                 ? sectionTitles[section]
@@ -682,22 +679,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               </button>
             </div>
           )}
-        </div>
-        <div className="topbarRight">
-          {canWrite && section === "loads" && (
-            <button
-              className="createButton"
-              disabled={offline || busy || !!setupCarrier}
-              onClick={createLoad}
-            >
-              <PlusCircleIcon size={18} aria-hidden="true" />
-              Create load
-            </button>
-          )}
-          <span className="workspaceEnvironment">
-            <CircleIcon weight="fill" size={6} aria-hidden="true" />
-            {demo ? "Interactive demo" : "QA workspace"}
-          </span>
         </div>
       </header>
       <main id="main" className="workspace">
