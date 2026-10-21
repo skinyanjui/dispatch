@@ -541,6 +541,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   }>("login", {
                     email: f.get("email"),
                     password: f.get("password"),
+                    remember: f.get("remember") === "on",
                   });
                   if (result.mfa_required && result.challenge) {
                     setMfaChallenge(result.challenge);
@@ -596,6 +597,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 </div>
               </div>
               <div className="formRow">
+                <label className="rememberMe">
+                  <input type="checkbox" name="remember" />
+                  <span>Keep me signed in for 30 days</span>
+                </label>
                 <button
                   type="button"
                   className="textButton"
@@ -631,6 +636,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               your administrator.
             </p>
           </details>
+          <p className="legalLine">
+            Read the <a href="/terms">Terms</a> and{" "}
+            <a href="/privacy">Privacy</a> pages.
+          </p>
           {!mfaChallenge && !recovering && (
             <>
               <p className="orDivider">

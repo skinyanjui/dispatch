@@ -79,22 +79,29 @@ export function sameOrigin(request: Request) {
   if (request.headers.get("origin") !== expected)
     throw new HttpError(403, "ORIGIN_REJECTED");
 }
-export async function createSession(userId: string) {
-  await pool.query(
-    "INSERT INTO audit_logs VALUES($1,$2,'session.created',NULL,now())",
-    [randomUUID(), userId],
-  );
+/** A remembered session lasts 30 days; otherwise 12 hours (ADR 0034). */
+export const rememberDays = 30;
+export async function createSession(userId: string, remember = false) {
+  await pool.query("INSERT INTO audit_logs VALUES($1,$2,$3,NULL,now())", [
+    randomUUID(),
+    userId,
+    remember ? "session.created.remembered" : "session.created",
+  ]);
   const token = randomBytes(32).toString("hex");
   await pool.query(
-    "INSERT INTO sessions VALUES ($1,$2,now()+interval '12 hours')",
-    [digest(token), userId],
+    `INSERT INTO sessions(token_hash,user_id,expires_at,remember)
+    VALUES ($1,$2,now()+${remember ? `interval '${rememberDays} days'` : "interval '12 hours'"},$3)`,
+    [digest(token), userId, remember],
   );
   return token;
 }
-export type LoginResult = { token: string } | { mfa_challenge: string };
+export type LoginResult =
+  | { token: string; remember: boolean }
+  | { mfa_challenge: string; remember: boolean };
 export async function login(
   email: string,
   password: string,
+  remember = false,
 ): Promise<LoginResult> {
   await consumeLoginAttempt(email);
   const { rows } = await pool.query("SELECT * FROM users WHERE email=$1", [
@@ -113,10 +120,10 @@ export async function login(
     // The password step alone never yields a session for MFA accounts.
     const challenge = randomBytes(32).toString("hex");
     await pool.query(
-      "INSERT INTO mfa_challenges(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '5 minutes')",
-      [digest(challenge), rows[0].id],
+      "INSERT INTO mfa_challenges(token_hash,user_id,expires_at,remember) VALUES($1,$2,now()+interval '5 minutes',$3)",
+      [digest(challenge), rows[0].id, remember],
     );
-    return { mfa_challenge: challenge };
+    return { mfa_challenge: challenge, remember };
   }
-  return { token: await createSession(rows[0].id) };
+  return { token: await createSession(rows[0].id, remember), remember };
 }

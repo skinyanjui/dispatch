@@ -320,7 +320,7 @@ export async function completeMfaLogin(input: unknown) {
     .object({ challenge: secretToken, code: z.string().max(40) })
     .strict()
     .parse(input);
-  const userId = await transaction(async (c) => {
+  const verified = await transaction(async (c) => {
     const { rows } = await c.query(
       "SELECT * FROM mfa_challenges WHERE token_hash=$1 AND expires_at>now() FOR UPDATE",
       [digest(data.challenge)],
@@ -350,11 +350,17 @@ export async function completeMfaLogin(input: unknown) {
       "mfa.verified." + factor,
       challenge.user_id,
     ]);
-    return challenge.user_id as string;
+    return {
+      userId: challenge.user_id as string,
+      remember: challenge.remember as boolean,
+    };
   });
   // The failed-attempt count must commit, so reject outside the transaction.
-  if (!userId) throw new HttpError(401, "INVALID_MFA_CODE");
-  return createSession(userId);
+  if (!verified) throw new HttpError(401, "INVALID_MFA_CODE");
+  return {
+    token: await createSession(verified.userId, verified.remember),
+    remember: verified.remember,
+  };
 }
 
 // ---------- Account summary ----------

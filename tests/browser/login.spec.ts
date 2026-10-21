@@ -53,18 +53,21 @@ test("sign-in is two columns: hero on the left, a card on the right, only real o
   // Icons inside the fields, and one primary action.
   await expect(card.locator(".fieldBox svg")).toHaveCount(3);
   await expect(card.getByRole("button", { name: "Sign in" })).toBeVisible();
-  // Nothing that does not exist in Relay is offered as a control.
-  for (const text of [
-    /Google/i,
-    /Apple/i,
-    /Remember me/i,
-    /Create an account/i,
-    /Terms/i,
-  ])
+  // Social sign-in only appears once the operator configures it, and
+  // there is no open sign-up; people ask for access instead.
+  for (const text of [/Google/i, /Apple/i, /Create an account/i])
     await expect(page.getByRole("button", { name: text })).toHaveCount(0);
-  for (const text of [/Google/i, /Apple/i, /Create an account/i, /Terms/i])
-    await expect(page.getByRole("link", { name: text })).toHaveCount(0);
-  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await expect(
+    card.getByLabel("Keep me signed in for 30 days"),
+  ).not.toBeChecked();
+  await expect(card.getByRole("link", { name: "Terms" })).toHaveAttribute(
+    "href",
+    "/terms",
+  );
+  await expect(card.getByRole("link", { name: "Privacy" })).toHaveAttribute(
+    "href",
+    "/privacy",
+  );
   await expect(
     card.getByRole("link", { name: /Try the interactive demo/ }),
   ).toHaveAttribute("href", "/demo");
@@ -133,4 +136,60 @@ test("the invitation page shares the layout and is accessible", async ({
     ).toBeVisible();
     await scan(page, "join " + size.width);
   }
+});
+
+test("keep me signed in is sent only when chosen", async ({ page }) => {
+  await signedOut(page);
+  const bodies: unknown[] = [];
+  await page.route("**/api/login", async (route) => {
+    bodies.push(route.request().postDataJSON());
+    await route.fulfill({
+      status: 401,
+      json: { error: "INVALID_CREDENTIALS" },
+    });
+  });
+  await page.goto("/");
+  await page.getByLabel("Email", { exact: true }).fill("a@b.test");
+  await page.getByLabel("Password", { exact: true }).fill("not-a-password-1");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect.poll(() => bodies.length).toBe(1);
+  await page.getByLabel("Keep me signed in for 30 days").check();
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies).toMatchObject([{ remember: false }, { remember: true }]);
+});
+
+test("Terms and Privacy pages exist, say they are drafts, and are accessible", async ({
+  page,
+}) => {
+  for (const [path, heading] of [
+    ["/terms", "Terms of use"],
+    ["/privacy", "Privacy"],
+  ]) {
+    for (const size of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      await page.goto(path);
+      await expect(
+        page.getByRole("heading", { name: heading, level: 1 }),
+      ).toBeVisible();
+      await expect(page.getByRole("note")).toContainText(
+        "not reviewed by a lawyer",
+      );
+      await expect(
+        page.getByText(/Version \d{4}-\d{2}-\d{2}\.\d/),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await scan(page, path + " " + size.width);
+    }
+  }
+  await page.goto("/privacy");
+  await page.getByRole("link", { name: "Back to sign in" }).click();
+  await expect(page).toHaveURL(/\/$/);
 });

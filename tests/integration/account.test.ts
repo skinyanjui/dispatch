@@ -208,7 +208,8 @@ test("MFA: enrollment, login challenge, replay protection, recovery codes, attem
     challenge: body.challenge,
     code: codeAt(secret, now + 1),
   });
-  assert.equal(session.length, 64);
+  assert.equal(session.token.length, 64);
+  assert.equal(session.remember, false);
   await assert.rejects(
     completeMfaLogin({
       challenge: body.challenge,

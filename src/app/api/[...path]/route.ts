@@ -2,7 +2,14 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { pool } from "@/lib/db";
-import { session, sameOrigin, login, HttpError, digest } from "@/lib/auth";
+import {
+  session,
+  sameOrigin,
+  login,
+  HttpError,
+  digest,
+  rememberDays,
+} from "@/lib/auth";
 import {
   createCarrier,
   carrierSetup,
@@ -131,7 +138,11 @@ import {
 export const runtime = "nodejs";
 // Reading a document with the model can take most of a minute.
 export const maxDuration = 60;
-function withSession(res: NextResponse, token: string) {
+/**
+ * Without "keep me signed in" the cookie ends with the browser; with it, the
+ * cookie lasts as long as the 30-day session (ADR 0034).
+ */
+function withSession(res: NextResponse, token: string, remember = false) {
   res.cookies.set("relay_session", token, {
     httpOnly: true,
     sameSite: "strict",
@@ -139,7 +150,7 @@ function withSession(res: NextResponse, token: string) {
       process.env.COOKIE_SECURE !== "false" &&
       process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 43200,
+    ...(remember ? { maxAge: rememberDays * 86_400 } : {}),
   });
   return res;
 }
@@ -238,21 +249,33 @@ async function handle(req: NextRequest) {
         .object({
           email: z.string().trim().max(254).pipe(z.email()),
           password: z.string().min(1).max(256),
+          remember: z.boolean().optional(),
         })
         .parse(await readJson(req));
-      const result = await login(input.email, input.password);
+      const result = await login(
+        input.email,
+        input.password,
+        input.remember === true,
+      );
       if ("mfa_challenge" in result)
         return NextResponse.json({
           mfa_required: true,
           challenge: result.mfa_challenge,
         });
-      return withSession(NextResponse.json({ ok: true }), result.token);
-    }
-    if (req.method === "POST" && path.join("/") === "login/mfa")
       return withSession(
         NextResponse.json({ ok: true }),
-        await completeMfaLogin(await readJson(req)),
+        result.token,
+        result.remember,
       );
+    }
+    if (req.method === "POST" && path.join("/") === "login/mfa") {
+      const done = await completeMfaLogin(await readJson(req));
+      return withSession(
+        NextResponse.json({ ok: true }),
+        done.token,
+        done.remember,
+      );
+    }
     if (req.method === "POST" && path.join("/") === "password-reset/request")
       return NextResponse.json(
         await requestPasswordReset(
