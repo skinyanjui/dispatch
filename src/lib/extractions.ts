@@ -6,6 +6,7 @@ import { digest, HttpError } from "./auth";
 import { member } from "./loads";
 import { orgAdmin } from "./account";
 import { readable } from "./documents";
+import { assistantProvider } from "./assistant-ai";
 import { objectStore, readPostgresObject } from "./storage";
 import {
   costMicros,
@@ -32,6 +33,8 @@ export const aiSettingsSchema = z
   .object({
     version: z.number().int().nonnegative(),
     enabled: z.boolean(),
+    /** Omitted keeps the current choice. */
+    assistant_enabled: z.boolean().optional(),
     monthly_limit_cents: z.number().int().min(0).max(1_000_000),
   })
   .strict();
@@ -43,7 +46,14 @@ async function spentMicros(c: PoolClient, organizationId: string) {
       AND created_at>=date_trunc('month',now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`,
     [organizationId],
   );
-  return Number(rows[0].spent);
+  // The assistant shares the same monthly limit (ADR 0031).
+  const chat = await c.query(
+    `SELECT COALESCE(sum(COALESCE(cost_micros,reserved_micros)),0)::bigint spent
+    FROM assistant_turns WHERE organization_id=$1
+      AND created_at>=date_trunc('month',now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`,
+    [organizationId],
+  );
+  return Number(rows[0].spent) + Number(chat.rows[0].spent);
 }
 
 /** What the organization settings screen shows. */
@@ -52,7 +62,7 @@ export async function aiStatus(user: string, organizationId: string) {
     await orgAdmin(c, user, organizationId);
     const provider = extractionProvider();
     const settings = await c.query(
-      "SELECT extraction_enabled,monthly_limit_cents,version FROM organization_ai_settings WHERE organization_id=$1",
+      "SELECT extraction_enabled,assistant_enabled,monthly_limit_cents,version FROM organization_ai_settings WHERE organization_id=$1",
       [organizationId],
     );
     const row = settings.rows[0];
@@ -62,6 +72,7 @@ export async function aiStatus(user: string, organizationId: string) {
         ? { name: provider.name, model: provider.model }
         : null,
       enabled: row?.extraction_enabled ?? false,
+      assistant_enabled: row?.assistant_enabled ?? false,
       monthly_limit_cents: row?.monthly_limit_cents ?? 1000,
       spent_cents: Math.ceil(
         (await spentMicros(c, organizationId)) / MICROS_PER_CENT,
@@ -84,19 +95,31 @@ export async function saveAiSettings(
       organizationId,
     ]);
     const current = await c.query(
-      "SELECT version FROM organization_ai_settings WHERE organization_id=$1",
+      "SELECT version,assistant_enabled FROM organization_ai_settings WHERE organization_id=$1",
       [organizationId],
     );
     if ((current.rows[0]?.version ?? 0) !== data.version)
       throw new HttpError(409, "VERSION_CONFLICT");
-    if (data.enabled && !extractionProvider())
+    const assistant =
+      data.assistant_enabled ?? current.rows[0]?.assistant_enabled ?? false;
+    if (
+      (data.enabled && !extractionProvider()) ||
+      (assistant && !assistantProvider())
+    )
       throw new HttpError(503, "AI_UNAVAILABLE");
     await c.query(
-      `INSERT INTO organization_ai_settings(organization_id,extraction_enabled,monthly_limit_cents,enabled_by)
-      VALUES($1,$2,$3,$4) ON CONFLICT(organization_id) DO UPDATE SET extraction_enabled=$2,
+      `INSERT INTO organization_ai_settings(organization_id,extraction_enabled,assistant_enabled,monthly_limit_cents,enabled_by)
+      VALUES($1,$2,$5,$3,$4) ON CONFLICT(organization_id) DO UPDATE SET extraction_enabled=$2,assistant_enabled=$5,
       monthly_limit_cents=$3,enabled_by=$4,version=organization_ai_settings.version+1,updated_at=now()`,
-      [organizationId, data.enabled, data.monthly_limit_cents, user],
+      [organizationId, data.enabled, data.monthly_limit_cents, user, assistant],
     );
+    if (assistant !== (current.rows[0]?.assistant_enabled ?? false))
+      await c.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
+        randomUUID(),
+        user,
+        assistant ? "ai.assistant.enabled" : "ai.assistant.disabled",
+        organizationId,
+      ]);
     await c.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
       randomUUID(),
       user,

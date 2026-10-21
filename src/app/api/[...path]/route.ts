@@ -88,6 +88,7 @@ import {
   setFavorite,
   updateContact,
 } from "@/lib/contacts";
+import { ask, assistantState, getConversation } from "@/lib/assistant";
 import {
   archiveProspect,
   convertProspect,
@@ -710,6 +711,36 @@ async function handle(req: NextRequest) {
             await archiveContact(user.id, contactId, await readJson(req)),
           );
       }
+    }
+    if (path[0] === "assistant") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await assistantState(
+            user.id,
+            z
+              .uuid()
+              .optional()
+              .parse(
+                req.nextUrl.searchParams.get("organization_id") ?? undefined,
+              ),
+          ),
+        );
+      if (path.length === 2 && path[1] === "ask" && req.method === "POST")
+        return NextResponse.json(
+          await ask(
+            user.id,
+            await readJson(req),
+            req.headers.get("idempotency-key") ?? undefined,
+          ),
+        );
+      if (
+        path.length === 3 &&
+        path[1] === "conversations" &&
+        req.method === "GET"
+      )
+        return NextResponse.json(
+          await getConversation(user.id, z.uuid().parse(path[2])),
+        );
     }
     if (path[0] === "prospects") {
       if (path.length === 1 && req.method === "GET")

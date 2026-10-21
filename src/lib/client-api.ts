@@ -174,6 +174,8 @@ const messages: Record<string, string> = {
     "Please confirm the earlier text didn't arrive before sending it again.",
   AI_NOT_ENABLED:
     "AI reading is off for this organization. An owner or admin can turn it on in Organization settings.",
+  ASSISTANT_NOT_ENABLED:
+    "The assistant is off for this organization. An owner or admin can turn it on in Organization settings.",
   AI_UNAVAILABLE:
     "AI reading isn't set up on this server yet, so nothing was sent.",
   AI_BUDGET_REACHED:
