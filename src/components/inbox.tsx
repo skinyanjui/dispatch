@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowLeftIcon,
   ChatTextIcon,
   EnvelopeSimpleIcon,
   MagnifyingGlassIcon,
@@ -655,6 +656,12 @@ export function Inbox({
     [status, setStatus] = useState(""),
     [resending, setResending] = useState<string | null>(null);
   const request = useRef(0);
+  const messages = useRef<HTMLOListElement>(null);
+  // Open a conversation at its latest message.
+  useEffect(() => {
+    const list = messages.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [view?.id, view?.messages.length]);
   const load = useCallback(
     async (cursor?: string) => {
       const id = ++request.current;
@@ -803,6 +810,12 @@ export function Inbox({
     await load();
     await openThread(threadId);
   };
+  const hasDetail = Boolean(newMessage || view || viewError);
+  const back = () => {
+    setNewMessage(null);
+    setSelected(null);
+    setView(null);
+  };
   return (
     <section className="inbox" aria-label="Inbox">
       <div className="inboxBar">
@@ -860,7 +873,7 @@ export function Inbox({
           onAuthError={onAuthError}
         />
       )}
-      <div className="inboxLayout">
+      <div className={"inboxLayout" + (hasDetail ? " hasDetail" : "")}>
         <div className="inboxList">
           {error && (
             <div className="alert error" role="alert">
@@ -870,7 +883,29 @@ export function Inbox({
               </button>
             </div>
           )}
-          <ul className="threadList" aria-label="Conversations">
+          <ul
+            className="threadList"
+            aria-label="Conversations"
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+              const items = [
+                ...e.currentTarget.querySelectorAll<HTMLButtonElement>(
+                  ".threadItem",
+                ),
+              ];
+              const at = items.indexOf(
+                document.activeElement as HTMLButtonElement,
+              );
+              if (at < 0) return;
+              e.preventDefault();
+              items[
+                Math.min(
+                  items.length - 1,
+                  Math.max(0, at + (e.key === "ArrowDown" ? 1 : -1)),
+                )
+              ]?.focus();
+            }}
+          >
             {(threads ?? []).map((t) => (
               <li key={t.id}>
                 <button
@@ -931,6 +966,15 @@ export function Inbox({
           )}
         </div>
         <div className="inboxDetail">
+          {hasDetail && (
+            <button
+              type="button"
+              className="backButton textButton"
+              onClick={back}
+            >
+              <ArrowLeftIcon {...icon} /> All conversations
+            </button>
+          )}
           {newMessage && (
             <Composer
               key={newMessage.to.map((p) => p.key).join(",") + "|new"}
@@ -1016,7 +1060,7 @@ export function Inbox({
                   {view.load && ` · Load ${view.load.reference}`}
                 </small>
               </header>
-              <ol className="messageList" aria-label="Messages">
+              <ol className="messageList" aria-label="Messages" ref={messages}>
                 {view.messages.map((m) => (
                   <li
                     key={m.id}

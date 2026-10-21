@@ -10,6 +10,10 @@ Status: accepted, 2026-10-21.
 - **Inbox** uses one toolbar row (search, channel, unread, New message) above two panes that fill the page and scroll independently; thread rows align icon, title and time in fixed columns.
 - Alignment is guarded by a Chromium test that compares each page's title and first block with the content column on desktop and phone widths, and checks there is no horizontal overflow.
 
+- **Dialogs** that slide in from the right use the shared `Sheet` (drawer panel, eyebrow, close button) so New load, Load details, Edit load and Cancel load share one left edge and width. A bare `Modal` has no panel and must not be used for content directly.
+- **Inbox conversation view:** header, a scrolling message list that opens at the latest message, and the composer pinned below. Sent messages are right-aligned and tinted, received ones left-aligned. On phones a conversation replaces the list, with an "All conversations" back button. Arrow keys move between conversations.
+- Checkboxes and radios are fixed-size and rows with a checkbox are never stacked; the generic full-width input rule previously stretched them.
+
 ## Consequences
 
 No data, API or migration change. Older per-page stylesheets still define their original rules; `system.css` overrides them, so new pages should use the shared classes instead of adding further overrides.

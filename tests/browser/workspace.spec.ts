@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 test("authenticated queue, details and mobile layout", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Email", { exact: true }).fill("dispatcher@relay.test");
@@ -280,3 +280,75 @@ for (const [label, size] of [
     }
   });
 }
+
+async function signIn(page: Page) {
+  const login = await page.request.post("/api/login", {
+    headers: { Origin: "http://localhost:3000" },
+    data: {
+      email: "dispatcher@relay.test",
+      password: process.env.SEED_PASSWORD,
+    },
+  });
+  expect(login.status()).toBe(200);
+}
+
+test("edit and cancel open as drawers lined up with load details", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  await page.locator(".lane.booked .loadCard").first().click();
+  const details = page.getByRole("dialog", { name: "Load details" });
+  await expect(details).toBeVisible();
+  const left = async (dialog: Locator) =>
+    dialog.locator(".inspector").evaluate((el) => ({
+      x: Math.round(el.getBoundingClientRect().left),
+      width: Math.round(el.getBoundingClientRect().width),
+      background: getComputedStyle(el).backgroundColor,
+    }));
+  const base = await left(details);
+  for (const name of ["Edit load", "Cancel load"]) {
+    await details.getByRole("button", { name, exact: true }).click();
+    const dialog = page.getByRole("dialog", { name, exact: true });
+    await expect(dialog.locator(".inspector")).toBeVisible();
+    const panel = await left(dialog);
+    expect(panel.x, name + " left edge").toBe(base.x);
+    expect(panel.width, name + " width").toBe(base.width);
+    expect(panel.background, name + " is opaque").not.toBe("rgba(0, 0, 0, 0)");
+    await dialog
+      .getByRole("button", { name: `Close ${name.toLowerCase()}` })
+      .click();
+    await expect(dialog).toHaveCount(0);
+  }
+});
+
+test("inbox: filters stay readable and phones get a back button", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Inbox", exact: true })
+    .first()
+    .click();
+  await expect(page.locator(".threadItem").first()).toBeVisible();
+  await page.locator(".threadItem").first().click();
+  const box = async (locator: Locator) => (await locator.boundingBox())!;
+  const check = await box(page.locator(".filterCheck input"));
+  const label = await box(page.locator(".filterCheck span"));
+  const button = await box(page.getByRole("button", { name: "New message" }));
+  expect(check.width).toBeLessThanOrEqual(20);
+  expect(label.x + label.width).toBeLessThanOrEqual(button.x);
+  // The composer stays on screen under a long conversation.
+  await expect(page.getByRole("button", { name: "Send" })).toBeInViewport();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".inboxList")).toBeHidden();
+  await page.getByRole("button", { name: "All conversations" }).click();
+  await expect(page.locator(".inboxList")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "All conversations" }),
+  ).toBeHidden();
+});

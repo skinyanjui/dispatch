@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { Load } from "@/lib/contracts";
 import { appointmentToInstant, dollarsToMinor } from "@/lib/entry";
-import { Modal } from "./modal";
+import { Sheet } from "./modal";
 
 /** `datetime-local` value for an instant, in the stop's own time zone. */
 function localValue(instant: string, timezone: string) {
@@ -146,7 +146,11 @@ export function LoadChanges({
         </details>
       )}
       {mode === "edit" && (
-        <Modal label="Edit load" onClose={() => setMode(null)}>
+        <Sheet
+          label="Edit load"
+          eyebrow="EDIT LOAD"
+          onClose={() => setMode(null)}
+        >
           <form
             className="opsForm"
             onSubmit={(e) => {
@@ -281,10 +285,14 @@ export function LoadChanges({
               </button>
             </div>
           </form>
-        </Modal>
+        </Sheet>
       )}
       {mode === "cancel" && (
-        <Modal label="Cancel load" onClose={() => setMode(null)}>
+        <Sheet
+          label="Cancel load"
+          eyebrow="CANCEL LOAD"
+          onClose={() => setMode(null)}
+        >
           <form
             className="opsForm"
             onSubmit={(e) => {
@@ -330,7 +338,7 @@ export function LoadChanges({
               </button>
             </div>
           </form>
-        </Modal>
+        </Sheet>
       )}
     </>
   );

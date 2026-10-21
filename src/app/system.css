@@ -229,3 +229,177 @@
     flex: 1 1 100%;
   }
 }
+
+/* Cards and forms: one padding, one gap, no leftover dashed rules. */
+.appShell .opsCard {
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+}
+.appShell .opsCard.opsForm {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+.appShell .opsForm {
+  padding-top: var(--space-2);
+}
+.appShell .inspector .opsForm {
+  border-top: 0;
+  padding-top: 0;
+  gap: var(--space-3);
+}
+.appShell .opsCard :is(h2, h3, h4):first-child {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.appShell .opsForm label,
+.appShell .opsCard label {
+  margin: 0;
+}
+/* A label wrapping a checkbox is a row, never the checkbox over its text. */
+.appShell label:has(> input[type="checkbox"], > input[type="radio"]) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  line-height: 1.4;
+}
+.appShell label:has(> input[type="checkbox"]) input {
+  margin: 0;
+  flex: none;
+}
+
+/* Page sections inside the card pages. */
+.appShell .carrierDirectory h2:not(.directoryIntro h2, .opsCard h2) {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Drawer content: buttons rows and stop numbers line up. */
+.appShell .actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+.appShell .stopIndex {
+  flex: none;
+  width: 2ch;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .opsActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Buttons that sit beside fields share their height. */
+.appShell button.primary,
+.appShell button.secondary {
+  min-height: var(--control-h);
+}
+
+/* Checkboxes and radios are never stretched by the generic input width. */
+.appShell input[type="checkbox"],
+.appShell input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  flex: none;
+  margin: 0;
+}
+
+/* Inbox conversation: header, scrolling messages, composer pinned below. */
+.appShell .inboxDetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: hidden;
+  height: calc(100dvh - 170px);
+  max-height: none;
+}
+.appShell .inboxDetail > * {
+  flex: none;
+}
+.appShell .inboxDetail > .messageList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.appShell .inboxDetail > .directoryEmpty {
+  margin: auto;
+}
+.appShell .threadHeader {
+  display: grid;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.appShell .threadHeader h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.appShell .messageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-right: var(--space-1);
+}
+.appShell .message {
+  max-width: min(85%, 640px);
+}
+.appShell .message.out {
+  align-self: flex-end;
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-hover);
+}
+.appShell .message.in {
+  align-self: flex-start;
+}
+.appShell .composerRow {
+  align-items: flex-end;
+}
+.appShell .composerRow .textButton {
+  min-height: var(--control-h);
+}
+.appShell .inboxList {
+  max-height: calc(100dvh - 170px);
+}
+.appShell .backButton {
+  display: none;
+  align-self: flex-start;
+}
+@media (max-width: 800px) {
+  .appShell .inboxLayout.hasDetail .inboxList {
+    display: none;
+  }
+  .appShell .backButton {
+    display: inline-flex;
+  }
+  .appShell .inboxDetail {
+    height: calc(100dvh - 150px);
+  }
+}
+
+.appShell .composer label,
+.appShell .composerRow label {
+  margin: 0;
+}
+.appShell .messageList > :first-child {
+  margin-top: auto;
+}
+@media (max-width: 800px) {
+  .appShell .inboxDetail {
+    height: auto;
+    overflow: visible;
+  }
+  .appShell .inboxDetail > .messageList {
+    flex: none;
+    max-height: 45dvh;
+  }
+}
