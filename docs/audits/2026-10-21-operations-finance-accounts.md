@@ -95,3 +95,12 @@ Verification on the final code:
 - **43** Chromium tests pass. New: multi-stop creation, correct then retract, and older activity/check-in paging.
 
 No live bucket or ClamAV daemon was reachable here: there is no Docker daemon, and the proxy blocks image and signature downloads. Storage is verified against AWS's published signature vectors and an in-process fake S3 server; scanning against a fake `clamd` that speaks the real INSTREAM protocol, including the EICAR test string. Run one upload against your real bucket and ClamAV before enabling `RELAY_REQUIRE_MALWARE_SCAN=true` in production.
+
+## Follow-up: direct-to-bucket uploads
+
+Files over 4 MB now upload straight to the bucket (up to 25 MB), then the server verifies size, checksum and type, scans, and records them ([ADR 0015](../decisions/0015-direct-to-bucket-uploads.md), migration 013). The 4 MB server path is unchanged.
+
+- **Verification:** lint, TypeScript and the production build pass; **85** integration tests pass (7 new) and **45** Chromium tests pass (1 new).
+- **Test fidelity:** the S3 stand-in recomputes presigned signatures as S3 does, which proves the PUT is bound to the declared size and validates the SigV4 signer. No live bucket or ClamAV was available.
+- **Needs configuration:** bucket CORS (PUT from the app origin), a lifecycle rule expiring `quarantine/`, and a `clamd` stream limit of at least 25 MB.
+- **Limits:** not resumable (a failed upload restarts), and 25 MB maximum.

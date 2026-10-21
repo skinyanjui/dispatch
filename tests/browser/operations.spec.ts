@@ -546,3 +546,75 @@ test("stops: record arrival and departure, then correct a time with a reason", a
   ).toHaveCount(1);
   await expect(dialog.locator(".badge")).toHaveText("Booked");
 });
+
+test("files over 4 MB upload directly to the bucket and retry with the same key", async ({
+  page,
+}) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "BIG");
+  const requests: string[] = [];
+  const sessionBodies: {
+    idempotency_key: string;
+    sha256: string;
+    size_bytes: number;
+  }[] = [];
+  let putAttempts = 0;
+  page.on("request", (r) => {
+    const url = new URL(r.url());
+    if (url.pathname.startsWith("/api/documents"))
+      requests.push(r.method() + " " + url.pathname);
+  });
+  await page.route("**/api/documents/uploads", (route) => {
+    sessionBodies.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 201,
+      json: {
+        status: "pending",
+        session_id: "11111111-1111-4111-8111-111111111111",
+        upload_url:
+          "https://bucket.example.test/relay-docs/quarantine/x?X-Amz-Signature=fake",
+        upload_headers: { "Content-Type": "application/octet-stream" },
+      },
+    });
+  });
+  await page.route("https://bucket.example.test/**", (route) => {
+    putAttempts++;
+    return putAttempts === 1
+      ? route.abort("connectionreset")
+      : route.fulfill({ status: 200, body: "" });
+  });
+  await page.route("**/api/documents/uploads/*/finalize", (route) =>
+    route.fulfill({
+      status: 201,
+      json: { document_id: randomUUID(), version_id: randomUUID(), version: 1 },
+    }),
+  );
+  const dialog = await openLoad(page, load.reference);
+  const pod = dialog.getByRole("article", { name: "Proof of delivery" });
+  await pod.getByLabel("Upload file").setInputFiles({
+    name: "big-pod.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.concat([
+      Buffer.from("%PDF-1.4\n"),
+      Buffer.alloc(5 * 1024 * 1024, 0x20),
+    ]),
+  });
+  await pod.getByRole("button", { name: "Upload Proof of delivery" }).click();
+  await expect(pod.getByRole("alert")).toContainText("didn't reach storage");
+  await pod.getByRole("button", { name: "Upload Proof of delivery" }).click();
+  await expect(dialog.getByRole("status").first()).toContainText(
+    "Proof of delivery uploaded for review.",
+  );
+  expect(putAttempts).toBe(2);
+  // The large body never went through the app server's upload endpoint.
+  expect(requests).not.toContain("POST /api/documents");
+  expect(
+    requests.filter((r) => r === "POST /api/documents/uploads"),
+  ).toHaveLength(2);
+  expect(sessionBodies[0].idempotency_key).toBe(
+    sessionBodies[1].idempotency_key,
+  );
+  expect(sessionBodies[0].sha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(sessionBodies[0].size_bytes).toBe(5 * 1024 * 1024 + 9);
+});
