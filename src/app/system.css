@@ -578,3 +578,39 @@
     flex: 1 1 auto;
   }
 }
+
+/* Organization team rows: name, badges and Remove on one line; stacked and
+   evenly spaced on phones. */
+.appShell .teamRow {
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+.appShell .teamRow + .teamRow {
+  border-top: 1px solid var(--border);
+}
+.appShell .teamPills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.appShell .teamRow .opsTeamName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .appShell .teamRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-3);
+  }
+  .appShell .teamRow .teamPills {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .appShell .teamRow .textButton {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+}

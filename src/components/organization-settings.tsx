@@ -55,14 +55,14 @@ const roleLabels: Record<string, string> = {
 
 function SecurityPills({ verified, mfa }: { verified: boolean; mfa: boolean }) {
   return (
-    <>
+    <span className="teamPills">
       <span className={"opsPill " + (verified ? "good" : "warn")}>
         {verified ? "Email verified" : "Email unverified"}
       </span>
       <span className={"opsPill " + (mfa ? "good" : "")}>
         {mfa ? "2-step on" : "2-step off"}
       </span>
-    </>
+    </span>
   );
 }
 
@@ -239,7 +239,7 @@ export function OrganizationSettings({
             <article className="opsCard">
               <h4>Administrators</h4>
               {data.admins.map((a) => (
-                <div className="opsCardHeading" key={a.id}>
+                <div className="opsCardHeading teamRow" key={a.id}>
                   <span className="opsTeamName">
                     {a.name} · {roleLabels[a.role]}
                     <small>{a.email}</small>
@@ -293,7 +293,7 @@ export function OrganizationSettings({
                 {data.team
                   .filter((p) => p.carrier_id === carrierId)
                   .map((p) => (
-                    <div className="opsCardHeading" key={p.user_id}>
+                    <div className="opsCardHeading teamRow" key={p.user_id}>
                       <span className="opsTeamName">
                         {p.name} · {roleLabels[p.role]}
                         <small>{p.email}</small>

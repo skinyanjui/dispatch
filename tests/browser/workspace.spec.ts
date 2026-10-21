@@ -357,3 +357,32 @@ test("inbox: tabs filter like an email client and phones get a back button", asy
     page.getByRole("button", { name: "All conversations" }),
   ).toBeHidden();
 });
+
+test("organization: team rows stack cleanly on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Open navigation", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Workspace navigation" })
+    .getByRole("button", { name: "Organization", exact: true })
+    .click();
+  const row = page.locator(".teamRow:has(.textButton)").first();
+  await expect(row).toBeVisible();
+  const [name, pills, remove] = await Promise.all(
+    [".opsTeamName", ".teamPills", ".textButton"].map(
+      async (selector) => (await row.locator(selector).first().boundingBox())!,
+    ),
+  );
+  // Badges sit under the name, Remove stays on the name's line and in view.
+  expect(pills.y).toBeGreaterThanOrEqual(name.y + name.height - 1);
+  expect(Math.abs(remove.y - name.y)).toBeLessThan(name.height);
+  expect(remove.x + remove.width).toBeLessThanOrEqual(390);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
