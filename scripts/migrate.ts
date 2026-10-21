@@ -12,6 +12,7 @@ try {
       ["003", "003_manual_check_ins.sql"],
       ["004", "004_onboarding.sql"],
       ["005", "005_documents.sql"],
+      ["006", "006_exceptions.sql"],
     ]) {
       const exists = await c.query(
         "SELECT 1 FROM schema_migrations WHERE version=$1",

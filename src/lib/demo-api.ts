@@ -11,6 +11,7 @@ import {
   type DocumentType,
   type DocumentVersion,
 } from "./compliance";
+import { suggestExceptions, type LoadException } from "./exception-rules";
 import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
@@ -36,6 +37,7 @@ type DemoDocument = DocumentVersion & {
   type: DocumentType;
 };
 type State = {
+  exceptions: LoadException[];
   documents: DemoDocument[];
   carriers: CarrierSetup[];
   loads: Load[];
@@ -167,7 +169,30 @@ function fixtures(): State {
       },
     },
   ];
+  const exceptions: LoadException[] = [
+    {
+      id: "88888888-8888-4888-8888-888888888881",
+      load_id: loads[2].id,
+      carrier_id: loads[2].carrier_id,
+      type: "delay",
+      severity: "medium",
+      status: "open",
+      summary: "Driver reports a two-hour weather delay",
+      details: "Sample exception for the demo.",
+      document_type: null,
+      owner_id: null,
+      owner_name: null,
+      due_at: new Date(Date.now() + 2 * 3600000).toISOString(),
+      opened_by_name: "Jordan Ellis",
+      opened_at: now(),
+      resolved_by_name: null,
+      resolved_at: null,
+      resolution: null,
+      version: 1,
+    },
+  ];
   return {
+    exceptions,
     documents,
     carriers,
     loads,
@@ -257,10 +282,110 @@ export function createDemoApi() {
         history: history.slice(0, 10),
       };
     });
-  const withDocuments = (l: Load): Load => ({
-    ...l,
-    documents: slots(loadDocumentTypes, (d) => d.load_id === l.id),
-  });
+  const owners = (carrierId: string) => [
+    { id: "demo-dispatcher", name: "Alex Morgan", role: "dispatcher" },
+    ...(carrierId === carrier
+      ? [{ id: "demo-manager", name: "Casey Lane", role: "carrier-manager" }]
+      : []),
+  ];
+  const withDocuments = (l: Load): Load => {
+    const documents = slots(loadDocumentTypes, (d) => d.load_id === l.id);
+    const exceptions = state.exceptions.filter((e) => e.load_id === l.id);
+    return {
+      ...l,
+      documents,
+      exceptions,
+      exception_suggestions: suggestExceptions(
+        { stage: l.stage, stops: l.stops, documents, exceptions },
+        Date.now(),
+      ),
+      exception_owners: owners(l.carrier_id),
+    };
+  };
+  const exceptionRequest = (
+    path: string[],
+    body: Record<string, unknown> | undefined,
+    url: URL,
+  ) => {
+    const visible = (e: LoadException) =>
+      state.loads.some(
+        (l) =>
+          l.id === e.load_id &&
+          allowed().some((c) => c.carrier.id === l.carrier_id) &&
+          (state.viewer.role !== "driver" ||
+            l.assignment?.driver_id === (state.viewer.driver_id || driver)),
+      );
+    if (path.length === 1 && !body) {
+      const status = url.searchParams.get("status") || "active";
+      const owner = url.searchParams.get("owner") || "any";
+      const me =
+        state.viewer.role === "dispatcher" ? "demo-dispatcher" : "demo-manager";
+      return {
+        exceptions: state.exceptions
+          .filter(
+            (e) =>
+              visible(e) &&
+              (status === "all" ||
+                (status === "active"
+                  ? e.status !== "resolved"
+                  : e.status === status)) &&
+              (owner === "any" ||
+                (owner === "me" ? e.owner_id === me : !e.owner_id)) &&
+              (url.searchParams.get("overdue") !== "true" ||
+                (e.status !== "resolved" &&
+                  !!e.due_at &&
+                  Date.parse(e.due_at) < Date.now())),
+          )
+          .map((e) => {
+            const l = state.loads.find((v) => v.id === e.load_id)!;
+            return {
+              ...e,
+              load_reference: l.reference,
+              carrier_name: l.carrier_name,
+            };
+          }),
+        truncated: false,
+      };
+    }
+    const e =
+      state.exceptions.find((v) => v.id === path[1] && visible(v)) ||
+      fail("NOT_FOUND", 404);
+    if (state.viewer.role === "driver") fail("NOT_FOUND", 404);
+    if (!body || e.version !== body.version) fail("VERSION_CONFLICT", 409);
+    const l = state.loads.find((v) => v.id === e.load_id)!;
+    const input = body!;
+    if (input.action === "assign") {
+      if (e.status === "resolved") fail("EXCEPTION_RESOLVED");
+      e.owner_id = (input.owner_id as string) || null;
+      e.owner_name =
+        owners(e.carrier_id).find((o) => o.id === e.owner_id)?.name || null;
+      event(l, "exception.assigned");
+    } else if (input.action === "start") {
+      if (e.status !== "open") fail("INVALID_TRANSITION");
+      e.status = "in_progress";
+      event(l, "exception.started");
+    } else if (input.action === "resolve") {
+      if (e.status === "resolved") fail("EXCEPTION_RESOLVED");
+      Object.assign(e, {
+        status: "resolved",
+        resolution: String(input.resolution),
+        resolved_at: now(),
+        resolved_by_name: state.viewer.name,
+      });
+      event(l, "exception.resolved");
+    } else {
+      if (e.status !== "resolved") fail("INVALID_TRANSITION");
+      Object.assign(e, {
+        status: "open",
+        resolution: null,
+        resolved_at: null,
+        resolved_by_name: null,
+      });
+      event(l, "exception.reopened");
+    }
+    e.version++;
+    return { id: e.id, version: e.version };
+  };
   const documentRequest = (path: string[], body: unknown) => {
     if (path.length === 1 && body instanceof FormData) {
       const field = (name: string) => String(body.get(name) || "");
@@ -344,6 +469,7 @@ export function createDemoApi() {
     const data = body as Record<string, unknown>;
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
+    if (p[0] === "exceptions") return exceptionRequest(p, data, url);
     if (p[0] === "carriers" && p[2] === "documents" && !body) {
       const c = writable(p[1]);
       const agreementFile = state.documents
@@ -433,6 +559,36 @@ export function createDemoApi() {
       }
       const l = visible.find((v) => v.id === p[1]) || fail("NOT_FOUND", 404);
       if (!body) return withDocuments(l);
+      if (p[2] === "exceptions") {
+        if (state.viewer.role === "driver" && (data.owner_id || data.due_at))
+          fail("ROLE_NOT_PERMITTED", 403);
+        const ownerId = (data.owner_id as string) || null;
+        const item: LoadException = {
+          id: crypto.randomUUID(),
+          load_id: l.id,
+          carrier_id: l.carrier_id,
+          type: data.type as LoadException["type"],
+          severity: data.severity as LoadException["severity"],
+          status: "open",
+          summary: String(data.summary),
+          details: String(data.details || ""),
+          document_type:
+            (data.document_type as LoadException["document_type"]) || null,
+          owner_id: ownerId,
+          owner_name:
+            owners(l.carrier_id).find((o) => o.id === ownerId)?.name || null,
+          due_at: (data.due_at as string) || null,
+          opened_by_name: state.viewer.name,
+          opened_at: now(),
+          resolved_by_name: null,
+          resolved_at: null,
+          resolution: null,
+          version: 1,
+        };
+        state.exceptions.unshift(item);
+        event(l, "exception.opened");
+        return { id: item.id, version: 1 };
+      }
       if (l.version !== data?.version) fail("VERSION_CONFLICT", 409);
       if (p[2] === "check-ins") {
         l.check_ins = [

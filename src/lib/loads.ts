@@ -4,6 +4,8 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { HttpError, digest } from "./auth";
 import { loadDocumentSlots } from "./documents";
+import { exceptionOwners, loadExceptions } from "./exceptions";
+import { suggestExceptions } from "./exception-rules";
 const timezone = z.string().refine((s) => {
   try {
     new Intl.DateTimeFormat("en", { timeZone: s });
@@ -255,6 +257,8 @@ export async function detail(user: string, id: string) {
        ORDER BY ci.observed_at DESC,ci.recorded_at DESC,ci.id DESC LIMIT 50`,
       [id, load.carrier_id],
     );
+    const documents = await loadDocumentSlots(c, id);
+    const exceptions = await loadExceptions(c, id);
     return {
       ...load,
       stops: stops.rows,
@@ -262,7 +266,13 @@ export async function detail(user: string, id: string) {
       events_truncated: events.rows.length > 100,
       assignment: assignment.rows[0] ?? null,
       check_ins: checkIns.rows,
-      documents: await loadDocumentSlots(c, id),
+      documents,
+      exceptions,
+      exception_suggestions: suggestExceptions(
+        { stage: load.stage, stops: stops.rows, documents, exceptions },
+        Date.now(),
+      ),
+      exception_owners: await exceptionOwners(c, load.carrier_id),
     };
   });
 }

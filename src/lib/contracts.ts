@@ -1,4 +1,5 @@
 import type { DocumentSlot } from "./compliance";
+import type { ExceptionSuggestion, LoadException } from "./exception-rules";
 export const stages = [
   "booked",
   "dispatched",
@@ -52,6 +53,9 @@ export type Load = {
   assignment?: { name: string; driver_id: string } | null;
   check_ins?: CheckIn[];
   documents?: DocumentSlot[];
+  exceptions?: LoadException[];
+  exception_suggestions?: ExceptionSuggestion[];
+  exception_owners?: { id: string; name: string; role: string }[];
 };
 export type Context = {
   user: { name: string };

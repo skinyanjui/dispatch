@@ -14,10 +14,18 @@ import {
   SquaresFourIcon,
   NavigationArrowIcon,
   CheckCircleIcon,
+  WarningIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
-export type WorkspaceSection = "loads" | "carriers";
+export type WorkspaceSection = "loads" | "carriers" | "exceptions";
+export const sectionTitles: Record<
+  Exclude<WorkspaceSection, "loads">,
+  string
+> = {
+  carriers: "Carriers",
+  exceptions: "Exceptions",
+};
 export function Brand() {
   return (
     <span className="brand">
@@ -136,6 +144,15 @@ export function WorkspaceShell({
             Carriers
           </button>
         )}
+        <button
+          className={section === "exceptions" ? "active" : ""}
+          disabled={busy}
+          aria-current={section === "exceptions" ? "page" : undefined}
+          onClick={() => navigate(() => onSection("exceptions"))}
+        >
+          <WarningIcon size={17} aria-hidden="true" />
+          Exceptions
+        </button>
       </nav>
       {!driverOnly && (
         <nav className="carrierNav" aria-label="Carrier scope">
@@ -229,6 +246,15 @@ export function WorkspaceShell({
             <BuildingsIcon size={23} aria-hidden="true" />
           </button>
         )}
+        <button
+          className={section === "exceptions" ? "active" : ""}
+          aria-label="Exception queue"
+          disabled={busy}
+          aria-current={section === "exceptions" ? "page" : undefined}
+          onClick={() => navigate(() => onSection("exceptions"))}
+        >
+          <WarningIcon size={23} aria-hidden="true" />
+        </button>
         <div className="railSpacer" />
         <a
           href="/demo"

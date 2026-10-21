@@ -46,6 +46,12 @@ const messages: Record<string, string> = {
     "The file could not be retrieved. Its record is retained; please retry.",
   AGREEMENT_FILE_UNAVAILABLE:
     "Upload the signed agreement again; the selected file is no longer current.",
+  OWNER_NOT_ELIGIBLE:
+    "Choose a dispatcher or carrier manager who works with this carrier.",
+  EXCEPTION_RESOLVED: "This exception is already resolved. Reopen it first.",
+  INVALID_TRANSITION:
+    "That change is not allowed from the current status. Refresh and retry.",
+  ROLE_NOT_PERMITTED: "Your role cannot make this change.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

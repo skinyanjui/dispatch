@@ -124,3 +124,30 @@
   font-size: 11px;
   flex-basis: 100%;
 }
+.loadExceptions {
+  margin: 26px 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.opsCard.suggestion {
+  background: var(--soft);
+  border-style: dashed;
+}
+.opsCard > button,
+.opsCard > .textButton {
+  justify-self: start;
+}
+.opsFilters {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.opsFilters select {
+  min-height: 36px;
+}
+.opsForm textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 400;
+}

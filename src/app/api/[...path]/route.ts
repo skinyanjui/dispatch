@@ -28,6 +28,11 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import {
+  listExceptions,
+  openException,
+  updateException,
+} from "@/lib/exceptions";
 export const runtime = "nodejs";
 function withSession(res: NextResponse, token: string) {
   res.cookies.set("relay_session", token, {
@@ -257,6 +262,20 @@ async function handle(req: NextRequest) {
       return NextResponse.json(
         await carrierDocuments(user.id, z.uuid().parse(path[1])),
       );
+    if (path[0] === "exceptions") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await listExceptions(user.id, req.nextUrl.searchParams),
+        );
+      if (path.length === 2 && req.method === "POST")
+        return NextResponse.json(
+          await updateException(
+            user.id,
+            z.uuid().parse(path[1]),
+            await readJson(req),
+          ),
+        );
+    }
     if (path[0] === "loads") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(
@@ -274,6 +293,15 @@ async function handle(req: NextRequest) {
       const id = z.uuid().parse(path[1]);
       if (path.length === 2 && req.method === "GET")
         return NextResponse.json(await detail(user.id, id));
+      if (
+        path.length === 3 &&
+        path[2] === "exceptions" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await openException(user.id, id, await readJson(req)),
+          { status: 201 },
+        );
       if (path.length === 3 && path[2] === "check-ins" && req.method === "POST")
         return NextResponse.json(
           await recordCheckIn(user.id, id, await readJson(req)),

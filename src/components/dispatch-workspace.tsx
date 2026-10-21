@@ -25,11 +25,14 @@ import {
   Brand,
   queueTitle,
   type WorkspaceSection,
+  sectionTitles,
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
 import { LoadCheckIns } from "@/components/load-check-ins";
 import { DocumentPanel } from "@/components/document-panel";
 import { CarrierDocumentsDialog } from "@/components/carrier-documents";
+import { LoadExceptions } from "@/components/load-exceptions";
+import { ExceptionQueue } from "@/components/exception-queue";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
 import {
@@ -49,6 +52,11 @@ const eventLabels: Record<string, string> = {
   "load.check-in": "Manual check-in recorded",
   "document.uploaded": "Document uploaded",
   "document.reviewed": "Document reviewed",
+  "exception.opened": "Exception flagged",
+  "exception.assigned": "Exception owner changed",
+  "exception.started": "Exception work started",
+  "exception.resolved": "Exception resolved",
+  "exception.reopened": "Exception reopened",
 };
 
 function appointmentLabel(start: string, end: string, timezone: string) {
@@ -88,7 +96,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [updated, setUpdated] = useState<Date | null>(null),
     [section, setSection] = useState<WorkspaceSection>("loads"),
     [setupCarrier, setSetupCarrier] = useState<string | null>(null),
-    [docsCarrier, setDocsCarrier] = useState<string | null>(null);
+    [docsCarrier, setDocsCarrier] = useState<string | null>(null),
+    [exceptionRevision, setExceptionRevision] = useState(0);
   const search = useRef<HTMLInputElement>(null),
     createRequest = useRef<{ payload: string; key: string } | null>(null),
     revision = useRef(0),
@@ -491,8 +500,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               {driverOnly ? "Driver workspace" : "Dispatch workspace"}
             </p>
             <h1>
-              {section === "carriers"
-                ? "Carriers"
+              {section !== "loads"
+                ? sectionTitles[section]
                 : driverOnly && !status
                   ? "My loads"
                   : queueTitle(status)}
@@ -875,6 +884,13 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               )}
             </section>
           </>
+        ) : section === "exceptions" ? (
+          <ExceptionQueue
+            revision={exceptionRevision}
+            driverOnly={driverOnly}
+            onAuthError={handleError}
+            onOpenLoad={(id) => void open(id)}
+          />
         ) : (
           <CarrierDirectory
             context={context}
@@ -1124,6 +1140,16 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   await refreshAfterSave("Manual check-in recorded.");
                 });
                 return result;
+              }}
+            />
+            <LoadExceptions
+              load={selected}
+              role={selectedRole}
+              disabled={busy || offline}
+              onChanged={async (message) => {
+                setExceptionRevision((r) => r + 1);
+                setSelected(await api<Load>("loads/" + selected.id));
+                setNotice(message);
               }}
             />
             <h3>Documents</h3>
