@@ -75,3 +75,23 @@ Baseline: `0b83d93`. The scope was the five gaps the user identified:
 - The billing overview reads document readiness per load, which is fine at 100 rows but should be batched before scaling.
 
 This was a focused engineering audit with automated tests. It was not a penetration test, a screen-reader certification or a legal/regulatory review.
+
+## Follow-up: storage, scanning and workflow limits
+
+Requested next: malware scanning and object storage, plus the workflow limits (one pickup and one delivery per load, no check-in correction, no older-history browsing).
+
+- **Storage and scanning** ([ADR 0012](../decisions/0012-object-storage-and-malware-scanning.md), migration 010):
+  - Write-once S3-compatible storage with built-in SigV4 signing, which reproduces AWS's published S3 signatures exactly.
+  - A ClamAV `clamd` INSTREAM client. Infected files are logged and never stored; scanner errors fail closed.
+  - Downloads use 60-second signed URLs.
+  - A verified, resumable PostgreSQL-to-bucket migration (`npm run documents:migrate-storage`).
+- **Multi-stop loads:** 2–10 ordered stops ([ADR 0013](../decisions/0013-multi-stop-and-check-in-history.md)).
+  - While adding this, the existing malformed-stops test caught a crash on an empty stops array: the ordering check ran even after the count check failed. It was fixed before the commit was pushed.
+- **Check-in amendments and older history** (migration 011): append-only corrections and retractions, plus cursor paging for events and check-ins.
+
+Verification on the final code:
+- Lint, TypeScript and the production build pass.
+- **75** unit/integration tests pass. New: object storage and scanning 6, multi-stop 3, history 3.
+- **43** Chromium tests pass. New: multi-stop creation, correct then retract, and older activity/check-in paging.
+
+No live bucket or ClamAV daemon was reachable here: there is no Docker daemon, and the proxy blocks image and signature downloads. Storage is verified against AWS's published signature vectors and an in-process fake S3 server; scanning against a fake `clamd` that speaks the real INSTREAM protocol, including the EICAR test string. Run one upload against your real bucket and ClamAV before enabling `RELAY_REQUIRE_MALWARE_SCAN=true` in production.

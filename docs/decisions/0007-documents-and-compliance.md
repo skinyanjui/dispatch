@@ -1,6 +1,6 @@
 # 0007 — Versioned documents and carrier compliance files
 
-Status: accepted, 2026-10-21.
+Status: accepted, 2026-10-21. Storage and scanning gaps addressed by [ADR 0012](0012-object-storage-and-malware-scanning.md).
 
 ## Decision
 
