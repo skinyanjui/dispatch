@@ -19,8 +19,8 @@ jobs:
       SEED_PASSWORD: FictionalCIOnly2026
       COOKIE_SECURE: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -35,7 +35,7 @@ jobs:
           npm start > /tmp/relay-server.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3000/ > /dev/null && break; sleep 1; done
           npm run test:browser
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: browser-results
