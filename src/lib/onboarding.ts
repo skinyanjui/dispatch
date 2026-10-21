@@ -4,6 +4,7 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { digest, hashNewPassword, HttpError } from "./auth";
 import { insertReview } from "./documents";
+import { appOrigin, enqueueForEmail } from "./notifications";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const email = z
@@ -296,6 +297,7 @@ async function makeInvite(
   address: string,
   secret: string,
   driverId: string | null,
+  origin?: string,
 ) {
   // Serializing on the carrier keeps reissues and driver creation deterministic.
   await c.query(
@@ -307,6 +309,19 @@ async function makeInvite(
     "INSERT INTO onboarding_invites(id,carrier_id,driver_id,role,email,name,token_hash,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING expires_at",
     [inviteId, id, driverId, role, address, name, digest(secret), user],
   );
+  const carrier = await c.query(
+    "SELECT name,organization_id FROM carriers WHERE id=$1",
+    [id],
+  );
+  // Queued in the same transaction as the invitation (outbox). The copied
+  // link remains available as a fallback.
+  await enqueueForEmail(c, address, {
+    kind: "invitation",
+    organization: carrier.rows[0].organization_id,
+    dedupe: "invitation:" + inviteId,
+    subject: `You're invited to ${carrier.rows[0].name} on Relay`,
+    text: `Hello ${name},\n\nYou've been invited to join ${carrier.rows[0].name} on Relay as ${role === "driver" ? "a driver" : "the carrier manager"}.\n\nAccept your invitation (expires in 7 days):\n${appOrigin(origin)}/join#${secret}\n\nIf you weren't expecting this, you can ignore this email.`,
+  });
   await emit(c, user, id, "invitation.created", {
     invite_id: inviteId,
     role,
@@ -318,7 +333,12 @@ async function makeInvite(
     expires_at: rows[0].expires_at.toISOString(),
   };
 }
-export async function inviteManager(user: string, id: string, input: unknown) {
+export async function inviteManager(
+  user: string,
+  id: string,
+  input: unknown,
+  origin?: string,
+) {
   const data = z.object({ key, token }).strict().parse(input);
   return transaction(async (c) => {
     await carrierAccess(c, user, id, true, true);
@@ -344,6 +364,7 @@ export async function inviteManager(user: string, id: string, input: unknown) {
           profile.rows[0].contact_email,
           data.token,
           null,
+          origin,
         );
       },
     );
@@ -354,6 +375,7 @@ export async function inviteDriver(
   id: string,
   input: unknown,
   existingId?: string,
+  origin?: string,
 ) {
   const data = z
     .object({ key, token, name: text(120).optional(), email: email.optional() })
@@ -400,6 +422,7 @@ export async function inviteDriver(
           driver.contact_email,
           data.token,
           driver.id,
+          origin,
         );
       },
     );

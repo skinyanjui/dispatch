@@ -7,6 +7,11 @@ import type {
 } from "./contracts";
 import { feeMinor } from "./entry";
 import {
+  optionalKinds,
+  type NotificationLogEntry,
+  type OptionalKind,
+} from "./notification-kinds";
+import {
   carrierDocumentTypes,
   cleanFilename,
   documentStatus,
@@ -44,6 +49,8 @@ type DemoDocument = DocumentVersion & {
   type: DocumentType;
 };
 type State = {
+  notifications: NotificationLogEntry[];
+  preferences: Record<OptionalKind, boolean>;
   packets: Record<string, BillingPacket>;
   invoices: (DispatchInvoice & { carrier_id: string })[];
   exceptions: LoadException[];
@@ -208,6 +215,10 @@ function fixtures(): State {
     carriers,
     loads,
     invites: [],
+    notifications: [],
+    preferences: Object.fromEntries(
+      optionalKinds.map((k) => [k, true]),
+    ) as Record<OptionalKind, boolean>,
     requests: {},
     viewer: { role: "dispatcher", name: "Alex Morgan" },
   };
@@ -666,6 +677,15 @@ export function createDemoApi() {
     const data = body as Record<string, unknown>;
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
+    if (p[0] === "notifications") {
+      if (p[1] === "preferences") {
+        if (data) state.preferences[data.kind as OptionalKind] = !!data.email;
+        return state.preferences;
+      }
+      if (!body)
+        return { transport: "demo", notifications: state.notifications };
+      fail("NOT_FOUND", 404);
+    }
     if (p[0] === "exceptions") return exceptionRequest(p, data, url);
     if (p[0] === "billing" || p[0] === "dispatch-invoices")
       return billingRequest(p, data, url);
@@ -980,6 +1000,20 @@ export function createDemoApi() {
           used: false,
         };
         state.invites.push(invitation);
+        state.notifications.unshift({
+          id: crypto.randomUUID(),
+          kind: "invitation",
+          recipient_email: invitation.email,
+          subject: `You're invited to ${c.carrier.name} on Relay`,
+          status: "suppressed",
+          attempts: 0,
+          last_error: "Demo — nothing is sent",
+          provider: null,
+          created_at: now(),
+          sent_at: null,
+          next_attempt_at: now(),
+          retryable: false,
+        });
         return {
           id: crypto.randomUUID(),
           driver_id: person.id,

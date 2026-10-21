@@ -5,6 +5,7 @@ import { pool, transaction } from "./db";
 import { digest, HttpError } from "./auth";
 import { event, member, scoped } from "./loads";
 import { loadDocumentTypes } from "./compliance";
+import { enqueueForUser } from "./notifications";
 import {
   exceptionSeverities,
   exceptionStatuses,
@@ -45,6 +46,27 @@ async function requireOwner(c: PoolClient, carrierId: string, owner: string) {
   );
   if (!rowCount) throw new HttpError(422, "OWNER_NOT_ELIGIBLE");
 }
+async function notifyOwner(
+  c: PoolClient,
+  owner: string | null,
+  actor: string,
+  exception: { id: string; summary: string; load_id: string },
+  version: number,
+) {
+  if (!owner || owner === actor) return;
+  const { rows } = await c.query(
+    "SELECT l.reference,c.organization_id FROM loads l JOIN carriers c ON c.id=l.carrier_id WHERE l.id=$1",
+    [exception.load_id],
+  );
+  await enqueueForUser(c, owner, {
+    kind: "exception_assigned",
+    organization: rows[0].organization_id,
+    dedupe: `exception_assigned:${exception.id}:${version}`,
+    subject: `Exception assigned to you on load ${rows[0].reference}`,
+    text: `You now own an exception on load ${rows[0].reference}: ${exception.summary}\n\nOpen Relay to work and resolve it.`,
+  });
+}
+
 export const openSchema = z
   .object({
     type: z.enum(exceptionTypes),
@@ -121,6 +143,13 @@ export async function openException(
       severity: data.severity,
       owner_id: data.owner_id ?? null,
     });
+    await notifyOwner(
+      c,
+      data.owner_id ?? null,
+      user,
+      { id, summary: data.summary, load_id: loadId },
+      1,
+    );
     return { id, version: 1 };
   });
 }
@@ -188,6 +217,8 @@ export async function updateException(
         exception_id: id,
         owner_id: data.owner_id,
       });
+      if (data.owner_id !== current.owner_id)
+        await notifyOwner(c, data.owner_id, user, current, current.version + 1);
     } else if (data.action === "start") {
       if (current.status !== "open")
         throw new HttpError(422, "INVALID_TRANSITION");

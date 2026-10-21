@@ -16,10 +16,16 @@ import {
   CheckCircleIcon,
   WarningIcon,
   ReceiptIcon,
+  BellIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
-export type WorkspaceSection = "loads" | "carriers" | "exceptions" | "billing";
+export type WorkspaceSection =
+  | "loads"
+  | "carriers"
+  | "exceptions"
+  | "billing"
+  | "notifications";
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
@@ -27,6 +33,7 @@ export const sectionTitles: Record<
   carriers: "Carriers",
   exceptions: "Exceptions",
   billing: "Billing",
+  notifications: "Notifications",
 };
 export function Brand() {
   return (
@@ -166,6 +173,15 @@ export function WorkspaceShell({
             Billing
           </button>
         )}
+        <button
+          className={section === "notifications" ? "active" : ""}
+          disabled={busy}
+          aria-current={section === "notifications" ? "page" : undefined}
+          onClick={() => navigate(() => onSection("notifications"))}
+        >
+          <BellIcon size={17} aria-hidden="true" />
+          Notifications
+        </button>
       </nav>
       {!driverOnly && (
         <nav className="carrierNav" aria-label="Carrier scope">

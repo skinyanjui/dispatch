@@ -25,6 +25,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # Throwaway per-run key for encrypted notification bodies and MFA secrets.
+      - run: echo "RELAY_DATA_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: npm run db:migrate && npm run db:migrate && npm run db:seed
       - run: npm run lint && npm run typecheck && npm test
       - run: VERCEL_ENV=production npm run build:vercel

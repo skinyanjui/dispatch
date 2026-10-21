@@ -6,6 +6,7 @@ import { HttpError, digest } from "./auth";
 import { loadDocumentSlots } from "./documents";
 import { exceptionOwners, loadExceptions } from "./exceptions";
 import { suggestExceptions } from "./exception-rules";
+import { enqueueForUser } from "./notifications";
 const timezone = z.string().refine((s) => {
   try {
     new Intl.DateTimeFormat("en", { timeZone: s });
@@ -384,6 +385,24 @@ export async function mutate(
         "INSERT INTO load_assignments(load_id,carrier_id,driver_id) VALUES($1,$2,$3) ON CONFLICT(load_id) DO UPDATE SET driver_id=$3",
         [id, load.carrier_id, data.driverId],
       );
+      const recipients = await c.query(
+        `SELECT m.user_id,c.organization_id,
+          (SELECT address FROM load_stops WHERE load_id=$1 AND sequence=1) pickup,
+          (SELECT window_start FROM load_stops WHERE load_id=$1 AND sequence=1) pickup_at,
+          (SELECT timezone FROM load_stops WHERE load_id=$1 AND sequence=1) pickup_zone,
+          (SELECT address FROM load_stops WHERE load_id=$1 AND sequence=2) delivery
+        FROM memberships m JOIN carriers c ON c.id=m.carrier_id
+        WHERE m.carrier_id=$2 AND m.driver_id=$3`,
+        [id, load.carrier_id, data.driverId],
+      );
+      for (const r of recipients.rows)
+        await enqueueForUser(c, r.user_id, {
+          kind: "assignment",
+          organization: r.organization_id,
+          dedupe: `assignment:${id}:${data.driverId}:${load.version + 1}`,
+          subject: `Load ${load.reference} assigned to you`,
+          text: `You've been assigned load ${load.reference}.\n\nPickup: ${r.pickup} — ${new Date(r.pickup_at).toLocaleString("en-US", { timeZone: r.pickup_zone, dateStyle: "medium", timeStyle: "short" })} (${r.pickup_zone})\nDelivery: ${r.delivery}\n\nOpen Relay for details and to record check-ins.`,
+        });
     } else {
       const stages = ["booked", "dispatched", "picked-up", "delivered"];
       if (

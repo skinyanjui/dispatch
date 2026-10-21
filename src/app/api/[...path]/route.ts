@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { pool } from "@/lib/db";
 import { session, sameOrigin, login, HttpError, digest } from "@/lib/auth";
@@ -28,6 +29,14 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import {
+  deliverDue,
+  notificationLog,
+  preferences,
+  retryNotification,
+  savePreference,
+  scheduleReminders,
+} from "@/lib/notifications";
 import {
   billingOverview,
   changeInvoice,
@@ -157,6 +166,16 @@ async function handle(req: NextRequest) {
         );
       }
     }
+    if (
+      path.length === 2 &&
+      path[0] === "jobs" &&
+      path[1] === "notifications" &&
+      req.method === "GET"
+    ) {
+      cronAuthorized(req);
+      const reminders = await scheduleReminders();
+      return NextResponse.json({ reminders, delivery: await deliverDue(50) });
+    }
     const user = await session(req);
     actor = user.id;
     if (path.length === 1 && path[0] === "logout" && req.method === "POST") {
@@ -211,12 +230,23 @@ async function handle(req: NextRequest) {
           return NextResponse.json(await completeSetup(user.id, id));
         if (path[3] === "manager-invite")
           return NextResponse.json(
-            await inviteManager(user.id, id, await readJson(req)),
+            await inviteManager(
+              user.id,
+              id,
+              await readJson(req),
+              req.headers.get("origin") || undefined,
+            ),
             { status: 201 },
           );
         if (path[3] === "drivers")
           return NextResponse.json(
-            await inviteDriver(user.id, id, await readJson(req)),
+            await inviteDriver(
+              user.id,
+              id,
+              await readJson(req),
+              undefined,
+              req.headers.get("origin") || undefined,
+            ),
             { status: 201 },
           );
       }
@@ -232,6 +262,7 @@ async function handle(req: NextRequest) {
             id,
             await readJson(req),
             z.uuid().parse(path[4]),
+            req.headers.get("origin") || undefined,
           ),
           { status: 201 },
         );
@@ -290,6 +321,20 @@ async function handle(req: NextRequest) {
         return NextResponse.json(
           await recordInvoicePayment(user.id, invoiceId, await readJson(req)),
           { status: 201 },
+        );
+    }
+    if (path[0] === "notifications") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(await notificationLog(user.id));
+      if (path.length === 2 && path[1] === "preferences")
+        return NextResponse.json(
+          req.method === "POST"
+            ? await savePreference(user.id, await readJson(req))
+            : await preferences(user.id),
+        );
+      if (path.length === 3 && path[2] === "retry" && req.method === "POST")
+        return NextResponse.json(
+          await retryNotification(user.id, z.uuid().parse(path[1])),
         );
     }
     if (path[0] === "exceptions") {
@@ -389,8 +434,30 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
   }
 }
+/** Vercel Cron sends `Authorization: Bearer $CRON_SECRET`. */
+function cronAuthorized(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || secret.length < 16)
+    throw new HttpError(503, "JOBS_NOT_CONFIGURED");
+  const given = Buffer.from(req.headers.get("authorization") || "");
+  const expected = Buffer.from("Bearer " + secret);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected))
+    throw new HttpError(401, "AUTH_REQUIRED");
+}
 async function response(req: NextRequest) {
   const result = await handle(req);
+  // Writes may have queued notifications in their transaction; deliver them
+  // after responding. The scheduled job retries anything left behind.
+  if (req.method === "POST" && result.status < 400)
+    try {
+      after(() =>
+        deliverDue(10).catch(() =>
+          console.error("notification.delivery_unavailable"),
+        ),
+      );
+    } catch {
+      // Outside a request scope (tests, scripts) delivery is left to the job.
+    }
   result.headers.set("Cache-Control", "private, no-store");
   result.headers.set("Vary", "Cookie");
   if (result.status === 429) result.headers.set("Retry-After", "60");

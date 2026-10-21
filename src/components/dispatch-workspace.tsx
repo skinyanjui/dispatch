@@ -34,6 +34,7 @@ import { CarrierDocumentsDialog } from "@/components/carrier-documents";
 import { LoadExceptions } from "@/components/load-exceptions";
 import { ExceptionQueue } from "@/components/exception-queue";
 import { BillingWorkspace } from "@/components/billing-workspace";
+import { NotificationCenter } from "@/components/notification-center";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
 import {
@@ -888,6 +889,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               )}
             </section>
           </>
+        ) : section === "notifications" ? (
+          <NotificationCenter
+            isDispatcher={context.carriers.some((c) => c.role === "dispatcher")}
+            driverOnly={driverOnly}
+            onAuthError={handleError}
+          />
         ) : section === "billing" ? (
           <BillingWorkspace
             context={context}

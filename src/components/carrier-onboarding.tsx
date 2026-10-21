@@ -169,7 +169,7 @@ export function CarrierOnboarding({
       setCopied(false);
       setAddingDriver(false);
       setNotice(
-        "Invitation created. Copy the private link and share it with its recipient.",
+        "Invitation created. An email is queued to the recipient when email delivery is configured; you can also copy the private link below.",
       );
       await load();
       await onChanged();
