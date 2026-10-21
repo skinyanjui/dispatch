@@ -360,7 +360,12 @@ test("billing: carrier packet and Relay dispatch invoice stay separate", async (
   }
   await page.goto("/");
   await page.getByRole("button", { name: "Billing", exact: true }).click();
-  const packet = page.getByRole("article", {
+  await page.getByRole("tab", { name: /^Carrier freight/ }).click();
+  await page
+    .getByRole("button", { name: `Open freight billing for ${load.reference}` })
+    .click();
+  const sheet = page.getByRole("dialog", { name: "Freight billing" });
+  const packet = sheet.getByRole("article", {
     name: `Freight billing for ${load.reference}`,
   });
   await expect(packet).toContainText("Paperwork accepted");
@@ -382,19 +387,29 @@ test("billing: carrier packet and Relay dispatch invoice stay separate", async (
     packet.locator(".opsPill").filter({ hasText: "Paid" }),
   ).toBeVisible();
 
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await page.getByRole("tab", { name: /^Invoices/ }).click();
+  await page.getByRole("button", { name: "New invoice" }).first().click();
   const create = page.getByRole("form", { name: "Create dispatch invoice" });
   await create.getByLabel(`${load.reference} · $2,500.00`).check();
   await create.getByLabel("Dispatch fee (%)").fill("8.5");
   await expect(create).toContainText("Invoice total: $212.50");
   await create.getByRole("button", { name: "Create draft invoice" }).click();
-  const draft = page
-    .getByRole("article", { name: "Dispatch invoice Draft invoice" })
-    .first();
+  // The new draft is a row in the invoice table; opening it shows its lines.
+  await page
+    .getByRole("button", { name: "Open invoice draft" })
+    .first()
+    .click();
+  const invoiceSheet = page.getByRole("dialog", { name: "Invoice" });
+  const draft = invoiceSheet.getByRole("article", {
+    name: "Dispatch invoice Draft invoice",
+  });
   await expect(draft).toContainText(`${load.reference}: $212.50 on $2,500.00`);
   await draft.getByRole("button", { name: "Issue invoice" }).click();
-  const issued = page
-    .getByRole("article", { name: /Dispatch invoice RLY-\d+/ })
-    .filter({ hasText: load.reference });
+  const issued = invoiceSheet.getByRole("article", {
+    name: /Dispatch invoice RLY-\d+/,
+  });
   await expect(issued).toContainText("Issued");
   await issued.getByRole("button", { name: "Record payment" }).click();
   await issued.getByLabel("Amount (USD)").fill("212.50");
@@ -402,6 +417,12 @@ test("billing: carrier packet and Relay dispatch invoice stay separate", async (
   await expect(
     issued.locator(".opsPill").filter({ hasText: "Paid" }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
+  // The table and summary now show it as paid.
+  await page.getByRole("button", { name: /^Paid\s*\d+$/ }).click();
+  await expect(
+    page.getByRole("table", { name: "Dispatch invoices" }),
+  ).toContainText("Paid");
   // Drivers never see billing.
   await login(page, "driver@relay.test");
   await page.goto("/");
@@ -507,7 +528,10 @@ test("demo shows exceptions, billing and notifications without calling the serve
   ).toBeVisible();
   await page.getByRole("button", { name: "Billing", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Carrier freight billing" }),
+    page.getByRole("tab", { name: /^Carrier freight/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Billing summary" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Account menu" }).click();
   await page

@@ -1076,3 +1076,176 @@ select {
   padding-top: var(--space-4);
   border-top: 1px solid var(--border);
 }
+
+/* Calm data display: left-aligned, stacked, quiet labels and firm values. */
+.appShell .opsFacts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  font-size: 12.5px;
+}
+.appShell .opsFact {
+  display: grid;
+  grid-template-columns: minmax(96px, 150px) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.appShell .opsFact dt {
+  color: var(--muted);
+  font-weight: 400;
+}
+.appShell .opsFact dd {
+  margin: 0;
+  color: var(--ink, #1f2a24);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .appShell .opsFact {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+/* Card facts stack, one per line. */
+.appShell .cardFacts {
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+}
+.appShell .cardFact {
+  white-space: normal;
+}
+/* Empty states read from the left, like everything else. */
+.appShell .laneEmpty {
+  text-align: left;
+  padding: var(--space-3);
+}
+.appShell .directoryEmpty {
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 0;
+  padding: var(--space-6) 0;
+  gap: var(--space-2);
+  text-align: left;
+}
+.appShell .inboxDetail > .directoryEmpty {
+  align-items: center;
+  text-align: center;
+}
+/* A row header reads like the other cells. */
+.appShell tbody th[scope="row"] {
+  font-size: inherit;
+  font-weight: 600;
+  text-align: left;
+  background: transparent;
+}
+/* Less air between the page bar and the page's first row. */
+.appShell .carrierDirectory > .directoryIntro:first-child {
+  margin-top: 0;
+}
+
+/* Billing: summary, tabs, a plain invoice table that stacks on phones. */
+.appShell .reportTile small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.appShell .reportTile strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .reportTile.bad strong {
+  color: var(--error);
+}
+.appShell .reportTile.good strong {
+  color: #1f7a4d;
+}
+.appShell .billingTabs {
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-4) 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.appShell .billingTab {
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .billingTab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.appShell .billingTab b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.appShell .billingTable {
+  margin-top: var(--space-3);
+}
+.appShell .billingTable th,
+.appShell .billingTable td {
+  text-align: left;
+  vertical-align: middle;
+}
+.appShell .billingTable td {
+  font-variant-numeric: tabular-nums;
+}
+.appShell .billingTable tbody th .textButton {
+  gap: var(--space-2);
+  padding-inline: 0;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .appShell .billingTable table,
+  .appShell .billingTable tbody,
+  .appShell .billingTable tr,
+  .appShell .billingTable th,
+  .appShell .billingTable td {
+    display: block;
+  }
+  .appShell .billingTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .appShell .billingTable tr {
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .appShell .billingTable td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 2px 0;
+    border: 0;
+  }
+  .appShell .billingTable td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .appShell .billingTable th[scope="row"] {
+    padding: 0 0 var(--space-2);
+    border: 0;
+  }
+}
+@media (max-width: 640px) {
+  .appShell .billing .reportTiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .appShell .billing .reportTile strong {
+    font-size: 18px;
+  }
+}

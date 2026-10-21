@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ReceiptIcon, FileTextIcon } from "@phosphor-icons/react";
+import { PlusIcon, ReceiptIcon, FileTextIcon } from "@phosphor-icons/react";
+import { Sheet } from "@/components/modal";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type {
   BillingOverview,
@@ -25,6 +26,16 @@ const paymentLabels: Record<PaymentState, string> = {
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Keeps one retry identity per unchanged form submission. */
+/** One stacked fact: a quiet label and a firmer value. */
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="opsFact">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
 function useRetryKey() {
   const ref = useRef<{ signature: string; key: string } | null>(null);
   return {
@@ -87,23 +98,29 @@ function PacketCard({
           </span>
         )}
       </div>
-      <p className="opsMeta">
-        Agreed rate {formatMoney(row.amount_minor)}
+      <dl className="opsFacts">
+        <Fact label="Agreed rate" value={formatMoney(row.amount_minor)} />
         {packet && (
           <>
-            {" "}
-            · Carrier invoice {packet.carrier_invoice_number} to{" "}
-            {packet.bill_to} for {formatMoney(packet.amount_minor)} · Received{" "}
-            {formatMoney(packet.paid_minor)}
+            <Fact
+              label="Carrier invoice"
+              value={`${packet.carrier_invoice_number} to ${packet.bill_to}`}
+            />
+            <Fact label="Invoiced" value={formatMoney(packet.amount_minor)} />
+            <Fact label="Received" value={formatMoney(packet.paid_minor)} />
           </>
         )}
-      </p>
-      {packet?.receipts.map((r) => (
-        <p className="opsMeta" key={r.id}>
-          Receipt {formatMoney(r.amount_minor)} on {r.received_on}
-          {r.reference && <> · {r.reference}</>}
-        </p>
-      ))}
+        {packet?.receipts.map((r) => (
+          <Fact
+            key={r.id}
+            label={`Receipt ${r.received_on}`}
+            value={
+              formatMoney(r.amount_minor) +
+              (r.reference ? ` · ${r.reference}` : "")
+            }
+          />
+        ))}
+      </dl>
       {!mode && (
         <div className="opsActions">
           {packet?.status !== "submitted" && (
@@ -319,12 +336,15 @@ function InvoiceCard({
           </span>
         )}
       </div>
-      <p className="opsMeta">
-        Dispatch fee {formatBps(invoice.fee_bps)} · Total{" "}
-        {formatMoney(invoice.total_minor)} · Paid{" "}
-        {formatMoney(invoice.paid_minor)} · Due {invoice.due_on}
-        {invoice.void_reason && <> · Voided: {invoice.void_reason}</>}
-      </p>
+      <dl className="opsFacts">
+        <Fact label="Dispatch fee" value={formatBps(invoice.fee_bps)} />
+        <Fact label="Total" value={formatMoney(invoice.total_minor)} />
+        <Fact label="Paid" value={formatMoney(invoice.paid_minor)} />
+        <Fact label="Due" value={invoice.due_on} />
+        {invoice.void_reason && (
+          <Fact label="Voided" value={invoice.void_reason} />
+        )}
+      </dl>
       <ul className="opsLines">
         {invoice.lines.map((l) => (
           <li key={l.load_id}>
@@ -333,13 +353,17 @@ function InvoiceCard({
           </li>
         ))}
       </ul>
-      {invoice.payments.map((p) => (
-        <p className="opsMeta" key={p.id}>
-          Payment {formatMoney(p.amount_minor)} by {p.method.toUpperCase()} on{" "}
-          {p.received_on}
-          {p.reference && <> · {p.reference}</>}
-        </p>
-      ))}
+      {invoice.payments.length > 0 && (
+        <dl className="opsFacts">
+          {invoice.payments.map((p) => (
+            <Fact
+              key={p.id}
+              label={`Payment ${p.received_on}`}
+              value={`${formatMoney(p.amount_minor)} by ${p.method.toUpperCase()}${p.reference ? ` · ${p.reference}` : ""}`}
+            />
+          ))}
+        </dl>
+      )}
       {canInvoice && !mode && invoice.status !== "void" && (
         <div className="opsActions">
           {invoice.status === "draft" && (
@@ -489,6 +513,58 @@ function InvoiceCard({
   );
 }
 
+type InvoiceFilter =
+  | "all"
+  | "draft"
+  | "open"
+  | "overdue"
+  | "partial"
+  | "paid"
+  | "void";
+const invoiceFilters: [InvoiceFilter, string][] = [
+  ["all", "All"],
+  ["draft", "Draft"],
+  ["open", "Open"],
+  ["overdue", "Overdue"],
+  ["partial", "Partly paid"],
+  ["paid", "Paid"],
+  ["void", "Void"],
+];
+/** What a person calls an invoice's state, from its status, balance and due date. */
+function shownStatus(i: DispatchInvoice, now: string) {
+  if (i.status === "draft")
+    return { key: "draft" as const, label: "Draft", tone: "" };
+  if (i.status === "void")
+    return { key: "void" as const, label: "Void", tone: "bad" };
+  const balance = BigInt(i.total_minor) - BigInt(i.paid_minor);
+  if (balance <= 0n)
+    return { key: "paid" as const, label: "Paid", tone: "good" };
+  if (i.due_on < now)
+    return { key: "overdue" as const, label: "Overdue", tone: "bad" };
+  if (BigInt(i.paid_minor) > 0n)
+    return { key: "partial" as const, label: "Partly paid", tone: "warn" };
+  return { key: "open" as const, label: "Open", tone: "warn" };
+}
+function Tile({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "good" | "bad";
+}) {
+  return (
+    <div className={"reportTile" + (tone ? " " + tone : "")}>
+      <small>{label}</small>
+      <strong>{value}</strong>
+      {hint && <small>{hint}</small>}
+    </div>
+  );
+}
+
 export function BillingWorkspace({
   context,
   offline,
@@ -507,7 +583,12 @@ export function BillingWorkspace({
     [busy, setBusy] = useState(false),
     [selected, setSelected] = useState<string[]>([]),
     [fee, setFee] = useState("8"),
-    [allLoads, setAllLoads] = useState(false);
+    [allLoads, setAllLoads] = useState(false),
+    [tab, setTab] = useState<"invoices" | "freight">("invoices"),
+    [filter, setFilter] = useState<InvoiceFilter>("all"),
+    [open, setOpen] = useState<
+      { kind: "invoice" | "packet"; id: string } | "new" | null
+    >(null);
   const retry = useRetryKey();
   const load = useCallback(async () => {
     if (!carrierId) return;
@@ -570,36 +651,89 @@ export function BillingWorkspace({
   const billable = (data?.loads || []).filter(
     (l) => allLoads || l.stage === "delivered" || l.packet,
   );
+  const now = today();
+  const invoices = data?.invoices ?? [];
+  const money = (n: bigint) => formatMoney(n.toString());
+  let outstanding = 0n,
+    overdue = 0n,
+    collected = 0n,
+    overdueCount = 0,
+    openCount = 0;
+  for (const i of invoices) {
+    if (i.status !== "issued") continue;
+    const balance = BigInt(i.total_minor) - BigInt(i.paid_minor);
+    collected += BigInt(i.paid_minor);
+    if (balance <= 0n) continue;
+    outstanding += balance;
+    openCount++;
+    if (i.due_on < now) {
+      overdue += balance;
+      overdueCount++;
+    }
+  }
+  const shown = invoices.filter(
+    (i) => filter === "all" || shownStatus(i, now).key === filter,
+  );
+  const counts = (key: InvoiceFilter) =>
+    key === "all"
+      ? invoices.length
+      : invoices.filter((i) => shownStatus(i, now).key === key).length;
+  const openInvoice =
+    open && open !== "new" && open.kind === "invoice"
+      ? invoices.find((i) => i.id === open.id)
+      : undefined;
+  const openPacket =
+    open && open !== "new" && open.kind === "packet"
+      ? (data?.loads || []).find((l) => l.id === open.id)
+      : undefined;
   return (
-    <section className="carrierDirectory" aria-label="Billing and payments">
+    <section
+      className="carrierDirectory billing"
+      aria-label="Billing and payments"
+    >
       <div className="directoryIntro">
         <div>
-          <p className="eyebrow">FINANCE</p>
           <h2>Billing and payments</h2>
           <p>
-            Carrier freight billing and Relay&apos;s dispatch-service invoices
-            are tracked separately. Nothing here sends an invoice or moves
+            Invoices Relay sends carriers for dispatch services, and the freight
+            bills carriers send brokers. Nothing here sends an invoice or moves
             money.
           </p>
         </div>
         <div className="directoryControls opsFilters">
-          <label>
-            <span className="srOnly">Carrier</span>
-            <select
-              value={carrierId}
-              onChange={(e) => {
-                setCarrierId(e.target.value);
-                setSelected([]);
-                setNotice("");
+          {carriers.length > 1 && (
+            <label>
+              <span className="srOnly">Carrier</span>
+              <select
+                value={carrierId}
+                onChange={(e) => {
+                  setCarrierId(e.target.value);
+                  setSelected([]);
+                  setNotice("");
+                  setOpen(null);
+                }}
+              >
+                {carriers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {data?.can_invoice && (
+            <button
+              className="primary"
+              disabled={disabled}
+              onClick={() => {
+                setTab("invoices");
+                setOpen("new");
               }}
             >
-              {carriers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <PlusIcon size={15} weight="bold" aria-hidden="true" />
+              New invoice
+            </button>
+          )}
         </div>
       </div>
       {!carriers.length && (
@@ -617,147 +751,407 @@ export function BillingWorkspace({
         {notice || (busy ? "Loading billing" : "")}
       </p>
       {data && (
-        <div className="billingColumns">
-          <div>
-            <h3>Carrier freight billing</h3>
-            <p className="helpText">
-              The carrier&apos;s invoice to the broker or shipper. Proceeds
-              belong to the carrier; receipts are recorded as reported.
-            </p>
-            <label className="setupCheckbox">
-              <input
-                type="checkbox"
-                checked={allLoads}
-                onChange={(e) => setAllLoads(e.target.checked)}
-              />
-              <span>Show loads not yet delivered</span>
-            </label>
-            <div className="opsList">
-              {billable.length ? (
-                billable.map((row) => (
-                  <PacketCard
-                    key={row.id}
-                    row={row}
-                    disabled={disabled}
-                    run={run}
-                  />
-                ))
-              ) : (
-                <p className="helpText">
-                  {allLoads
-                    ? "No loads for this carrier yet."
-                    : "No delivered loads or packets yet."}
-                </p>
-              )}
-            </div>
+        <>
+          <div
+            className="reportTiles"
+            role="group"
+            aria-label="Billing summary"
+          >
+            <Tile
+              label="Outstanding"
+              value={money(outstanding)}
+              hint={`${openCount} open ${openCount === 1 ? "invoice" : "invoices"}`}
+            />
+            <Tile
+              label="Overdue"
+              value={money(overdue)}
+              hint={`${overdueCount} past due`}
+              tone={overdueCount ? "bad" : undefined}
+            />
+            <Tile
+              label="Collected"
+              value={money(collected)}
+              hint="On issued invoices"
+              tone="good"
+            />
+            <Tile
+              label="Ready to invoice"
+              value={String(eligible.length)}
+              hint={
+                eligible.length === 1 ? "delivered load" : "delivered loads"
+              }
+            />
           </div>
-          <div>
-            <h3>Relay dispatch-service invoices</h3>
-            <p className="helpText">
-              Relay&apos;s fee invoices to the carrier under the dispatch
-              agreement.
-            </p>
-            {data.can_invoice && (
-              <form
-                className="opsForm opsCard"
-                aria-label="Create dispatch invoice"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  void run(async () => {
-                    const body = {
-                      carrier_id: carrierId,
-                      load_ids: selected,
-                      fee_bps: percentToBps(fee),
-                      due_on: String(f.get("due_on")),
-                    };
-                    await api("dispatch-invoices", {
-                      ...body,
-                      idempotency_key: retry.key(JSON.stringify(body)),
-                    });
-                    retry.reset();
-                    setSelected([]);
-                    return "Draft dispatch invoice created. Review it, then issue.";
-                  });
-                }}
+          <div
+            className="billingTabs"
+            role="tablist"
+            aria-label="Billing views"
+          >
+            {(
+              [
+                ["invoices", "Invoices", invoices.length],
+                ["freight", "Carrier freight", billable.length],
+              ] as const
+            ).map(([key, label, n]) => (
+              <button
+                key={key}
+                role="tab"
+                id={"billing-tab-" + key}
+                aria-selected={tab === key}
+                aria-controls="billing-panel"
+                className="billingTab"
+                onClick={() => setTab(key)}
               >
-                <fieldset className="opsChecklist">
-                  <legend>Delivered loads not yet invoiced</legend>
-                  {eligible.length ? (
-                    eligible.map((l) => (
-                      <label key={l.id} className="setupCheckbox">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(l.id)}
-                          onChange={(e) =>
-                            setSelected((s) =>
-                              e.target.checked
-                                ? [...s, l.id]
-                                : s.filter((v) => v !== l.id),
-                            )
-                          }
-                        />
-                        <span>
-                          {l.reference} · {formatMoney(l.amount_minor)}
-                        </span>
-                      </label>
-                    ))
-                  ) : (
+                {label}
+                <b>{n}</b>
+              </button>
+            ))}
+          </div>
+          <div
+            id="billing-panel"
+            role="tabpanel"
+            aria-labelledby={"billing-tab-" + tab}
+          >
+            {tab === "invoices" ? (
+              <>
+                <p className="helpText">
+                  Relay&apos;s fee invoices to this carrier under the dispatch
+                  agreement.
+                </p>
+                <div
+                  className="attentionChips"
+                  role="group"
+                  aria-label="Show invoices"
+                >
+                  {invoiceFilters.map(([key, label]) => {
+                    const n = counts(key);
+                    if (!n && key !== "all" && filter !== key) return null;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={
+                          "attentionChip" + (key === "overdue" ? " late" : "")
+                        }
+                        aria-pressed={filter === key}
+                        onClick={() => setFilter(key)}
+                      >
+                        {label}
+                        <b>{n}</b>
+                      </button>
+                    );
+                  })}
+                </div>
+                {shown.length ? (
+                  <div className="tableScroll billingTable">
+                    <table className="reportTable">
+                      <caption className="srOnly">Dispatch invoices</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Invoice</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Due</th>
+                          <th scope="col">Total</th>
+                          <th scope="col">Paid</th>
+                          <th scope="col">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shown.map((i) => {
+                          const st = shownStatus(i, now);
+                          const balance =
+                            i.status === "issued"
+                              ? BigInt(i.total_minor) - BigInt(i.paid_minor)
+                              : 0n;
+                          return (
+                            <tr key={i.id}>
+                              <th scope="row" data-label="Invoice">
+                                <button
+                                  className="textButton"
+                                  onClick={() =>
+                                    setOpen({ kind: "invoice", id: i.id })
+                                  }
+                                  aria-label={`Open invoice ${i.number ?? "draft"}`}
+                                >
+                                  <ReceiptIcon size={15} aria-hidden="true" />
+                                  {i.number ?? "Draft"}
+                                </button>
+                              </th>
+                              <td data-label="Status">
+                                <span className={"opsPill " + st.tone}>
+                                  {st.label}
+                                </span>
+                              </td>
+                              <td data-label="Due">{i.due_on}</td>
+                              <td data-label="Total">
+                                {formatMoney(i.total_minor)}
+                              </td>
+                              <td data-label="Paid">
+                                {formatMoney(i.paid_minor)}
+                              </td>
+                              <td data-label="Balance">
+                                <strong>{money(balance)}</strong>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="directoryEmpty">
+                    <ReceiptIcon size={32} weight="light" aria-hidden="true" />
+                    <h3>
+                      {invoices.length
+                        ? "No invoices match"
+                        : "No dispatch invoices yet"}
+                    </h3>
+                    <p>
+                      {invoices.length
+                        ? "Choose another filter."
+                        : eligible.length && data.can_invoice
+                          ? `${eligible.length} delivered ${eligible.length === 1 ? "load is" : "loads are"} ready to invoice.`
+                          : "Invoices appear here once delivered loads are billed."}
+                    </p>
+                    {!invoices.length &&
+                      eligible.length > 0 &&
+                      data.can_invoice && (
+                        <button
+                          className="primary"
+                          disabled={disabled}
+                          onClick={() => setOpen("new")}
+                        >
+                          New invoice
+                        </button>
+                      )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="helpText">
+                  The carrier&apos;s invoice to the broker or shipper. Proceeds
+                  belong to the carrier; receipts are recorded as reported.
+                </p>
+                <label className="setupCheckbox">
+                  <input
+                    type="checkbox"
+                    checked={allLoads}
+                    onChange={(e) => setAllLoads(e.target.checked)}
+                  />
+                  <span>Show loads not yet delivered</span>
+                </label>
+                {billable.length ? (
+                  <div className="tableScroll billingTable">
+                    <table className="reportTable">
+                      <caption className="srOnly">
+                        Carrier freight billing
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Load</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Agreed rate</th>
+                          <th scope="col">Invoiced</th>
+                          <th scope="col">Received</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {billable.map((l) => {
+                          const pk = l.packet;
+                          return (
+                            <tr key={l.id}>
+                              <th scope="row" data-label="Load">
+                                <button
+                                  className="textButton"
+                                  onClick={() =>
+                                    setOpen({ kind: "packet", id: l.id })
+                                  }
+                                  aria-label={`Open freight billing for ${l.reference}`}
+                                >
+                                  <FileTextIcon size={15} aria-hidden="true" />
+                                  {l.reference}
+                                </button>
+                              </th>
+                              <td data-label="Status">
+                                <span
+                                  className={
+                                    "opsPill " +
+                                    (pk?.payment_state === "paid"
+                                      ? "good"
+                                      : pk?.status === "submitted"
+                                        ? "warn"
+                                        : "")
+                                  }
+                                >
+                                  {pk
+                                    ? pk.status === "submitted"
+                                      ? paymentLabels[pk.payment_state]
+                                      : "Draft packet"
+                                    : l.stage === "delivered"
+                                      ? "Needs packet"
+                                      : stageLabels[l.stage]}
+                                </span>
+                              </td>
+                              <td data-label="Agreed rate">
+                                {formatMoney(l.amount_minor)}
+                              </td>
+                              <td data-label="Invoiced">
+                                {pk ? formatMoney(pk.amount_minor) : "—"}
+                              </td>
+                              <td data-label="Received">
+                                {pk ? formatMoney(pk.paid_minor) : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="directoryEmpty">
+                    <FileTextIcon size={32} weight="light" aria-hidden="true" />
+                    <h3>
+                      {allLoads
+                        ? "No loads for this carrier yet"
+                        : "No delivered loads or packets yet"}
+                    </h3>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {open === "new" && data.can_invoice && (
+            <Sheet
+              label="New dispatch invoice"
+              eyebrow="New invoice"
+              onClose={() => setOpen(null)}
+            >
+              <div className="inspectorBody">
+                <form
+                  className="opsForm"
+                  aria-label="Create dispatch invoice"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    void run(async () => {
+                      const body = {
+                        carrier_id: carrierId,
+                        load_ids: selected,
+                        fee_bps: percentToBps(fee),
+                        due_on: String(f.get("due_on")),
+                      };
+                      await api("dispatch-invoices", {
+                        ...body,
+                        idempotency_key: retry.key(JSON.stringify(body)),
+                      });
+                      retry.reset();
+                      setSelected([]);
+                      setOpen(null);
+                      setFilter("all");
+                      return "Draft dispatch invoice created. Open it to review, then issue.";
+                    });
+                  }}
+                >
+                  <fieldset className="opsChecklist">
+                    <legend>Delivered loads not yet invoiced</legend>
+                    {eligible.length ? (
+                      eligible.map((l) => (
+                        <label key={l.id} className="setupCheckbox">
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(l.id)}
+                            onChange={(e) =>
+                              setSelected((s) =>
+                                e.target.checked
+                                  ? [...s, l.id]
+                                  : s.filter((v) => v !== l.id),
+                              )
+                            }
+                          />
+                          <span>
+                            {l.reference} · {formatMoney(l.amount_minor)}
+                          </span>
+                        </label>
+                      ))
+                    ) : (
+                      <small>
+                        No delivered loads are waiting for a dispatch invoice.
+                      </small>
+                    )}
+                  </fieldset>
+                  <div className="formGrid">
+                    <label>
+                      Dispatch fee (%)
+                      <input
+                        value={fee}
+                        onChange={(e) => setFee(e.target.value)}
+                        inputMode="decimal"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Due on
+                      <input
+                        name="due_on"
+                        type="date"
+                        required
+                        defaultValue={now}
+                      />
+                    </label>
+                  </div>
+                  {preview && selected.length > 0 && (
                     <small>
-                      No delivered loads are waiting for a dispatch invoice.
+                      Invoice total: {preview} (rounded half up per load)
                     </small>
                   )}
-                </fieldset>
-                <div className="formGrid">
-                  <label>
-                    Dispatch fee (%)
-                    <input
-                      value={fee}
-                      onChange={(e) => setFee(e.target.value)}
-                      inputMode="decimal"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Due on
-                    <input
-                      name="due_on"
-                      type="date"
-                      required
-                      defaultValue={today()}
-                    />
-                  </label>
-                </div>
-                {preview && selected.length > 0 && (
-                  <small>
-                    Invoice total: {preview} (rounded half up per load)
-                  </small>
-                )}
-                <button
-                  className="primary"
-                  disabled={disabled || !selected.length}
-                >
-                  Create draft invoice
-                </button>
-              </form>
-            )}
-            <div className="opsList">
-              {data.invoices.length ? (
-                data.invoices.map((invoice) => (
-                  <InvoiceCard
-                    key={invoice.id}
-                    invoice={invoice}
-                    canInvoice={data.can_invoice}
-                    disabled={disabled}
-                    run={run}
-                  />
-                ))
-              ) : (
-                <p className="helpText">No dispatch invoices yet.</p>
-              )}
-            </div>
-          </div>
-        </div>
+                  <div className="opsActions">
+                    <button
+                      className="primary"
+                      disabled={disabled || !selected.length}
+                    >
+                      Create draft invoice
+                    </button>
+                    <button
+                      type="button"
+                      className="textButton"
+                      onClick={() => setOpen(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </Sheet>
+          )}
+          {openInvoice && (
+            <Sheet
+              label="Invoice"
+              eyebrow="Dispatch invoice"
+              onClose={() => setOpen(null)}
+            >
+              <div className="inspectorBody">
+                <InvoiceCard
+                  invoice={openInvoice}
+                  canInvoice={data.can_invoice}
+                  disabled={disabled}
+                  run={run}
+                />
+              </div>
+            </Sheet>
+          )}
+          {openPacket && (
+            <Sheet
+              label="Freight billing"
+              eyebrow="Carrier freight billing"
+              onClose={() => setOpen(null)}
+            >
+              <div className="inspectorBody">
+                <PacketCard row={openPacket} disabled={disabled} run={run} />
+              </div>
+            </Sheet>
+          )}
+        </>
       )}
     </section>
   );
