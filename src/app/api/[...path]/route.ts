@@ -22,6 +22,7 @@ import {
   recordCheckIn,
   auditDenied,
   amendCheckIn,
+  recordStopEvent,
   olderCheckIns,
   olderEvents,
 } from "@/lib/loads";
@@ -498,6 +499,21 @@ async function handle(req: NextRequest) {
       )
         return NextResponse.json(
           await openException(user.id, id, await readJson(req)),
+          { status: 201 },
+        );
+      if (
+        path[2] === "stops" &&
+        path.length === 5 &&
+        path[4] === "events" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await recordStopEvent(
+            user.id,
+            id,
+            z.uuid().parse(path[3]),
+            await readJson(req),
+          ),
           { status: 201 },
         );
       if (path[2] === "events" && path.length === 3 && req.method === "GET")

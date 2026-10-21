@@ -7,6 +7,12 @@ import { loadDocumentSlots } from "./documents";
 import { exceptionOwners, loadExceptions } from "./exceptions";
 import { suggestExceptions } from "./exception-rules";
 import { enqueueForUser } from "./notifications";
+import {
+  effective,
+  stopTimeError,
+  type StopEvent,
+  type TimedStop,
+} from "./stop-timing";
 const timezone = z.string().refine((s) => {
   try {
     new Intl.DateTimeFormat("en", { timeZone: s });
@@ -244,10 +250,7 @@ export async function listLoads(user: string, params: URLSearchParams) {
 export async function detail(user: string, id: string) {
   return transaction(async (c) => {
     const load = await scoped(c, user, id);
-    const stops = await c.query(
-      "SELECT * FROM load_stops WHERE load_id=$1 ORDER BY sequence",
-      [id],
-    );
+    const stops = { rows: await stopsWithEvents(c, id) };
     const events = await eventPage(c, id, null, 100);
     const assignment = await c.query(
       "SELECT a.*,d.name FROM load_assignments a JOIN drivers d ON d.id=a.driver_id WHERE load_id=$1",
@@ -275,6 +278,150 @@ export async function detail(user: string, id: string) {
     };
   });
 }
+// ---------- Stop arrivals and departures ----------
+
+/** Ordered stops with their current arrival/departure and full history. */
+async function stopsWithEvents(c: PoolClient, loadId: string) {
+  const stops = await c.query(
+    "SELECT * FROM load_stops WHERE load_id=$1 ORDER BY sequence",
+    [loadId],
+  );
+  const events = await c.query(
+    `SELECT e.id,e.stop_id,e.kind,e.occurred_at,e.recorded_at,u.name actor_name,e.note,e.supersedes,e.reason
+    FROM stop_events e JOIN users u ON u.id=e.actor_id
+    WHERE e.load_id=$1 ORDER BY e.recorded_at,e.id`,
+    [loadId],
+  );
+  return stops.rows.map((stop) => {
+    const history: StopEvent[] = events.rows
+      .filter((e) => e.stop_id === stop.id)
+      .map(({ stop_id, ...e }) => {
+        void stop_id;
+        return e;
+      });
+    return {
+      ...stop,
+      arrived: effective(history, "arrived"),
+      departed: effective(history, "departed"),
+      stop_events: history,
+    } as TimedStop & Record<string, unknown>;
+  });
+}
+
+export const stopEventSchema = z
+  .object({
+    version: z.number().int().positive(),
+    kind: z.enum(["arrived", "departed"]),
+    occurred_at: z.iso.datetime({ offset: true }),
+    note: z.string().trim().max(500).default(""),
+    supersedes: z.uuid().optional(),
+    reason: z.string().trim().min(1).max(500).optional(),
+    idempotency_key: z.uuid().transform((value) => value.toLowerCase()),
+  })
+  .strict()
+  .refine((d) => Boolean(d.supersedes) === Boolean(d.reason), {
+    message: "A correction names the report it replaces and a reason",
+  });
+
+/**
+ * Records an arrival or departure at one stop. A second report of the same
+ * kind must explicitly supersede the current one (a correction with a
+ * reason), so concurrent reporters cannot silently overwrite each other.
+ * Milestones are not changed; they remain explicit load-level actions.
+ */
+export async function recordStopEvent(
+  user: string,
+  id: string,
+  stopId: string,
+  input: unknown,
+) {
+  const data = stopEventSchema.parse(input);
+  return transaction(async (c) => {
+    const load = await scoped(c, user, id, true, true);
+    const membership = await member(c, user, load.carrier_id);
+    if (membership.role === "driver") {
+      const assigned = await c.query(
+        "SELECT 1 FROM load_assignments WHERE load_id=$1 AND driver_id=$2",
+        [id, membership.driver_id],
+      );
+      if (!assigned.rowCount) throw new HttpError(404, "NOT_FOUND");
+    }
+    await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+      user + ":stop-event:" + data.idempotency_key,
+    ]);
+    const { idempotency_key, version, ...report } = data;
+    void version;
+    const hash = digest(
+      JSON.stringify({ load_id: id, stop_id: stopId, ...report }),
+    );
+    const old = await c.query(
+      "SELECT id,load_version,request_hash FROM stop_events WHERE actor_id=$1 AND idempotency_key=$2",
+      [user, idempotency_key],
+    );
+    if (old.rows[0]) {
+      if (old.rows[0].request_hash !== hash)
+        throw new HttpError(409, "IDEMPOTENCY_CONFLICT");
+      return {
+        id,
+        version: old.rows[0].load_version,
+        stop_event_id: old.rows[0].id,
+      };
+    }
+    const stops = await stopsWithEvents(c, id);
+    const index = stops.findIndex((s) => s.id === stopId);
+    if (index < 0) throw new HttpError(404, "NOT_FOUND");
+    if (load.version !== data.version)
+      throw new HttpError(409, "VERSION_CONFLICT");
+    const current = stops[index][data.kind];
+    if (current && !data.supersedes)
+      throw new HttpError(409, "STOP_EVENT_EXISTS");
+    if (data.supersedes && data.supersedes !== current?.id)
+      throw new HttpError(409, "STOP_EVENT_CHANGED");
+    const occurred = Date.parse(data.occurred_at);
+    const now = Date.now();
+    if (occurred > now + 5 * 60_000 || occurred < now - 30 * 86_400_000)
+      throw new HttpError(422, "STOP_TIME_OUT_OF_RANGE");
+    const order = stopTimeError(stops, index, data.kind, data.occurred_at);
+    if (order) throw new HttpError(422, order);
+    const eventId = randomUUID();
+    const next = load.version + 1;
+    await c.query(
+      `INSERT INTO stop_events(id,load_id,stop_id,carrier_id,kind,occurred_at,actor_id,note,supersedes,reason,load_version,idempotency_key,request_hash)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [
+        eventId,
+        id,
+        stopId,
+        load.carrier_id,
+        data.kind,
+        data.occurred_at,
+        user,
+        data.note,
+        data.supersedes ?? null,
+        data.reason ?? null,
+        next,
+        idempotency_key,
+        hash,
+      ],
+    );
+    await c.query("UPDATE loads SET version=$2 WHERE id=$1", [id, next]);
+    await event(
+      c,
+      user,
+      load,
+      `load.stop-${data.kind}${data.supersedes ? "-corrected" : ""}`,
+      {
+        stop_id: stopId,
+        sequence: index + 1,
+        stop_event_id: eventId,
+        occurred_at: data.occurred_at,
+        reason: data.reason ?? null,
+      },
+    );
+    return { id, version: next, stop_event_id: eventId };
+  });
+}
+
 // ---------- History pages ----------
 
 const eventCursor = z.object({ at: pgTimestamp, id: z.uuid() }).strict();

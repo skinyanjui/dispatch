@@ -31,6 +31,7 @@ import {
 import { CarrierDirectory } from "@/components/carrier-directory";
 import { LoadCheckIns } from "@/components/load-check-ins";
 import { DocumentPanel } from "@/components/document-panel";
+import { StopList } from "@/components/stop-list";
 import { CarrierDocumentsDialog } from "@/components/carrier-documents";
 import { LoadExceptions } from "@/components/load-exceptions";
 import { ExceptionQueue } from "@/components/exception-queue";
@@ -56,6 +57,10 @@ const eventLabels: Record<string, string> = {
   "load.milestones": "Milestone recorded",
   "load.check-in": "Manual check-in recorded",
   "load.check-in-correct": "Check-in corrected",
+  "load.stop-arrived": "Stop arrival recorded",
+  "load.stop-departed": "Stop departure recorded",
+  "load.stop-arrived-corrected": "Stop arrival corrected",
+  "load.stop-departed-corrected": "Stop departure corrected",
   "load.check-in-retract": "Check-in retracted",
   "document.uploaded": "Document uploaded",
   "document.reviewed": "Document reviewed",
@@ -68,21 +73,6 @@ const eventLabels: Record<string, string> = {
   "billing.packet_submitted": "Billing packet submitted",
   "billing.carrier_receipt_recorded": "Carrier receipt recorded",
 };
-
-function appointmentLabel(start: string, end: string, timezone: string) {
-  const format = (value: string) =>
-    new Date(value).toLocaleString("en-US", {
-      timeZone: timezone,
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  return new Date(start).getTime() === new Date(end).getTime()
-    ? format(start)
-    : `${format(start)} – ${format(end)}`;
-}
 
 export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
   const api = useApi();
@@ -1185,30 +1175,15 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               </div>
             </div>
             <h3>Route & appointments</h3>
-            <div className="stops">
-              {selected.stops?.map((s, i) => (
-                <article className="stop" key={i}>
-                  <span className="stopIndex">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <small>{s.kind}</small>
-                    <strong>{s.address}</strong>
-                    <p>
-                      <ClockIcon size={13} aria-hidden="true" />
-                      <span>
-                        {appointmentLabel(
-                          s.window_start,
-                          s.window_end,
-                          s.timezone,
-                        )}
-                      </span>
-                    </p>
-                    <span className="stopZone">{s.timezone}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <StopList
+              load={selected}
+              canReport={!offline}
+              disabled={busy || offline}
+              onChanged={async (message) => {
+                setSelected(await api<Load>("loads/" + selected.id));
+                await refreshAfterSave(message);
+              }}
+            />
             <h3>Driver assignment</h3>
             <div className="assignedDriver">
               <TruckIcon size={18} aria-hidden="true" />

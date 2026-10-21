@@ -1,3 +1,4 @@
+import type { TimedStop } from "./stop-timing";
 import type { DocumentSlot } from "./compliance";
 import type { ExceptionSuggestion, LoadException } from "./exception-rules";
 export const stages = [
@@ -68,13 +69,7 @@ export type Load = {
   version: number;
   created_at: string;
   source: string;
-  stops?: {
-    kind: string;
-    address: string;
-    window_start: string;
-    window_end: string;
-    timezone: string;
-  }[];
+  stops?: TimedStop[];
   events?: { id: string; type: string; created_at: string }[];
   events_truncated?: boolean;
   events_cursor?: string | null;

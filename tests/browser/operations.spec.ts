@@ -495,3 +495,52 @@ test("older activity loads on demand without duplicates", async ({ page }) => {
     dialog.getByRole("article", { name: "Check-in: Mile 0", exact: true }),
   ).toBeVisible();
 });
+
+test("stops: record arrival and departure, then correct a time with a reason", async ({
+  page,
+}) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "STOP");
+  const dialog = await openLoad(page, load.reference);
+  const first = dialog.getByRole("article", { name: "Stop 1: Chicago, IL" });
+  await first.getByRole("button", { name: "Record arrival at stop 1" }).click();
+  const arrival = first.getByRole("form", { name: "Arrived time for stop 1" });
+  await arrival
+    .getByLabel(/Arrived time/)
+    .fill(
+      new Date(Date.now() - 3 * 3600000 - 6 * 3600000)
+        .toISOString()
+        .slice(0, 16),
+    );
+  await arrival.getByRole("button", { name: "Save arrived time" }).click();
+  await expect(first.locator(".stopTimes")).toContainText("Arrived");
+  await first
+    .getByRole("button", { name: "Record departure from stop 1" })
+    .click();
+  const departure = first.getByRole("form", {
+    name: "Departed time for stop 1",
+  });
+  await departure.getByRole("button", { name: "Save departed time" }).click();
+  await expect(first.locator(".stopTimes")).toContainText("on site");
+  await expect(first.locator(".stopTimes")).toContainText("check detention");
+  await first
+    .getByRole("button", { name: "Correct arrival at stop 1" })
+    .click();
+  const fix = first.getByRole("form", { name: "Arrived time for stop 1" });
+  await fix
+    .getByLabel(/Arrived time/)
+    .fill(
+      new Date(Date.now() - 7 * 3600000 - 30 * 60000)
+        .toISOString()
+        .slice(0, 16),
+    );
+  await fix.getByLabel("Reason for correction").fill("Gate time, not dock");
+  await fix.getByRole("button", { name: "Save correction" }).click();
+  await first.getByText("Time history (3)").click();
+  await expect(first).toContainText("corrected: Gate time, not dock");
+  await expect(
+    dialog.locator(".event").filter({ hasText: "Stop arrival corrected" }),
+  ).toHaveCount(1);
+  await expect(dialog.locator(".badge")).toHaveText("Booked");
+});

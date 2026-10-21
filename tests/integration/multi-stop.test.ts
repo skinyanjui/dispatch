@@ -98,11 +98,22 @@ test("missed-appointment suggestions use the first pickup and the final delivery
     { kind: "delivery", window_end: "2026-11-12T07:00:00Z" },
   ];
   const now = Date.parse("2026-11-11T00:00:00Z");
-  // An intermediate delivery window passing does not mean the load missed
-  // its final delivery.
-  assert.deepEqual(
-    suggestExceptions({ stage: "picked-up", stops }, now).map((s) => s.type),
-    ["missing_document", "missing_document"],
+  // An intermediate window passing is flagged for that stop only, never as a
+  // missed final delivery; a recorded arrival clears it.
+  const summaries = suggestExceptions({ stage: "picked-up", stops }, now).map(
+    (s) => s.summary,
+  );
+  assert.ok(
+    summaries.includes("Window ended without a recorded arrival at stop 2"),
+  );
+  assert.ok(!summaries.some((s) => s.startsWith("Delivery window ended")));
+  const arrived = stops.map((s, i) =>
+    i === 1 ? { ...s, arrived: { occurred_at: "2026-11-10T06:30:00Z" } } : s,
+  );
+  assert.ok(
+    !suggestExceptions({ stage: "picked-up", stops: arrived }, now).some(
+      (s) => s.type === "missed_appointment",
+    ),
   );
   assert.ok(
     suggestExceptions(

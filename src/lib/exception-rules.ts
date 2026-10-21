@@ -55,7 +55,13 @@ export type ExceptionSuggestion = {
 
 type SuggestionInput = {
   stage: string;
-  stops?: { kind: string; window_end: string }[];
+  stops?: {
+    kind: string;
+    window_end: string;
+    address?: string;
+    arrived?: { occurred_at: string } | null;
+    departed?: { occurred_at: string } | null;
+  }[];
   documents?: DocumentSlot[];
   exceptions?: Pick<LoadException, "type" | "status" | "document_type">[];
 };
@@ -74,10 +80,14 @@ export function suggestExceptions(
   const delivery = [...(load.stops || [])]
     .reverse()
     .find((s) => s.kind === "delivery");
+  const time = (v: string) => new Date(v).getTime();
+  // A recorded departure from the first pickup (or arrival at the final
+  // delivery) shows the appointment was met even before the milestone.
   if (
     pickup &&
     !reached("picked-up") &&
-    new Date(pickup.window_end).getTime() < now
+    !pickup.departed &&
+    time(pickup.window_end) < now
   )
     out.push({
       type: "missed_appointment",
@@ -88,7 +98,8 @@ export function suggestExceptions(
   if (
     delivery &&
     !reached("delivered") &&
-    new Date(delivery.window_end).getTime() < now
+    !delivery.arrived &&
+    time(delivery.window_end) < now
   )
     out.push({
       type: "missed_appointment",
@@ -96,6 +107,32 @@ export function suggestExceptions(
       summary: "Delivery window ended without a delivered milestone",
       document_type: null,
     });
+  (load.stops || []).forEach((stop, i) => {
+    const label = `stop ${i + 1}${stop.address ? ` (${stop.address})` : ""}`;
+    if (stop.arrived) {
+      const late = Math.round(
+        (time(stop.arrived.occurred_at) - time(stop.window_end)) / 60000,
+      );
+      if (late > 0)
+        out.push({
+          type: "delay",
+          severity: late >= 120 ? "high" : "medium",
+          summary: `Arrived ${late} min after the window at ${label}`,
+          document_type: null,
+        });
+    } else if (
+      stop !== pickup &&
+      stop !== delivery &&
+      !reached("delivered") &&
+      time(stop.window_end) < now
+    )
+      out.push({
+        type: "missed_appointment",
+        severity: "high",
+        summary: `Window ended without a recorded arrival at ${label}`,
+        document_type: null,
+      });
+  });
   const status = (type: LoadDocumentType) =>
     load.documents?.find((d) => d.type === type)?.status ?? "missing";
   const needs: [LoadDocumentType, boolean][] = [

@@ -7,6 +7,11 @@ import type {
 } from "./contracts";
 import { feeMinor } from "./entry";
 import {
+  stopTimeError,
+  type StopEvent,
+  type StopEventKind,
+} from "./stop-timing";
+import {
   optionalKinds,
   type NotificationLogEntry,
   type OptionalKind,
@@ -28,7 +33,7 @@ import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
 // password. Shared production components provide the interface and controls.
-const storageKey = "relay-current-demo-v2";
+const storageKey = "relay-current-demo-v3";
 type Role = "dispatcher" | "carrier-manager" | "driver";
 type Invite = {
   token: string;
@@ -119,6 +124,7 @@ function fixtures(): State {
       source: "Fictional interactive demo",
       stops: [
         {
+          id: `99999999-9999-4999-8999-99999999990${i}`,
           kind: "pickup",
           address: ["Chicago, IL", "Columbus, OH", "Atlanta, GA", "Dallas, TX"][
             i
@@ -128,6 +134,7 @@ function fixtures(): State {
           timezone: "America/Chicago",
         },
         {
+          id: `99999999-9999-4999-8999-99999999991${i}`,
           kind: "delivery",
           address: [
             "Nashville, TN",
@@ -797,6 +804,7 @@ export function createDemoApi() {
           created_at: now(),
           source: String(data.source),
           stops: stops.map((s) => ({
+            id: crypto.randomUUID(),
             kind: s.kind,
             address: s.address,
             timezone: s.timezone,
@@ -845,6 +853,41 @@ export function createDemoApi() {
         return { id: item.id, version: 1 };
       }
       if (l.version !== data?.version) fail("VERSION_CONFLICT", 409);
+      if (p[2] === "stops" && p[4] === "events") {
+        const stops = l.stops || [];
+        const index = stops.findIndex((v) => v.id === p[3]);
+        if (index < 0) fail("NOT_FOUND", 404);
+        const kind = data.kind as StopEventKind;
+        const current = stops[index][kind] ?? null;
+        if (current && !data.supersedes) fail("STOP_EVENT_EXISTS", 409);
+        if (data.supersedes && data.supersedes !== current?.id)
+          fail("STOP_EVENT_CHANGED", 409);
+        const order = stopTimeError(
+          stops,
+          index,
+          kind,
+          String(data.occurred_at),
+        );
+        if (order) fail(order);
+        const entry: StopEvent = {
+          id: crypto.randomUUID(),
+          kind,
+          occurred_at: String(data.occurred_at),
+          recorded_at: now(),
+          actor_name: state.viewer.name,
+          note: String(data.note || ""),
+          supersedes: (data.supersedes as string) || null,
+          reason: (data.reason as string) || null,
+        };
+        stops[index] = {
+          ...stops[index],
+          [kind]: entry,
+          stop_events: [...(stops[index].stop_events || []), entry],
+        };
+        l.version++;
+        event(l, `load.stop-${kind}${entry.supersedes ? "-corrected" : ""}`);
+        return { id: l.id, version: l.version, stop_event_id: entry.id };
+      }
       if (p[2] === "check-ins" && p[4] === "amend") {
         const report =
           (l.check_ins || []).find((r) => r.id === p[3]) ||

@@ -89,6 +89,16 @@ const messages: Record<string, string> = {
   STORAGE_UNAVAILABLE:
     "Document storage is unavailable right now, so the file was not stored. Retry in a few minutes.",
   CHECK_IN_RETRACTED: "This check-in was retracted and can't be changed.",
+  STOP_EVENT_EXISTS:
+    "This time is already recorded. Use Correct to change it with a reason.",
+  STOP_EVENT_CHANGED:
+    "Someone updated this stop. Refresh the load details and review the latest time.",
+  STOP_ARRIVAL_REQUIRED:
+    "Record the arrival at this stop before its departure.",
+  STOP_TIME_ORDER:
+    "That time would run backwards along the route. Check this stop's arrival/departure and the neighbouring stops.",
+  STOP_TIME_OUT_OF_RANGE:
+    "Use a time within the last 30 days and no more than five minutes ahead.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };
