@@ -35,7 +35,7 @@ export function RequestAccess() {
               aria-hidden="true"
             />
             <h1>Request received</h1>
-            <p className="loginDescription">
+            <p className="loginDescription keep">
               Thanks. Relay is invitation-only, so a person reviews each
               request. If it is approved, a private link to set your password is
               sent to <strong>{sent}</strong>. Nothing has been created yet.
@@ -53,6 +53,7 @@ export function RequestAccess() {
               nothing is created until it is approved.
             </p>
             <form
+              className="requestForm"
               ref={form}
               aria-label="Request access"
               onSubmit={async (e) => {
@@ -138,7 +139,7 @@ export function RequestAccess() {
                   Anything we should know (optional)
                 </label>
                 <div className="fieldBox tall">
-                  <textarea id="ra-note" name="note" rows={3} maxLength={500} />
+                  <textarea id="ra-note" name="note" rows={2} maxLength={500} />
                 </div>
               </div>
               {/* A field people never see: bots fill it in and are ignored. */}

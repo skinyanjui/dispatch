@@ -557,3 +557,26 @@ test("a failed load request says so instead of showing an empty board", async ({
   await expect(page.locator(".loadCard").first()).toBeVisible();
   await expect(alert).toHaveCount(0);
 });
+
+test("search is on every page, and on settings pages it searches loads", async ({
+  page,
+}) => {
+  await page.request.post("/api/login", {
+    headers: { Origin: "http://localhost:3000" },
+    data: {
+      email: "dispatcher@relay.test",
+      password: process.env.SEED_PASSWORD,
+    },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page
+    .getByRole("button", { name: "Notifications", exact: true })
+    .click();
+  const box = page.getByRole("searchbox", { name: "Search loads" });
+  await expect(box).toBeVisible();
+  await box.fill("RETRY");
+  await expect(
+    page.getByRole("button", { name: "Refresh loads" }),
+  ).toBeVisible();
+});

@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   StackIcon,
   TruckIcon,
@@ -84,37 +90,43 @@ export function QueueTabs({
   driverOnly,
   busy,
   onQueue,
+  trailing,
 }: {
   status: string;
   driverOnly: boolean;
   busy: boolean;
   onQueue: (status: string) => void;
+  /** Sits at the end of the same row as the pills (count, refresh). */
+  trailing?: ReactNode;
 }) {
   return (
-    <nav className="queueTabs" aria-label="Dispatch queues">
-      {queues
-        .filter(
-          (q) =>
-            !driverOnly ||
-            ["", "picked-up", "delivered", "cancelled"].includes(q.value),
-        )
-        .map(({ value, label }) => (
-          <button
-            key={value}
-            className={"queueTab" + (status === value ? " active" : "")}
-            disabled={busy}
-            aria-current={status === value ? "page" : undefined}
-            onClick={() => onQueue(value)}
-          >
-            <span
-              className="queueDot"
-              style={{ background: dotColors[value] }}
-              aria-hidden="true"
-            />
-            {driverOnly && value === "" ? "My loads" : label}
-          </button>
-        ))}
-    </nav>
+    <div className="queueRow">
+      <nav className="queueTabs" aria-label="Dispatch queues">
+        {queues
+          .filter(
+            (q) =>
+              !driverOnly ||
+              ["", "picked-up", "delivered", "cancelled"].includes(q.value),
+          )
+          .map(({ value, label }) => (
+            <button
+              key={value}
+              className={"queueTab" + (status === value ? " active" : "")}
+              disabled={busy}
+              aria-current={status === value ? "page" : undefined}
+              onClick={() => onQueue(value)}
+            >
+              <span
+                className="queueDot"
+                style={{ background: dotColors[value] }}
+                aria-hidden="true"
+              />
+              {driverOnly && value === "" ? "My loads" : label}
+            </button>
+          ))}
+      </nav>
+      {trailing}
+    </div>
   );
 }
 const icon = { size: 16, "aria-hidden": true } as const;

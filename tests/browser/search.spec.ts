@@ -42,12 +42,14 @@ test("one search box sits at the top of the sidebar on every searchable page", a
     // Pages do not carry a second search box of their own.
     await expect(page.getByRole("searchbox")).toHaveCount(1);
   }
-  // Settings pages have nothing to filter.
+  // Settings pages have nothing to filter, so the box searches loads.
   await page.getByRole("button", { name: "Account menu" }).click();
   await page
     .getByRole("button", { name: "Notifications", exact: true })
     .click();
-  await expect(page.getByRole("searchbox")).toHaveCount(0);
+  await expect(
+    dock(page).getByRole("searchbox", { name: "Search loads" }),
+  ).toBeVisible();
 });
 
 test("typing in the sidebar search filters the open page, and Ctrl+K focuses it", async ({

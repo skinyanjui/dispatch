@@ -788,18 +788,22 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     billing: ["Search invoices and loads", "Search invoices and loads…"],
     reports: ["Search carriers", "Search carriers…"],
   };
-  const pageSearch = searchLabels[section]
-    ? {
-        value: section === "loads" ? q : (pageQ[section] ?? ""),
-        onChange: (value: string) =>
-          section === "loads"
-            ? filterChange({ q: value })
-            : setPageQ((old) => ({ ...old, [section]: value })),
-        label: searchLabels[section]![0],
-        placeholder: searchLabels[section]![1],
-        inputRef: search,
-      }
-    : null;
+  // Every page has a search. Pages with nothing of their own to filter
+  // (account, organization, notifications) search loads and jump to them.
+  const ownSearch = searchLabels[section];
+  const pageSearch = {
+    value: !ownSearch || section === "loads" ? q : (pageQ[section] ?? ""),
+    onChange: (value: string) => {
+      if (!ownSearch) {
+        setSection("loads");
+        filterChange({ q: value });
+      } else if (section === "loads") filterChange({ q: value });
+      else setPageQ((old) => ({ ...old, [section]: value }));
+    },
+    label: (ownSearch ?? searchLabels.loads!)[0],
+    placeholder: (ownSearch ?? searchLabels.loads!)[1],
+    inputRef: search,
+  };
   const controls = (
     <div className="toolbar">
       <div className="toolbarLeft">
@@ -845,7 +849,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             <h1 className="srOnly">
               {driverOnly && !status ? "My loads" : queueTitle(status)}
             </h1>
-            {controls}
           </>
         ) : (
           <div className="topbarLeft">
@@ -875,6 +878,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               driverOnly={driverOnly}
               busy={busy}
               onQueue={showQueue}
+              trailing={controls}
             />
             {carrier && (
               <div

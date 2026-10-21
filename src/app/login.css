@@ -344,7 +344,10 @@
     background: #f6f8fd;
   }
   .authTop {
-    padding: 28px clamp(24px, 5vw, 64px) 0;
+    /* Same width as the card so the link lines up with its right edge. */
+    width: min(540px, calc(100% - clamp(48px, 10vw, 128px)));
+    margin: 0 auto;
+    padding: 28px 0 0;
     font-size: 14px;
   }
   .authCard {
@@ -445,6 +448,7 @@
 }
 .login .rememberMe {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
   margin: 0;
@@ -458,6 +462,7 @@
   height: 18px;
   min-height: 0;
   margin: 0;
+  padding: 0;
   accent-color: var(--login-blue);
 }
 .login .legalLine {
@@ -489,7 +494,11 @@
 }
 .login .termsCheck {
   align-items: flex-start;
+  line-height: 1.45;
   margin: 4px 0 18px;
+}
+.login .termsCheck input {
+  margin-top: 2px;
 }
 .login .termsCheck a {
   color: var(--login-blue);
@@ -502,11 +511,185 @@
 
 .socialButtons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
 .socialButtons + .helpText {
   display: block;
   margin: 10px 0 0;
   color: var(--login-muted);
+}
+
+/* ---- Compact and responsive: sign-in should not need scrolling ----
+   Sizes follow the viewport height, so short laptops and phones fit too. */
+.authTop {
+  padding-top: clamp(10px, 2.4vh, 28px);
+}
+.authCard {
+  margin-block: clamp(8px, 1.6vh, 16px) clamp(12px, 2vh, 32px);
+  padding: clamp(16px, 2.6vh, 26px) 20px;
+}
+.loginPanel h1 {
+  font-size: clamp(24px, 3.6vh, 30px);
+}
+.loginDescription {
+  margin-bottom: clamp(10px, 2vh, 24px);
+  font-size: 14px;
+}
+.login .field {
+  margin-bottom: clamp(8px, 1.6vh, 16px);
+}
+.login .field > label {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.login .fieldBox {
+  height: clamp(40px, 5.2vh, 48px);
+}
+.login .primary.full,
+.login .secondary.full {
+  height: clamp(40px, 5.4vh, 48px);
+}
+.login .formRow {
+  margin: 0 0 clamp(10px, 1.8vh, 18px);
+}
+.login .termsCheck {
+  margin: 2px 0 clamp(10px, 1.8vh, 18px);
+}
+.loginAccess {
+  margin-top: clamp(8px, 1.6vh, 18px);
+}
+.login .legalLine {
+  margin-top: clamp(6px, 1.2vh, 12px);
+}
+.orDivider {
+  margin: clamp(8px, 1.6vh, 18px) 0 clamp(6px, 1.2vh, 12px);
+}
+.socialButtons + .helpText {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.requestForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 12px;
+}
+.requestForm > :nth-child(n + 5) {
+  grid-column: 1 / -1;
+}
+.fieldBox.tall {
+  height: auto;
+}
+@media (max-width: 899px) {
+  .loginHero {
+    gap: 8px;
+    padding: 14px 20px 14px;
+  }
+  .loginHero .brand {
+    font-size: 20px;
+  }
+  .loginHero h2 {
+    font-size: 19px;
+  }
+}
+@media (min-width: 640px) {
+  .requestForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 900px) {
+  .authCard {
+    padding: clamp(18px, 3.4vh, 44px) clamp(28px, 3.4vw, 48px);
+  }
+  .loginPanel h1 {
+    font-size: clamp(28px, 4.4vh, 40px);
+  }
+  .loginDescription {
+    font-size: 15px;
+  }
+  .authTop {
+    padding-top: clamp(12px, 3vh, 28px);
+  }
+}
+@media (max-width: 899px) and (max-height: 900px) {
+  .heroBody {
+    display: none;
+  }
+  .loginHero {
+    padding-block: 10px;
+  }
+  .loginDescription:not(.keep) {
+    display: none;
+  }
+  .authTop {
+    padding-top: 8px;
+  }
+}
+@media (max-width: 899px) and (max-height: 700px) {
+  .authCard {
+    padding-block: 12px;
+  }
+  .login .field {
+    margin-bottom: 6px;
+  }
+  .login .fieldBox {
+    height: 38px;
+  }
+  .login .primary.full,
+  .login .secondary.full {
+    height: 40px;
+  }
+  .loginPanel h1 {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .requestForm textarea {
+    min-height: 0;
+    height: 44px;
+  }
+}
+@media (max-width: 899px) and (max-height: 700px) {
+  .orDivider {
+    margin: 6px 0;
+  }
+  .socialButtons .secondary.full,
+  .login a.secondary.full {
+    height: 36px;
+  }
+  .loginAccess,
+  .login .legalLine {
+    margin-top: 6px;
+  }
+}
+@media (min-width: 900px) and (max-height: 760px) {
+  .authTop {
+    padding-top: 10px;
+  }
+  .authCard {
+    margin-bottom: 8px;
+  }
+}
+.login .formRow {
+  gap: 2px 12px;
+}
+@media (max-width: 899px) and (max-height: 700px) {
+  .login .formRow {
+    margin-bottom: 8px;
+  }
+  .login .rememberMe,
+  .login .formRow .textButton {
+    font-size: 13px;
+  }
+}
+@media (min-width: 900px) and (max-height: 800px) {
+  .heroLead {
+    margin: 14px 0 18px;
+    font-size: 17px;
+  }
+  .loginHero ul {
+    gap: 10px;
+  }
+  .loginHero h2 {
+    font-size: clamp(28px, 3.6vw, 44px);
+  }
 }

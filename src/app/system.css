@@ -1515,3 +1515,47 @@ select {
 .appShell .draftNote q {
   color: var(--muted);
 }
+
+/* The queue pills and the count and refresh button share one row. */
+.appShell .queueRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+.appShell .queueRow .queueTabs {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.appShell .queueRow .toolbar {
+  flex: none;
+  margin: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .queueRow .toolbarLeft,
+.appShell .queueRow .toolbarRight {
+  width: auto;
+  gap: var(--space-2);
+}
+.appShell .queueRow .toolbarMeta {
+  white-space: nowrap;
+}
+/* On Loads the header only holds a hidden title, so it takes no space. */
+.appShell .topbar.compact {
+  min-height: 0;
+  height: 0;
+  padding-block: 0;
+  border: 0;
+  overflow: hidden;
+}
+@media (max-width: 700px) {
+  .appShell .queueRow {
+    gap: var(--space-2);
+  }
+  .appShell .queueRow .toolbarMeta {
+    display: none;
+  }
+}
