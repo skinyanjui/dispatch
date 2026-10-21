@@ -904,6 +904,36 @@ test("loads: fix an address with history, then cancel with a reason", async ({
   );
 });
 
+test("loads: a cancel whose response is lost can be retried safely", async ({
+  page,
+}) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "RETRY");
+  const dialog = await openLoad(page, load.reference);
+  let attempts = 0;
+  const keys: (string | undefined)[] = [];
+  await page.route("**/api/loads/*/cancel", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (++attempts === 1) {
+      // The server applies the cancel, but the browser never sees the reply.
+      await route.fetch();
+      return route.abort("connectionreset");
+    }
+    return route.continue();
+  });
+  await dialog.getByRole("button", { name: "Cancel load" }).click();
+  const cancel = page.getByRole("dialog", { name: "Cancel load" });
+  await cancel.getByLabel("Reason").fill("Customer closed the dock");
+  await cancel.getByRole("button", { name: "Cancel this load" }).click();
+  await expect(cancel.getByRole("alert")).toBeVisible();
+  await cancel.getByRole("button", { name: "Cancel this load" }).click();
+  await expect(dialog.getByText("Customer closed the dock")).toBeVisible();
+  expect(attempts).toBe(2);
+  expect(keys[0]).toBeTruthy();
+  expect(keys[1]).toBe(keys[0]);
+});
+
 test("inbox: attach a PDF to a message and download it as the recipient", async ({
   page,
   browser,

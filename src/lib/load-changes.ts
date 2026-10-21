@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { transaction } from "./db";
-import { HttpError } from "./auth";
+import { digest, HttpError } from "./auth";
 import { event, scoped } from "./loads";
 import { enqueueForUser } from "./notifications";
 
@@ -83,10 +83,76 @@ async function notifyDriver(
     });
 }
 
-export async function editLoad(user: string, id: string, input: unknown) {
+/**
+ * Replays the stored result when this actor already applied the same request
+ * under the same key. Returns null when the key is new (or none was sent).
+ * Runs after `scoped`, so a foreign load is NOT_FOUND before any replay.
+ */
+async function replay(
+  c: PoolClient,
+  user: string,
+  load: { id: string },
+  kind: "edit" | "cancel",
+  key: string | undefined,
+  body: unknown,
+) {
+  if (key === undefined) return null;
+  if (!key || key.length > 128)
+    throw new HttpError(400, "IDEMPOTENCY_KEY_REQUIRED");
+  await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+    user + ":load-change:" + key,
+  ]);
+  const old = await c.query(
+    "SELECT load_id,kind,request_hash,result FROM load_change_requests WHERE actor_id=$1 AND idempotency_key=$2",
+    [user, key],
+  );
+  const row = old.rows[0];
+  if (!row) return null;
+  if (
+    row.load_id !== load.id ||
+    row.kind !== kind ||
+    row.request_hash !== digest(JSON.stringify(body))
+  )
+    throw new HttpError(409, "IDEMPOTENCY_CONFLICT");
+  return row.result as { id: string; version: number };
+}
+async function remember(
+  c: PoolClient,
+  user: string,
+  load: { id: string; carrier_id: string },
+  kind: "edit" | "cancel",
+  key: string | undefined,
+  body: unknown,
+  result: object,
+) {
+  if (key === undefined) return;
+  await c.query(
+    "INSERT INTO load_change_requests(actor_id,idempotency_key,load_id,carrier_id,kind,request_hash,result) VALUES($1,$2,$3,$4,$5,$6,$7)",
+    [
+      user,
+      key,
+      load.id,
+      load.carrier_id,
+      kind,
+      digest(JSON.stringify(body)),
+      JSON.stringify(result),
+    ],
+  );
+}
+
+export async function editLoad(
+  user: string,
+  id: string,
+  input: unknown,
+  key?: string,
+) {
   const data = editSchema.parse(input);
   return transaction(async (c) => {
-    const load = await scoped(c, user, id, true);
+    // A replayed request must not trip over its own cancellation or version.
+    const load = await scoped(c, user, id, true, false, true);
+    const again = await replay(c, user, load, "edit", key, data);
+    if (again) return again;
+    if (load.cancelled_at) throw new HttpError(409, "LOAD_CANCELLED");
     if (load.version !== data.version)
       throw new HttpError(409, "VERSION_CONFLICT");
     if (load.stage === "delivered") throw new HttpError(422, "LOAD_LOCKED");
@@ -204,14 +270,24 @@ export async function editLoad(user: string, id: string, input: unknown) {
         `Load ${data.reference ?? load.reference} was updated`,
         `Heads up: dispatch updated pickup or delivery details for load ${data.reference ?? load.reference}.${data.reason ? `\n\nReason: ${data.reason}` : ""}\n\nOpen Relay to see the latest addresses and appointment times. Thanks for staying flexible!`,
       );
-    return { id, version, change_group: group };
+    const result = { id, version, change_group: group };
+    await remember(c, user, load, "edit", key, data, result);
+    return result;
   });
 }
 
-export async function cancelLoad(user: string, id: string, input: unknown) {
+export async function cancelLoad(
+  user: string,
+  id: string,
+  input: unknown,
+  key?: string,
+) {
   const data = cancelSchema.parse(input);
   return transaction(async (c) => {
-    const load = await scoped(c, user, id, true);
+    const load = await scoped(c, user, id, true, false, true);
+    const again = await replay(c, user, load, "cancel", key, data);
+    if (again) return again;
+    if (load.cancelled_at) throw new HttpError(409, "LOAD_CANCELLED");
     if (load.version !== data.version)
       throw new HttpError(409, "VERSION_CONFLICT");
     if (load.stage !== "booked" && load.stage !== "dispatched")
@@ -235,7 +311,9 @@ export async function cancelLoad(user: string, id: string, input: unknown) {
       `Load ${load.reference} was cancelled`,
       `Load ${load.reference} was cancelled. Please don't pick it up. Sorry for the change of plans!\n\nReason: ${data.reason}`,
     );
-    return { id, version };
+    const result = { id, version };
+    await remember(c, user, load, "cancel", key, data, result);
+    return result;
   });
 }
 

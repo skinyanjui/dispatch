@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { Load } from "@/lib/contracts";
 import { appointmentToInstant, dollarsToMinor } from "@/lib/entry";
@@ -65,11 +65,18 @@ export function LoadChanges({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const open = canChange && !load.cancelled_at && load.stage !== "delivered";
+  // A retry of the same form reuses its key so a request that did succeed is
+  // replayed, not rejected for its stale version; edited input gets a new key.
+  const attempt = useRef<{ body: string; key: string } | null>(null);
   async function run(path: string, body: unknown, done: string) {
     setBusy(true);
     setError("");
     try {
-      await api(`loads/${load.id}/${path}`, body);
+      const json = path + JSON.stringify(body);
+      if (attempt.current?.body !== json)
+        attempt.current = { body: json, key: crypto.randomUUID() };
+      await api(`loads/${load.id}/${path}`, body, attempt.current.key);
+      attempt.current = null;
       setMode(null);
       await onChanged(done);
     } catch (e) {

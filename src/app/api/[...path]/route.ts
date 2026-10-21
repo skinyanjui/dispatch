@@ -716,6 +716,7 @@ async function handle(req: NextRequest) {
             user.id,
             id,
             await readJson(req),
+            req.headers.get("idempotency-key") ?? undefined,
           ),
         );
       if (path[2] === "billing-packet" && req.method === "POST") {

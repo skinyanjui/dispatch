@@ -83,6 +83,7 @@ export async function scoped(
   id: string,
   write = false,
   allowDriverWrite = false,
+  allowCancelled = false,
 ) {
   const { rows } = await c.query(
     `SELECT l.* FROM loads l
@@ -93,7 +94,7 @@ export async function scoped(
     [id, user, write, allowDriverWrite],
   );
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
-  if (write && rows[0].cancelled_at) throw new HttpError(409, "LOAD_CANCELLED");
+  if (write && !allowCancelled && rows[0].cancelled_at) throw new HttpError(409, "LOAD_CANCELLED");
   return rows[0];
 }
 export async function event(
