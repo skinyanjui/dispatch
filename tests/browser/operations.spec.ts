@@ -873,3 +873,31 @@ test("inbox: saved replies fill in names and can be inserted", async ({
     /^Hi Jordan, what is your ETA\? — .+/,
   );
 });
+
+test("loads: fix an address with history, then cancel with a reason", async ({
+  page,
+}) => {
+  await login(page);
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "EDIT");
+  const dialog = await openLoad(page, load.reference);
+  await dialog.getByRole("button", { name: "Edit load" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit load" });
+  await edit.getByLabel("Address").first().fill("Chicago, IL 60601 (Dock 4)");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(
+    dialog.getByText("Chicago, IL 60601 (Dock 4)").first(),
+  ).toBeVisible();
+  await dialog.getByText(/Change history/).click();
+  await expect(dialog.locator(".changeLog")).toContainText(
+    "Chicago, IL → Chicago, IL 60601 (Dock 4)",
+  );
+  await dialog.getByRole("button", { name: "Cancel load" }).click();
+  const cancel = page.getByRole("dialog", { name: "Cancel load" });
+  await cancel.getByLabel("Reason").fill("Broker withdrew");
+  await cancel.getByRole("button", { name: "Cancel this load" }).click();
+  await expect(dialog.getByText("Broker withdrew")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Edit load" })).toHaveCount(
+    0,
+  );
+});

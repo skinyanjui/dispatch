@@ -7,6 +7,7 @@ import { loadDocumentSlots } from "./documents";
 import { exceptionOwners, loadExceptions } from "./exceptions";
 import { suggestExceptions } from "./exception-rules";
 import { enqueueForUser } from "./notifications";
+import { loadChanges } from "./load-changes";
 import {
   effective,
   stopTimeError,
@@ -92,6 +93,7 @@ export async function scoped(
     [id, user, write, allowDriverWrite],
   );
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
+  if (write && rows[0].cancelled_at) throw new HttpError(409, "LOAD_CANCELLED");
   return rows[0];
 }
 export async function event(
@@ -210,7 +212,7 @@ export async function listLoads(user: string, params: URLSearchParams) {
     .object({
       carrier_id: z.uuid().optional(),
       status: z
-        .enum(["booked", "dispatched", "picked-up", "delivered"])
+        .enum(["booked", "dispatched", "picked-up", "delivered", "cancelled"])
         .optional(),
       q: z.string().max(100).optional(),
     })
@@ -220,7 +222,7 @@ export async function listLoads(user: string, params: URLSearchParams) {
       q: params.get("q") ?? undefined,
     });
   const { rows } = await pool.query(
-    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id ORDER BY sequence DESC LIMIT 1) delivery,(SELECT count(*)::int FROM load_stops WHERE load_id=l.id) stop_count FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND ($3::text IS NULL OR l.stage=$3) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
+    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id ORDER BY sequence DESC LIMIT 1) delivery,(SELECT count(*)::int FROM load_stops WHERE load_id=l.id) stop_count FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND (($3::text='cancelled' AND l.cancelled_at IS NOT NULL) OR ($3::text IS DISTINCT FROM 'cancelled' AND l.cancelled_at IS NULL AND ($3::text IS NULL OR l.stage=$3))) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
     [
       user,
       filters.carrier_id ?? null,
@@ -275,6 +277,7 @@ export async function detail(user: string, id: string) {
         Date.now(),
       ),
       exception_owners: await exceptionOwners(c, load.carrier_id),
+      changes: await loadChanges(c, id),
     };
   });
 }

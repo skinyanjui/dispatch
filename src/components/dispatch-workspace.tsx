@@ -40,6 +40,7 @@ import { NotificationCenter } from "@/components/notification-center";
 import { AccountSettings } from "@/components/account-settings";
 import { ContactsDirectory } from "@/components/contacts-directory";
 import { Inbox, type Compose } from "@/components/inbox";
+import { LoadChanges } from "@/components/load-changes";
 import { OrganizationSettings } from "@/components/organization-settings";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
@@ -873,7 +874,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                       <span className="driverCardHeading">
                         <strong>{l.reference}</strong>
                         <span className={"badge " + l.stage}>
-                          {stageLabels[l.stage]}
+                          {l.cancelled_at ? "Cancelled" : stageLabels[l.stage]}
                         </span>
                       </span>
                       <span className="driverCardRoute">
@@ -956,7 +957,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                                 weight="fill"
                                 aria-hidden="true"
                               />
-                              {stageLabels[l.stage]}
+                              {l.cancelled_at ? "Cancelled" : stageLabels[l.stage]}
                             </span>
                           </td>
                           {!driverOnly && (
@@ -1180,7 +1181,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             </p>
             <span className={"badge " + selected.stage}>
               <CircleIcon size={7} weight="fill" aria-hidden="true" />
-              {stageLabels[selected.stage]}
+              {selected.cancelled_at ? "Cancelled" : stageLabels[selected.stage]}
             </span>
             <div className="detailFacts">
               <div>
@@ -1202,73 +1203,87 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 await refreshAfterSave(message);
               }}
             />
+            <LoadChanges
+              load={selected}
+              canChange={
+                selectedRole !== "driver" && selectedRole !== undefined
+              }
+              disabled={busy || offline}
+              onAuthError={handleError}
+              onChanged={async (message) => {
+                setSelected(await api<Load>("loads/" + selected.id));
+                await refreshAfterSave(message);
+              }}
+            />
             <h3>Driver assignment</h3>
             <div className="assignedDriver">
               <TruckIcon size={18} aria-hidden="true" />
               <span>{selected.assignment?.name || "No driver assigned"}</span>
             </div>
-            {selectedRole !== "driver" && selected.stage !== "delivered" && (
-              <>
-                <form
-                  className="assignForm"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const f = new FormData(e.currentTarget);
-                    act(async () => {
-                      await api("loads/" + selected.id + "/assign", {
-                        version: selected.version,
-                        driverId: f.get("driver"),
-                      });
-                      setNotice("Driver assignment saved.");
-                      setSelected(await api<Load>("loads/" + selected.id));
-                      await refreshAfterSave("Driver assignment saved.");
-                    });
-                  }}
-                >
-                  <label>
-                    <span className="srOnly">Authorized driver</span>
-                    <select
-                      name="driver"
-                      required
-                      defaultValue={selected.assignment?.driver_id || ""}
-                    >
-                      <option value="">Choose driver</option>
-                      {context.drivers
-                        .filter((d) => d.carrier_id === selected.carrier_id)
-                        .map((d) => (
-                          <option value={d.id} key={d.id}>
-                            {d.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <button className="secondary" disabled={busy || offline}>
-                    Assign driver
-                  </button>
-                </form>
-                {nextStage && (
-                  <button
-                    className="primary full nextMilestone"
-                    disabled={busy || offline || !selected.assignment}
-                    onClick={() =>
+            {selectedRole !== "driver" &&
+              selected.stage !== "delivered" &&
+              !selected.cancelled_at && (
+                <>
+                  <form
+                    className="assignForm"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const f = new FormData(e.currentTarget);
                       act(async () => {
-                        await api("loads/" + selected.id + "/milestones", {
+                        await api("loads/" + selected.id + "/assign", {
                           version: selected.version,
-                          stage: nextStage,
+                          driverId: f.get("driver"),
                         });
-                        setNotice("Milestone recorded.");
+                        setNotice("Driver assignment saved.");
                         setSelected(await api<Load>("loads/" + selected.id));
-                        await refreshAfterSave("Milestone recorded.");
-                      })
-                    }
+                        await refreshAfterSave("Driver assignment saved.");
+                      });
+                    }}
                   >
-                    Record next milestone
-                    <ArrowRightIcon size={15} aria-hidden="true" />
-                    <small>{stageLabels[nextStage]}</small>
-                  </button>
-                )}
-              </>
-            )}
+                    <label>
+                      <span className="srOnly">Authorized driver</span>
+                      <select
+                        name="driver"
+                        required
+                        defaultValue={selected.assignment?.driver_id || ""}
+                      >
+                        <option value="">Choose driver</option>
+                        {context.drivers
+                          .filter((d) => d.carrier_id === selected.carrier_id)
+                          .map((d) => (
+                            <option value={d.id} key={d.id}>
+                              {d.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <button className="secondary" disabled={busy || offline}>
+                      Assign driver
+                    </button>
+                  </form>
+                  {nextStage && (
+                    <button
+                      className="primary full nextMilestone"
+                      disabled={busy || offline || !selected.assignment}
+                      onClick={() =>
+                        act(async () => {
+                          await api("loads/" + selected.id + "/milestones", {
+                            version: selected.version,
+                            stage: nextStage,
+                          });
+                          setNotice("Milestone recorded.");
+                          setSelected(await api<Load>("loads/" + selected.id));
+                          await refreshAfterSave("Milestone recorded.");
+                        })
+                      }
+                    >
+                      Record next milestone
+                      <ArrowRightIcon size={15} aria-hidden="true" />
+                      <small>{stageLabels[nextStage]}</small>
+                    </button>
+                  )}
+                </>
+              )}
             {selectedRole === "driver" && (
               <p className="helpText">
                 You can record manual check-ins for your assigned loads. Contact

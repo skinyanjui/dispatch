@@ -80,6 +80,18 @@ export type Load = {
   exceptions?: LoadException[];
   exception_suggestions?: ExceptionSuggestion[];
   exception_owners?: { id: string; name: string; role: string }[];
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
+  changes?: {
+    change_group: string;
+    field: string;
+    stop_id: string | null;
+    old_value: string;
+    new_value: string;
+    reason: string;
+    created_at: string;
+    actor_name: string;
+  }[];
 };
 export type Context = {
   user: { name: string; id?: string; email?: string };

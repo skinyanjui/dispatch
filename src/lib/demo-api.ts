@@ -1143,8 +1143,11 @@ export function createDemoApi() {
               l.reference
                 .toLowerCase()
                 .includes(url.searchParams.get("q")!.toLowerCase())) &&
-            (!url.searchParams.get("status") ||
-              l.stage === url.searchParams.get("status")) &&
+            (url.searchParams.get("status") === "cancelled"
+              ? Boolean(l.cancelled_at)
+              : !l.cancelled_at &&
+                (!url.searchParams.get("status") ||
+                  l.stage === url.searchParams.get("status"))) &&
             (!url.searchParams.get("carrier_id") ||
               l.carrier_id === url.searchParams.get("carrier_id")),
         );
@@ -1242,6 +1245,100 @@ export function createDemoApi() {
         return { id: item.id, version: 1 };
       }
       if (l.version !== data?.version) fail("VERSION_CONFLICT", 409);
+      if (l.cancelled_at) fail("LOAD_CANCELLED", 409);
+      if (p[2] === "cancel") {
+        if (state.viewer.role === "driver") fail("NOT_FOUND", 404);
+        if (l.stage !== "booked" && l.stage !== "dispatched")
+          fail("CANNOT_CANCEL_STARTED");
+        l.cancelled_at = now();
+        l.cancel_reason = String(data.reason);
+        l.version++;
+        for (const x of state.exceptions)
+          if (x.load_id === l.id && x.status !== "resolved") {
+            x.status = "resolved";
+            x.resolved_at = now();
+            x.resolved_by_name = state.viewer.name;
+            x.resolution = "Load cancelled: " + l.cancel_reason;
+          }
+        event(l, "load.cancelled");
+        return { id: l.id, version: l.version };
+      }
+      if (p[2] === "edit") {
+        if (state.viewer.role === "driver") fail("NOT_FOUND", 404);
+        if (l.stage === "delivered") fail("LOAD_LOCKED");
+        const reason = String(data.reason || "").trim();
+        if (l.stage !== "booked" && !reason) fail("REASON_REQUIRED");
+        const changes: NonNullable<Load["changes"]> = [];
+        const note = (
+          field: string,
+          old: unknown,
+          next: unknown,
+          stopId?: string,
+        ) => {
+          if (next !== undefined && String(next) !== String(old))
+            changes.push({
+              change_group: "demo",
+              field,
+              stop_id: stopId ?? null,
+              old_value: String(old),
+              new_value: String(next),
+              reason,
+              created_at: now(),
+              actor_name: state.viewer.name,
+            });
+        };
+        if (
+          data.reference !== undefined &&
+          data.reference !== l.reference &&
+          state.loads.some(
+            (v) =>
+              v.carrier_id === l.carrier_id && v.reference === data.reference,
+          )
+        )
+          fail("REFERENCE_TAKEN", 409);
+        note("reference", l.reference, data.reference);
+        note("source", l.source, data.source);
+        note("amount_minor", l.amount_minor, data.amountMinor);
+        const edits = (data.stops as Record<string, string>[]) || [];
+        for (const e of edits) {
+          const s =
+            (l.stops || []).find((v) => v.id === e.id) ||
+            fail("NOT_FOUND", 404);
+          const pairs: [string, string, string | undefined][] = [
+            ["address", s.address, e.address],
+            ["window_start", s.window_start, e.windowStart],
+            ["window_end", s.window_end, e.windowEnd],
+          ];
+          for (const [f, o, n] of pairs) {
+            const same =
+              f === "address"
+                ? n === o
+                : new Date(n as string).getTime() === new Date(o).getTime();
+            if (n !== undefined && !same) {
+              if (s.arrived || s.departed) fail("STOP_ALREADY_STARTED");
+              note(f, o, n, s.id);
+            }
+          }
+        }
+        if (!changes.length) fail("NO_CHANGES");
+        for (const ch of changes) {
+          if (ch.stop_id) {
+            const s = l.stops!.find((v) => v.id === ch.stop_id)!;
+            if (ch.field === "address") s.address = ch.new_value;
+            if (ch.field === "window_start") s.window_start = ch.new_value;
+            if (ch.field === "window_end") s.window_end = ch.new_value;
+          }
+          if (ch.field === "reference") l.reference = ch.new_value;
+          if (ch.field === "source") l.source = ch.new_value;
+          if (ch.field === "amount_minor") l.amount_minor = ch.new_value;
+        }
+        l.pickup = l.stops![0].address;
+        l.delivery = l.stops![l.stops!.length - 1].address;
+        l.changes = [...changes, ...(l.changes || [])];
+        l.version++;
+        event(l, "load.edited");
+        return { id: l.id, version: l.version, change_group: "demo" };
+      }
       if (p[2] === "stops" && p[4] === "events") {
         const stops = l.stops || [];
         const index = stops.findIndex((v) => v.id === p[3]);

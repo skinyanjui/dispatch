@@ -59,6 +59,7 @@ const queues = [
   { value: "dispatched", label: "Dispatched" },
   { value: "picked-up", label: "In transit" },
   { value: "delivered", label: "Delivered" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 const icon = { size: 16, "aria-hidden": true } as const;
 const collapseKey = "relay-sidebar-collapsed";
@@ -254,7 +255,9 @@ export function WorkspaceShell({
                 .filter(
                   (q) =>
                     !driverOnly ||
-                    ["", "picked-up", "delivered"].includes(q.value),
+                    ["", "picked-up", "delivered", "cancelled"].includes(
+                      q.value,
+                    ),
                 )
                 .map(({ value, label }) => (
                   <button

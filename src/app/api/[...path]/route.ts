@@ -26,6 +26,7 @@ import {
   olderCheckIns,
   olderEvents,
 } from "@/lib/loads";
+import { cancelLoad, editLoad } from "@/lib/load-changes";
 import {
   uploadDocument,
   createUploadSession,
@@ -616,6 +617,18 @@ async function handle(req: NextRequest) {
       const id = z.uuid().parse(path[1]);
       if (path.length === 2 && req.method === "GET")
         return NextResponse.json(await detail(user.id, id));
+      if (
+        path.length === 3 &&
+        (path[2] === "edit" || path[2] === "cancel") &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await (path[2] === "edit" ? editLoad : cancelLoad)(
+            user.id,
+            id,
+            await readJson(req),
+          ),
+        );
       if (path[2] === "billing-packet" && req.method === "POST") {
         if (path.length === 3)
           return NextResponse.json(
