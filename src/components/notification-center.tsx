@@ -84,7 +84,9 @@ export function NotificationCenter({
   const visibleKinds = optionalKinds.filter(
     (k) =>
       k === "message_received" ||
-      (driverOnly ? k === "assignment" : k !== "assignment"),
+      (driverOnly
+        ? k === "assignment" || k === "appointment_reminder"
+        : k !== "assignment" && k !== "appointment_reminder"),
   );
   return (
     <section className="carrierDirectory" aria-label="Notifications">

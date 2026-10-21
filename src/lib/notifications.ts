@@ -244,6 +244,11 @@ export async function deliverDue(limit = 20) {
 
 // ---------- Reminders ----------
 
+/** How far ahead drivers are reminded; the job is safe to run more often. */
+const reminderLeadHours = () => {
+  const hours = Number(process.env.RELAY_APPOINTMENT_REMINDER_HOURS);
+  return Number.isInteger(hours) && hours >= 3 && hours <= 72 ? hours : 24;
+};
 const day = () => new Date().toISOString().slice(0, 10);
 
 /** Idempotent per day (or week for insurance) through dedupe keys. */
@@ -304,6 +309,41 @@ export async function scheduleReminders() {
         dedupe: `exception_overdue:${r.id}:${r.owner_id}:${today}`,
         subject: `Overdue exception on load ${r.reference}`,
         text: `An exception you own on load ${r.reference} is past due: ${r.summary}\n\nOpen Relay to update or resolve it.`,
+      });
+      queued++;
+    }
+    // Appointment reminders: the assigned driver hears about each upcoming
+    // stop once a day ahead and once within two hours. Keys include the
+    // window start, so a rescheduled stop is announced again.
+    const upcoming = await c.query(
+      `SELECT s.id,s.sequence,s.kind,s.address,s.timezone,s.window_start,s.window_end,
+        l.reference,car.organization_id,m.user_id,
+        (SELECT count(*)::int FROM load_stops x WHERE x.load_id=l.id) stop_count,
+        (s.window_start<=now()+interval '2 hours') soon
+      FROM load_stops s JOIN loads l ON l.id=s.load_id
+      JOIN carriers car ON car.id=l.carrier_id
+      JOIN load_assignments a ON a.load_id=l.id
+      JOIN memberships m ON m.driver_id=a.driver_id AND m.carrier_id=a.carrier_id
+      WHERE l.cancelled_at IS NULL AND l.stage<>'delivered'
+        AND s.window_end>now()
+        AND s.window_start<=now()+make_interval(hours=>$1)
+        AND NOT EXISTS(SELECT 1 FROM stop_events e WHERE e.stop_id=s.id AND e.kind='arrived')`,
+      [reminderLeadHours()],
+    );
+    for (const r of upcoming.rows) {
+      const when = (v: Date) =>
+        v.toLocaleString("en-US", {
+          timeZone: r.timezone,
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+      const tier = r.soon ? "2h" : "lead";
+      await enqueueForUser(c, r.user_id, {
+        kind: "appointment_reminder",
+        organization: r.organization_id,
+        dedupe: `appointment_reminder:${r.id}:${new Date(r.window_start).getTime()}:${tier}:${r.user_id}`,
+        subject: `${r.kind === "pickup" ? "Pickup" : "Delivery"} ${r.soon ? "soon" : "coming up"}: load ${r.reference}`,
+        text: `${r.kind === "pickup" ? "Pickup" : "Delivery"} for load ${r.reference}${r.stop_count > 2 ? ` (stop ${r.sequence} of ${r.stop_count})` : ""}\n\n${r.address}\nAppointment: ${when(r.window_start)} – ${when(r.window_end)} (${r.timezone})\n\nRecord your arrival in Relay when you get there. Contact dispatch if you will be late.`,
       });
       queued++;
     }
