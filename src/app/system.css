@@ -1559,3 +1559,151 @@ select {
     display: none;
   }
 }
+
+/* ---- Organization page ---- */
+.appShell .orgPage {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 1040px;
+}
+.appShell .orgIntro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.appShell .orgIntro p {
+  margin: 0;
+  color: var(--muted);
+}
+.appShell .orgPicker {
+  flex-direction: row;
+  align-items: center;
+  width: auto;
+}
+.appShell .orgTabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.appShell .orgTab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .orgTab:hover {
+  color: var(--ink);
+}
+.appShell .orgTab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.appShell .orgCount {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--panel-soft, #eef1fb);
+  font-size: 11px;
+}
+.appShell .orgPanel {
+  display: grid;
+  gap: var(--space-3);
+}
+.appShell .orgGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .appShell .orgGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.appShell .orgPanel .formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+@media (max-width: 560px) {
+  .appShell .orgPanel .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.appShell .orgToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.appShell .orgToolbar h3 {
+  margin: 0;
+}
+.appShell .orgPeople {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.appShell .orgPeople > li {
+  border-top: 1px solid var(--border);
+}
+.appShell .orgPanel .teamRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) auto auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
+}
+.appShell .orgPanel .teamRow .opsTeamName {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.appShell .orgPanel .teamRow small,
+.appShell .orgMeta {
+  color: var(--muted);
+}
+.appShell .orgPanel .teamPills {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+.appShell .orgRemove {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--panel-soft, #f6f8fd);
+  border-radius: 10px;
+}
+@media (max-width: 760px) {
+  .appShell .orgPanel .teamRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name remove" "meta meta" "pills pills";
+  }
+  .appShell .orgPanel .teamRow .opsTeamName {
+    grid-area: name;
+  }
+  .appShell .orgPanel .teamRow .textButton {
+    grid-area: remove;
+  }
+  .appShell .orgPanel .teamRow .orgMeta {
+    grid-area: meta;
+  }
+  .appShell .orgPanel .teamRow .teamPills {
+    grid-area: pills;
+  }
+}
+.appShell .orgMeta {
+  font-size: 13px;
+}

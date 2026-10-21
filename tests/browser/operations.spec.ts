@@ -147,6 +147,7 @@ test("AI reading: an admin opts in, a dispatcher reads a rate confirmation and c
     .locator(".accountMenu")
     .getByRole("button", { name: "Organization", exact: true })
     .click();
+  await page.getByRole("tab", { name: "AI" }).click();
   const card = page.getByRole("article", { name: "AI document reading" });
   await expect(card).toBeVisible();
   await expect(card).toContainText(
@@ -798,6 +799,7 @@ test("an owner invites a dispatcher, who joins from the private link and sees on
   await page.goto("/");
   await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("button", { name: "Organization", exact: true }).click();
+  await page.getByRole("tab", { name: "Invitations" }).click();
   const email = `dispatcher-${randomUUID().slice(0, 8)}@relay.test`;
   const card = page.getByRole("article", { name: "Team invitations" });
   await card.getByRole("button", { name: "Invite", exact: true }).click();
@@ -841,6 +843,7 @@ test("an owner invites a dispatcher, who joins from the private link and sees on
   await page.reload();
   await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("button", { name: "Organization", exact: true }).click();
+  await page.getByRole("tab", { name: "Invitations" }).click();
   await expect(
     page.getByRole("article", { name: "Team invitations" }),
   ).not.toContainText(email);

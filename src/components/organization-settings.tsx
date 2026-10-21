@@ -1,6 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import { UsersIcon } from "@phosphor-icons/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AiSettings } from "@/components/ai-settings";
 import { StaffInvites } from "./staff-invites";
 import { ApiError, describe, useApi } from "@/lib/client-api";
@@ -67,23 +66,43 @@ function SecurityPills({ verified, mfa }: { verified: boolean; mfa: boolean }) {
   );
 }
 
+const tabs = [
+  { id: "profile", label: "Profile" },
+  { id: "people", label: "People" },
+  { id: "invites", label: "Invitations" },
+  { id: "ai", label: "AI" },
+] as const;
+type Tab = (typeof tabs)[number]["id"];
+const pageSize = 25;
+
+/**
+ * Organization settings in four tabs so no section pushes the others out of
+ * view. People is one searchable list across carriers, not a card per carrier.
+ */
 export function OrganizationSettings({
   context,
   onAuthError,
   onChanged,
+  query = "",
 }: {
   context: Context;
   onAuthError: (e: unknown) => void;
   onChanged: () => Promise<void>;
+  /** Search text from the sidebar; filters People. */
+  query?: string;
 }) {
   const api = useApi();
   const orgs = (context.organizations || []).filter((o) => o.role);
   const [orgId, setOrgId] = useState(orgs[0]?.id || ""),
     [data, setData] = useState<Organization | null>(null),
+    [tab, setTab] = useState<Tab>("profile"),
+    [carrierFilter, setCarrierFilter] = useState(""),
+    [shown, setShown] = useState(pageSize),
     [removing, setRemoving] = useState<Person | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const load = useCallback(async () => {
     if (!orgId) return;
     try {
@@ -115,32 +134,66 @@ export function OrganizationSettings({
       setBusy(false);
     }
   }
-  const carriers = data
-    ? [...new Map(data.team.map((p) => [p.carrier_id, p.carrier_name]))]
-    : [];
+  const carriers = useMemo<[string, string][]>(
+    () =>
+      data
+        ? [...new Map(data.team.map((p) => [p.carrier_id, p.carrier_name]))]
+        : [],
+    [data],
+  );
+  const needle = query.trim().toLowerCase();
+  const people = useMemo(
+    () =>
+      (data?.team ?? []).filter(
+        (p) =>
+          (!carrierFilter || p.carrier_id === carrierFilter) &&
+          (!needle ||
+            [p.name, p.email, p.carrier_name, roleLabels[p.role] ?? p.role]
+              .join(" ")
+              .toLowerCase()
+              .includes(needle)),
+      ),
+    [data, carrierFilter, needle],
+  );
+  const visible = people.slice(0, shown);
+  function onTabKey(e: React.KeyboardEvent, index: number) {
+    const next =
+      e.key === "ArrowRight"
+        ? (index + 1) % tabs.length
+        : e.key === "ArrowLeft"
+          ? (index + tabs.length - 1) % tabs.length
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? tabs.length - 1
+              : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    setTab(tabs[next].id);
+    tabRefs.current[tabs[next].id]?.focus();
+  }
   return (
-    <section className="carrierDirectory" aria-label="Organization settings">
-      <div className="directoryIntro">
-        <div>
-          <p className="eyebrow">ADMINISTRATION</p>
-          <h2>Organization</h2>
-          <p>
-            Company profile, administrators and who can access each carrier.
-          </p>
-        </div>
+    <section className="orgPage" aria-label="Organization settings">
+      <div className="orgIntro">
+        <p>Company profile, administrators, people and AI settings.</p>
         {orgs.length > 1 && (
-          <div className="directoryControls opsFilters">
-            <label>
-              <span className="srOnly">Organization</span>
-              <select value={orgId} onChange={(e) => setOrgId(e.target.value)}>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <label className="orgPicker">
+            <span className="srOnly">Organization</span>
+            <select
+              value={orgId}
+              onChange={(e) => {
+                setOrgId(e.target.value);
+                setData(null);
+                setCarrierFilter("");
+              }}
+            >
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
       </div>
       {!orgs.length && (
@@ -156,217 +209,307 @@ export function OrganizationSettings({
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice}
       </p>
+      {orgs.length > 0 && !data && !error && (
+        <p className="helpText" role="status">
+          Loading organization…
+        </p>
+      )}
       {data && (
-        <div className="billingColumns">
-          <form
-            key={data.version}
-            className="opsCard opsForm"
-            aria-label="Organization profile"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              void act(async () => {
-                await api("organizations/" + data.id + "/profile", {
-                  version: data.version,
-                  name: String(f.get("name")),
-                  legal_name: String(f.get("legal_name")),
-                  billing_email: String(f.get("billing_email")),
-                  phone: String(f.get("phone")),
-                  address: String(f.get("address")),
-                  timezone: String(f.get("timezone")),
-                });
-                await onChanged();
-                return "Organization profile saved.";
-              });
-            }}
-          >
-            <h3>Company profile</h3>
-            <label>
-              Display name
-              <input
-                name="name"
-                required
-                maxLength={160}
-                defaultValue={data.name}
-              />
-            </label>
-            <label>
-              Legal name
-              <input
-                name="legal_name"
-                maxLength={200}
-                defaultValue={data.legal_name}
-              />
-            </label>
-            <div className="formGrid">
-              <label>
-                Billing email
-                <input
-                  name="billing_email"
-                  type="email"
-                  maxLength={254}
-                  defaultValue={data.billing_email}
-                />
-              </label>
-              <label>
-                Phone
-                <input name="phone" maxLength={40} defaultValue={data.phone} />
-              </label>
-            </div>
-            <label>
-              Address
-              <textarea
-                name="address"
-                rows={2}
-                maxLength={500}
-                defaultValue={data.address}
-              />
-            </label>
-            <label>
-              Operating time zone
-              <select name="timezone" defaultValue={data.timezone}>
-                {[...new Set([data.timezone, ...zones])].map((z) => (
-                  <option key={z} value={z}>
-                    {z}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="primary" disabled={busy}>
-              Save profile
-            </button>
-          </form>
-          <div className="opsList">
-            <article className="opsCard">
-              <h3>Administrators</h3>
-              {data.admins.map((a) => (
-                <div className="opsCardHeading teamRow" key={a.id}>
-                  <span className="opsTeamName">
-                    {a.name} · {roleLabels[a.role]}
-                    <small>{a.email}</small>
-                  </span>
-                  <SecurityPills
-                    verified={a.email_verified}
-                    mfa={a.mfa_enabled}
-                  />
-                  {data.role === "owner" && a.role !== "owner" && (
-                    <button
-                      className="textButton"
-                      disabled={busy}
-                      aria-label={`Remove administrator ${a.name}`}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Remove ${a.name} as an administrator? Their carrier access is unchanged.`,
-                          )
-                        )
-                          void act(async () => {
-                            await api(
-                              "organizations/" + data.id + "/admins/remove",
-                              { user_id: a.id, reason: "Removed by owner" },
-                            );
-                            return `${a.name} is no longer an administrator.`;
-                          });
-                      }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <small className="opsMeta">
-                New organizations are created by your Relay operator (see the
-                README). Invite teammates below.
-              </small>
-            </article>
-            <AiSettings organizationId={data.id} onAuthError={onAuthError} />
-            <StaffInvites
-              organizationId={data.id}
-              isOwner={data.role === "owner"}
-              carriers={carriers}
-              onAuthError={onAuthError}
-            />
-            {carriers.map(([carrierId, carrierName]) => (
-              <article className="opsCard" key={carrierId}>
-                <div className="opsCardHeading">
-                  <UsersIcon size={16} aria-hidden="true" />
-                  <h3>{carrierName}</h3>
-                </div>
-                {data.team
-                  .filter((p) => p.carrier_id === carrierId)
-                  .map((p) => (
-                    <div className="opsCardHeading teamRow" key={p.user_id}>
-                      <span className="opsTeamName">
-                        {p.name} · {roleLabels[p.role]}
-                        <small>{p.email}</small>
-                      </span>
-                      <SecurityPills
-                        verified={p.email_verified}
-                        mfa={p.mfa_enabled}
-                      />
-                      <button
-                        className="textButton"
-                        disabled={busy}
-                        aria-label={`Remove ${p.name} from ${carrierName}`}
-                        onClick={() => setRemoving(p)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                {removing?.carrier_id === carrierId && (
-                  <form
-                    className="opsForm"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const reason = String(
-                        new FormData(e.currentTarget).get("reason"),
-                      );
-                      const person = removing;
-                      const ok = await act(async () => {
-                        await api(
-                          "carriers/" + person.carrier_id + "/team/remove",
-                          person.driver_id
-                            ? { driver_id: person.driver_id, reason }
-                            : { user_id: person.user_id, reason },
-                        );
-                        await onChanged();
-                        return `${person.name} no longer has access to ${person.carrier_name}.`;
-                      });
-                      if (ok) setRemoving(null);
-                    }}
-                  >
-                    <p className="opsMeta">
-                      Remove {removing.name}&apos;s access to {carrierName}?
-                      Their history stays. Open exceptions they own return to
-                      the queue
-                      {removing.driver_id
-                        ? ", and they leave the driver roster"
-                        : ""}
-                      .
-                    </p>
-                    <label>
-                      Reason
-                      <input name="reason" required maxLength={500} />
-                    </label>
-                    <div className="opsActions">
-                      <button className="primary" disabled={busy}>
-                        Remove access
-                      </button>
-                      <button
-                        type="button"
-                        className="textButton"
-                        onClick={() => setRemoving(null)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+        <>
+          <div className="orgTabs" role="tablist" aria-label="Organization">
+            {tabs.map((t, i) => (
+              <button
+                key={t.id}
+                ref={(el) => {
+                  tabRefs.current[t.id] = el;
+                }}
+                role="tab"
+                id={"org-tab-" + t.id}
+                aria-selected={tab === t.id}
+                aria-controls={"org-panel-" + t.id}
+                tabIndex={tab === t.id ? 0 : -1}
+                className={"orgTab" + (tab === t.id ? " active" : "")}
+                onClick={() => setTab(t.id)}
+                onKeyDown={(e) => onTabKey(e, i)}
+              >
+                {t.label}
+                {t.id === "people" && (
+                  <span className="orgCount">{data.team.length}</span>
                 )}
-              </article>
+              </button>
             ))}
           </div>
-        </div>
+          <div
+            role="tabpanel"
+            id={"org-panel-" + tab}
+            aria-labelledby={"org-tab-" + tab}
+            className="orgPanel"
+          >
+            {tab === "profile" && (
+              <div className="orgGrid">
+                <form
+                  key={data.version}
+                  className="opsCard opsForm"
+                  aria-label="Organization profile"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    void act(async () => {
+                      await api("organizations/" + data.id + "/profile", {
+                        version: data.version,
+                        name: String(f.get("name")),
+                        legal_name: String(f.get("legal_name")),
+                        billing_email: String(f.get("billing_email")),
+                        phone: String(f.get("phone")),
+                        address: String(f.get("address")),
+                        timezone: String(f.get("timezone")),
+                      });
+                      await onChanged();
+                      return "Organization profile saved.";
+                    });
+                  }}
+                >
+                  <h3>Company profile</h3>
+                  <div className="formGrid">
+                    <label>
+                      Display name
+                      <input
+                        name="name"
+                        required
+                        maxLength={160}
+                        defaultValue={data.name}
+                      />
+                    </label>
+                    <label>
+                      Legal name
+                      <input
+                        name="legal_name"
+                        maxLength={200}
+                        defaultValue={data.legal_name}
+                      />
+                    </label>
+                    <label>
+                      Billing email
+                      <input
+                        name="billing_email"
+                        type="email"
+                        maxLength={254}
+                        defaultValue={data.billing_email}
+                      />
+                    </label>
+                    <label>
+                      Phone
+                      <input
+                        name="phone"
+                        maxLength={40}
+                        defaultValue={data.phone}
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    Address
+                    <textarea
+                      name="address"
+                      rows={2}
+                      maxLength={500}
+                      defaultValue={data.address}
+                    />
+                  </label>
+                  <label>
+                    Operating time zone
+                    <select name="timezone" defaultValue={data.timezone}>
+                      {[...new Set([data.timezone, ...zones])].map((z) => (
+                        <option key={z} value={z}>
+                          {z}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="opsActions">
+                    <button className="primary" disabled={busy}>
+                      Save profile
+                    </button>
+                  </div>
+                </form>
+                <article className="opsCard">
+                  <h3>Administrators</h3>
+                  {data.admins.map((a) => (
+                    <div className="teamRow" key={a.id}>
+                      <span className="opsTeamName">
+                        {a.name}
+                        <small>
+                          {roleLabels[a.role]} · {a.email}
+                        </small>
+                      </span>
+                      <SecurityPills
+                        verified={a.email_verified}
+                        mfa={a.mfa_enabled}
+                      />
+                      {data.role === "owner" && a.role !== "owner" && (
+                        <button
+                          className="textButton"
+                          disabled={busy}
+                          aria-label={`Remove administrator ${a.name}`}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Remove ${a.name} as an administrator? Their carrier access is unchanged.`,
+                              )
+                            )
+                              void act(async () => {
+                                await api(
+                                  "organizations/" + data.id + "/admins/remove",
+                                  { user_id: a.id, reason: "Removed by owner" },
+                                );
+                                return `${a.name} is no longer an administrator.`;
+                              });
+                          }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <small className="opsMeta">
+                    New organizations are created by your Relay operator (see
+                    the README). Invite teammates in the Invitations tab.
+                  </small>
+                </article>
+              </div>
+            )}
+
+            {tab === "people" && (
+              <article className="opsCard">
+                <div className="orgToolbar">
+                  <h3>People with carrier access</h3>
+                  <label className="orgPicker">
+                    <span className="srOnly">Carrier</span>
+                    <select
+                      value={carrierFilter}
+                      onChange={(e) => {
+                        setCarrierFilter(e.target.value);
+                        setShown(pageSize);
+                        setRemoving(null);
+                      }}
+                    >
+                      <option value="">All carriers ({carriers.length})</option>
+                      {carriers.map(([id, name]) => (
+                        <option key={id} value={id}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <p className="opsMeta" role="status">
+                  {people.length
+                    ? `Showing ${visible.length} of ${people.length}`
+                    : needle || carrierFilter
+                      ? "No one matches."
+                      : "No one has carrier access yet."}
+                </p>
+                <ul className="orgPeople">
+                  {visible.map((p) => (
+                    <li key={p.user_id + p.carrier_id}>
+                      <div className="teamRow">
+                        <span className="opsTeamName">
+                          {p.name}
+                          <small>{p.email}</small>
+                        </span>
+                        <span className="orgMeta">
+                          {roleLabels[p.role] ?? p.role} · {p.carrier_name}
+                        </span>
+                        <SecurityPills
+                          verified={p.email_verified}
+                          mfa={p.mfa_enabled}
+                        />
+                        <button
+                          className="textButton"
+                          disabled={busy}
+                          aria-label={`Remove ${p.name} from ${p.carrier_name}`}
+                          onClick={() => setRemoving(p)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {removing?.user_id === p.user_id &&
+                        removing.carrier_id === p.carrier_id && (
+                          <form
+                            className="opsForm orgRemove"
+                            aria-label={`Remove ${p.name} from ${p.carrier_name}`}
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              const reason = String(
+                                new FormData(e.currentTarget).get("reason"),
+                              );
+                              const ok = await act(async () => {
+                                await api(
+                                  "carriers/" + p.carrier_id + "/team/remove",
+                                  p.driver_id
+                                    ? { driver_id: p.driver_id, reason }
+                                    : { user_id: p.user_id, reason },
+                                );
+                                await onChanged();
+                                return `${p.name} no longer has access to ${p.carrier_name}.`;
+                              });
+                              if (ok) setRemoving(null);
+                            }}
+                          >
+                            <p className="opsMeta">
+                              Remove {p.name}&apos;s access to {p.carrier_name}?
+                              Their history stays. Open exceptions they own
+                              return to the queue
+                              {p.driver_id
+                                ? ", and they leave the driver roster"
+                                : ""}
+                              .
+                            </p>
+                            <label>
+                              Reason
+                              <input name="reason" required maxLength={500} />
+                            </label>
+                            <div className="opsActions">
+                              <button className="primary" disabled={busy}>
+                                Remove access
+                              </button>
+                              <button
+                                type="button"
+                                className="textButton"
+                                onClick={() => setRemoving(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        )}
+                    </li>
+                  ))}
+                </ul>
+                {people.length > shown && (
+                  <button
+                    className="secondary"
+                    onClick={() => setShown((n) => n + pageSize)}
+                  >
+                    Show {Math.min(pageSize, people.length - shown)} more
+                  </button>
+                )}
+              </article>
+            )}
+
+            {tab === "invites" && (
+              <StaffInvites
+                organizationId={data.id}
+                isOwner={data.role === "owner"}
+                carriers={carriers}
+                onAuthError={onAuthError}
+              />
+            )}
+
+            {tab === "ai" && (
+              <AiSettings organizationId={data.id} onAuthError={onAuthError} />
+            )}
+          </div>
+        </>
       )}
     </section>
   );

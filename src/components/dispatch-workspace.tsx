@@ -787,6 +787,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     assistant: ["Search conversations", "Search conversations…"],
     billing: ["Search invoices and loads", "Search invoices and loads…"],
     reports: ["Search carriers", "Search carriers…"],
+    organization: ["Search people", "Search people…"],
   };
   // Every page has a search. Pages with nothing of their own to filter
   // (account, organization, notifications) search loads and jump to them.
@@ -1089,6 +1090,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           <AccountSettings onAuthError={handleError} />
         ) : section === "organization" ? (
           <OrganizationSettings
+            query={pageQ.organization ?? ""}
             context={context}
             onAuthError={handleError}
             onChanged={async () => setContext(await api<Context>("me"))}

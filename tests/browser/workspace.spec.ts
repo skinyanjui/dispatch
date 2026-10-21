@@ -376,6 +376,7 @@ test("organization: team rows stack cleanly on phones", async ({ page }) => {
     .getByRole("dialog", { name: "Workspace navigation" })
     .getByRole("button", { name: "Organization", exact: true })
     .click();
+  await page.getByRole("tab", { name: /People/ }).click();
   const row = page.locator(".teamRow:has(.textButton)").first();
   await expect(row).toBeVisible();
   const [name, pills, remove] = await Promise.all(
@@ -578,5 +579,52 @@ test("search is on every page, and on settings pages it searches loads", async (
   await box.fill("RETRY");
   await expect(
     page.getByRole("button", { name: "Refresh loads" }),
+  ).toBeVisible();
+});
+
+test("organization: tabs, a filterable people list and search", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("button", { name: /Organization/ }).click();
+  const tabs = page.getByRole("tablist", { name: "Organization" });
+  await expect(tabs.getByRole("tab", { selected: true })).toHaveText("Profile");
+  await expect(
+    page.getByRole("form", { name: "Organization profile" }),
+  ).toBeVisible();
+  // Arrow keys move between tabs.
+  await tabs.getByRole("tab", { name: "Profile" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(tabs.getByRole("tab", { selected: true })).toContainText(
+    "People",
+  );
+  const rows = page.locator(".orgPeople > li");
+  // The list is paged, not one card per carrier.
+  expect(await rows.count()).toBeLessThanOrEqual(25);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Showing" }),
+  ).toBeVisible();
+  await page
+    .getByRole("searchbox", { name: "Search people" })
+    .fill("zzz-nobody");
+  await expect(page.getByText("No one matches.")).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search people" }).fill("");
+  await page.getByRole("button", { name: /Show \d+ more/ }).click();
+  expect(await rows.count()).toBeGreaterThan(25);
+  // Removing asks for a reason first and can be cancelled.
+  await page
+    .getByRole("button", { name: /^Remove .* from / })
+    .first()
+    .click();
+  await expect(page.getByLabel("Reason")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByLabel("Reason")).toHaveCount(0);
+  await tabs.getByRole("tab", { name: "AI" }).click();
+  await expect(page.getByText("AI document reading")).toBeVisible();
+  await tabs.getByRole("tab", { name: "Invitations" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Invite teammates" }),
   ).toBeVisible();
 });
