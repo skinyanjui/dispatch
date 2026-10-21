@@ -14,6 +14,8 @@ Verification:
 - The Production build path ran against local QA PostgreSQL, applied pending migrations, reported completion, and compiled the optimized Next.js app successfully.
 - Disposable databases used by deployment tests were removed. An initial test attempt found the local PostgreSQL container stopped after workspace restart; restarting the existing service resolved that environment prerequisite before the passing gates.
 
-Local checks do not prove a Vercel deployment succeeded. After the main-branch push, verify the hosted endpoint and Vercel build logs separately. Build logs should contain `Production database preparation complete.` Existing project overrides must use `npm run build:vercel` or defer to the repository configuration. Runtime variable changes require a new deployment.
+After pushing `c27cec6` to main, the hosted login changed from HTTP503/`SERVICE_UNAVAILABLE` to HTTP401/`INVALID_CREDENTIALS` on the next check. This verifies that the observed missing-table failure is resolved and the login endpoint can process credentials. The development workspace password did not authenticate on the hosted database; no successful hosted login or QA-account initialization is claimed. The user must enable QA setup with their private Vercel password if accounts are absent, or use the original hosted account password if already initialized.
+
+Build logs should contain `Production database preparation complete.` Existing project overrides must use `npm run build:vercel` or defer to the repository configuration. Runtime variable changes require a new deployment.
 
 Rollback: restore the previous app while retaining applied schema and account records. Do not drop tables or migration history. Current migrations are additive; future incompatible migrations require a reviewed compatibility plan. See ADR0005 and README for setup and recovery details.
