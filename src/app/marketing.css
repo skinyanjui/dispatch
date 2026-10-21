@@ -1,0 +1,344 @@
+/* Public pages: product overview, how it works and getting started. Same
+   tokens as the app; nothing here shows data that is not real. */
+.mk {
+  min-height: 100dvh;
+  background: #f6f8fd;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.mk a {
+  color: var(--accent);
+}
+.mkSkip {
+  position: absolute;
+  left: -999px;
+}
+.mkSkip:focus {
+  left: 12px;
+  top: 12px;
+  z-index: 10;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+}
+.mkHeader,
+.mkFooter,
+.mk main > section,
+.mkSteps {
+  width: min(1080px, calc(100% - 40px));
+  margin-inline: auto;
+}
+.mkHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 0;
+}
+.mkHeader .brand {
+  color: var(--ink);
+}
+.mkHeader nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.mkHeader nav a,
+.mkActions > a:not(.mkButton) {
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.mkHeader nav a:hover,
+.mkActions > a:not(.mkButton):hover {
+  background: #e9edfb;
+}
+.mkHeader nav a[aria-current="page"] {
+  color: var(--accent);
+  background: #e9edfb;
+}
+.mkActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mkButton,
+.mk a.mkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.mkButton:hover {
+  background: var(--action-hover);
+}
+.mk a.mkGhost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.mkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.mkHero {
+  padding: clamp(36px, 8vh, 88px) 0 clamp(28px, 6vh, 56px);
+  border-radius: 24px;
+}
+.mkHero.compact {
+  padding-block: clamp(24px, 5vh, 48px) 8px;
+}
+.mkEyebrow {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.mkHero h1 {
+  margin: 0;
+  max-width: 16ch;
+  font-size: clamp(34px, 6vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.mkHero.compact h1 {
+  max-width: 24ch;
+  font-size: clamp(28px, 4.4vw, 42px);
+}
+.mkLead {
+  max-width: 54ch;
+  margin: 18px 0 24px;
+  font-size: clamp(16px, 2vw, 19px);
+  color: var(--muted);
+}
+.mkHero.compact .mkLead {
+  margin-bottom: 0;
+}
+.mkNote {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.mkSection {
+  padding: clamp(24px, 5vh, 48px) 0;
+}
+.mkSection > h2,
+.mkSplit h2,
+.mkBand h2,
+.mkCta h2 {
+  margin: 0 0 14px;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.02em;
+}
+.mkGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.mkCard {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.mkCard svg {
+  color: var(--accent);
+}
+.mkCard h3 {
+  margin: 10px 0 4px;
+  font-size: 17px;
+}
+.mkCard p {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+.mkSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+@media (min-width: 800px) {
+  .mkSplit {
+    grid-template-columns: 1fr 1.3fr;
+    gap: 48px;
+  }
+}
+.mkSplit p {
+  margin: 0;
+  color: var(--muted);
+}
+.mkChecks {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mkChecks li {
+  position: relative;
+  padding: 12px 14px 12px 40px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+}
+.mkChecks li::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 17px;
+  width: 12px;
+  height: 7px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+.mkBand {
+  padding: 28px clamp(20px, 4vw, 40px);
+  margin-block: 12px;
+  background: #e9edfb;
+  border-radius: 16px;
+}
+.mkBand p {
+  max-width: 70ch;
+  margin: 0;
+}
+.mkSteps {
+  display: grid;
+  gap: 14px;
+  margin-block: 24px;
+  padding: 0;
+  list-style: none;
+}
+.mkSteps li {
+  display: flex;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.mkNum {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+.mkSteps h2 {
+  margin: 0 0 2px;
+  font-size: 18px;
+}
+.mkSteps p {
+  margin: 0 0 4px;
+  color: var(--muted);
+}
+.mkFaq {
+  display: grid;
+  gap: 8px;
+}
+.mkFaq details {
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.mkFaq summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.mkFaq p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.mkCta {
+  margin-block: 32px;
+  padding: clamp(24px, 5vw, 48px);
+  text-align: center;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 20px;
+}
+.mkCta p {
+  margin: 0 auto 20px;
+  max-width: 52ch;
+  color: #d4dbf5;
+}
+.mkCta .mkRow {
+  justify-content: center;
+}
+.mkCta .mkButton {
+  background: #fff;
+  color: var(--ink);
+}
+.mkCta .mkGhost {
+  background: transparent;
+  color: #fff;
+  border-color: #5a6aa8;
+}
+.mkFooter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.mkFooter p {
+  max-width: 36ch;
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.mkFooter nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  align-content: flex-start;
+}
+@media (max-width: 720px) {
+  .mkHeader {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .mkHeader nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .mkActions {
+    margin-left: auto;
+  }
+}
+.mk p a:not(.mkButton):not(.mkGhost) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.mkSteps li a {
+  font-weight: 600;
+}
