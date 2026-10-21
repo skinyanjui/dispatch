@@ -7,10 +7,32 @@ import { formatMoney } from "./entry";
 import type { DocumentType } from "./compliance";
 
 /** Bump when the instructions or fields change, so old results stay explainable. */
-export const promptVersion = "2026-10-21.1";
+export const promptVersion = "2026-10-22.1";
 
-export type FieldKind = "text" | "date" | "cents" | "flag";
+export type FieldKind = "text" | "date" | "datetime" | "cents" | "flag";
 type FieldSpec = { label: string; kind: FieldKind };
+
+function stopFields<N extends number>(n: N) {
+  return {
+    [`stop${n}_kind`]: {
+      label: `Stop ${n} type (pickup or delivery)`,
+      kind: "text",
+    },
+    [`stop${n}_address`]: {
+      label: `Stop ${n} facility and city, state`,
+      kind: "text",
+    },
+    [`stop${n}_appointment`]: {
+      label: `Stop ${n} appointment, local time, start of the window (YYYY-MM-DDTHH:mm)`,
+      kind: "datetime",
+    },
+  } as {
+    [K in
+      | `stop${N}_kind`
+      | `stop${N}_address`
+      | `stop${N}_appointment`]: FieldSpec;
+  };
+}
 
 /**
  * Only paperwork a person reviews anyway is readable. W-9s (tax ID numbers)
@@ -52,11 +74,27 @@ export const extractionFields = {
     signed: { label: "Signed", kind: "flag" },
     exceptions_noted: { label: "Damage or shortage noted", kind: "text" },
   },
-} as const satisfies Partial<Record<DocumentType, Record<string, FieldSpec>>>;
+  // Everything needed to start a draft load from a rate confirmation (ADR 0032).
+  // Stops are flattened and numbered in route order; the model never decides
+  // time zones, which are inferred from the address by plain code.
+  rate_confirmation_load: {
+    reference: { label: "Load or confirmation reference", kind: "text" },
+    broker_name: { label: "Broker", kind: "text" },
+    rate_minor: { label: "Rate", kind: "cents" },
+    ...stopFields(1),
+    ...stopFields(2),
+    ...stopFields(3),
+    ...stopFields(4),
+  },
+} as const satisfies Record<string, Record<string, FieldSpec>>;
 
 export type ExtractableType = keyof typeof extractionFields;
+/** The draft-load reading, which is not a stored document type. */
+export const draftType = "rate_confirmation_load" as const;
+export const draftStopCount = 4;
+/** Paperwork on a load or carrier that the document screens can read. */
 export const isExtractable = (type: string): type is ExtractableType =>
-  type in extractionFields;
+  type in extractionFields && type !== draftType;
 
 export const confidenceLevels = ["high", "medium", "low"] as const;
 export type Suggestion = {
@@ -70,6 +108,7 @@ export type Suggestions = Record<string, Suggestion>;
 const strictValue: Record<FieldKind, z.ZodType> = {
   text: z.string().trim().min(1).max(200),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  datetime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
   cents: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   flag: z.boolean(),
 };
@@ -78,6 +117,7 @@ const strictValue: Record<FieldKind, z.ZodType> = {
 const wireValue: Record<FieldKind, z.ZodType> = {
   text: z.string(),
   date: z.string(),
+  datetime: z.string(),
   cents: z.number(),
   flag: z.boolean(),
 };
@@ -272,6 +312,42 @@ export function sampleSuggestions(type: ExtractableType): Suggestions {
         pickup_date: date("2026-11-05"),
         delivery_date: date("2026-11-06"),
       };
+    case "rate_confirmation_load": {
+      // Relative to now, so the sample always fills a valid future load.
+      const at = (days: number, time: string) =>
+        new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10) +
+        "T" +
+        time;
+      const stop = (
+        n: number,
+        kind: string,
+        address: string,
+        when: string,
+      ) => ({
+        [`stop${n}_kind`]: text(kind),
+        [`stop${n}_address`]: text(address),
+        [`stop${n}_appointment`]: text(when),
+      });
+      const missing = (n: number) => ({
+        [`stop${n}_kind`]: none,
+        [`stop${n}_address`]: none,
+        [`stop${n}_appointment`]: none,
+      });
+      return {
+        reference: text("SAMPLE-RC-1001"),
+        broker_name: text("Sample Freight Brokers"),
+        rate_minor: cents(250_000),
+        ...stop(1, "pickup", "Sample Warehouse, Chicago, IL", at(3, "09:00")),
+        ...stop(
+          2,
+          "delivery",
+          "Sample Distribution, Nashville, TN",
+          at(4, "14:00"),
+        ),
+        ...missing(3),
+        ...missing(4),
+      } as Suggestions;
+    }
     case "bol":
       return {
         bol_number: text("SAMPLE-BOL-1"),

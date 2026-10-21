@@ -1,3 +1,4 @@
+import { linkRead } from "./rate-read-link";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
@@ -43,6 +44,8 @@ export const createSchema = z
     source: z.string().trim().min(1).max(100),
     amountMinor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     stops: z.array(stop).min(2).max(10),
+    /** A rate confirmation reading this load was drafted from (ADR 0032). */
+    readId: z.uuid().optional(),
   })
   .refine(
     (s) =>
@@ -169,6 +172,7 @@ export async function createLoad(user: string, input: unknown, key: string) {
         s.windowStart,
         s.windowEnd,
       ]);
+    if (data.readId) await linkRead(c, user, data.carrierId, id, data.readId);
     await c.query("INSERT INTO idempotency_keys VALUES($1,$2,$3,$4)", [
       user,
       key,

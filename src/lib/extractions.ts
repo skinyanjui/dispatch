@@ -39,7 +39,7 @@ export const aiSettingsSchema = z
   })
   .strict();
 
-async function spentMicros(c: PoolClient, organizationId: string) {
+export async function spentMicros(c: PoolClient, organizationId: string) {
   const { rows } = await c.query(
     `SELECT COALESCE(sum(COALESCE(cost_micros,reserved_micros)),0)::bigint spent
     FROM document_extractions WHERE organization_id=$1
@@ -53,7 +53,17 @@ async function spentMicros(c: PoolClient, organizationId: string) {
       AND created_at>=date_trunc('month',now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`,
     [organizationId],
   );
-  return Number(rows[0].spent) + Number(chat.rows[0].spent);
+  const reads = await c.query(
+    `SELECT COALESCE(sum(COALESCE(cost_micros,reserved_micros)),0)::bigint spent
+    FROM rate_confirmation_reads WHERE organization_id=$1
+      AND created_at>=date_trunc('month',now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`,
+    [organizationId],
+  );
+  return (
+    Number(rows[0].spent) +
+    Number(chat.rows[0].spent) +
+    Number(reads.rows[0].spent)
+  );
 }
 
 /** What the organization settings screen shows. */

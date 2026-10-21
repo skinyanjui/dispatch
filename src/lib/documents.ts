@@ -269,6 +269,27 @@ async function scanOrReject(
   return scan;
 }
 
+/** Scans bytes that will be sent for reading; infected files are logged and refused. */
+export function scanBeforeReading(
+  user: string,
+  carrierId: string,
+  bytes: Buffer,
+  filename: string,
+  sha256: string,
+) {
+  return scanOrReject(
+    user,
+    {
+      carrier_id: carrierId,
+      type: "rate_confirmation",
+      idempotency_key: randomUUID(),
+    } as Upload,
+    bytes,
+    filename,
+    sha256,
+  );
+}
+
 /** One transaction: object location, immutable version, scan row, events. */
 async function recordVersion(
   user: string,

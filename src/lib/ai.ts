@@ -84,6 +84,7 @@ Rules:
 - Report only the requested fields. Use null for a field that is not on the document. Never guess or infer a value that is not written there.
 - "quote" must be text copied exactly from the document where you found the value. Use an empty string when the value is null.
 - Dates are YYYY-MM-DD. Money is a whole number of cents (US dollars x 100). "signed" is true only if a signature or initials are visible.
+- For a rate confirmation read as a load draft: number the stops in route order (stop 1 first), leave unused stops null, give each stop type as exactly "pickup" or "delivery", copy the facility and city, state as written, and give appointments as local time in 24-hour YYYY-MM-DDTHH:mm using the start of the appointment window. Do not guess a time zone.
 - confidence is "high" when the text is clear, "medium" when it is partly unclear, and "low" when you are unsure.`;
 
 export function anthropicProvider(

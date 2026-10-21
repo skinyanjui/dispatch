@@ -4,6 +4,7 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { digest, HttpError } from "./auth";
 import { access } from "./contacts";
+import { spentMicros } from "./extractions";
 import { costMicros, ProviderError } from "./ai";
 import {
   assistantPromptVersion,
@@ -118,15 +119,9 @@ export async function getConversation(
 }
 
 async function spent(c: PoolClient, org: string) {
-  const { rows } = await c.query(
-    `SELECT (
-      SELECT COALESCE(sum(COALESCE(cost_micros,reserved_micros)),0) FROM document_extractions
-        WHERE organization_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'utc') AT TIME ZONE 'utc')
-    + (SELECT COALESCE(sum(COALESCE(cost_micros,reserved_micros)),0) FROM assistant_turns
-        WHERE organization_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'utc') AT TIME ZONE 'utc') AS total`,
-    [org],
-  );
-  return Number(rows[0].total);
+  // One shared monthly limit across document reading, rate confirmation
+  // reading and the assistant.
+  return spentMicros(c, org);
 }
 
 export const askSchema = z

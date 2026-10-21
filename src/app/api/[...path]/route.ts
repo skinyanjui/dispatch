@@ -88,6 +88,7 @@ import {
   setFavorite,
   updateContact,
 } from "@/lib/contacts";
+import { rateReadStatus, readRateConfirmation } from "@/lib/rate-reads";
 import { ask, assistantState, getConversation } from "@/lib/assistant";
 import {
   archiveProspect,
@@ -710,6 +711,21 @@ async function handle(req: NextRequest) {
           return NextResponse.json(
             await archiveContact(user.id, contactId, await readJson(req)),
           );
+      }
+    }
+    if (path[0] === "rate-confirmations") {
+      if (path.length === 2 && path[1] === "status" && req.method === "GET")
+        return NextResponse.json(
+          await rateReadStatus(
+            user.id,
+            req.nextUrl.searchParams.get("carrier_id") ?? "",
+          ),
+        );
+      if (path.length === 2 && path[1] === "read" && req.method === "POST") {
+        const upload = await readUpload(req);
+        return NextResponse.json(
+          await readRateConfirmation(user.id, upload.fields, upload.file),
+        );
       }
     }
     if (path[0] === "assistant") {
