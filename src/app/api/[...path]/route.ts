@@ -39,7 +39,11 @@ import { maxDocumentBytes } from "@/lib/compliance";
 import { loadsCsv, reportOverview } from "@/lib/reports";
 import { receiveEmail, receiveSms } from "@/lib/inbound";
 import { appOrigin } from "@/lib/notifications";
-import { attachmentContent, uploadAttachment } from "@/lib/message-attachments";
+import {
+  attachmentContent,
+  cleanupAbandoned,
+  uploadAttachment,
+} from "@/lib/message-attachments";
 import {
   accountSummary,
   changePassword,
@@ -186,7 +190,10 @@ async function handle(req: NextRequest) {
     // Provider webhooks carry no browser origin or session; each verifies its
     // own signature before anything is read or written.
     if (path[0] === "webhooks" && path.length === 2 && req.method === "POST") {
-      const raw = (await readBody(req, 262144)).toString("utf8");
+      // Email may carry base64 attachments (up to 6 files of 4 MB, encoded).
+      const raw = (
+        await readBody(req, path[1] === "email" ? 32 * 1024 * 1024 : 262144)
+      ).toString("utf8");
       if (path[1] === "sms") {
         await receiveSms(
           raw,
@@ -275,7 +282,12 @@ async function handle(req: NextRequest) {
     ) {
       cronAuthorized(req);
       const reminders = await scheduleReminders();
-      return NextResponse.json({ reminders, delivery: await deliverDue(50) });
+      const cleanup = await cleanupAbandoned();
+      return NextResponse.json({
+        reminders,
+        delivery: await deliverDue(50),
+        cleanup,
+      });
     }
     const user = await session(req);
     actor = user.id;

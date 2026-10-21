@@ -10,13 +10,13 @@ Replies to messages sent from Relay can arrive automatically through two signed 
 
 **STOP.** STOP, STOPALL, UNSUBSCRIBE, CANCEL, END and QUIT withdraw text consent for every user and contact with that number at once (before any threading), write an audit record, and the next send is refused (`RECIPIENT_CHANNEL_UNAVAILABLE`). START/re-consent is a deliberate manual action, never inferred.
 
-**Email — `POST /api/webhooks/email`.** A provider-neutral JSON body (`id`, `from`, `to[]`, `subject`, `text`) signed `x-relay-signature: sha256=<HMAC-SHA256 of the raw body>` with `RELAY_INBOUND_SECRET`. Outgoing email gets `Reply-To: reply+<thread>.<mac>@RELAY_INBOUND_EMAIL_DOMAIN`; the mac is an HMAC of the thread id, so addresses cannot be guessed or redirected to another thread. The sender must already be a participant with that email address: `From` is forgeable, so an unknown sender never writes into a conversation (rejected, audited). Quoted history (`>` lines, "On … wrote:") is dropped; the body is capped at 5,000 characters; attachments on inbound mail are ignored.
+**Email — `POST /api/webhooks/email`.** A provider-neutral JSON body (`id`, `from`, `to[]`, `subject`, `text`) signed `x-relay-signature: sha256=<HMAC-SHA256 of the raw body>` with `RELAY_INBOUND_SECRET`. Outgoing email gets `Reply-To: reply+<thread>.<mac>@RELAY_INBOUND_EMAIL_DOMAIN`; the mac is an HMAC of the thread id, so addresses cannot be guessed or redirected to another thread. The sender must already be a participant with that email address: `From` is forgeable, so an unknown sender never writes into a conversation (rejected, audited). Quoted history (`>` lines, "On … wrote:") is dropped; the body is capped at 5,000 characters; attachments are handled by ADR 0025.
 
 **Data.** Inbound messages have `source = 'inbound'`, no Relay sender, the sender's label and the provider's message id (migration 021). They notify the conversation's Relay participants like any message and count as unread.
 
 ## Not included
 
-Provider-specific adapters (a small forwarder per provider maps its payload onto the JSON above), inbound attachments, MMS, matching an inbound text to a brand-new conversation, HTML-only email, bounce and spam handling, and per-tenant phone numbers (one shared number is used, so a number texted from two tenants threads with the most recent).
+Provider-specific adapters (a small forwarder per provider maps its payload onto the JSON above), matching an inbound text to a brand-new conversation, HTML-only email, bounce and spam handling, and per-tenant phone numbers (one shared number is used, so a number texted from two tenants threads with the most recent).
 
 ## Verification
 

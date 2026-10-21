@@ -4,6 +4,104 @@ import { pool, transaction } from "./db";
 import { HttpError, digest } from "./auth";
 import { appOrigin, enqueueForUser } from "./notifications";
 import { toE164 } from "./sms";
+import {
+  recordInbound,
+  scanAndStore,
+  type StoredFile,
+} from "./message-attachments";
+import { maxDocumentBytes } from "./compliance";
+
+const maxInboundFiles = 3;
+type Prepared = { files: StoredFile[]; skipped: string[] };
+
+/** Scans and stores each candidate; anything refused is reported, not fatal. */
+async function prepare(
+  externalId: string,
+  candidates: { name: string; load: () => Promise<Buffer> }[],
+): Promise<Prepared> {
+  const out: Prepared = { files: [], skipped: [] };
+  const base = digest(externalId);
+  for (const [i, candidate] of candidates.slice(0, maxInboundFiles).entries()) {
+    try {
+      out.files.push(
+        await scanAndStore(
+          null,
+          await candidate.load(),
+          candidate.name,
+          // Deterministic, so a provider retry reuses the same write-once key.
+          `message-attachments/inbound/${base}/${i}`,
+        ),
+      );
+    } catch (e) {
+      out.skipped.push(
+        e instanceof HttpError && e.code === "MALWARE_DETECTED"
+          ? "blocked by the virus scan"
+          : e instanceof HttpError && e.code === "UNSUPPORTED_FILE_TYPE"
+            ? "unsupported type (only PDF, PNG and JPEG are kept)"
+            : e instanceof HttpError && e.code === "FILE_TOO_LARGE"
+              ? "larger than 4 MB"
+              : "could not be saved",
+      );
+    }
+  }
+  if (candidates.length > maxInboundFiles)
+    out.skipped.push(`more than ${maxInboundFiles} files`);
+  return out;
+}
+const withNotice = (body: string, p: Prepared) => {
+  const text = body || (p.files.length ? "(attachment only)" : "");
+  return p.skipped.length
+    ? `${text}\n\n[${p.skipped.length} attachment${p.skipped.length === 1 ? "" : "s"} not saved: ${[...new Set(p.skipped)].join("; ")}]`.slice(
+        0,
+        5000,
+      )
+    : text;
+};
+const alreadyStored = async (channel: string, externalId: string) =>
+  Boolean(
+    (
+      await pool.query(
+        "SELECT 1 FROM messages WHERE channel=$1 AND external_id=$2",
+        [channel, externalId],
+      )
+    ).rowCount,
+  );
+
+/**
+ * Twilio media URLs are fetched only from the configured Twilio API host,
+ * with the account credentials, and the one redirect Twilio issues to its CDN
+ * is followed without them. Anything else is refused (no arbitrary fetches).
+ */
+async function fetchTwilioMedia(url: string): Promise<Buffer> {
+  const sid = process.env.TWILIO_ACCOUNT_SID,
+    token = process.env.TWILIO_AUTH_TOKEN;
+  const base = new URL(process.env.TWILIO_API_BASE || "https://api.twilio.com");
+  const target = new URL(url);
+  if (!sid || !token || target.origin !== base.origin)
+    throw new HttpError(422, "MEDIA_REFUSED");
+  const auth = "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
+  const read = async (response: Response) => {
+    if (!response.ok) throw new HttpError(502, "MEDIA_UNAVAILABLE");
+    const declared = Number(response.headers.get("content-length") || 0);
+    if (declared > maxDocumentBytes) throw new HttpError(413, "FILE_TOO_LARGE");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length > maxDocumentBytes)
+      throw new HttpError(413, "FILE_TOO_LARGE");
+    return bytes;
+  };
+  const first = await fetch(target, {
+    headers: { Authorization: auth },
+    redirect: "manual",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (first.status >= 300 && first.status < 400) {
+    const next = new URL(first.headers.get("location") || "", target);
+    if (next.protocol !== "https:" && next.origin !== base.origin)
+      throw new HttpError(422, "MEDIA_REFUSED");
+    return read(await fetch(next, { signal: AbortSignal.timeout(10000) }));
+  }
+  return read(first);
+}
 
 // Inbound email and text (ADR 0023). Providers call a signed webhook; a
 // message is accepted only when it can be tied to a conversation that Relay
@@ -87,6 +185,7 @@ async function store(
   label: string,
   body: string,
   notifyOrigin: string,
+  files: StoredFile[] = [],
 ) {
   return transaction(async (c) => {
     const thread = (
@@ -109,6 +208,7 @@ async function store(
       ],
     );
     if (!inserted.rowCount) return "duplicate" as const;
+    await recordInbound(c, id, files);
     await c.query("UPDATE threads SET last_message_at=now() WHERE id=$1", [
       threadId,
     ]);
@@ -179,7 +279,8 @@ export async function receiveSms(
   const from = toE164(params.get("From") || "");
   const sid = params.get("MessageSid") || "";
   const body = (params.get("Body") || "").trim();
-  if (!from || !sid || !body) return { status: "ignored" };
+  const mediaCount = Math.min(Number(params.get("NumMedia") || 0) || 0, 10);
+  if (!from || !sid || (!body && !mediaCount)) return { status: "ignored" };
   const opted = stopWords.has(body.toLowerCase().replace(/[^a-z]/g, ""));
   const digits = last10(from);
   if (opted) {
@@ -209,13 +310,22 @@ export async function receiveSms(
     await audit("inbound.sms_unmatched", "no recent conversation");
     return { status: opted ? "opted_out" : "unmatched" };
   }
+  if (await alreadyStored("sms", sid)) return { status: "duplicate" };
+  const media = await prepare(
+    sid,
+    Array.from({ length: mediaCount }, (_, i) => ({
+      name: "text-attachment-" + (i + 1),
+      load: () => fetchTwilioMedia(params.get("MediaUrl" + i) || ""),
+    })),
+  );
   const outcome = await store(
     recent.thread_id,
     "sms",
     sid,
     recent.name || from,
-    body,
+    withNotice(body, media),
     appOrigin(),
+    media.files,
   );
   return { status: opted ? "opted_out" : outcome };
 }
@@ -229,6 +339,19 @@ export const inboundEmailSchema = z
     to: z.array(z.string().trim().max(320)).min(1).max(20),
     subject: z.string().max(500).default(""),
     text: z.string().max(100000).default(""),
+    attachments: z
+      .array(
+        z
+          .object({
+            filename: z.string().max(200).default("attachment"),
+            content_base64: z
+              .string()
+              .max(Math.ceil((maxDocumentBytes * 4) / 3) + 8),
+          })
+          .strict(),
+      )
+      .max(6)
+      .default([]),
   })
   .strict();
 
@@ -253,7 +376,7 @@ export async function receiveEmail(rawBody: string, signature: string | null) {
   const threadId = mail.to.map(threadFromAddress).find(Boolean) ?? null;
   const from = bareAddress(mail.from);
   const body = stripQuoted(mail.text);
-  if (!threadId || !body) {
+  if (!threadId || (!body && !mail.attachments.length)) {
     await audit("inbound.email_unmatched", "no valid reply address");
     return { status: "unmatched" };
   }
@@ -269,14 +392,23 @@ export async function receiveEmail(rawBody: string, signature: string | null) {
     await audit("inbound.email_sender_rejected", threadId);
     return { status: "rejected" };
   }
+  if (await alreadyStored("email", mail.id)) return { status: "duplicate" };
+  const media = await prepare(
+    mail.id,
+    mail.attachments.map((a) => ({
+      name: a.filename,
+      load: async () => Buffer.from(a.content_base64, "base64"),
+    })),
+  );
   return {
     status: await store(
       threadId,
       "email",
       mail.id,
       person.name,
-      body,
+      withNotice(body, media),
       appOrigin(),
+      media.files,
     ),
   };
 }

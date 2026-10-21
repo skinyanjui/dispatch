@@ -116,6 +116,12 @@ export function s3Client(config: S3Config, fetcher: typeof fetch = fetch) {
       }
       throw new StorageUnavailable(`PUT responded ${response.status}`);
     },
+    /** Removes an object. Only abandoned-upload cleanup calls this. */
+    async delete(key: string) {
+      const response = await call("DELETE", key);
+      if (!response.ok && response.status !== 404)
+        throw new StorageUnavailable(`DELETE responded ${response.status}`);
+    },
     async get(key: string) {
       const response = await call("GET", key);
       if (!response.ok)

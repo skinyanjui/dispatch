@@ -89,6 +89,10 @@ export async function startFakeS3() {
       });
       return res.writeHead(200).end();
     }
+    if (req.method === "DELETE") {
+      objects.delete(key);
+      return res.writeHead(204).end();
+    }
     const object = objects.get(key);
     if (!object) return res.writeHead(404).end();
     res.writeHead(200, {
