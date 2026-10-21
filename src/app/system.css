@@ -614,3 +614,138 @@
     align-self: start;
   }
 }
+
+/* Phones: 40px tap targets, even rows, full-width selects, no wasted gaps. */
+@media (max-width: 760px) {
+  .appShell .iconButton,
+  .appShell .iconAction {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .appShell .search {
+    height: 40px;
+  }
+  .appShell .toolbar {
+    margin-bottom: var(--space-2);
+  }
+  .appShell a.secondary {
+    min-height: 40px;
+    border-radius: var(--control-radius);
+  }
+  .appShell .contactActions {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .appShell .workspace .sidebarLabel {
+    padding-left: 0;
+  }
+  .appShell footer a,
+  a[href="/demo"],
+  .demoBanner a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .demoBanner button,
+  .demoBanner select {
+    min-height: 40px;
+  }
+  summary {
+    padding-block: 10px;
+  }
+  .primary.full + .textButton {
+    padding-left: 0;
+  }
+  .appShell .kanban,
+  .appShell .loadSurface {
+    scroll-snap-type: x proximity;
+  }
+  .appShell .lane {
+    scroll-snap-align: start;
+  }
+  .appShell fieldset + h2,
+  .appShell fieldset + h3 {
+    margin-top: var(--space-5);
+  }
+}
+
+/* Top bar and unscoped links get the same touch size as everything else. */
+@media (max-width: 1000px) {
+  .mobileBar button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+@media (max-width: 760px) {
+  .textButton {
+    min-height: 40px;
+  }
+  .appShell .search input {
+    align-self: stretch;
+  }
+}
+
+/* Dropdowns are as wide as their longest option, never stretched, and filter
+   rows pack them side by side, wrapping only when they run out of room. */
+select {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  align-self: flex-start;
+  flex: 0 0 auto;
+}
+.appShell .contactFilters > label:not(.directorySearch),
+.appShell .opsFilters > label,
+.appShell .filterPanel label,
+.appShell .composerRow > label,
+.appShell .assignForm label {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: auto;
+}
+.appShell .filterPanel {
+  gap: var(--space-2) var(--space-3);
+}
+.appShell .assignForm {
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  .appShell .contactFilters .directorySearch,
+  .appShell .inboxBar .directorySearch {
+    flex: 1 1 100%;
+  }
+  .appShell .contactActions {
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .appShell .iconAction {
+    min-width: 36px;
+    min-height: 40px;
+  }
+}
+
+/* Contact rows keep their actions on the right however long the details are. */
+@media (min-width: 761px) {
+  .appShell .contactRow {
+    flex-wrap: nowrap;
+  }
+  .appShell .contactMain {
+    flex: 1 1 0;
+  }
+  .appShell .contactActions {
+    flex: none;
+    margin-left: auto;
+  }
+}
+
+/* Controls sharing a form row have one height, so their labels line up. */
+.appShell .formGrid select,
+.appShell .formGrid input:not([type="checkbox"], [type="radio"]) {
+  height: var(--control-h);
+}
+.appShell .formGrid > label {
+  margin-bottom: 0;
+}

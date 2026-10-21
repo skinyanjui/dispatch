@@ -386,3 +386,38 @@ test("organization: team rows stack cleanly on phones", async ({ page }) => {
     ),
   ).toBe(true);
 });
+
+test("dropdowns are as wide as their longest option and share a row", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Exceptions", exact: true })
+    .first()
+    .click();
+  const selects = page.locator(".workspace select");
+  await expect(selects.first()).toBeVisible();
+  const widths = await selects.evaluateAll((all) =>
+    all.map((select) => {
+      const canvas = document.createElement("canvas").getContext("2d")!;
+      const style = getComputedStyle(select as HTMLSelectElement);
+      canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const widest = Math.max(
+        ...[...(select as HTMLSelectElement).options].map(
+          (o) => canvas.measureText(o.text).width,
+        ),
+      );
+      const box = select.getBoundingClientRect();
+      return { extra: box.width - widest, top: Math.round(box.top) };
+    }),
+  );
+  expect(widths.length).toBeGreaterThan(1);
+  for (const { extra } of widths) {
+    // Longest option plus padding and the arrow; never stretched to the row.
+    expect(extra).toBeGreaterThan(15);
+    expect(extra).toBeLessThan(60);
+  }
+  expect(new Set(widths.map((w) => w.top)).size).toBe(1);
+});

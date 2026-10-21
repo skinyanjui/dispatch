@@ -14,6 +14,9 @@ Status: accepted, 2026-10-21.
 - **Inbox follows email-client conventions:** filter tabs (All, Unread, Relay, Email, Texts, Calls), dense rows with an avatar, sender, time, subject and preview (unread rows are bold with a dot), and a reading pane with the subject, a flat stack of messages (avatar, sender, channel, time, body) and the composer pinned below. On phones a conversation replaces the list, with an "All conversations" back button. Arrow keys move between conversations.
 - Checkboxes and radios are fixed-size and rows with a checkbox are never stacked; the generic full-width input rule previously stretched them.
 
+- **Dropdowns** are as wide as their longest option (plus a constant padding and arrow), never stretched to their container, and filter rows pack them side by side, wrapping only when there is no room.
+- **Phones** use 40px tap targets (36px wide for icon-only actions) on buttons, links, icon buttons, the top bar and the search field.
+
 ## Consequences
 
 No data, API or migration change. Older per-page stylesheets still define their original rules; `system.css` overrides them, so new pages should use the shared classes instead of adding further overrides.
