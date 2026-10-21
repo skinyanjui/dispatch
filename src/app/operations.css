@@ -22,6 +22,8 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.docHeading h3,
+.opsCardHeading h3,
 .docHeading h4,
 .opsCardHeading h4 {
   margin: 0;

@@ -208,6 +208,8 @@ small {
   gap: 6px;
   margin: 8px 0 16px;
 }
+.docHeading h3,
+.opsCardHeading h3,
 .docHeading h4,
 .opsCardHeading h4 {
   font-weight: 500;

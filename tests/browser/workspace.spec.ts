@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 test("authenticated queue, details and mobile layout", async ({ page }) => {
   await page.goto("/");
@@ -421,3 +422,74 @@ test("dropdowns are as wide as their longest option and share a row", async ({
   }
   expect(new Set(widths.map((w) => w.top)).size).toBe(1);
 });
+
+// Accessibility guard: WCAG 2 A/AA rules (contrast, names, roles, keyboard
+// reach) on the main pages and drawers, at phone and desktop widths.
+for (const [label, size] of [
+  ["phone", { width: 390, height: 844 }],
+  ["desktop", { width: 1440, height: 900 }],
+] as const) {
+  test(`no accessibility violations on the main pages (${label})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    await signIn(page);
+    await page.goto("/");
+    const axe = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
+    const scan = async (name: string) => {
+      await page.addScriptTag({ path: axe });
+      const violations = await page.evaluate(async () => {
+        const result = await (
+          window as unknown as {
+            axe: {
+              run: (
+                c: Document,
+                o: object,
+              ) => Promise<{ violations: { id: string; nodes: unknown[] }[] }>;
+            };
+          }
+        ).axe.run(document, {
+          runOnly: {
+            type: "tag",
+            values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"],
+          },
+        });
+        return result.violations.map((v) => `${v.id} ×${v.nodes.length}`);
+      });
+      expect(violations, name).toEqual([]);
+    };
+    const go = async (name: string) => {
+      if (label === "phone") {
+        await page
+          .getByRole("button", { name: "Open navigation", exact: true })
+          .click();
+        await page
+          .getByRole("dialog", { name: "Workspace navigation" })
+          .getByRole("button", { name: new RegExp(`^${name}`) })
+          .first()
+          .click();
+      } else {
+        await page
+          .locator(".sidebarDock")
+          .getByRole("button", { name: new RegExp(`^${name}`) })
+          .first()
+          .click();
+      }
+      await page.waitForTimeout(600);
+      await scan(name);
+    };
+    await scan("Loads");
+    for (const name of [
+      "Exceptions",
+      "Inbox",
+      "Contacts",
+      "Carriers",
+      "Billing",
+      "Reports",
+    ])
+      await go(name);
+    await go("Loads");
+    await page.locator(".loadCard").first().click();
+    await scan("Load details");
+  });
+}

@@ -277,7 +277,12 @@ export function Reports({
             </>
           )}
           <h3>By carrier</h3>
-          <div className="tableScroll">
+          <div
+            className="tableScroll"
+            role="region"
+            aria-label="By carrier"
+            tabIndex={0}
+          >
             <table className="reportTable">
               <thead>
                 <tr>
@@ -311,7 +316,12 @@ export function Reports({
           {data.exceptions.by_type.length > 0 && (
             <>
               <h3>Exceptions</h3>
-              <div className="tableScroll">
+              <div
+                className="tableScroll"
+                role="region"
+                aria-label="Exceptions"
+                tabIndex={0}
+              >
                 <table className="reportTable">
                   <thead>
                     <tr>

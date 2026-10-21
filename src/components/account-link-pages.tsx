@@ -46,8 +46,9 @@ export function ResetPasswordPage() {
           <>
             <h1>Link unavailable.</h1>
             <p className="setupIntro">{describe("TOKEN_UNAVAILABLE")}</p>
-            <Link className="secondary" href="/">
+            <Link className="primary full setupLink" href="/">
               Back to sign in
+              <ArrowRightIcon size={16} aria-hidden="true" />
             </Link>
           </>
         ) : (
@@ -153,8 +154,9 @@ export function VerifyEmailPage() {
             <p className="setupIntro" role="alert">
               {describe(state)} You can send a new link from Account.
             </p>
-            <Link className="secondary" href="/">
+            <Link className="primary full setupLink" href="/">
               Back to Relay
+              <ArrowRightIcon size={16} aria-hidden="true" />
             </Link>
           </>
         )}

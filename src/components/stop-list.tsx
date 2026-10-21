@@ -31,8 +31,19 @@ function appointmentLabel(start: string, end: string, timezone: string) {
       hour: "numeric",
       minute: "2-digit",
     });
-  return new Date(start).getTime() === new Date(end).getTime()
-    ? format(start)
+  const day = (value: string) =>
+    new Date(value).toLocaleDateString("en-CA", { timeZone: timezone });
+  const time = (value: string) =>
+    new Date(value).toLocaleTimeString("en-US", {
+      timeZone: timezone,
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  if (new Date(start).getTime() === new Date(end).getTime())
+    return format(start);
+  // Same day: say the date once ("Nov 5, 2026, 9:00 AM – 10:00 AM").
+  return day(start) === day(end)
+    ? `${format(start)} – ${time(end)}`
     : `${format(start)} – ${format(end)}`;
 }
 const duration = (minutes: number) =>

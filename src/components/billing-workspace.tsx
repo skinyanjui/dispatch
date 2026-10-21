@@ -61,7 +61,7 @@ function PacketCard({
     >
       <div className="opsCardHeading">
         <FileTextIcon size={16} aria-hidden="true" />
-        <h4>{row.reference}</h4>
+        <h3>{row.reference}</h3>
         <span className="opsPill">{stageLabels[row.stage]}</span>
         <span className={"opsPill " + (row.documents_ready ? "good" : "warn")}>
           {row.documents_ready ? "Paperwork accepted" : "Paperwork incomplete"}
@@ -292,7 +292,7 @@ function InvoiceCard({
     <article className="opsCard" aria-label={`Dispatch invoice ${label}`}>
       <div className="opsCardHeading">
         <ReceiptIcon size={16} aria-hidden="true" />
-        <h4>{label}</h4>
+        <h3>{label}</h3>
         <span
           className={
             "opsPill " +

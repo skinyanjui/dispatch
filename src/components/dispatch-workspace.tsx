@@ -780,7 +780,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   </p>
                 </div>
               ) : (
-                <div className="kanban">
+                <div
+                  className="kanban"
+                  role="region"
+                  aria-label="Load board"
+                  tabIndex={0}
+                >
                   {stages.map((stage) => {
                     const items = loads.filter((l) => l.stage === stage);
                     return (

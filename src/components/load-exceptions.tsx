@@ -53,7 +53,7 @@ function ExceptionCard({
     >
       <div className="opsCardHeading">
         <WarningIcon size={16} aria-hidden="true" />
-        <h4>{item.summary}</h4>
+        <h3>{item.summary}</h3>
         <span className={"opsPill " + severityClass(item.severity)}>
           {item.severity}
         </span>

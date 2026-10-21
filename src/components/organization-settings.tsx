@@ -179,7 +179,7 @@ export function OrganizationSettings({
               });
             }}
           >
-            <h4>Company profile</h4>
+            <h3>Company profile</h3>
             <label>
               Display name
               <input
@@ -237,7 +237,7 @@ export function OrganizationSettings({
           </form>
           <div className="opsList">
             <article className="opsCard">
-              <h4>Administrators</h4>
+              <h3>Administrators</h3>
               {data.admins.map((a) => (
                 <div className="opsCardHeading teamRow" key={a.id}>
                   <span className="opsTeamName">
@@ -288,7 +288,7 @@ export function OrganizationSettings({
               <article className="opsCard" key={carrierId}>
                 <div className="opsCardHeading">
                   <UsersIcon size={16} aria-hidden="true" />
-                  <h4>{carrierName}</h4>
+                  <h3>{carrierName}</h3>
                 </div>
                 {data.team
                   .filter((p) => p.carrier_id === carrierId)

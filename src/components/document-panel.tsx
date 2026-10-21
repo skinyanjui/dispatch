@@ -120,7 +120,7 @@ function Slot({
     <article className="docSlot" aria-labelledby={id + "-title"}>
       <div className="docHeading">
         <FileTextIcon size={17} aria-hidden="true" />
-        <h4 id={id + "-title"}>{label}</h4>
+        <h3 id={id + "-title"}>{label}</h3>
         <span className={"docStatus " + slot.status}>
           {documentStatusLabels[slot.status]}
         </span>

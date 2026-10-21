@@ -463,7 +463,7 @@ function ContactForm({
         await onSave(body, entry);
       }}
     >
-      <h4>{entry ? "Edit contact" : "Add contact"}</h4>
+      <h3>{entry ? "Edit contact" : "Add contact"}</h3>
       <div className="formGrid">
         <label>
           Name

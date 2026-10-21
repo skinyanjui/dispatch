@@ -85,7 +85,7 @@ export function StaffInvites({
   return (
     <article className="opsCard" aria-label="Team invitations">
       <div className="opsCardHeading">
-        <h4>Invite teammates</h4>
+        <h3>Invite teammates</h3>
         {!open && (
           <button className="secondary" onClick={() => setOpen(true)}>
             Invite

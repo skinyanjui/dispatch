@@ -100,7 +100,7 @@ export function AccountSettings({
                 });
               }}
             >
-              <h4>Profile</h4>
+              <h3>Profile</h3>
               <label>
                 Name
                 <input
@@ -137,7 +137,7 @@ export function AccountSettings({
             </form>
             <article className="opsCard">
               <div className="opsCardHeading">
-                <h4>Email address</h4>
+                <h3>Email address</h3>
                 <span
                   className={
                     "opsPill " + (account.email_verified ? "good" : "warn")
@@ -185,7 +185,7 @@ export function AccountSettings({
                 if (ok) form.reset();
               }}
             >
-              <h4>Change password</h4>
+              <h3>Change password</h3>
               <label>
                 Current password
                 <input
@@ -227,7 +227,7 @@ export function AccountSettings({
             <article className="opsCard">
               <div className="opsCardHeading">
                 <ShieldCheckIcon size={16} aria-hidden="true" />
-                <h4>Two-step verification</h4>
+                <h3>Two-step verification</h3>
                 <span
                   className={"opsPill " + (account.mfa_enabled ? "good" : "")}
                 >

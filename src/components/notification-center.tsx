@@ -154,7 +154,7 @@ export function NotificationCenter({
                 <article className="opsCard" key={n.id}>
                   <div className="opsCardHeading">
                     <EnvelopeSimpleIcon size={16} aria-hidden="true" />
-                    <h4>{n.subject}</h4>
+                    <h3>{n.subject}</h3>
                     <span
                       className={
                         "opsPill " +

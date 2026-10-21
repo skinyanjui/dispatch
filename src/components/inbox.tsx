@@ -508,7 +508,7 @@ function SavedReplies({
     <section className="savedReplies" aria-label="Saved replies">
       <div className="directoryIntro">
         <div>
-          <h3>Saved replies</h3>
+          <h2>Saved replies</h2>
           <p>
             Use {"{name}"}, {"{load}"} and {"{sender}"} to fill in details when
             inserted.
@@ -965,11 +965,11 @@ export function Inbox({
           {!loading && threads && !threads.length && !error && (
             <div className="directoryEmpty">
               <TrayIcon size={36} weight="light" aria-hidden="true" />
-              <h3>
+              <h2>
                 {q || unreadOnly || channel
                   ? "No matching conversations"
                   : "Nothing here yet. Let's fix that!"}
-              </h3>
+              </h2>
               <p>
                 {q || unreadOnly || channel
                   ? "Try fewer words or clear the filters."
@@ -1076,7 +1076,7 @@ export function Inbox({
           {!newMessage && view && (
             <>
               <header className="threadHeader">
-                <h3>{view.subject}</h3>
+                <h2>{view.subject}</h2>
                 <small>
                   With {others.map((p) => p.name).join(", ") || "no one else"}
                   {view.load && ` · Load ${view.load.reference}`}
@@ -1182,7 +1182,7 @@ export function Inbox({
           {!newMessage && !view && !viewError && (
             <div className="directoryEmpty">
               <TrayIcon size={36} weight="light" aria-hidden="true" />
-              <h3>Pick a conversation, or start a new one</h3>
+              <h2>Pick a conversation, or start a new one</h2>
               <p>
                 Replies show up by themselves once inbound delivery is set up;
                 until then, log them by hand so the whole story stays together.
