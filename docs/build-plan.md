@@ -1,6 +1,6 @@
 # Relay Dispatch TMS — Build plan
 
-**Current stage:** Authenticated, carrier-scoped foundation with persistent load creation, assignment, milestones, manual check-ins and guided carrier/driver onboarding. The public demo now shares application screens with a browser-only fictional adapter. The operational MVP remains incomplete; exceptions, documents, finances and integrations are pending. The prototype workflows below remain a historical reference. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
+**Current stage:** Authenticated, carrier-scoped foundation with persistent load creation, assignment, milestones, manual check-ins, guided carrier/driver onboarding, versioned documents and compliance files, exception management, separate carrier-billing and dispatch-invoice lifecycles, an encrypted email notification outbox, and account security (password reset, email verification, MFA, team removal, organization profiles). The public demo shares application screens with a browser-only fictional adapter. Pending: malware scanning and object storage, accounting/telematics/rate-confirmation integrations, SMS, dispatcher invitations and production hardening listed in the audits. The prototype workflows below remain a historical reference. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
 
 ## What works in the prototype
 
