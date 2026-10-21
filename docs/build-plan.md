@@ -1,6 +1,6 @@
 # Relay Dispatch TMS — Build plan
 
-**Current stage:** Authenticated, carrier-scoped foundation with persistent load creation, assignment, milestones and manual check-ins. The operational MVP remains incomplete; exceptions, documents, finances and integrations are pending. The prototype workflows below remain a historical reference. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
+**Current stage:** Authenticated, carrier-scoped foundation with persistent load creation, assignment, milestones, manual check-ins and guided carrier/driver onboarding. The public demo now shares application screens with a browser-only fictional adapter. The operational MVP remains incomplete; exceptions, documents, finances and integrations are pending. The prototype workflows below remain a historical reference. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
 
 ## What works in the prototype
 

@@ -55,5 +55,33 @@ export type Context = {
   user: { name: string };
   carriers: { id: string; name: string; role: string }[];
   drivers: { id: string; name: string; carrier_id: string }[];
+  organizations?: { id: string; name: string }[];
+};
+export type CarrierSetup = {
+  carrier: { id: string; name: string; organization_id: string; role: string };
+  profile: {
+    contact_name: string;
+    contact_email: string;
+    phone: string;
+    usdot: string;
+    step: "agreement" | "team" | "complete";
+    version: number;
+  } | null;
+  agreement: {
+    agreement_ref: string;
+    effective_at: string;
+    expires_at: string;
+    verified_at: string;
+    current: boolean;
+  } | null;
+  drivers: {
+    id: string;
+    name: string;
+    email: string | null;
+    onboarding_status: "pending" | "ready";
+    phone: string;
+    timezone: string;
+  }[];
+  can_verify: boolean;
 };
 export type Queue = { loads: Load[]; nextCursor: string | null };

@@ -15,7 +15,7 @@ test("sign-in explains administrator access and fictional QA account choices", a
   await guidance.getByText("How do I get access?", { exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(guidance).toContainText(
-    "Self-service registration and password recovery are not available yet",
+    "Public signup and password recovery are not available yet",
   );
   for (const email of [
     "dispatcher@relay.test",

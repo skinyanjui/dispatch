@@ -15,6 +15,14 @@ export function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   return salt + ":" + scryptSync(password, salt, 64).toString("hex");
 }
+export async function hashNewPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  return (
+    salt +
+    ":" +
+    ((await deriveKey(password, salt, 64)) as Buffer).toString("hex")
+  );
+}
 export async function verifyPassword(password: string, stored: string) {
   const [salt, hash] = stored.split(":");
   const expected = Buffer.from(hash, "hex");

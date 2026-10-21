@@ -14,9 +14,15 @@ const roles: Record<string, string> = {
 export function CarrierDirectory({
   context,
   onViewLoads,
+  onSetup,
+  onAdd,
+  busy = false,
 }: {
   context: Context;
   onViewLoads: (carrier: string) => void;
+  onSetup?: (carrier: string) => void;
+  onAdd?: () => void;
+  busy?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const carriers = context.carriers.filter((c) =>
@@ -33,15 +39,22 @@ export function CarrierDirectory({
           <h2>Carrier accounts</h2>
           <p>The carriers you can work with, and your access to each.</p>
         </div>
-        <label className="directorySearch">
-          <MagnifyingGlassIcon size={18} aria-hidden="true" />
-          <span className="srOnly">Search carriers</span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search carriers…"
-          />
-        </label>
+        <div className="directoryControls">
+          {(context.organizations?.length ?? 0) > 0 && onAdd && (
+            <button className="primary" disabled={busy} onClick={onAdd}>
+              Add carrier
+            </button>
+          )}
+          <label className="directorySearch">
+            <MagnifyingGlassIcon size={18} aria-hidden="true" />
+            <span className="srOnly">Search carriers</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search carriers…"
+            />
+          </label>
+        </div>
       </div>
       {carriers.length ? (
         <div className="directoryTable">
@@ -62,10 +75,21 @@ export function CarrierDirectory({
                 </div>
               </div>
               <span className="roleLabel">{roles[c.role] || "Member"}</span>
-              <button className="secondary" onClick={() => onViewLoads(c.id)}>
-                View loads
-                <ArrowUpRightIcon size={14} aria-hidden="true" />
-              </button>
+              <div className="directoryRowActions">
+                {c.role !== "driver" && onSetup && (
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => onSetup(c.id)}
+                  >
+                    Manage setup
+                  </button>
+                )}
+                <button className="secondary" onClick={() => onViewLoads(c.id)}>
+                  View loads
+                  <ArrowUpRightIcon size={14} aria-hidden="true" />
+                </button>
+              </div>
             </article>
           ))}
         </div>

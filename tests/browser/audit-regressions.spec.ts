@@ -101,7 +101,7 @@ test("creating a load from the carrier directory shows its saved acknowledgment"
 
   await page.goto("/");
   await page.getByRole("button", { name: "Carrier directory" }).click();
-  await page.getByRole("button", { name: "Create load", exact: true }).click();
+  await page.getByRole("button", { name: "New load", exact: true }).click();
   const modal = page.getByRole("dialog", { name: "Create load" });
   await modal.getByLabel("Load reference").fill(load.reference);
   await modal.getByLabel("Booking source").fill(load.source);

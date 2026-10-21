@@ -64,6 +64,9 @@ export function WorkspaceShell({
 }) {
   const [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false);
+  const driverOnly =
+    context.carriers.length > 0 &&
+    context.carriers.every((c) => c.role === "driver");
   function navigate(fn: () => void) {
     fn();
     setMobileOpen(false);
@@ -71,7 +74,7 @@ export function WorkspaceShell({
   const navigation = (
     <>
       <div className="sidebarTitle">
-        <span>Dispatch</span>
+        <span>{driverOnly ? "My workspace" : "Dispatch"}</span>
         <button
           className="iconButton desktopSidebarToggle"
           aria-label="Collapse sidebar"
@@ -101,55 +104,66 @@ export function WorkspaceShell({
       </div>
       <nav className="queueNav" aria-label="Dispatch queues">
         <p className="sidebarLabel">WORKSPACE</p>
-        {queues.map(({ value, label, Icon }) => (
+        {queues
+          .filter(
+            (q) =>
+              !driverOnly || ["", "picked-up", "delivered"].includes(q.value),
+          )
+          .map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              className={
+                section === "loads" && status === value ? "active" : ""
+              }
+              disabled={busy}
+              aria-current={
+                section === "loads" && status === value ? "page" : undefined
+              }
+              onClick={() => navigate(() => onQueue(value))}
+            >
+              <Icon size={17} aria-hidden="true" />
+              {driverOnly && value === "" ? "My loads" : label}
+            </button>
+          ))}
+        {!driverOnly && (
           <button
-            key={value}
-            className={section === "loads" && status === value ? "active" : ""}
+            className={section === "carriers" ? "active" : ""}
             disabled={busy}
-            aria-current={
-              section === "loads" && status === value ? "page" : undefined
-            }
-            onClick={() => navigate(() => onQueue(value))}
+            aria-current={section === "carriers" ? "page" : undefined}
+            onClick={() => navigate(() => onSection("carriers"))}
           >
-            <Icon size={17} aria-hidden="true" />
-            {label}
+            <BuildingsIcon size={17} aria-hidden="true" />
+            Carriers
           </button>
-        ))}
-        <button
-          className={section === "carriers" ? "active" : ""}
-          disabled={busy}
-          aria-current={section === "carriers" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("carriers"))}
-        >
-          <BuildingsIcon size={17} aria-hidden="true" />
-          Carriers
-        </button>
+        )}
       </nav>
-      <nav className="carrierNav" aria-label="Carrier scope">
-        <p className="sidebarLabel">CARRIER SCOPE</p>
-        <button
-          className={!carrier ? "activeScope" : ""}
-          aria-pressed={!carrier}
-          disabled={busy}
-          onClick={() => navigate(() => onCarrier(""))}
-        >
-          <CircleIcon size={8} weight="fill" aria-hidden="true" />
-          All authorized carriers
-        </button>
-        {context.carriers.map((c) => (
+      {!driverOnly && (
+        <nav className="carrierNav" aria-label="Carrier scope">
+          <p className="sidebarLabel">CARRIER SCOPE</p>
           <button
-            className={carrier === c.id ? "activeScope" : ""}
-            key={c.id}
-            aria-pressed={carrier === c.id}
+            className={!carrier ? "activeScope" : ""}
+            aria-pressed={!carrier}
             disabled={busy}
-            onClick={() => navigate(() => onCarrier(c.id))}
-            title={c.name}
+            onClick={() => navigate(() => onCarrier(""))}
           >
-            <BuildingsIcon size={15} aria-hidden="true" />
-            <span>{c.name}</span>
+            <CircleIcon size={8} weight="fill" aria-hidden="true" />
+            All authorized carriers
           </button>
-        ))}
-      </nav>
+          {context.carriers.map((c) => (
+            <button
+              className={carrier === c.id ? "activeScope" : ""}
+              key={c.id}
+              aria-pressed={carrier === c.id}
+              disabled={busy}
+              onClick={() => navigate(() => onCarrier(c.id))}
+              title={c.name}
+            >
+              <BuildingsIcon size={15} aria-hidden="true" />
+              <span>{c.name}</span>
+            </button>
+          ))}
+        </nav>
+      )}
       <div className="sidebarAccount">
         <span className="accountInitial" aria-hidden="true">
           {context.user.name
@@ -160,7 +174,9 @@ export function WorkspaceShell({
         </span>
         <div>
           <strong>{context.user.name}</strong>
-          <small>Dispatch workspace</small>
+          <small>
+            {driverOnly ? "Assigned loads only" : "Dispatch workspace"}
+          </small>
         </div>
       </div>
     </>
@@ -202,20 +218,22 @@ export function WorkspaceShell({
         >
           <TruckIcon size={23} aria-hidden="true" />
         </button>
-        <button
-          className={section === "carriers" ? "active" : ""}
-          aria-label="Carrier directory"
-          disabled={busy}
-          aria-current={section === "carriers" ? "page" : undefined}
-          onClick={() => navigate(() => onSection("carriers"))}
-        >
-          <BuildingsIcon size={23} aria-hidden="true" />
-        </button>
+        {!driverOnly && (
+          <button
+            className={section === "carriers" ? "active" : ""}
+            aria-label="Carrier directory"
+            disabled={busy}
+            aria-current={section === "carriers" ? "page" : undefined}
+            onClick={() => navigate(() => onSection("carriers"))}
+          >
+            <BuildingsIcon size={23} aria-hidden="true" />
+          </button>
+        )}
         <div className="railSpacer" />
         <a
-          href="/demo.html"
-          aria-label="Open original demo"
-          title="Original demo"
+          href="/demo"
+          aria-label="Open interactive demo"
+          title="Interactive demo"
         >
           <ArrowSquareOutIcon size={21} aria-hidden="true" />
         </a>

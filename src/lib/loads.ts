@@ -362,7 +362,7 @@ export async function mutate(
       await requireAgreement(c, load.carrier_id);
       if (!data.driverId) throw new HttpError(400, "DRIVER_REQUIRED");
       const driver = await c.query(
-        "SELECT 1 FROM drivers WHERE id=$1 AND carrier_id=$2",
+        "SELECT 1 FROM drivers WHERE id=$1 AND carrier_id=$2 AND onboarding_status='ready'",
         [data.driverId, load.carrier_id],
       );
       if (!driver.rowCount) throw new HttpError(422, "DRIVER_CARRIER_MISMATCH");

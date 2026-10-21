@@ -1,0 +1,21 @@
+# 0006 — Guided carrier and driver onboarding
+
+Status: accepted, 2026-10-21.
+
+Use invitation-led activation rather than public carrier/driver self-registration. A dispatcher with an existing membership may add carriers only inside that membership's organization. The new carrier grants access only to its creator. Carrier-manager memberships cannot create other carriers, and drivers cannot manage onboarding. These rules are checked server-side independently of UI controls.
+
+Carrier setup has three steps: company contact, signed dispatch-agreement review, and team invitations. Save the company before proceeding and persist the current step. Optional USDOT/phone fields stay behind disclosure. USDOT entry is a reference, not an FMCSA lookup or verification. Agreement dates are inclusive UTC dates; only a dispatcher can attest they reviewed an externally stored signed agreement. The server records verifier/time and continues to require a current agreement for booking/assignment. Setup status and identity activation never replace that authority check. Agreements remain independent of team invitations and shipment milestones.
+
+An authorized dispatcher can invite the carrier contact as carrier manager. Managers and dispatchers can invite drivers only for their own carrier. New driver records are pending and excluded from both assignment options and server-side assignment until acceptance. Existing driver records default to ready in migration004 for compatibility. Ready means the account onboarding finished; it is not a regulatory qualification or license check.
+
+The browser creates a cryptographically random 32-byte token and holds it across uncertain request retries. Store only SHA256 token hashes and request hashes server-side, with actor-scoped UUID idempotency keys. Private URLs use `/join#token`; tokens are sent in POST bodies for inspection/acceptance, never in API paths or server-visible URL query strings. Tokens expire after7 days and are single-use. Reissuing revokes earlier pending links; changing the carrier contact revokes unused manager links for the previous address. Links are copied for private out-of-band sharing, with no automatic email/SMS delivery or claim of verified email ownership.
+
+Join uses the carrier/role/email/driver stored with the invitation; callers cannot choose their own grants. New users set their own password, hashed asynchronously with the same scrypt format as existing accounts. Existing users must sign in as the exact invited account; acceptance never resets passwords or silently changes an existing carrier role. Lock the carrier before the invite consistently with reissue operations, then serialize account creation by email. Membership, driver activation, invite consumption, session creation and append-only audit/event/outbox writes commit atomically. A lost acceptance response can be recovered by normal sign-in; used tokens cannot grant a fresh unauthenticated session.
+
+Onboarding events have their own append-only carrier-bound table. Expand the outbox with an optional onboarding-event FK and enforce exactly one event source per row. Existing load-event inserts remain valid. No outbox worker or external delivery is introduced.
+
+Drivers land on simple assigned-load cards, with management navigation, board/list switching and list rate columns omitted. Their server scope remains assigned loads only. Load details refresh assignment options from current context, so a newly joined driver can be selected without signing out.
+
+Migration004 is additive, including back-compatible defaults for legacy drivers. Apply it before this app starts; Vercel's existing Production build hook now includes it. Preserve profiles, invitations, users and event history on rollback. Once pending driver records exist, do not roll back to assignment code that ignores `onboarding_status`: retain the ready-only predicates in the old API/context query or deploy a forward fix. Invitation flows stop when rolling back their UI/API. No destructive down migration is provided.
+
+Deferred: open registration/new organization bootstrap, automated invite delivery, independent email verification, identity recovery/MFA, membership removal, full document storage/scanning and regulator/provider verification. None are implied by setup completion.

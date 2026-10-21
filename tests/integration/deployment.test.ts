@@ -59,7 +59,7 @@ test("Production preparation migrates an empty database, repeats safely and neve
       (
         await db.query("SELECT version FROM schema_migrations ORDER BY version")
       ).rows.map((r) => r.version),
-      ["001", "002", "003"],
+      ["001", "002", "003", "004"],
     );
     assert.equal((await db.query("SELECT 1 FROM login_attempts")).rowCount, 0);
     assert.equal((await db.query("SELECT 1 FROM check_ins")).rowCount, 0);

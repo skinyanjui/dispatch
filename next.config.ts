@@ -3,6 +3,9 @@ const config: NextConfig = {
   experimental: { cpus: 2 },
   poweredByHeader: false,
   devIndicators: false,
+  async redirects() {
+    return [{ source: "/demo.html", destination: "/demo", permanent: false }];
+  },
   async headers() {
     return [
       {

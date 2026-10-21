@@ -3,6 +3,17 @@ import { z } from "zod";
 import { pool } from "@/lib/db";
 import { session, sameOrigin, login, HttpError, digest } from "@/lib/auth";
 import {
+  createCarrier,
+  carrierSetup,
+  saveCompany,
+  saveAgreement,
+  completeSetup,
+  inviteManager,
+  inviteDriver,
+  inspectInvite,
+  acceptInvite,
+} from "@/lib/onboarding";
+import {
   createLoad,
   listLoads,
   detail,
@@ -11,6 +22,18 @@ import {
   auditDenied,
 } from "@/lib/loads";
 export const runtime = "nodejs";
+function withSession(res: NextResponse, token: string) {
+  res.cookies.set("relay_session", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure:
+      process.env.COOKIE_SECURE !== "false" &&
+      process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 43200,
+  });
+  return res;
+}
 async function readJson(req: NextRequest): Promise<unknown> {
   if (
     !req.headers
@@ -53,16 +76,31 @@ async function handle(req: NextRequest) {
         .parse(await readJson(req));
       const token = await login(input.email, input.password);
       const res = NextResponse.json({ ok: true });
-      res.cookies.set("relay_session", token, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure:
-          process.env.COOKIE_SECURE !== "false" &&
-          process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 43200,
-      });
-      return res;
+      return withSession(res, token);
+    }
+    if (
+      path.length === 3 &&
+      path[0] === "onboarding" &&
+      path[1] === "invitations" &&
+      req.method === "POST"
+    ) {
+      let current;
+      try {
+        current = await session(req);
+      } catch (e) {
+        if (!(e instanceof HttpError && e.status === 401)) throw e;
+      }
+      if (path[2] === "inspect")
+        return NextResponse.json(
+          await inspectInvite(await readJson(req), current),
+        );
+      if (path[2] === "accept") {
+        const accepted = await acceptInvite(await readJson(req), current);
+        return withSession(
+          NextResponse.json({ ok: true, role: accepted.role }),
+          accepted.sessionToken,
+        );
+      }
     }
     const user = await session(req);
     actor = user.id;
@@ -82,14 +120,66 @@ async function handle(req: NextRequest) {
         [user.id],
       );
       const drivers = await pool.query(
-        "SELECT d.* FROM drivers d JOIN memberships m ON m.carrier_id=d.carrier_id WHERE m.user_id=$1 AND m.role<>'driver'",
+        "SELECT d.* FROM drivers d JOIN memberships m ON m.carrier_id=d.carrier_id WHERE m.user_id=$1 AND m.role<>'driver' AND d.onboarding_status='ready'",
+        [user.id],
+      );
+      const organizations = await pool.query(
+        "SELECT DISTINCT o.id,o.name FROM organizations o JOIN carriers c ON c.organization_id=o.id JOIN memberships m ON m.carrier_id=c.id WHERE m.user_id=$1 AND m.role='dispatcher'",
         [user.id],
       );
       return NextResponse.json({
         user,
         carriers: carriers.rows,
         drivers: drivers.rows,
+        organizations: organizations.rows,
       });
+    }
+    if (path[0] === "onboarding" && path[1] === "carriers") {
+      if (path.length === 2 && req.method === "POST")
+        return NextResponse.json(
+          await createCarrier(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const id = z.uuid().parse(path[2]);
+      if (path.length === 3 && req.method === "GET")
+        return NextResponse.json(await carrierSetup(user.id, id));
+      if (path.length === 4 && req.method === "POST") {
+        if (path[3] === "company")
+          return NextResponse.json(
+            await saveCompany(user.id, id, await readJson(req)),
+          );
+        if (path[3] === "agreement")
+          return NextResponse.json(
+            await saveAgreement(user.id, id, await readJson(req)),
+          );
+        if (path[3] === "complete")
+          return NextResponse.json(await completeSetup(user.id, id));
+        if (path[3] === "manager-invite")
+          return NextResponse.json(
+            await inviteManager(user.id, id, await readJson(req)),
+            { status: 201 },
+          );
+        if (path[3] === "drivers")
+          return NextResponse.json(
+            await inviteDriver(user.id, id, await readJson(req)),
+            { status: 201 },
+          );
+      }
+      if (
+        path.length === 6 &&
+        path[3] === "drivers" &&
+        path[5] === "invite" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await inviteDriver(
+            user.id,
+            id,
+            await readJson(req),
+            z.uuid().parse(path[4]),
+          ),
+          { status: 201 },
+        );
     }
     if (path[0] === "loads") {
       if (path.length === 1 && req.method === "GET")
