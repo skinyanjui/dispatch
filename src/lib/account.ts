@@ -577,7 +577,7 @@ export async function removeTeamMember(
     }
     if (target.driver_id) {
       const active = await c.query(
-        "SELECT 1 FROM load_assignments a JOIN loads l ON l.id=a.load_id WHERE a.driver_id=$1 AND l.stage<>'delivered' LIMIT 1",
+        "SELECT 1 FROM load_assignments a JOIN loads l ON l.id=a.load_id WHERE a.driver_id=$1 AND l.stage<>'delivered' AND l.cancelled_at IS NULL LIMIT 1",
         [target.driver_id],
       );
       if (active.rowCount) throw new HttpError(422, "DRIVER_HAS_ACTIVE_LOADS");

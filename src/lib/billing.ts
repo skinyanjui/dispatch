@@ -462,7 +462,7 @@ export async function billingOverview(user: string, params: URLSearchParams) {
           FROM dispatch_invoice_lines dl JOIN dispatch_invoices i ON i.id=dl.invoice_id
           WHERE dl.load_id=l.id AND dl.active) invoice
       FROM loads l LEFT JOIN carrier_billing_packets p ON p.load_id=l.id
-      WHERE l.carrier_id=$1 ORDER BY l.created_at DESC,l.id LIMIT 100`,
+      WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL ORDER BY l.created_at DESC,l.id LIMIT 100`,
       [carrierId],
     );
     const ready: Record<string, boolean> = {};
