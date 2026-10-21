@@ -112,3 +112,43 @@ test("driver demo uses a focused mobile view and the legacy prototype stays acce
   await page.goto("/legacy-demo.html");
   await expect(page.locator("#loadTable")).toBeAttached();
 });
+
+test("demo prospects: fictional sample board, add and move in the browser only, hidden from drivers", async ({
+  page,
+}) => {
+  await page.goto("/demo");
+  await page
+    .locator(".sidebarDock")
+    .getByRole("button", { name: /^Prospects/ })
+    .first()
+    .click();
+  const board = page.getByRole("region", { name: "Prospect board" });
+  await expect(
+    board.getByRole("button", { name: /Cedar Valley Freight/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Add prospect" }).click();
+  const sheet = page.getByRole("dialog", { name: "Add prospect" });
+  await sheet.getByLabel("Company").fill("Demo Added Trucking");
+  await sheet
+    .getByRole("form", { name: "Add prospect" })
+    .getByRole("button", { name: "Add prospect" })
+    .click();
+  const card = board
+    .getByRole("region", { name: "New prospects" })
+    .getByRole("button", { name: /Demo Added Trucking/ });
+  await expect(card).toBeVisible();
+  await card.click();
+  const detail = page.getByRole("dialog", { name: "Prospect" });
+  await detail.getByLabel("Stage").selectOption("contacted");
+  await expect(detail.getByText(/In Contacted since/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    board
+      .getByRole("region", { name: "Contacted prospects" })
+      .getByRole("button", { name: /Demo Added Trucking/ }),
+  ).toBeVisible();
+  await page.getByLabel("Demo role").selectOption("driver");
+  await expect(
+    page.getByRole("button", { name: "Prospects", exact: true }),
+  ).toHaveCount(0);
+});

@@ -36,6 +36,7 @@ import { BillingWorkspace } from "@/components/billing-workspace";
 import { NotificationCenter } from "@/components/notification-center";
 import { AccountSettings } from "@/components/account-settings";
 import { ContactsDirectory } from "@/components/contacts-directory";
+import { Prospects } from "@/components/prospects";
 import { Inbox, type Compose } from "@/components/inbox";
 import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
@@ -886,6 +887,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               setCompose({ to: [entry] });
               setSection("inbox");
             }}
+          />
+        ) : section === "prospects" ? (
+          <Prospects
+            offline={offline}
+            onAuthError={handleError}
+            onOpenCarriers={() => setSection("carriers")}
           />
         ) : section === "reports" ? (
           <Reports

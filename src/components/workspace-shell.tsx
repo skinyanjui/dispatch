@@ -18,6 +18,7 @@ import {
   ListIcon,
   CaretUpDownIcon,
   AddressBookIcon,
+  HandshakeIcon,
   TrayIcon,
   ChartBarIcon,
 } from "@phosphor-icons/react";
@@ -32,6 +33,7 @@ export type WorkspaceSection =
   | "account"
   | "organization"
   | "contacts"
+  | "prospects"
   | "inbox"
   | "reports";
 export const sectionTitles: Record<
@@ -45,6 +47,7 @@ export const sectionTitles: Record<
   account: "Account",
   organization: "Organization",
   contacts: "Contacts",
+  prospects: "Prospects",
   inbox: "Inbox",
   reports: "Reports",
 };
@@ -146,6 +149,9 @@ export function WorkspaceShell({
     context.carriers.length > 0 &&
     context.carriers.every((c) => c.role === "driver");
   const isAdmin = (context.organizations || []).some((o) => o.role);
+  // Prospects are the dispatch company's own sales records (ADR 0030).
+  const orgStaff =
+    isAdmin || context.carriers.some((c) => c.role === "dispatcher");
   const initials = context.user.name
     .split(" ")
     .map((s) => s[0])
@@ -166,6 +172,12 @@ export function WorkspaceShell({
       label: "Carriers",
       Icon: BuildingsIcon,
       show: !driverOnly,
+    },
+    {
+      key: "prospects",
+      label: "Prospects",
+      Icon: HandshakeIcon,
+      show: !driverOnly && orgStaff,
     },
     { key: "billing", label: "Billing", Icon: ReceiptIcon, show: !driverOnly },
     { key: "reports", label: "Reports", Icon: ChartBarIcon, show: !driverOnly },

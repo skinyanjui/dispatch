@@ -490,6 +490,7 @@ for (const [label, size] of [
       "Inbox",
       "Contacts",
       "Carriers",
+      "Prospects",
       "Billing",
       "Reports",
     ])

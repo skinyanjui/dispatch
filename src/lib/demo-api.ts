@@ -8,6 +8,11 @@ import type {
 import { feeMinor } from "./entry";
 import type { ContactKind, DirectoryEntry } from "./contact-types";
 import {
+  prospectsRequest,
+  seedProspects,
+  type DemoProspects,
+} from "./demo-prospects";
+import {
   stopTimeError,
   type StopEvent,
   type StopEventKind,
@@ -93,6 +98,7 @@ type State = {
   threads: DemoThread[];
   savedReplies: { id: string; title: string; body: string; shared: boolean }[];
   contacts: DirectoryEntry[];
+  prospects?: DemoProspects;
   favorites: string[];
   notifications: NotificationLogEntry[];
   preferences: Record<OptionalKind, boolean>;
@@ -295,6 +301,7 @@ function fixtures(): State {
         sms_ok: false,
       },
     ],
+    prospects: seedProspects(),
     notifications: [],
     preferences: Object.fromEntries(
       optionalKinds.map((k) => [k, true]),
@@ -1150,6 +1157,40 @@ export function createDemoApi() {
     if (p[0] === "documents") return documentRequest(p, body);
     if (p[0] === "extractions" && body) return extractionRequest(p);
     if (p[0] === "contacts") return contactsRequest(p, data, url);
+    if (p[0] === "prospects")
+      return prospectsRequest(
+        (state.prospects ||= seedProspects()),
+        {
+          isStaff: state.viewer.role === "dispatcher",
+          fail,
+          addCarrier: (prospect) => {
+            const id = crypto.randomUUID();
+            state.carriers.push({
+              carrier: {
+                id,
+                name: prospect.company,
+                organization_id: org,
+                role: "dispatcher",
+              },
+              profile: {
+                contact_name: prospect.contact_name,
+                contact_email: prospect.email,
+                phone: prospect.phone,
+                usdot: prospect.usdot,
+                step: "agreement",
+                version: 1,
+              },
+              agreement: null,
+              drivers: [],
+              can_verify: true,
+            });
+            return id;
+          },
+        },
+        p,
+        data,
+        url,
+      );
     if (
       p[0] === "threads" ||
       p[0] === "messages" ||

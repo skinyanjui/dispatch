@@ -1026,3 +1026,53 @@ select {
     color: #e0b34a;
   }
 }
+
+/* Prospects (ADR 0030): six stages, so the board scrolls sideways before it
+   squeezes cards below a readable width. */
+.appShell .prospectBoard {
+  grid-template-columns: repeat(6, minmax(210px, 1fr));
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  min-height: 0;
+}
+.appShell .prospectBoard .lane {
+  min-height: 160px;
+  scroll-snap-align: start;
+}
+.appShell .prospectCard {
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+.appShell .prospectCard strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appShell .prospectMeta {
+  align-self: end;
+  margin: 0 0 var(--space-2);
+}
+.appShell .prospectTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.appShell .prospectTimeline li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.appShell .prospectTimeline small {
+  color: var(--muted);
+}
+.appShell .prospectFooter {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
