@@ -29,6 +29,15 @@ import {
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
 import {
+  billingOverview,
+  changeInvoice,
+  createInvoice,
+  recordCarrierReceipt,
+  recordInvoicePayment,
+  savePacket,
+  submitPacket,
+} from "@/lib/billing";
+import {
   listExceptions,
   openException,
   updateException,
@@ -262,6 +271,27 @@ async function handle(req: NextRequest) {
       return NextResponse.json(
         await carrierDocuments(user.id, z.uuid().parse(path[1])),
       );
+    if (path.length === 1 && path[0] === "billing" && req.method === "GET")
+      return NextResponse.json(
+        await billingOverview(user.id, req.nextUrl.searchParams),
+      );
+    if (path[0] === "dispatch-invoices" && req.method === "POST") {
+      if (path.length === 1)
+        return NextResponse.json(
+          await createInvoice(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const invoiceId = z.uuid().parse(path[1]);
+      if (path.length === 2)
+        return NextResponse.json(
+          await changeInvoice(user.id, invoiceId, await readJson(req)),
+        );
+      if (path.length === 3 && path[2] === "payments")
+        return NextResponse.json(
+          await recordInvoicePayment(user.id, invoiceId, await readJson(req)),
+          { status: 201 },
+        );
+    }
     if (path[0] === "exceptions") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(
@@ -293,6 +323,21 @@ async function handle(req: NextRequest) {
       const id = z.uuid().parse(path[1]);
       if (path.length === 2 && req.method === "GET")
         return NextResponse.json(await detail(user.id, id));
+      if (path[2] === "billing-packet" && req.method === "POST") {
+        if (path.length === 3)
+          return NextResponse.json(
+            await savePacket(user.id, id, await readJson(req)),
+          );
+        if (path.length === 4 && path[3] === "submit")
+          return NextResponse.json(
+            await submitPacket(user.id, id, await readJson(req)),
+          );
+        if (path.length === 4 && path[3] === "receipts")
+          return NextResponse.json(
+            await recordCarrierReceipt(user.id, id, await readJson(req)),
+            { status: 201 },
+          );
+      }
       if (
         path.length === 3 &&
         path[2] === "exceptions" &&

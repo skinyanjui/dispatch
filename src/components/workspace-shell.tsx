@@ -15,16 +15,18 @@ import {
   NavigationArrowIcon,
   CheckCircleIcon,
   WarningIcon,
+  ReceiptIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
-export type WorkspaceSection = "loads" | "carriers" | "exceptions";
+export type WorkspaceSection = "loads" | "carriers" | "exceptions" | "billing";
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
 > = {
   carriers: "Carriers",
   exceptions: "Exceptions",
+  billing: "Billing",
 };
 export function Brand() {
   return (
@@ -153,6 +155,17 @@ export function WorkspaceShell({
           <WarningIcon size={17} aria-hidden="true" />
           Exceptions
         </button>
+        {!driverOnly && (
+          <button
+            className={section === "billing" ? "active" : ""}
+            disabled={busy}
+            aria-current={section === "billing" ? "page" : undefined}
+            onClick={() => navigate(() => onSection("billing"))}
+          >
+            <ReceiptIcon size={17} aria-hidden="true" />
+            Billing
+          </button>
+        )}
       </nav>
       {!driverOnly && (
         <nav className="carrierNav" aria-label="Carrier scope">
@@ -255,6 +268,17 @@ export function WorkspaceShell({
         >
           <WarningIcon size={23} aria-hidden="true" />
         </button>
+        {!driverOnly && (
+          <button
+            className={section === "billing" ? "active" : ""}
+            aria-label="Billing and payments"
+            disabled={busy}
+            aria-current={section === "billing" ? "page" : undefined}
+            onClick={() => navigate(() => onSection("billing"))}
+          >
+            <ReceiptIcon size={23} aria-hidden="true" />
+          </button>
+        )}
         <div className="railSpacer" />
         <a
           href="/demo"

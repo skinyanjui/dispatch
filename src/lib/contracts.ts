@@ -104,3 +104,64 @@ export type CarrierDocuments = {
   } | null;
   slots: DocumentSlot[];
 };
+export type PaymentState = "unpaid" | "partial" | "paid";
+export type BillingPacket = {
+  bill_to: string;
+  carrier_invoice_number: string;
+  amount_minor: string;
+  status: "draft" | "submitted";
+  submitted_at: string | null;
+  version: number;
+  paid_minor: string;
+  payment_state: PaymentState;
+  receipts: {
+    id: string;
+    amount_minor: string;
+    received_on: string;
+    reference: string;
+  }[];
+};
+export type DispatchInvoice = {
+  id: string;
+  number: string | null;
+  status: "draft" | "issued" | "void";
+  fee_bps: number;
+  total_minor: string;
+  due_on: string;
+  issued_at: string | null;
+  void_reason: string | null;
+  version: number;
+  paid_minor: string;
+  payment_state: PaymentState | null;
+  lines: {
+    load_id: string;
+    reference: string;
+    load_amount_minor: string;
+    fee_minor: string;
+  }[];
+  payments: {
+    id: string;
+    amount_minor: string;
+    received_on: string;
+    method: string;
+    reference: string;
+  }[];
+};
+export type BillingOverview = {
+  carrier_id: string;
+  can_invoice: boolean;
+  loads: {
+    id: string;
+    reference: string;
+    stage: Stage;
+    amount_minor: string;
+    documents_ready: boolean;
+    packet: BillingPacket | null;
+    invoice: {
+      invoice_id: string;
+      number: string | null;
+      status: string;
+    } | null;
+  }[];
+  invoices: DispatchInvoice[];
+};

@@ -1,4 +1,11 @@
-import type { CarrierSetup, Load, Context } from "./contracts";
+import type {
+  BillingPacket,
+  CarrierSetup,
+  Context,
+  DispatchInvoice,
+  Load,
+} from "./contracts";
+import { feeMinor } from "./entry";
 import {
   carrierDocumentTypes,
   cleanFilename,
@@ -37,6 +44,8 @@ type DemoDocument = DocumentVersion & {
   type: DocumentType;
 };
 type State = {
+  packets: Record<string, BillingPacket>;
+  invoices: (DispatchInvoice & { carrier_id: string })[];
   exceptions: LoadException[];
   documents: DemoDocument[];
   carriers: CarrierSetup[];
@@ -192,6 +201,8 @@ function fixtures(): State {
     },
   ];
   return {
+    packets: {},
+    invoices: [],
     exceptions,
     documents,
     carriers,
@@ -460,6 +471,192 @@ export function createDemoApi() {
     }
     return fail("NOT_FOUND", 404);
   };
+  const paymentState = (total: string, paid: string) =>
+    BigInt(paid) >= BigInt(total)
+      ? ("paid" as const)
+      : BigInt(paid) === 0n
+        ? ("unpaid" as const)
+        : ("partial" as const);
+  const sumMinor = (values: { amount_minor: string }[]) =>
+    values.reduce((t, v) => t + BigInt(v.amount_minor), 0n).toString();
+  const billingRequest = (
+    path: string[],
+    body: Record<string, unknown> | undefined,
+    url: URL,
+  ) => {
+    if (path[0] === "billing") {
+      const carrierId = url.searchParams.get("carrier_id") || "";
+      writable(carrierId);
+      return {
+        carrier_id: carrierId,
+        can_invoice: state.viewer.role === "dispatcher",
+        loads: state.loads
+          .filter((l) => l.carrier_id === carrierId)
+          .map((l) => {
+            const docs = withDocuments(l).documents || [];
+            const line = state.invoices.find(
+              (i) =>
+                i.status !== "void" && i.lines.some((x) => x.load_id === l.id),
+            );
+            return {
+              id: l.id,
+              reference: l.reference,
+              stage: l.stage,
+              amount_minor: l.amount_minor,
+              documents_ready: docs.every((d) => d.status === "accepted"),
+              packet: state.packets[l.id] || null,
+              invoice: line
+                ? {
+                    invoice_id: line.id,
+                    number: line.number,
+                    status: line.status,
+                  }
+                : null,
+            };
+          }),
+        invoices: state.invoices.filter((i) => i.carrier_id === carrierId),
+      };
+    }
+    if (path[0] === "dispatch-invoices") {
+      if (state.viewer.role !== "dispatcher") fail("DISPATCHER_REQUIRED", 403);
+      if (path.length === 1) {
+        const ids = body!.load_ids as string[];
+        const loads = state.loads.filter((l) => ids.includes(l.id));
+        if (loads.some((l) => l.stage !== "delivered"))
+          fail("LOAD_NOT_DELIVERED");
+        const bps = Number(body!.fee_bps);
+        const lines = loads.map((l) => ({
+          load_id: l.id,
+          reference: l.reference,
+          load_amount_minor: l.amount_minor,
+          fee_minor: feeMinor(l.amount_minor, bps),
+        }));
+        const invoice = {
+          id: crypto.randomUUID(),
+          carrier_id: String(body!.carrier_id),
+          number: null,
+          status: "draft" as const,
+          fee_bps: bps,
+          total_minor: lines
+            .reduce((t, l) => t + BigInt(l.fee_minor), 0n)
+            .toString(),
+          due_on: String(body!.due_on),
+          issued_at: null,
+          void_reason: null,
+          version: 1,
+          paid_minor: "0",
+          payment_state: null,
+          lines,
+          payments: [],
+        };
+        state.invoices.unshift(invoice);
+        return { id: invoice.id, version: 1 };
+      }
+      const invoice =
+        state.invoices.find((i) => i.id === path[1]) || fail("NOT_FOUND", 404);
+      if (path[2] === "payments") {
+        if (invoice.status !== "issued") fail("INVOICE_NOT_ISSUED");
+        const amount = String(body!.amount_minor);
+        if (
+          BigInt(invoice.paid_minor) + BigInt(amount) >
+          BigInt(invoice.total_minor)
+        )
+          fail("PAYMENT_EXCEEDS_BALANCE");
+        invoice.payments.push({
+          id: crypto.randomUUID(),
+          amount_minor: amount,
+          received_on: String(body!.received_on),
+          method: String(body!.method),
+          reference: String(body!.reference || ""),
+        });
+        invoice.paid_minor = sumMinor(invoice.payments);
+        invoice.payment_state = paymentState(
+          invoice.total_minor,
+          invoice.paid_minor,
+        );
+        return { id: invoice.payments.at(-1)!.id };
+      }
+      if (invoice.version !== body!.version) fail("VERSION_CONFLICT", 409);
+      if (body!.action === "issue") {
+        Object.assign(invoice, {
+          status: "issued",
+          number: "DEMO-" + (1000 + state.invoices.length),
+          issued_at: now(),
+          payment_state: paymentState(invoice.total_minor, "0"),
+        });
+      } else {
+        if (invoice.payments.length) fail("INVOICE_HAS_PAYMENTS");
+        Object.assign(invoice, {
+          status: "void",
+          void_reason: String(body!.reason),
+          payment_state: null,
+        });
+      }
+      invoice.version++;
+      return {
+        id: invoice.id,
+        version: invoice.version,
+        number: invoice.number,
+      };
+    }
+    return fail("NOT_FOUND", 404);
+  };
+  const packetRequest = (
+    l: Load,
+    path: string[],
+    body: Record<string, unknown>,
+  ) => {
+    if (state.viewer.role === "driver") fail("NOT_FOUND", 404);
+    const packet = state.packets[l.id];
+    if (path.length === 3) {
+      if ((packet?.version ?? 0) !== body.version)
+        fail("VERSION_CONFLICT", 409);
+      if (packet?.status === "submitted") fail("PACKET_SUBMITTED");
+      state.packets[l.id] = {
+        bill_to: String(body.bill_to),
+        carrier_invoice_number: String(body.carrier_invoice_number),
+        amount_minor: String(body.amount_minor),
+        status: "draft",
+        submitted_at: null,
+        version: (packet?.version ?? 0) + 1,
+        paid_minor: "0",
+        payment_state: "unpaid",
+        receipts: [],
+      };
+      event(l, "billing.packet_saved");
+      return { load_id: l.id, version: state.packets[l.id].version };
+    }
+    if (!packet) return fail("PACKET_REQUIRED");
+    if (path[3] === "submit") {
+      if (packet.version !== body.version) fail("VERSION_CONFLICT", 409);
+      if (l.stage !== "delivered") fail("LOAD_NOT_DELIVERED");
+      if (
+        (withDocuments(l).documents || []).some((d) => d.status !== "accepted")
+      )
+        fail("DOCUMENTS_NOT_READY");
+      Object.assign(packet, { status: "submitted", submitted_at: now() });
+      packet.version++;
+      event(l, "billing.packet_submitted");
+      return { load_id: l.id, version: packet.version };
+    }
+    if (packet.status !== "submitted") fail("PACKET_NOT_SUBMITTED");
+    const amount = String(body.amount_minor);
+    if (
+      BigInt(packet.paid_minor) + BigInt(amount) >
+      BigInt(packet.amount_minor)
+    )
+      fail("PAYMENT_EXCEEDS_BALANCE");
+    packet.receipts.push({
+      id: crypto.randomUUID(),
+      amount_minor: amount,
+      received_on: String(body.received_on),
+      reference: String(body.reference || ""),
+    });
+    packet.paid_minor = sumMinor(packet.receipts);
+    packet.payment_state = paymentState(packet.amount_minor, packet.paid_minor);
+    event(l, "billing.carrier_receipt_recorded");
+    return { id: packet.receipts.at(-1)!.id };
+  };
   const implementation = async (
     path: string,
     body?: unknown,
@@ -470,6 +667,8 @@ export function createDemoApi() {
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
     if (p[0] === "exceptions") return exceptionRequest(p, data, url);
+    if (p[0] === "billing" || p[0] === "dispatch-invoices")
+      return billingRequest(p, data, url);
     if (p[0] === "carriers" && p[2] === "documents" && !body) {
       const c = writable(p[1]);
       const agreementFile = state.documents
@@ -559,6 +758,7 @@ export function createDemoApi() {
       }
       const l = visible.find((v) => v.id === p[1]) || fail("NOT_FOUND", 404);
       if (!body) return withDocuments(l);
+      if (p[2] === "billing-packet") return packetRequest(l, p, data);
       if (p[2] === "exceptions") {
         if (state.viewer.role === "driver" && (data.owner_id || data.due_at))
           fail("ROLE_NOT_PERMITTED", 403);

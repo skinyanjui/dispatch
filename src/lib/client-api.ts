@@ -52,6 +52,19 @@ const messages: Record<string, string> = {
   INVALID_TRANSITION:
     "That change is not allowed from the current status. Refresh and retry.",
   ROLE_NOT_PERMITTED: "Your role cannot make this change.",
+  PACKET_SUBMITTED: "This billing packet was already submitted.",
+  PACKET_REQUIRED: "Save the carrier billing packet first.",
+  PACKET_NOT_SUBMITTED: "Mark the packet submitted before recording receipts.",
+  LOAD_NOT_DELIVERED: "Record delivery before billing this load.",
+  DOCUMENTS_NOT_READY:
+    "Rate confirmation, BOL and POD must all be accepted before submitting.",
+  PAYMENT_EXCEEDS_BALANCE: "That amount exceeds the remaining balance.",
+  DISPATCHER_REQUIRED: "Only a dispatcher can manage Relay invoices.",
+  LOAD_ALREADY_INVOICED:
+    "A selected load is already on an active dispatch invoice.",
+  INVOICE_VOID: "This invoice was voided.",
+  INVOICE_HAS_PAYMENTS: "Invoices with recorded payments cannot be voided.",
+  INVOICE_NOT_ISSUED: "Issue the invoice before recording payments.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

@@ -33,6 +33,7 @@ import { DocumentPanel } from "@/components/document-panel";
 import { CarrierDocumentsDialog } from "@/components/carrier-documents";
 import { LoadExceptions } from "@/components/load-exceptions";
 import { ExceptionQueue } from "@/components/exception-queue";
+import { BillingWorkspace } from "@/components/billing-workspace";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
 import {
@@ -57,6 +58,9 @@ const eventLabels: Record<string, string> = {
   "exception.started": "Exception work started",
   "exception.resolved": "Exception resolved",
   "exception.reopened": "Exception reopened",
+  "billing.packet_saved": "Billing packet saved",
+  "billing.packet_submitted": "Billing packet submitted",
+  "billing.carrier_receipt_recorded": "Carrier receipt recorded",
 };
 
 function appointmentLabel(start: string, end: string, timezone: string) {
@@ -884,6 +888,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               )}
             </section>
           </>
+        ) : section === "billing" ? (
+          <BillingWorkspace
+            context={context}
+            offline={offline}
+            onAuthError={handleError}
+          />
         ) : section === "exceptions" ? (
           <ExceptionQueue
             revision={exceptionRevision}
