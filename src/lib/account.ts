@@ -393,7 +393,11 @@ export async function saveProfile(user: string, input: unknown) {
 
 // ---------- Organization setup and team ----------
 
-async function orgAdmin(c: import("pg").PoolClient, user: string, org: string) {
+export async function orgAdmin(
+  c: import("pg").PoolClient,
+  user: string,
+  org: string,
+) {
   const { rows } = await c.query(
     "SELECT role FROM organization_members WHERE organization_id=$1 AND user_id=$2",
     [org, user],

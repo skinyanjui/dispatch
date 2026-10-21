@@ -6,6 +6,8 @@ import { digest, HttpError } from "./auth";
 import { event, member, scoped } from "./loads";
 import { emit } from "./onboarding";
 import { objectStore, StorageUnavailable } from "./storage";
+import { extractionProvider } from "./ai";
+import { isExtractable } from "./extraction";
 import {
   configuredScanner,
   scanRequired,
@@ -57,7 +59,13 @@ async function versions(
   c: PoolClient,
   where: string,
   params: unknown[],
-): Promise<(DocumentVersion & { document_id: string; type: DocumentType })[]> {
+): Promise<
+  (DocumentVersion & {
+    document_id: string;
+    type: DocumentType;
+    ai_enabled: boolean;
+  })[]
+> {
   const { rows } = await c.query(
     `SELECT v.id,v.document_id,d.type,v.version,v.filename,v.content_type,v.size_bytes,
       to_char(v.expires_on,'YYYY-MM-DD') expires_on,v.uploaded_at,u.name uploader_name,
@@ -65,7 +73,14 @@ async function versions(
         FROM document_reviews r JOIN users ru ON ru.id=r.reviewer_id
         WHERE r.version_id=v.id ORDER BY r.created_at DESC,r.id DESC LIMIT 1) review,
       (SELECT json_build_object('verdict',sc.verdict,'engine',sc.engine,'scanned_at',sc.scanned_at)
-        FROM document_scans sc WHERE sc.version_id=v.id ORDER BY sc.scanned_at DESC LIMIT 1) scan
+        FROM document_scans sc WHERE sc.version_id=v.id ORDER BY sc.scanned_at DESC LIMIT 1) scan,
+      COALESCE((SELECT s.extraction_enabled FROM organization_ai_settings s
+        JOIN carriers ca ON ca.organization_id=s.organization_id WHERE ca.id=v.carrier_id),false) ai_enabled,
+      (SELECT json_build_object('id',x.id,'status',x.status,'provider',x.provider,'model',x.model,
+          'prompt_version',x.prompt_version,'fields',x.fields,'error_code',x.error_code,'created_at',x.created_at,
+          'checked_at',x.checked_at,'checked_by_name',cu.name,'checked_fields',x.checked_fields)
+        FROM document_extractions x LEFT JOIN users cu ON cu.id=x.checked_by
+        WHERE x.version_id=v.id AND x.status<>'dismissed' ORDER BY x.created_at DESC LIMIT 1) extraction
     FROM document_versions v JOIN documents d ON d.id=v.document_id JOIN users u ON u.id=v.uploaded_by
     WHERE ${where} ORDER BY v.version DESC`,
     params,
@@ -77,13 +92,18 @@ function slots(
   rows: Awaited<ReturnType<typeof versions>>,
 ): DocumentSlot[] {
   const today = todayUtc();
+  const reading = extractionProvider() !== null;
   return types.map((type) => {
     const history = rows
       .filter((r) => r.type === type)
-      .map(({ document_id, type, ...v }) => {
+      .map(({ document_id, type, ai_enabled, ...v }) => {
         void document_id;
         void type;
-        return v;
+        // Offered only where the organization opted in and a model is set up.
+        return {
+          ...v,
+          can_read_with_ai: reading && ai_enabled && isExtractable(type),
+        };
       });
     const current = history[0] ?? null;
     return {
@@ -599,7 +619,7 @@ export async function finalizeUpload(user: string, sessionId: string) {
 }
 
 /** Locate a version and confirm the caller may read it. Foreign IDs are 404. */
-async function readable(
+export async function readable(
   c: PoolClient,
   user: string,
   versionId: string,

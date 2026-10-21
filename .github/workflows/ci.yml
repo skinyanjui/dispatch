@@ -32,7 +32,7 @@ jobs:
       - run: VERCEL_ENV=production npm run build:vercel
       - run: npx playwright install --with-deps chromium
       - run: |
-          npm start > /tmp/relay-server.log 2>&1 &
+          RELAY_AI_PROVIDER=fixture npm start > /tmp/relay-server.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3000/ > /dev/null && break; sleep 1; done
           npm run test:browser
       - uses: actions/upload-artifact@v5

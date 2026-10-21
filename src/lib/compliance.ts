@@ -1,3 +1,4 @@
+import type { ExtractionView } from "./extraction";
 // Shared by server handlers, the browser UI and the browser-only demo adapter.
 export const carrierDocumentTypes = [
   "dispatch_agreement",
@@ -63,6 +64,10 @@ export type DocumentVersion = {
   review: DocumentReview | null;
   /** Null when no scanner was configured at upload time. */
   scan?: { verdict: "clean"; engine: string; scanned_at: string } | null;
+  /** The newest AI reading of this file, shown as a suggestion only. */
+  extraction?: ExtractionView | null;
+  /** True when this organization has AI reading on and the file type allows it. */
+  can_read_with_ai?: boolean;
 };
 export type DocumentSlot = {
   type: DocumentType;

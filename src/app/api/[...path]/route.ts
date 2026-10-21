@@ -28,6 +28,13 @@ import {
 } from "@/lib/loads";
 import { cancelLoad, editLoad } from "@/lib/load-changes";
 import {
+  aiStatus,
+  checkExtraction,
+  dismissExtraction,
+  requestExtraction,
+  saveAiSettings,
+} from "@/lib/extractions";
+import {
   uploadDocument,
   createUploadSession,
   finalizeUpload,
@@ -109,6 +116,8 @@ import {
   updateException,
 } from "@/lib/exceptions";
 export const runtime = "nodejs";
+// Reading a document with the model can take most of a minute.
+export const maxDuration = 60;
 function withSession(res: NextResponse, token: string) {
   res.cookies.set("relay_session", token, {
     httpOnly: true,
@@ -424,6 +433,28 @@ async function handle(req: NextRequest) {
         return NextResponse.json(
           await reviewDocument(user.id, versionId, await readJson(req)),
         );
+      if (path.length === 3 && path[2] === "read" && req.method === "POST")
+        return NextResponse.json(
+          await requestExtraction(
+            user.id,
+            versionId,
+            req.headers.get("idempotency-key") ?? undefined,
+          ),
+          { status: 201 },
+        );
+    }
+    if (
+      path[0] === "extractions" &&
+      path.length === 3 &&
+      req.method === "POST"
+    ) {
+      const id = z.uuid().parse(path[1]);
+      if (path[2] === "check")
+        return NextResponse.json(
+          await checkExtraction(user.id, id, await readJson(req)),
+        );
+      if (path[2] === "dismiss")
+        return NextResponse.json(await dismissExtraction(user.id, id));
     }
     if (
       path[0] === "carriers" &&
@@ -526,6 +557,14 @@ async function handle(req: NextRequest) {
         return NextResponse.json(
           await saveOrganization(user.id, org, await readJson(req)),
         );
+      if (path.length === 3 && path[2] === "ai") {
+        if (req.method === "GET")
+          return NextResponse.json(await aiStatus(user.id, org));
+        if (req.method === "POST")
+          return NextResponse.json(
+            await saveAiSettings(user.id, org, await readJson(req)),
+          );
+      }
     }
     if (
       path[0] === "carriers" &&
