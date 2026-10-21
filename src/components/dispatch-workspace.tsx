@@ -1275,6 +1275,14 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               slots={selected.documents || []}
               carrierId={selected.carrier_id}
               loadId={selected.id}
+              recordedLoad={{
+                amount_minor: selected.amount_minor,
+                stops: (selected.stops || []).map((stop) => ({
+                  window_start: stop.window_start,
+                  window_end: stop.window_end,
+                  timezone: stop.timezone,
+                })),
+              }}
               canUpload={(type) =>
                 !offline &&
                 (selectedRole !== "driver" || driverUploadTypes.includes(type))

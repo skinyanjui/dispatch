@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 import { test, expect, type Page } from "@playwright/test";
 import pg from "pg";
 import { hashNewPassword } from "../../src/lib/auth";
@@ -69,6 +70,85 @@ async function openLoad(page: Page, reference: string) {
   await expect(dialog).toBeVisible();
   return dialog;
 }
+
+test("AI reading: an admin opts in, a dispatcher reads a rate confirmation and checks the suggestions", async ({
+  page,
+}) => {
+  await login(page);
+  // The server under test uses the labelled sample provider (no network).
+  await page.goto("/");
+  await page.locator("button:has-text('Alex Morgan')").first().click();
+  await page
+    .locator(".accountMenu")
+    .getByRole("button", { name: "Organization", exact: true })
+    .click();
+  const card = page.getByRole("article", { name: "AI document reading" });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText(
+    "W-9s and dispatch agreements are never sent",
+  );
+  await card.getByLabel("Allow AI reading for this organization").check();
+  await card.getByLabel("Monthly limit (USD)").fill("5");
+  await card.getByRole("button", { name: "Save" }).click();
+  await expect(
+    card.getByRole("status").filter({ hasText: "is on" }),
+  ).toBeVisible();
+
+  const { carrier } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "AI");
+  const dialog = await openLoad(page, load.reference);
+  const rate = dialog.getByRole("article", { name: "Rate confirmation" });
+  await expect(rate.getByRole("button", { name: "Read with AI" })).toHaveCount(
+    0,
+  );
+  await rate.getByLabel("Upload file").setInputFiles(pdf("ratecon"));
+  await rate.getByRole("button", { name: "Upload Rate confirmation" }).click();
+  await expect(rate).toContainText("v1 · ratecon.pdf");
+  await rate.getByRole("button", { name: "Read with AI" }).click();
+  const reading = rate.getByRole("region", {
+    name: "AI reading of Rate confirmation",
+  });
+  await expect(reading).toContainText("Sample values. No AI was used.");
+  await expect(
+    reading.getByRole("list", { name: "Suggested values" }),
+  ).toContainText("$2,600.00");
+  // Compared with the load in plain code: a different rate is flagged,
+  // matching dates are confirmed, and nothing on the load changed.
+  const checks = reading.getByRole("list", {
+    name: "Compared with Relay's records",
+  });
+  await expect(checks).toContainText(
+    "The file says $2,600.00; the load's agreed rate is $2,500.00.",
+  );
+  await expect(checks).toContainText("The pickup date matches the load.");
+  await expect(dialog).toContainText("$2,500.00");
+
+  const axe = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
+  await page.addScriptTag({ path: axe });
+  const violations = await page.evaluate(async () => {
+    const result = await (
+      window as unknown as {
+        axe: {
+          run: (
+            c: Document,
+            o: object,
+          ) => Promise<{ violations: { id: string }[] }>;
+        };
+      }
+    ).axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+    });
+    return result.violations.map((v) => v.id);
+  });
+  expect(violations).toEqual([]);
+
+  await reading.getByRole("button", { name: "I checked these" }).click();
+  await expect(reading).toContainText("Checked by Alex Morgan");
+  await reading.getByRole("button", { name: "Dismiss" }).click();
+  await expect(
+    rate.getByRole("button", { name: "Read with AI" }),
+  ).toBeVisible();
+});
 
 test("documents: upload a BOL, accept it, and see versioned status on the load", async ({
   page,

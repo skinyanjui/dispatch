@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { UsersIcon } from "@phosphor-icons/react";
+import { AiSettings } from "@/components/ai-settings";
 import { StaffInvites } from "./staff-invites";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { Context } from "@/lib/contracts";
@@ -278,6 +279,7 @@ export function OrganizationSettings({
                 README). Invite teammates below.
               </small>
             </article>
+            <AiSettings organizationId={data.id} onAuthError={onAuthError} />
             <StaffInvites
               organizationId={data.id}
               isOwner={data.role === "owner"}

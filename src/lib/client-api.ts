@@ -166,6 +166,17 @@ const messages: Record<string, string> = {
     "That text is still on its way. Check again in a moment.",
   CONFIRM_UNKNOWN_REQUIRED:
     "Please confirm the earlier text didn't arrive before sending it again.",
+  AI_NOT_ENABLED:
+    "AI reading is off for this organization. An owner or admin can turn it on in Organization settings.",
+  AI_UNAVAILABLE:
+    "AI reading isn't set up on this server yet, so nothing was sent.",
+  AI_BUDGET_REACHED:
+    "This month's AI limit has been reached. An owner or admin can raise it in Organization settings.",
+  TOO_MANY_ATTEMPTS:
+    "This file couldn't be read after a few tries. Check the file, or enter the values by hand.",
+  NOT_READABLE: "This kind of paperwork isn't read by AI.",
+  ALREADY_RUNNING: "This file is already being read. Give it a moment.",
+  NOT_READY: "That reading isn't finished yet.",
   IDEMPOTENCY_CONFLICT:
     "That retry doesn't match your original request. Refresh the details and start fresh.",
   REQUEST_TOO_LARGE:

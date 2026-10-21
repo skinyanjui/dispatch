@@ -30,6 +30,7 @@ import {
   type DocumentVersion,
 } from "./compliance";
 import { suggestExceptions, type LoadException } from "./exception-rules";
+import { isExtractable, promptVersion, sampleSuggestions } from "./extraction";
 import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
@@ -374,11 +375,17 @@ export function createDemoApi() {
       const history = state.documents
         .filter((d) => d.type === type && match(d))
         .sort((a, b) => b.version - a.version);
+      // The demo always offers reading (with sample values) to dispatchers.
+      const readable =
+        state.viewer.role === "dispatcher" && isExtractable(type);
+      const current = history[0]
+        ? { ...history[0], can_read_with_ai: readable }
+        : null;
       return {
         type,
         document_id: history[0]?.document_id ?? null,
         status: documentStatus(history[0] ?? null, todayUtc()),
-        current: history[0] ?? null,
+        current,
         history: history.slice(0, 10),
       };
     });
@@ -557,6 +564,48 @@ export function createDemoApi() {
       const l = state.loads.find((v) => v.id === target.load_id);
       if (l) event(l, "document.reviewed");
       return { version_id: target.id, decision: input.decision };
+    }
+    if (path[2] === "read" && body) {
+      writable(target.carrier_id, true);
+      if (!isExtractable(target.type)) fail("NOT_READABLE");
+      // A good reading is kept; reading again would change nothing.
+      if (target.extraction) return target.extraction;
+      target.extraction = {
+        id: crypto.randomUUID(),
+        status: "succeeded",
+        provider: "fixture",
+        model: "sample",
+        prompt_version: promptVersion,
+        fields: sampleSuggestions(
+          target.type as Parameters<typeof sampleSuggestions>[0],
+        ),
+        error_code: null,
+        created_at: now(),
+        checked_at: null,
+        checked_by_name: null,
+        checked_fields: null,
+      };
+      return target.extraction;
+    }
+    return fail("NOT_FOUND", 404);
+  };
+  const extractionRequest = (path: string[]) => {
+    const doc =
+      state.documents.find((d) => d.extraction?.id === path[1]) ||
+      fail("NOT_FOUND", 404);
+    writable(doc.carrier_id, true);
+    if (path[2] === "check" && doc.extraction) {
+      doc.extraction = {
+        ...doc.extraction,
+        checked_at: now(),
+        checked_by_name: state.viewer.name,
+        checked_fields: {},
+      };
+      return doc.extraction;
+    }
+    if (path[2] === "dismiss") {
+      doc.extraction = null;
+      return { id: path[1], status: "dismissed" };
     }
     return fail("NOT_FOUND", 404);
   };
@@ -1065,6 +1114,7 @@ export function createDemoApi() {
     const data = body as Record<string, unknown>;
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
+    if (p[0] === "extractions" && body) return extractionRequest(p);
     if (p[0] === "contacts") return contactsRequest(p, data, url);
     if (
       p[0] === "threads" ||

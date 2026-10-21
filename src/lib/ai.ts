@@ -6,7 +6,7 @@ import {
   resultSchema,
   wireSchema,
   type ExtractableType,
-  type Suggestion,
+  sampleSuggestions,
   type Suggestions,
 } from "./extraction";
 
@@ -168,60 +168,6 @@ export function anthropicProvider(
  * and its values are labelled as sample data in the interface.
  */
 export function fixtureProvider(): ExtractionProvider {
-  const sample = {
-    text: (value: string): Suggestion => ({
-      value,
-      confidence: "high",
-      quote: value,
-    }),
-    date: (value: string): Suggestion => ({
-      value,
-      confidence: "high",
-      quote: value,
-    }),
-    cents: (value: number): Suggestion => ({
-      value,
-      confidence: "medium",
-      quote: `$${(value / 100).toFixed(2)}`,
-    }),
-  };
-  const samples: Record<ExtractableType, Suggestions> = {
-    insurance_auto_liability: {
-      insurer: sample.text("Sample Mutual Insurance"),
-      policy_number: sample.text("SAMPLE-AL-0001"),
-      named_insured: sample.text("Sample Carrier LLC"),
-      effective_date: sample.date("2026-01-01"),
-      expiry_date: sample.date("2027-01-01"),
-      coverage_limit_minor: sample.cents(100_000_000),
-    },
-    insurance_cargo: {
-      insurer: sample.text("Sample Mutual Insurance"),
-      policy_number: sample.text("SAMPLE-CG-0001"),
-      named_insured: sample.text("Sample Carrier LLC"),
-      effective_date: sample.date("2026-01-01"),
-      expiry_date: sample.date("2027-01-01"),
-      coverage_limit_minor: sample.cents(10_000_000),
-    },
-    rate_confirmation: {
-      reference: sample.text("SAMPLE-RC-1"),
-      broker_name: sample.text("Sample Brokerage"),
-      rate_minor: sample.cents(260_000),
-      pickup_date: sample.date("2026-11-05"),
-      delivery_date: sample.date("2026-11-06"),
-    },
-    bol: {
-      bol_number: sample.text("SAMPLE-BOL-1"),
-      ship_date: sample.date("2026-11-05"),
-      shipper_name: sample.text("Sample Shipper"),
-      consignee_name: sample.text("Sample Consignee"),
-    },
-    pod: {
-      delivered_date: sample.date("2026-11-06"),
-      receiver_name: sample.text("Sample Receiver"),
-      signed: { value: true, confidence: "high", quote: "signature" },
-      exceptions_noted: { value: null, confidence: "high", quote: "" },
-    },
-  };
   return {
     name: "fixture",
     model: "fixture",
@@ -229,7 +175,7 @@ export function fixtureProvider(): ExtractionProvider {
       if (/fail/i.test(input.filename))
         throw new ProviderError("PROVIDER_UNAVAILABLE");
       return {
-        fields: structuredClone(samples[input.type]),
+        fields: sampleSuggestions(input.type),
         model: "fixture",
         inputTokens: 0,
         outputTokens: 0,

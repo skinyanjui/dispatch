@@ -7,6 +7,8 @@ import {
 } from "@phosphor-icons/react";
 import { describe, useApi, ApiError } from "@/lib/client-api";
 import { uploadDocumentFile } from "@/lib/upload-client";
+import type { Recorded } from "@/lib/extraction";
+import { DocumentReading } from "@/components/document-reading";
 import {
   documentLabels,
   documentStatusLabels,
@@ -83,8 +85,10 @@ function Slot({
   disabled,
   onChanged,
   demo,
+  recordedLoad,
 }: {
   demo: boolean;
+  recordedLoad: Recorded["load"];
   slot: DocumentSlot;
   carrierId: string;
   loadId?: string;
@@ -129,6 +133,19 @@ function Slot({
         <VersionLine version={slot.current} downloads={downloads} />
       ) : (
         <p className="helpText">No file on record.</p>
+      )}
+      {canReview && slot.current && (
+        <DocumentReading
+          version={slot.current}
+          type={slot.type}
+          label={label}
+          recorded={{
+            expires_on: slot.current.expires_on,
+            load: recordedLoad,
+          }}
+          disabled={disabled || busy}
+          onChanged={onChanged}
+        />
       )}
       {slot.history.length > 1 && (
         <details className="docHistory">
@@ -285,8 +302,11 @@ export function DocumentPanel({
   disabled = false,
   onChanged,
   demo = false,
+  recordedLoad = null,
 }: {
   demo?: boolean;
+  /** The load's own values, which a reading is compared with. */
+  recordedLoad?: Recorded["load"];
   slots: DocumentSlot[];
   carrierId: string;
   loadId?: string;
@@ -310,6 +330,7 @@ export function DocumentPanel({
           disabled={disabled}
           onChanged={onChanged}
           demo={demo}
+          recordedLoad={recordedLoad}
         />
       ))}
     </div>

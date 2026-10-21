@@ -233,3 +233,58 @@ export type ExtractionView = {
   checked_by_name: string | null;
   checked_fields: Record<string, string | number | boolean | null> | null;
 };
+
+/**
+ * Labelled sample values for QA, the browser-only demo and tests. They are not
+ * read from any file and the interface says so.
+ */
+export function sampleSuggestions(type: ExtractableType): Suggestions {
+  const text = (value: string): Suggestion => ({
+    value,
+    confidence: "high",
+    quote: value,
+  });
+  const date = text;
+  const cents = (value: number): Suggestion => ({
+    value,
+    confidence: "medium",
+    quote: `$${(value / 100).toFixed(2)}`,
+  });
+  const none: Suggestion = { value: null, confidence: "high", quote: "" };
+  const policy = (limit: number, prefix: string): Suggestions => ({
+    insurer: text("Sample Mutual Insurance"),
+    policy_number: text(`SAMPLE-${prefix}-0001`),
+    named_insured: text("Sample Carrier LLC"),
+    effective_date: date("2026-01-01"),
+    expiry_date: date("2027-01-01"),
+    coverage_limit_minor: cents(limit),
+  });
+  switch (type) {
+    case "insurance_auto_liability":
+      return policy(100_000_000, "AL");
+    case "insurance_cargo":
+      return policy(10_000_000, "CG");
+    case "rate_confirmation":
+      return {
+        reference: text("SAMPLE-RC-1"),
+        broker_name: text("Sample Brokerage"),
+        rate_minor: cents(260_000),
+        pickup_date: date("2026-11-05"),
+        delivery_date: date("2026-11-06"),
+      };
+    case "bol":
+      return {
+        bol_number: text("SAMPLE-BOL-1"),
+        ship_date: date("2026-11-05"),
+        shipper_name: text("Sample Shipper"),
+        consignee_name: text("Sample Consignee"),
+      };
+    case "pod":
+      return {
+        delivered_date: date("2026-11-06"),
+        receiver_name: text("Sample Receiver"),
+        signed: { value: true, confidence: "high", quote: "signature" },
+        exceptions_noted: none,
+      };
+  }
+}
