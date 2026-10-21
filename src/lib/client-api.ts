@@ -32,6 +32,12 @@ const messages: Record<string, string> = {
     "Something looks a little off. Please check the highlighted details, dates and lengths, then try again.",
   TRY_AGAIN_LATER:
     "That's a lot of sign-in attempts. Take a breath and try again in a minute.",
+  OWNER_NOT_ON_TEAM: "Pick someone who works on your team as the owner.",
+  ALREADY_A_CARRIER:
+    "This prospect already became a carrier, so its stage can't be changed here.",
+  PROSPECT_LOST: "Reopen this prospect before starting carrier setup.",
+  CONTACT_NAME_AND_EMAIL_REQUIRED:
+    "Add a contact name and email first. Carrier setup needs them.",
   NOT_FOUND: "We couldn't find that, or it isn't available to your account.",
   AUTH_REQUIRED: "Please sign in to continue.",
   SESSION_EXPIRED:

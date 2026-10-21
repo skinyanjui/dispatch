@@ -89,6 +89,16 @@ import {
   updateContact,
 } from "@/lib/contacts";
 import {
+  archiveProspect,
+  convertProspect,
+  createProspect,
+  getProspect,
+  listProspects,
+  logActivity,
+  moveProspect,
+  updateProspect,
+} from "@/lib/prospects";
+import {
   inviteStaff,
   listStaffInvites,
   removeOrganizationAdmin,
@@ -698,6 +708,44 @@ async function handle(req: NextRequest) {
         if (path.length === 3 && path[2] === "archive")
           return NextResponse.json(
             await archiveContact(user.id, contactId, await readJson(req)),
+          );
+      }
+    }
+    if (path[0] === "prospects") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await listProspects(user.id, req.nextUrl.searchParams),
+        );
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await createProspect(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const prospectId = path.length >= 2 ? z.uuid().parse(path[1]) : "";
+      if (path.length === 2 && req.method === "GET")
+        return NextResponse.json(await getProspect(user.id, prospectId));
+      if (path.length >= 2 && req.method === "POST") {
+        const body = await readJson(req);
+        if (path.length === 2)
+          return NextResponse.json(
+            await updateProspect(user.id, prospectId, body),
+          );
+        if (path[2] === "stage")
+          return NextResponse.json(
+            await moveProspect(user.id, prospectId, body),
+          );
+        if (path[2] === "activities")
+          return NextResponse.json(
+            await logActivity(user.id, prospectId, body),
+            { status: 201 },
+          );
+        if (path[2] === "archive")
+          return NextResponse.json(
+            await archiveProspect(user.id, prospectId, body),
+          );
+        if (path[2] === "convert")
+          return NextResponse.json(
+            await convertProspect(user.id, prospectId, body),
           );
       }
     }
