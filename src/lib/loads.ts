@@ -779,7 +779,7 @@ export async function mutate(
           organization: r.organization_id,
           dedupe: `assignment:${id}:${data.driverId}:${load.version + 1}`,
           subject: `Load ${load.reference} assigned to you`,
-          text: `You've been assigned load ${load.reference}.\n\nPickup: ${r.pickup} — ${new Date(r.pickup_at).toLocaleString("en-US", { timeZone: r.pickup_zone, dateStyle: "medium", timeStyle: "short" })} (${r.pickup_zone})\nFinal delivery: ${r.delivery}${r.stop_count > 2 ? ` (${r.stop_count} stops in total)` : ""}\n\nOpen Relay for details and to record check-ins.`,
+          text: `Good news: load ${load.reference} has been assigned to you.\n\nPickup: ${r.pickup} — ${new Date(r.pickup_at).toLocaleString("en-US", { timeZone: r.pickup_zone, dateStyle: "medium", timeStyle: "short" })} (${r.pickup_zone})\nFinal delivery: ${r.delivery}${r.stop_count > 2 ? ` (${r.stop_count} stops in total)` : ""}\n\nOpen Relay whenever you're ready for the details and to check in along the way. Thank you!`,
         });
     } else {
       const stages = ["booked", "dispatched", "picked-up", "delivered"];

@@ -202,7 +202,7 @@ export async function editLoad(user: string, id: string, input: unknown) {
         load,
         version,
         `Load ${data.reference ?? load.reference} was updated`,
-        `Dispatch changed pickup or delivery details for load ${data.reference ?? load.reference}.${data.reason ? `\n\nReason: ${data.reason}` : ""}\n\nOpen Relay to see the current addresses and appointment times.`,
+        `Heads up: dispatch updated pickup or delivery details for load ${data.reference ?? load.reference}.${data.reason ? `\n\nReason: ${data.reason}` : ""}\n\nOpen Relay to see the latest addresses and appointment times. Thanks for staying flexible!`,
       );
     return { id, version, change_group: group };
   });
@@ -233,7 +233,7 @@ export async function cancelLoad(user: string, id: string, input: unknown) {
       load,
       version,
       `Load ${load.reference} was cancelled`,
-      `Load ${load.reference} was cancelled. Do not pick it up.\n\nReason: ${data.reason}`,
+      `Load ${load.reference} was cancelled. Please don't pick it up. Sorry for the change of plans!\n\nReason: ${data.reason}`,
     );
     return { id, version };
   });

@@ -226,8 +226,8 @@ export function ContactsDirectory({
         <div>
           <h2>Contacts</h2>
           <p>
-            Find and reach your team, drivers, carriers, brokers and shippers.
-            Calls and texts open on this device.
+            Everyone you work with, one search away. Tap call, text or email to
+            reach out from this device, or Message to keep it in Relay.
           </p>
         </div>
         {data?.can_add && (

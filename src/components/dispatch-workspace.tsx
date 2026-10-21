@@ -103,6 +103,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
     [exceptionRevision, setExceptionRevision] = useState(0),
     [unread, setUnread] = useState(0),
+    [showPassword, setShowPassword] = useState(false),
     [compose, setCompose] = useState<Compose | null>(null),
     [mfaChallenge, setMfaChallenge] = useState<string | null>(null),
     [extraStops, setExtraStops] = useState<string[]>([]),
@@ -373,7 +374,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             All in one place.
           </h1>
           <p className="loginDescription">
-            Sign in to your dispatch workspace.
+            Welcome back! Sign in to pick up where you left off.
           </p>
           {mfaChallenge ? (
             <form
@@ -529,11 +530,19 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 Password
                 <input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
                   maxLength={256}
                 />
+              </label>
+              <label className="setupCheckbox">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                />
+                <span>Show password</span>
               </label>
               <button className="primary full" disabled={busy || offline}>
                 {busy ? "Signing in…" : "Sign in"}
@@ -1374,6 +1383,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 onClick={() => {
                   setCompose({
                     to: [],
+                    suggest: selected.assignment
+                      ? {
+                          key: "driver:" + selected.assignment.driver_id,
+                          name: selected.assignment.name,
+                        }
+                      : undefined,
                     subject: `About ${selected.reference}`,
                     load: { id: selected.id, reference: selected.reference },
                   });

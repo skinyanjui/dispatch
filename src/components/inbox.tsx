@@ -14,6 +14,8 @@ import type { DirectoryEntry } from "@/lib/contact-types";
 
 export type Compose = {
   to: DirectoryEntry[];
+  /** Offer this person as the first recipient (e.g. the load's driver). */
+  suggest?: { key: string; name: string };
   subject?: string;
   load?: { id: string; reference: string };
 };
@@ -178,7 +180,7 @@ function Composer({
   disabled: boolean;
   /** Drivers can only message in Relay; email, text and logging are staff tools. */
   staff: boolean;
-  onSent: (threadId: string) => void;
+  onSent: (threadId: string, logged: boolean) => void;
   onAuthError: (e: unknown) => void;
   onChooseRecipients?: () => React.ReactNode;
   onManageReplies: () => void;
@@ -233,7 +235,16 @@ function Composer({
     try {
       const sent = await api<{ thread_id: string }>("messages", {
         idempotency_key: key.current,
-        ...(threadId ? { thread_id: threadId } : { subject: subject.trim() }),
+        ...(threadId
+          ? { thread_id: threadId }
+          : {
+              // A subject is a nicety, never a hurdle: make one when it's blank.
+              subject:
+                subject.trim() ||
+                (load ? `About ${load.reference}` : "") ||
+                body.trim().replace(/\s+/g, " ").slice(0, 60) ||
+                "New conversation",
+            }),
         ...(load ? { load_id: load.id } : {}),
         to: recipients.map((r) => r.key),
         body,
@@ -252,7 +263,7 @@ function Composer({
       setBody("");
       setOccurred("");
       setFiles([]);
-      onSent(sent.thread_id);
+      onSent(sent.thread_id, log);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) onAuthError(err);
       setError(err instanceof Error ? err.message : "SERVICE_UNAVAILABLE");
@@ -271,11 +282,10 @@ function Composer({
       {onChooseRecipients?.()}
       {!threadId && (
         <label>
-          Subject
+          Subject <small>(optional, we&apos;ll add one if you skip it)</small>
           <input
             value={subject}
             maxLength={200}
-            required
             onChange={(e) => setSubject(e.target.value)}
           />
         </label>
@@ -359,7 +369,24 @@ function Composer({
           rows={4}
           required
           maxLength={limit}
+          placeholder={
+            log
+              ? "What was said or agreed?"
+              : "Write your message. Tip: Ctrl or ⌘ + Enter sends it."
+          }
           onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if (
+              (e.ctrlKey || e.metaKey) &&
+              e.key === "Enter" &&
+              body.trim() &&
+              recipients.length &&
+              !busy
+            ) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
         />
       </label>
       {canAttach && (
@@ -675,6 +702,28 @@ export function Inbox({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadReplies();
   }, [loadReplies]);
+  // Pre-fill the recipient we already know about, so no searching is needed.
+  const suggested = newMessage?.suggest;
+  useEffect(() => {
+    if (!suggested) return;
+    let cancelled = false;
+    api<{ entries: DirectoryEntry[] }>(
+      "contacts?" + new URLSearchParams({ q: suggested.name }),
+    )
+      .then((r) => {
+        const found = r.entries.find((e) => e.key === suggested.key);
+        if (!cancelled)
+          setNewMessage((m) =>
+            m && m.suggest === suggested
+              ? { ...m, suggest: undefined, to: found ? [found] : m.to }
+              : m,
+          );
+      })
+      .catch(() => undefined); // choosing someone by hand still works
+    return () => {
+      cancelled = true;
+    };
+  }, [api, suggested]);
   // Looking up people for a new conversation.
   useEffect(() => {
     if (!newMessage) return;
@@ -748,8 +797,8 @@ export function Inbox({
     setResending(null);
     if (failure) setViewError(failure);
   }
-  const finish = async (threadId: string) => {
-    setStatus("Saved.");
+  const finish = async (threadId: string, logged = false) => {
+    setStatus(logged ? "Saved to the conversation log." : "Message sent.");
     onComposeDone();
     await load();
     await openThread(threadId);
@@ -760,10 +809,10 @@ export function Inbox({
         <div>
           <h2>Inbox</h2>
           <p>
-            Messages sent from Relay, plus calls, texts and emails you log here.
-            Relay does not read your mailbox or phone. Replies to emails and
-            texts sent from here appear automatically only when inbound delivery
-            is set up on this server; otherwise log them.
+            All your conversations in one place: messages, emails and texts you
+            send from Relay, plus any calls you jot down. Replies show up by
+            themselves when inbound delivery is set up; if not, just log them
+            here so the whole story stays together.
           </p>
         </div>
         <button
@@ -800,7 +849,7 @@ export function Inbox({
                 type="search"
                 value={q}
                 maxLength={100}
-                placeholder="Subject, person or text…"
+                placeholder="Search by subject, person or words…"
                 onChange={(e) => setQ(e.target.value)}
               />
             </label>
@@ -876,10 +925,12 @@ export function Inbox({
               <h3>
                 {q || unreadOnly || channel
                   ? "No matching conversations"
-                  : "No conversations yet"}
+                  : "Nothing here yet. Let's fix that!"}
               </h3>
               <p>
-                Start one with New message, or open Contacts and choose Message.
+                {q || unreadOnly || channel
+                  ? "Try fewer words or clear the filters."
+                  : "Tap New message to say hello, or open Contacts and choose Message next to anyone."}
               </p>
             </div>
           )}
@@ -905,7 +956,7 @@ export function Inbox({
               disabled={offline}
               staff={staff}
               onAuthError={onAuthError}
-              onSent={(id) => void finish(id)}
+              onSent={(id, logged) => void finish(id, logged)}
               onManageReplies={() => setManaging(true)}
               onChooseRecipients={() => (
                 <fieldset className="recipientPicker">
@@ -933,7 +984,7 @@ export function Inbox({
                     <input
                       type="search"
                       value={find}
-                      placeholder="Find people to add…"
+                      placeholder="Type a name to find someone…"
                       onChange={(e) => setFind(e.target.value)}
                     />
                   </label>
@@ -1062,7 +1113,7 @@ export function Inbox({
                 disabled={offline}
                 staff={staff}
                 onAuthError={onAuthError}
-                onSent={(id) => void finish(id)}
+                onSent={(id, logged) => void finish(id, logged)}
                 onManageReplies={() => setManaging(true)}
               />
             </>
@@ -1070,7 +1121,7 @@ export function Inbox({
           {!newMessage && !view && !viewError && (
             <div className="directoryEmpty">
               <TrayIcon size={36} weight="light" aria-hidden="true" />
-              <h3>Select a conversation</h3>
+              <h3>Pick a conversation, or start a new one</h3>
             </div>
           )}
         </div>

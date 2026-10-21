@@ -170,15 +170,15 @@ export function LoadChanges({
                 setError(err instanceof Error ? err.message : "INVALID");
                 return;
               }
-              void run("edit", body, "Load updated.");
+              void run("edit", body, "All saved. The load is up to date.");
             }}
           >
             <h2>Edit {load.reference}</h2>
             <p className="helpText">
-              Only changed fields are saved. Each change keeps the old value and
-              who made it.
+              Change only what you need. We&apos;ll save just those fields and
+              keep a note of what they were before and who changed them.
               {load.assignment &&
-                " The assigned driver is told about route or time changes."}
+                " Your driver will get a friendly heads-up about address or time changes."}
             </p>
             <div className="formGrid">
               <label>
@@ -290,16 +290,16 @@ export function LoadChanges({
                     new FormData(e.currentTarget).get("reason"),
                   ).trim(),
                 },
-                "Load cancelled.",
+                "Done. The load has been cancelled.",
               );
             }}
           >
             <h2>Cancel {load.reference}?</h2>
             <p className="helpText">
-              The load leaves active queues, open exceptions are closed, and the
-              assigned driver is told not to pick it up. This cannot be undone;
-              book a new load instead. Loads already picked up can&apos;t be
-              cancelled.
+              The load leaves your active queues, its open exceptions are
+              closed, and the assigned driver is told not to pick it up.
+              Cancelling can&apos;t be undone, so if plans change just book a
+              fresh load.
             </p>
             <label>
               Reason

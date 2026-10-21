@@ -343,7 +343,7 @@ export async function scheduleReminders() {
         organization: r.organization_id,
         dedupe: `appointment_reminder:${r.id}:${new Date(r.window_start).getTime()}:${tier}:${r.user_id}`,
         subject: `${r.kind === "pickup" ? "Pickup" : "Delivery"} ${r.soon ? "soon" : "coming up"}: load ${r.reference}`,
-        text: `${r.kind === "pickup" ? "Pickup" : "Delivery"} for load ${r.reference}${r.stop_count > 2 ? ` (stop ${r.sequence} of ${r.stop_count})` : ""}\n\n${r.address}\nAppointment: ${when(r.window_start)} – ${when(r.window_end)} (${r.timezone})\n\nRecord your arrival in Relay when you get there. Contact dispatch if you will be late.`,
+        text: `${r.kind === "pickup" ? "Pickup" : "Delivery"} for load ${r.reference}${r.stop_count > 2 ? ` (stop ${r.sequence} of ${r.stop_count})` : ""}\n\n${r.address}\nAppointment: ${when(r.window_start)} – ${when(r.window_end)} (${r.timezone})\n\nTap to record your arrival in Relay when you get there. If you're running late, just let dispatch know. Safe travels!`,
       });
       queued++;
     }

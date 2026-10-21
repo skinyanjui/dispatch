@@ -9,7 +9,7 @@ import { getThread, sendMessage } from "../../src/lib/messaging";
 import { createContact } from "../../src/lib/contacts";
 import { setTransport } from "../../src/lib/notifications";
 import { setSmsTransport } from "../../src/lib/sms";
-import { twilioSignature } from "../../src/lib/inbound";
+import { twilioSignature, replyAddress } from "../../src/lib/inbound";
 import {
   attachmentContent,
   cleanupAbandoned,
@@ -60,7 +60,6 @@ before(async () => {
         sms_consent_note: "Verbal OK",
       })
     ).id;
-  setTransport({ name: "test", send: async (e) => "p-" + e.id });
   setSmsTransport({
     name: "t",
     send: async () => ({ ok: true, providerId: "SM1" }),
@@ -99,15 +98,6 @@ after(async () => {
 });
 
 const emailThread = async (subject: string) => {
-  const { deliverDue } = await import("../../src/lib/notifications");
-  let replyTo = "";
-  setTransport({
-    name: "test",
-    send: async (e) => {
-      replyTo = e.replyTo!;
-      return "p-" + e.id;
-    },
-  });
   const sent = await sendMessage(t.dispatcher, {
     idempotency_key: randomUUID(),
     subject,
@@ -115,8 +105,8 @@ const emailThread = async (subject: string) => {
     channel: "email",
     body: "Please send the rate con.",
   });
-  await deliverDue(50);
-  return { thread: sent.thread_id, replyTo };
+  // The reply address is derived from the thread, so no delivery is needed.
+  return { thread: sent.thread_id, replyTo: replyAddress(sent.thread_id)! };
 };
 const emailHook = (payload: object) => {
   const raw = JSON.stringify(payload);

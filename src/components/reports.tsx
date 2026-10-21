@@ -144,9 +144,10 @@ export function Reports({
         <div>
           <h2>Reports</h2>
           <p>
-            Figures come from loads whose first pickup falls in the range (UTC
-            dates). On-time uses reported arrivals only; stops nobody reported
-            are counted separately, never assumed on time.
+            Here&apos;s how things are going. Pick a date range and we&apos;ll
+            tally loads by first pickup (UTC dates). On-time counts arrivals
+            people have reported; stops with no report are shown separately
+            instead of being guessed.
           </p>
         </div>
         <a

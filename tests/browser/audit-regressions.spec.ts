@@ -75,7 +75,7 @@ test("a failed sign out remains visible in the carrier directory", async ({
     main.getByRole("heading", { name: "Carrier accounts", exact: true }),
   ).toBeVisible();
   await expect(main.getByRole("alert")).toContainText(
-    "The workspace is unavailable. Please retry.",
+    "We couldn't reach Relay just now.",
   );
   await page.getByRole("button", { name: "Account menu" }).click();
   await expect(
@@ -276,7 +276,9 @@ test("refreshing after a lost check-in response preserves the original retry ide
   await form
     .getByRole("button", { name: "Record check-in", exact: true })
     .click();
-  await expect(details.getByRole("alert")).toContainText("unavailable");
+  await expect(details.getByRole("alert")).toContainText(
+    "couldn't reach Relay",
+  );
 
   await details
     .getByRole("button", { name: "Refresh load details", exact: true })

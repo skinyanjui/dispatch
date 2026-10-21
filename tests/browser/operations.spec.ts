@@ -286,7 +286,7 @@ test("account: enroll two-step verification and sign in with a code", async ({
     );
     await page.goto("/");
     await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
+    await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("button", { name: "Account", exact: true }).click();
@@ -312,7 +312,7 @@ test("account: enroll two-step verification and sign in with a code", async ({
     await page.getByRole("button", { name: "Sign out" }).click();
 
     await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
+    await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
     const challenge = page.getByRole("form", { name: "Two-step verification" });
     await challenge.getByLabel("Authentication code").fill("000000");
@@ -601,7 +601,9 @@ test("files over 4 MB upload directly to the bucket and retry with the same key"
     ]),
   });
   await pod.getByRole("button", { name: "Upload Proof of delivery" }).click();
-  await expect(pod.getByRole("alert")).toContainText("didn't reach storage");
+  await expect(pod.getByRole("alert")).toContainText(
+    "didn't make it to storage",
+  );
   await pod.getByRole("button", { name: "Upload Proof of delivery" }).click();
   await expect(dialog.getByRole("status").first()).toContainText(
     "Proof of delivery uploaded for review.",
@@ -650,7 +652,9 @@ test("an owner invites a dispatcher, who joins from the private link and sees on
   const joinPage = await invitee.newPage();
   await joinPage.goto(link);
   await expect(joinPage.getByText("invited you as a dispatcher")).toBeVisible();
-  await joinPage.getByLabel("Password").fill("fictional-browser-password");
+  await joinPage
+    .getByLabel("Password", { exact: true })
+    .fill("fictional-browser-password");
   await joinPage.getByRole("button", { name: "Join workspace" }).click();
   await expect(
     joinPage.getByRole("heading", { name: "Welcome aboard." }),
@@ -982,4 +986,48 @@ test("a driver has no Reports page and the API refuses them", async ({
     page.getByRole("button", { name: "Reports", exact: true }),
   ).toHaveCount(0);
   expect((await page.request.get("/api/reports")).status()).toBe(404);
+});
+
+test("friction: message a load's driver in two clicks, no subject needed, Ctrl+Enter sends", async ({
+  page,
+}) => {
+  const unique = randomUUID().slice(0, 6);
+  await login(page);
+  const { carrier, driver } = await blueRidge(page);
+  const load = await createLoad(page, carrier, "EASY");
+  const assigned = await page.request.post(`/api/loads/${load.id}/assign`, {
+    headers: origin,
+    data: { version: load.version, driverId: driver },
+  });
+  expect(assigned.status()).toBe(200);
+  const dialog = await openLoad(page, load.reference);
+  await dialog.getByRole("button", { name: "Message about this load" }).click();
+  const inbox = page.getByRole("region", { name: "Inbox" });
+  const composer = inbox.getByRole("form", { name: "Write a message" });
+  // The driver is already chosen for us.
+  await expect(
+    composer.getByRole("button", { name: /Remove Jordan/ }),
+  ).toBeVisible();
+  const text = composer.locator("textarea");
+  await text.fill("Quick one " + unique);
+  await text.press("Control+Enter");
+  await expect(
+    inbox.getByRole("heading", { name: "About " + load.reference }),
+  ).toBeVisible();
+  await expect(inbox.getByText("Message sent.")).toBeAttached();
+});
+
+test("friendly wording: wrong password and the show-password option", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Email").fill("dispatcher@relay.test");
+  await page.getByLabel("Password", { exact: true }).fill("not-the-password-1");
+  await page.getByLabel("Show password").check();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
+    "type",
+    "text",
+  );
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("alert")).toContainText("don't match");
 });

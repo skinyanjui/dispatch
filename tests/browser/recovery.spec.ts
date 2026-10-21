@@ -201,8 +201,10 @@ test("HTML gateway errors produce an actionable queue error instead of parser in
     }),
   );
   await page.goto("/");
-  const alert = page.getByRole("alert").filter({ hasText: /unavailable/i });
-  await expect(alert).toContainText("The workspace is unavailable.");
+  const alert = page
+    .getByRole("alert")
+    .filter({ hasText: /couldn.t reach Relay/i });
+  await expect(alert).toContainText("We couldn't reach Relay just now.");
   await expect(alert).not.toContainText(
     /Unexpected token|SyntaxError|JSON|<!DOCTYPE/i,
   );
@@ -247,7 +249,7 @@ test("a saved load stays acknowledged when the queue refresh fails", async ({
     page.getByText("Booked load created.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "unavailable",
+    "couldn't reach Relay",
   );
   failRefresh = false;
   await page.getByRole("button", { name: "Retry", exact: true }).click();

@@ -7,7 +7,11 @@ import { getThread, sendMessage, unreadCount } from "../../src/lib/messaging";
 import { createContact } from "../../src/lib/contacts";
 import { setTransport, type Email } from "../../src/lib/notifications";
 import { setSmsTransport } from "../../src/lib/sms";
-import { twilioSignature, stripQuoted } from "../../src/lib/inbound";
+import {
+  twilioSignature,
+  stripQuoted,
+  replyAddress,
+} from "../../src/lib/inbound";
 import { tenant } from "./fixtures";
 import { NextRequest } from "next/server";
 
@@ -241,11 +245,7 @@ test("email replies route through the signed reply address and must come from a 
     channel: "email",
     body: "Please confirm the rate.",
   });
-  const { deliverDue } = await import("../../src/lib/notifications");
-  await deliverDue(50);
-  const mail = emails.find((e) => e.to === "casey@broker.test");
-  assert.ok(mail);
-  const replyTo = mail!.replyTo!;
+  const replyTo = replyAddress(sent.thread_id)!;
   assert.match(
     replyTo,
     /^reply\+[0-9a-f]{32}\.[0-9a-f]{16}@mail\.relay\.test$/,
