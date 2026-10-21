@@ -845,6 +845,39 @@ export function createDemoApi() {
         return { id: item.id, version: 1 };
       }
       if (l.version !== data?.version) fail("VERSION_CONFLICT", 409);
+      if (p[2] === "check-ins" && p[4] === "amend") {
+        const report =
+          (l.check_ins || []).find((r) => r.id === p[3]) ||
+          fail("NOT_FOUND", 404);
+        if (report.status === "retracted") fail("CHECK_IN_RETRACTED");
+        if (state.viewer.role === "driver") fail("ROLE_NOT_PERMITTED", 403);
+        report.amendments = [
+          ...(report.amendments || []),
+          {
+            action: data.action as "correct" | "retract",
+            reason: String(data.reason),
+            actor_name: state.viewer.name,
+            created_at: now(),
+          },
+        ];
+        if (data.action === "retract") report.status = "retracted";
+        else {
+          report.original ??= {
+            location: report.location,
+            note: report.note,
+            observed_at: report.observed_at,
+          };
+          Object.assign(report, {
+            status: "corrected",
+            location: String(data.location),
+            note: String(data.note || ""),
+            observed_at: String(data.observed_at),
+          });
+        }
+        l.version++;
+        event(l, "load.check-in-" + String(data.action));
+        return { id: l.id, version: l.version, check_in_id: report.id };
+      }
       if (p[2] === "check-ins") {
         l.check_ins = [
           ...(l.check_ins || []),

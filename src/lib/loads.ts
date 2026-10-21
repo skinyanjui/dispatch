@@ -167,39 +167,39 @@ export async function createLoad(user: string, input: unknown, key: string) {
     return result.rows[0];
   });
 }
+// PostgreSQL text timestamps keep microseconds, so paging never skips or
+// repeats rows the way millisecond JavaScript dates could.
+const pgTimestamp = z
+  .string()
+  .max(50)
+  .regex(
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-](?:0\d|1[0-5])(:[0-5]\d)?$/,
+  )
+  .refine((value) => {
+    // PostgreSQL text timestamps include a space and may omit offset
+    // minutes. Check actual calendar validity before a database cast.
+    const iso = value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+    return (
+      Number(value.slice(0, 4)) > 0 &&
+      z.iso.datetime({ offset: true }).safeParse(iso).success
+    );
+  });
+function decodeCursor<T>(raw: string, shape: z.ZodType<T>): T {
+  if (raw.length > 300) throw new HttpError(400, "INVALID_CURSOR");
+  try {
+    return shape.parse(JSON.parse(Buffer.from(raw, "base64url").toString()));
+  } catch {
+    throw new HttpError(400, "INVALID_CURSOR");
+  }
+}
+const encodeCursor = (value: unknown) =>
+  Buffer.from(JSON.stringify(value)).toString("base64url");
 export async function listLoads(user: string, params: URLSearchParams) {
   const limit = 25;
   const raw = params.get("cursor");
-  let cursor: { at: string; id: string } | null = null;
-  if (raw) {
-    if (raw.length > 200) throw new HttpError(400, "INVALID_CURSOR");
-    try {
-      cursor = z
-        .object({
-          at: z
-            .string()
-            .max(50)
-            .regex(
-              /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-](?:0\d|1[0-5])(:[0-5]\d)?$/,
-            )
-            .refine((value) => {
-              // PostgreSQL text timestamps include a space and may omit offset
-              // minutes. Check actual calendar validity before a database cast.
-              const iso = value
-                .replace(" ", "T")
-                .replace(/([+-]\d{2})$/, "$1:00");
-              return (
-                Number(value.slice(0, 4)) > 0 &&
-                z.iso.datetime({ offset: true }).safeParse(iso).success
-              );
-            }),
-          id: z.uuid(),
-        })
-        .parse(JSON.parse(Buffer.from(raw, "base64url").toString()));
-    } catch {
-      throw new HttpError(400, "INVALID_CURSOR");
-    }
-  }
+  const cursor = raw
+    ? decodeCursor(raw, z.object({ at: pgTimestamp, id: z.uuid() }))
+    : null;
   const filters = z
     .object({
       carrier_id: z.uuid().optional(),
@@ -248,30 +248,23 @@ export async function detail(user: string, id: string) {
       "SELECT * FROM load_stops WHERE load_id=$1 ORDER BY sequence",
       [id],
     );
-    const events = await c.query(
-      "SELECT id,type,payload,created_at FROM load_events WHERE load_id=$1 ORDER BY created_at DESC,id DESC LIMIT 101",
-      [id],
-    );
+    const events = await eventPage(c, id, null, 100);
     const assignment = await c.query(
       "SELECT a.*,d.name FROM load_assignments a JOIN drivers d ON d.id=a.driver_id WHERE load_id=$1",
       [id],
     );
-    const checkIns = await c.query(
-      `SELECT ci.id,ci.location,ci.note,ci.source,ci.observed_at,ci.recorded_at,u.name actor_name
-       FROM check_ins ci JOIN users u ON u.id=ci.actor_id
-       WHERE ci.load_id=$1 AND ci.carrier_id=$2
-       ORDER BY ci.observed_at DESC,ci.recorded_at DESC,ci.id DESC LIMIT 50`,
-      [id, load.carrier_id],
-    );
+    const checkIns = await checkInPage(c, id, null, 50);
     const documents = await loadDocumentSlots(c, id);
     const exceptions = await loadExceptions(c, id);
     return {
       ...load,
       stops: stops.rows,
-      events: events.rows.slice(0, 100).reverse(),
-      events_truncated: events.rows.length > 100,
+      events: events.events,
+      events_truncated: events.cursor !== null,
+      events_cursor: events.cursor,
       assignment: assignment.rows[0] ?? null,
-      check_ins: checkIns.rows,
+      check_ins: checkIns.check_ins,
+      check_ins_cursor: checkIns.cursor,
       documents,
       exceptions,
       exception_suggestions: suggestExceptions(
@@ -282,6 +275,118 @@ export async function detail(user: string, id: string) {
     };
   });
 }
+// ---------- History pages ----------
+
+const eventCursor = z.object({ at: pgTimestamp, id: z.uuid() }).strict();
+/** Newest-first page, returned in chronological order for display. */
+async function eventPage(
+  c: PoolClient,
+  loadId: string,
+  before: z.infer<typeof eventCursor> | null,
+  limit: number,
+) {
+  const { rows } = await c.query(
+    `SELECT id,type,payload,created_at,created_at::text cursor_at FROM load_events
+    WHERE load_id=$1 AND ($2::timestamptz IS NULL OR (created_at,id)<($2,$3::uuid))
+    ORDER BY created_at DESC,id DESC LIMIT $4`,
+    [loadId, before?.at ?? null, before?.id ?? null, limit + 1],
+  );
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    events: page
+      .map(({ cursor_at, ...e }) => {
+        void cursor_at;
+        return e;
+      })
+      .reverse(),
+    cursor:
+      rows.length > limit
+        ? encodeCursor({ at: last.cursor_at, id: last.id })
+        : null,
+  };
+}
+
+const checkInCursor = z
+  .object({ observed: pgTimestamp, recorded: pgTimestamp, id: z.uuid() })
+  .strict();
+/**
+ * Effective check-ins, newest observation first: the original overlaid by its
+ * latest correction, with retracted reports kept but marked.
+ */
+async function checkInPage(
+  c: PoolClient,
+  loadId: string,
+  before: z.infer<typeof checkInCursor> | null,
+  limit: number,
+) {
+  const { rows } = await c.query(
+    `WITH effective AS (
+      SELECT ci.id,ci.source,ci.recorded_at,u.name actor_name,ci.actor_id,
+        COALESCE(fix.location,ci.location) location,COALESCE(fix.note,ci.note) note,
+        COALESCE(fix.observed_at,ci.observed_at) observed_at,
+        CASE WHEN retraction.id IS NOT NULL THEN 'retracted' WHEN fix.id IS NOT NULL THEN 'corrected' ELSE 'reported' END status,
+        CASE WHEN fix.id IS NULL THEN NULL ELSE json_build_object('location',ci.location,'note',ci.note,'observed_at',ci.observed_at) END original,
+        (SELECT json_agg(json_build_object('action',a.action,'reason',a.reason,'actor_name',au.name,'created_at',a.created_at) ORDER BY a.created_at,a.id)
+          FROM check_in_amendments a JOIN users au ON au.id=a.actor_id WHERE a.check_in_id=ci.id) amendments
+      FROM check_ins ci JOIN users u ON u.id=ci.actor_id
+      LEFT JOIN LATERAL (SELECT * FROM check_in_amendments a WHERE a.check_in_id=ci.id AND a.action='correct'
+        ORDER BY a.created_at DESC,a.id DESC LIMIT 1) fix ON true
+      LEFT JOIN LATERAL (SELECT a.id FROM check_in_amendments a WHERE a.check_in_id=ci.id AND a.action='retract') retraction ON true
+      WHERE ci.load_id=$1)
+    SELECT *,observed_at::text cursor_observed,recorded_at::text cursor_recorded FROM effective
+    WHERE $2::timestamptz IS NULL OR (observed_at,recorded_at,id)<($2,$3::timestamptz,$4::uuid)
+    ORDER BY observed_at DESC,recorded_at DESC,id DESC LIMIT $5`,
+    [
+      loadId,
+      before?.observed ?? null,
+      before?.recorded ?? null,
+      before?.id ?? null,
+      limit + 1,
+    ],
+  );
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    check_ins: page.map(({ cursor_observed, cursor_recorded, ...r }) => {
+      void cursor_observed;
+      void cursor_recorded;
+      return { ...r, amendments: r.amendments ?? [] };
+    }),
+    cursor:
+      rows.length > limit
+        ? encodeCursor({
+            observed: last.cursor_observed,
+            recorded: last.cursor_recorded,
+            id: last.id,
+          })
+        : null,
+  };
+}
+
+export async function olderEvents(
+  user: string,
+  id: string,
+  params: URLSearchParams,
+) {
+  const before = decodeCursor(params.get("before") || "", eventCursor);
+  return transaction(async (c) => {
+    await scoped(c, user, id);
+    return eventPage(c, id, before, 100);
+  });
+}
+export async function olderCheckIns(
+  user: string,
+  id: string,
+  params: URLSearchParams,
+) {
+  const before = decodeCursor(params.get("before") || "", checkInCursor);
+  return transaction(async (c) => {
+    await scoped(c, user, id);
+    return checkInPage(c, id, before, 50);
+  });
+}
+
 export const checkInSchema = z
   .object({
     version: z.number().int().positive(),
@@ -357,6 +462,123 @@ export async function recordCheckIn(user: string, id: string, input: unknown) {
       observed_at: data.observed_at,
     });
     return { id, version, check_in_id: checkInId };
+  });
+}
+export const amendSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("correct"),
+      version: z.number().int().positive(),
+      location: z.string().trim().min(1).max(160),
+      note: z.string().trim().max(1000).default(""),
+      observed_at: z.iso.datetime({ offset: true }),
+      reason: z.string().trim().min(1).max(500),
+      idempotency_key: z.uuid().transform((value) => value.toLowerCase()),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("retract"),
+      version: z.number().int().positive(),
+      reason: z.string().trim().min(1).max(500),
+      idempotency_key: z.uuid().transform((value) => value.toLowerCase()),
+    })
+    .strict(),
+]);
+
+/**
+ * Corrects or retracts a manual check-in without changing the original
+ * record. Dispatchers and carrier managers may amend any report on their
+ * carrier's loads; a driver may amend only their own reports on loads still
+ * assigned to them. Retraction is final.
+ */
+export async function amendCheckIn(
+  user: string,
+  id: string,
+  checkInId: string,
+  input: unknown,
+) {
+  const data = amendSchema.parse(input);
+  return transaction(async (c) => {
+    const load = await scoped(c, user, id, true, true);
+    const membership = await member(c, user, load.carrier_id);
+    if (membership.role === "driver") {
+      const assigned = await c.query(
+        "SELECT 1 FROM load_assignments WHERE load_id=$1 AND driver_id=$2",
+        [id, membership.driver_id],
+      );
+      if (!assigned.rowCount) throw new HttpError(404, "NOT_FOUND");
+    }
+    await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+      user + ":check-in-amend:" + data.idempotency_key,
+    ]);
+    const { idempotency_key, version, ...change } = data;
+    void version;
+    const hash = digest(
+      JSON.stringify({ load_id: id, check_in_id: checkInId, ...change }),
+    );
+    const old = await c.query(
+      "SELECT load_version,request_hash FROM check_in_amendments WHERE actor_id=$1 AND idempotency_key=$2",
+      [user, idempotency_key],
+    );
+    if (old.rows[0]) {
+      if (old.rows[0].request_hash !== hash)
+        throw new HttpError(409, "IDEMPOTENCY_CONFLICT");
+      return { id, version: old.rows[0].load_version, check_in_id: checkInId };
+    }
+    const report = await c.query(
+      "SELECT actor_id FROM check_ins WHERE id=$1 AND load_id=$2",
+      [checkInId, id],
+    );
+    if (!report.rows[0]) throw new HttpError(404, "NOT_FOUND");
+    if (membership.role === "driver" && report.rows[0].actor_id !== user)
+      throw new HttpError(403, "ROLE_NOT_PERMITTED");
+    if (load.version !== data.version)
+      throw new HttpError(409, "VERSION_CONFLICT");
+    const retracted = await c.query(
+      "SELECT 1 FROM check_in_amendments WHERE check_in_id=$1 AND action='retract'",
+      [checkInId],
+    );
+    if (retracted.rowCount) throw new HttpError(422, "CHECK_IN_RETRACTED");
+    if (data.action === "correct") {
+      const observedAt = Date.parse(data.observed_at);
+      const now = Date.now();
+      if (observedAt > now + 5 * 60_000 || observedAt < now - 30 * 86_400_000)
+        throw new HttpError(422, "CHECK_IN_TIME_OUT_OF_RANGE");
+    }
+    const next = load.version + 1;
+    await c.query(
+      `INSERT INTO check_in_amendments(id,check_in_id,load_id,carrier_id,actor_id,action,location,note,observed_at,reason,load_version,idempotency_key,request_hash)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [
+        randomUUID(),
+        checkInId,
+        id,
+        load.carrier_id,
+        user,
+        data.action,
+        data.action === "correct" ? data.location : null,
+        data.action === "correct" ? data.note : null,
+        data.action === "correct" ? data.observed_at : null,
+        data.reason,
+        next,
+        idempotency_key,
+        hash,
+      ],
+    );
+    await c.query("UPDATE loads SET version=$2 WHERE id=$1", [id, next]);
+    await event(c, user, load, "load.check-in-" + data.action, {
+      check_in_id: checkInId,
+      reason: data.reason,
+      ...(data.action === "correct"
+        ? {
+            location: data.location,
+            note: data.note,
+            observed_at: data.observed_at,
+          }
+        : {}),
+    });
+    return { id, version: next, check_in_id: checkInId };
   });
 }
 export async function mutate(

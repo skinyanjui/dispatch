@@ -21,7 +21,33 @@ export type CheckIn = {
   observed_at: string;
   recorded_at: string;
   actor_name: string;
+  /** Present on server data; the original report is never changed. */
+  actor_id?: string;
+  status?: "reported" | "corrected" | "retracted";
+  original?: { location: string; note: string; observed_at: string } | null;
+  amendments?: {
+    action: "correct" | "retract";
+    reason: string;
+    actor_name: string;
+    created_at: string;
+  }[];
 };
+export type CheckInAmendment =
+  | {
+      action: "correct";
+      version: number;
+      location: string;
+      note: string;
+      observed_at: string;
+      reason: string;
+      idempotency_key: string;
+    }
+  | {
+      action: "retract";
+      version: number;
+      reason: string;
+      idempotency_key: string;
+    };
 export type CheckInInput = {
   version: number;
   location: string;
@@ -51,6 +77,8 @@ export type Load = {
   }[];
   events?: { id: string; type: string; created_at: string }[];
   events_truncated?: boolean;
+  events_cursor?: string | null;
+  check_ins_cursor?: string | null;
   assignment?: { name: string; driver_id: string } | null;
   check_ins?: CheckIn[];
   documents?: DocumentSlot[];
@@ -59,7 +87,7 @@ export type Load = {
   exception_owners?: { id: string; name: string; role: string }[];
 };
 export type Context = {
-  user: { name: string };
+  user: { name: string; id?: string };
   carriers: { id: string; name: string; role: string }[];
   drivers: { id: string; name: string; carrier_id: string }[];
   organizations?: { id: string; name: string; role?: string | null }[];

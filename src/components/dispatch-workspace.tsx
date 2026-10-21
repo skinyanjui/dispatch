@@ -55,6 +55,8 @@ const eventLabels: Record<string, string> = {
   "load.assign": "Driver assigned",
   "load.milestones": "Milestone recorded",
   "load.check-in": "Manual check-in recorded",
+  "load.check-in-correct": "Check-in corrected",
+  "load.check-in-retract": "Check-in retracted",
   "document.uploaded": "Document uploaded",
   "document.reviewed": "Document reviewed",
   "exception.opened": "Exception flagged",
@@ -108,6 +110,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [exceptionRevision, setExceptionRevision] = useState(0),
     [mfaChallenge, setMfaChallenge] = useState<string | null>(null),
     [extraStops, setExtraStops] = useState<string[]>([]),
+    [olderEvents, setOlderEvents] = useState<{
+      loadId: string;
+      events: NonNullable<Load["events"]>;
+      cursor: string | null;
+    } | null>(null),
     [recovering, setRecovering] = useState(false),
     [recoveryNotice, setRecoveryNotice] = useState("");
   const search = useRef<HTMLInputElement>(null),
@@ -575,6 +582,20 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
   const selectedRole = context.carriers.find(
     (c) => c.id === selected?.carrier_id,
   )?.role;
+  // Older pages are kept per load and merged by id, so a refresh that
+  // shifts the newest window never duplicates or drops an event.
+  const olderForSelected =
+    selected && olderEvents?.loadId === selected.id ? olderEvents : null;
+  const timeline = [
+    ...new Map(
+      [...(olderForSelected?.events || []), ...(selected?.events || [])].map(
+        (e) => [e.id, e],
+      ),
+    ).values(),
+  ];
+  const timelineCursor = olderForSelected
+    ? olderForSelected.cursor
+    : selected?.events_cursor;
   const selectedCarrier = context.carriers.find(
     (c) => c.id === selected?.carrier_id,
   )?.name;
@@ -1281,6 +1302,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               load={selected}
               busy={busy}
               offline={offline}
+              userId={context.user.id}
+              role={selectedRole}
+              onAmended={async (message) => {
+                setSelected(await api<Load>("loads/" + selected.id));
+                await refreshAfterSave(message);
+              }}
               onRecord={async (input) => {
                 let result: "saved" | "retry" | "version-conflict" = "retry";
                 await act(async () => {
@@ -1345,15 +1372,38 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               }}
             />
             <h3>Activity timeline</h3>
-            {selected.events_truncated && (
-              <p className="helpText">
-                Showing the latest 100 activity events. Earlier history is
-                retained.
-              </p>
+            {timelineCursor && (
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy}
+                onClick={() =>
+                  act(async () => {
+                    const page = await api<{
+                      events: NonNullable<Load["events"]>;
+                      cursor: string | null;
+                    }>(
+                      `loads/${selected.id}/events?before=${encodeURIComponent(timelineCursor)}`,
+                    );
+                    setOlderEvents({
+                      loadId: selected.id,
+                      events: [
+                        ...page.events,
+                        ...(olderEvents?.loadId === selected.id
+                          ? olderEvents.events
+                          : []),
+                      ],
+                      cursor: page.cursor,
+                    });
+                  })
+                }
+              >
+                Show older activity
+              </button>
             )}
             <div className="timeline">
-              {selected.events?.length ? (
-                selected.events.map((e) => (
+              {timeline.length ? (
+                timeline.map((e) => (
                   <p className="event" key={e.id}>
                     <CircleIcon size={7} weight="fill" aria-hidden="true" />
                     {eventLabels[e.type] || "Load updated"}

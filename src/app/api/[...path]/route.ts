@@ -21,6 +21,9 @@ import {
   mutate,
   recordCheckIn,
   auditDenied,
+  amendCheckIn,
+  olderCheckIns,
+  olderEvents,
 } from "@/lib/loads";
 import {
   uploadDocument,
@@ -495,6 +498,29 @@ async function handle(req: NextRequest) {
       )
         return NextResponse.json(
           await openException(user.id, id, await readJson(req)),
+          { status: 201 },
+        );
+      if (path[2] === "events" && path.length === 3 && req.method === "GET")
+        return NextResponse.json(
+          await olderEvents(user.id, id, req.nextUrl.searchParams),
+        );
+      if (path[2] === "check-ins" && path.length === 3 && req.method === "GET")
+        return NextResponse.json(
+          await olderCheckIns(user.id, id, req.nextUrl.searchParams),
+        );
+      if (
+        path[2] === "check-ins" &&
+        path.length === 5 &&
+        path[4] === "amend" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await amendCheckIn(
+            user.id,
+            id,
+            z.uuid().parse(path[3]),
+            await readJson(req),
+          ),
           { status: 201 },
         );
       if (path.length === 3 && path[2] === "check-ins" && req.method === "POST")

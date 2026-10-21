@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MapPinIcon, PlusIcon, ClockIcon } from "@phosphor-icons/react";
-import type { CheckIn, CheckInInput, Load } from "@/lib/contracts";
+import type {
+  CheckIn,
+  CheckInAmendment,
+  CheckInInput,
+  Load,
+} from "@/lib/contracts";
+import { ApiError, describe, useApi } from "@/lib/client-api";
 import { appointmentToInstant } from "@/lib/entry";
 
 const zones = [
@@ -27,9 +33,23 @@ function timestamp(value: string) {
   });
 }
 
-function Report({ report, now }: { report: CheckIn; now: number }) {
+function localInput(value: number) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function Report({
+  report,
+  now,
+  actions,
+}: {
+  report: CheckIn;
+  now: number;
+  actions?: React.ReactNode;
+}) {
+  const retracted = report.status === "retracted";
   const minutes = Math.floor((now - Date.parse(report.observed_at)) / 60000);
-  const stale = minutes >= 120;
+  const stale = minutes >= 120 && !retracted;
   const age =
     minutes < 0
       ? "Reported time is ahead"
@@ -47,8 +67,18 @@ function Report({ report, now }: { report: CheckIn; now: number }) {
     >
       <div className="checkInLocation">
         <MapPinIcon size={16} aria-hidden="true" />
-        <strong>{report.location}</strong>
+        {retracted ? (
+          <del>
+            <strong>{report.location}</strong>
+          </del>
+        ) : (
+          <strong>{report.location}</strong>
+        )}
         {stale && <span className="checkInStale">Stale</span>}
+        {report.status === "corrected" && (
+          <span className="checkInStale">Corrected</span>
+        )}
+        {retracted && <span className="checkInStale">Retracted</span>}
       </div>
       <p className="checkInAge">
         <ClockIcon size={12} aria-hidden="true" />
@@ -77,6 +107,20 @@ function Report({ report, now }: { report: CheckIn; now: number }) {
           <dd>{report.actor_name} · Manual</dd>
         </div>
       </dl>
+      {report.original && (
+        <p className="checkInNote">
+          Originally reported as {report.original.location} at{" "}
+          {timestamp(report.original.observed_at)}
+          {report.original.note && <> — “{report.original.note}”</>}
+        </p>
+      )}
+      {(report.amendments || []).map((a) => (
+        <p className="checkInHelp" key={a.created_at + a.action}>
+          {a.action === "correct" ? "Corrected" : "Retracted"} by {a.actor_name}{" "}
+          on {timestamp(a.created_at)}: {a.reason}
+        </p>
+      ))}
+      {actions}
     </article>
   );
 }
@@ -86,10 +130,16 @@ export function LoadCheckIns({
   busy,
   offline,
   onRecord,
+  userId,
+  role,
+  onAmended,
 }: {
   load: Load;
   busy: boolean;
   offline: boolean;
+  userId?: string;
+  role?: string;
+  onAmended: (message: string) => Promise<void>;
   onRecord: (
     input: CheckInInput,
   ) => Promise<"saved" | "retry" | "version-conflict">;
@@ -101,7 +151,114 @@ export function LoadCheckIns({
   const [now, setNow] = useState(() => Date.now());
   const request = useRef<{ payload: string; input: CheckInInput } | null>(null);
   const addButton = useRef<HTMLButtonElement>(null);
-  const reports = load.check_ins || [];
+  const api = useApi();
+  const [older, setOlder] = useState<{
+    reports: CheckIn[];
+    cursor: string | null;
+  } | null>(null);
+  const [amending, setAmending] = useState<{
+    report: CheckIn;
+    action: "correct" | "retract";
+  } | null>(null);
+  const [amendError, setAmendError] = useState("");
+  const [amendBusy, setAmendBusy] = useState(false);
+  const amendRequest = useRef<{
+    payload: string;
+    input: CheckInAmendment;
+  } | null>(null);
+  const reports = [...(load.check_ins || []), ...(older?.reports || [])];
+  const cursor = older ? older.cursor : load.check_ins_cursor;
+  // The headline is the newest report that has not been retracted.
+  const headline = reports.find((r) => r.status !== "retracted") ?? null;
+  const canAmend = (r: CheckIn) =>
+    !offline &&
+    r.status !== "retracted" &&
+    (role === "dispatcher" ||
+      role === "carrier-manager" ||
+      (role === "driver" && !!userId && r.actor_id === userId));
+  const actionsFor = (r: CheckIn) =>
+    canAmend(r) && !amending ? (
+      <div className="checkInActions">
+        <button
+          type="button"
+          className="textButton"
+          aria-label={`Correct check-in at ${r.location}`}
+          onClick={() => {
+            amendRequest.current = null;
+            setAmendError("");
+            setAmending({ report: r, action: "correct" });
+          }}
+        >
+          Correct
+        </button>
+        <button
+          type="button"
+          className="textButton"
+          aria-label={`Retract check-in at ${r.location}`}
+          onClick={() => {
+            amendRequest.current = null;
+            setAmendError("");
+            setAmending({ report: r, action: "retract" });
+          }}
+        >
+          Retract
+        </button>
+      </div>
+    ) : null;
+  async function submitAmendment(change: Record<string, string>) {
+    if (!amending) return;
+    const payload = JSON.stringify({ id: amending.report.id, ...change });
+    // Keep the original key and version across an uncertain retry.
+    if (amendRequest.current?.payload !== payload)
+      amendRequest.current = {
+        payload,
+        input: {
+          ...change,
+          action: amending.action,
+          version: load.version,
+          idempotency_key: crypto.randomUUID(),
+        } as CheckInAmendment,
+      };
+    setAmendBusy(true);
+    setAmendError("");
+    try {
+      await api(
+        `loads/${load.id}/check-ins/${amending.report.id}/amend`,
+        amendRequest.current.input,
+      );
+      const action = amending.action;
+      amendRequest.current = null;
+      setAmending(null);
+      setOlder(null);
+      await onAmended(
+        action === "correct" ? "Check-in corrected." : "Check-in retracted.",
+      );
+    } catch (e) {
+      const code = e instanceof ApiError ? e.message : "SERVICE_UNAVAILABLE";
+      if (code === "VERSION_CONFLICT") amendRequest.current = null;
+      setAmendError(code);
+    } finally {
+      setAmendBusy(false);
+    }
+  }
+  async function loadOlder() {
+    if (!cursor) return;
+    setAmendBusy(true);
+    setAmendError("");
+    try {
+      const page = await api<{ check_ins: CheckIn[]; cursor: string | null }>(
+        `loads/${load.id}/check-ins?before=${encodeURIComponent(cursor)}`,
+      );
+      setOlder({
+        reports: [...(older?.reports || []), ...page.check_ins],
+        cursor: page.cursor,
+      });
+    } catch (e) {
+      setAmendError(e instanceof ApiError ? e.message : "SERVICE_UNAVAILABLE");
+    } finally {
+      setAmendBusy(false);
+    }
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
@@ -244,19 +401,181 @@ export function LoadCheckIns({
           </fieldset>
         </form>
       )}
+      {amending && (
+        <form
+          className="checkInForm"
+          aria-label={
+            amending.action === "correct"
+              ? "Correct check-in"
+              : "Retract check-in"
+          }
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const f = new FormData(event.currentTarget);
+            const reason = String(f.get("reason")).trim();
+            if (amending.action === "retract") {
+              await submitAmendment({ reason });
+              return;
+            }
+            let instant: string;
+            try {
+              instant = appointmentToInstant(
+                String(f.get("observed")),
+                String(f.get("zone")),
+              );
+            } catch {
+              setAmendError(
+                "Check the observed time and time zone. A time skipped or repeated by daylight saving needs clarification.",
+              );
+              return;
+            }
+            await submitAmendment({
+              location: String(f.get("location")).trim(),
+              note: String(f.get("note")).trim(),
+              observed_at: instant,
+              reason,
+            });
+          }}
+        >
+          <fieldset disabled={amendBusy || busy}>
+            <legend>
+              {amending.action === "correct"
+                ? `Correct the report at ${amending.report.location}`
+                : `Retract the report at ${amending.report.location}`}
+            </legend>
+            {amending.action === "correct" && (
+              <>
+                <label>
+                  Corrected location
+                  <input
+                    name="location"
+                    required
+                    maxLength={160}
+                    defaultValue={amending.report.location}
+                  />
+                </label>
+                <div className="formGrid">
+                  <label>
+                    Observed time
+                    <input
+                      name="observed"
+                      type="datetime-local"
+                      required
+                      defaultValue={localInput(
+                        Date.parse(amending.report.observed_at),
+                      )}
+                    />
+                  </label>
+                  <label>
+                    Time zone
+                    <select
+                      name="zone"
+                      defaultValue={
+                        Intl.DateTimeFormat().resolvedOptions().timeZone ||
+                        "UTC"
+                      }
+                    >
+                      {[
+                        ...new Set([
+                          Intl.DateTimeFormat().resolvedOptions().timeZone ||
+                            "UTC",
+                          ...zones,
+                        ]),
+                      ].map((z) => (
+                        <option key={z}>{z}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <label>
+                  Note <span className="optionalLabel">Optional</span>
+                  <textarea
+                    name="note"
+                    maxLength={1000}
+                    rows={2}
+                    defaultValue={amending.report.note}
+                  />
+                </label>
+              </>
+            )}
+            <label>
+              Reason
+              <input
+                name="reason"
+                required
+                maxLength={500}
+                placeholder={
+                  amending.action === "correct"
+                    ? "What was wrong with the original?"
+                    : "Why should this report be disregarded?"
+                }
+              />
+            </label>
+            <p className="checkInHelp">
+              The original report stays on record; this{" "}
+              {amending.action === "correct"
+                ? "correction is shown in its place"
+                : "retraction is final"}
+              .
+            </p>
+            <div className="checkInActions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setAmending(null)}
+              >
+                Cancel
+              </button>
+              <button className="primary" disabled={offline}>
+                {amending.action === "correct"
+                  ? "Save correction"
+                  : "Retract report"}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      )}
+      {amendError && (
+        <p className="checkInFormError" role="alert">
+          {describe(amendError)}
+        </p>
+      )}
       {reports.length ? (
         <>
-          <Report report={reports[0]} now={now} />
-          {reports.length > 1 && (
-            <details className="checkInHistory">
-              <summary>Previous check-ins ({reports.length - 1})</summary>
-              {reports.slice(1).map((report) => (
-                <Report key={report.id} report={report} now={now} />
-              ))}
-            </details>
+          {headline && (
+            <Report
+              report={headline}
+              now={now}
+              actions={actionsFor(headline)}
+            />
           )}
-          {reports.length === 50 && (
-            <p className="checkInHelp">Showing the latest 50 observations.</p>
+          {reports.length > (headline ? 1 : 0) && (
+            <details className="checkInHistory" open={!headline || !!older}>
+              <summary>
+                {headline ? "Previous check-ins" : "Retracted check-ins"} (
+                {reports.length - (headline ? 1 : 0)})
+              </summary>
+              {reports
+                .filter((r) => r !== headline)
+                .map((report) => (
+                  <Report
+                    key={report.id}
+                    report={report}
+                    now={now}
+                    actions={actionsFor(report)}
+                  />
+                ))}
+              {cursor && (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={amendBusy}
+                  onClick={() => void loadOlder()}
+                >
+                  Show older check-ins
+                </button>
+              )}
+            </details>
           )}
         </>
       ) : (

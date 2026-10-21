@@ -88,6 +88,7 @@ const messages: Record<string, string> = {
     "Malware scanning is unavailable right now, so the file was not stored. Retry in a few minutes.",
   STORAGE_UNAVAILABLE:
     "Document storage is unavailable right now, so the file was not stored. Retry in a few minutes.",
+  CHECK_IN_RETRACTED: "This check-in was retracted and can't be changed.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };
