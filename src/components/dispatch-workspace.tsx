@@ -35,6 +35,8 @@ import { LoadExceptions } from "@/components/load-exceptions";
 import { ExceptionQueue } from "@/components/exception-queue";
 import { BillingWorkspace } from "@/components/billing-workspace";
 import { NotificationCenter } from "@/components/notification-center";
+import { AccountSettings } from "@/components/account-settings";
+import { OrganizationSettings } from "@/components/organization-settings";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
 import {
@@ -102,7 +104,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [section, setSection] = useState<WorkspaceSection>("loads"),
     [setupCarrier, setSetupCarrier] = useState<string | null>(null),
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
-    [exceptionRevision, setExceptionRevision] = useState(0);
+    [exceptionRevision, setExceptionRevision] = useState(0),
+    [mfaChallenge, setMfaChallenge] = useState<string | null>(null),
+    [recovering, setRecovering] = useState(false),
+    [recoveryNotice, setRecoveryNotice] = useState("");
   const search = useRef<HTMLInputElement>(null),
     createRequest = useRef<{ payload: string; key: string } | null>(null),
     revision = useRef(0),
@@ -352,58 +357,191 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           <p className="loginDescription">
             Sign in to your dispatch workspace.
           </p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              act(async () => {
-                await api("login", {
-                  email: f.get("email"),
-                  password: f.get("password"),
+          {mfaChallenge ? (
+            <form
+              aria-label="Two-step verification"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                act(async () => {
+                  try {
+                    await api("login/mfa", {
+                      challenge: mfaChallenge,
+                      code: String(f.get("code")).trim(),
+                    });
+                  } catch (err) {
+                    if (
+                      err instanceof ApiError &&
+                      ["MFA_CHALLENGE_EXPIRED", "TRY_AGAIN_LATER"].includes(
+                        err.message,
+                      )
+                    )
+                      setMfaChallenge(null);
+                    throw err;
+                  }
+                  setMfaChallenge(null);
+                  const c = await api<Context>("me");
+                  active.current = true;
+                  setContext(c);
+                  if (
+                    c.carriers.length &&
+                    c.carriers.every((v) => v.role === "driver")
+                  )
+                    setView("list");
                 });
-                const c = await api<Context>("me");
-                active.current = true;
-                setContext(c);
-                if (
-                  c.carriers.length &&
-                  c.carriers.every((v) => v.role === "driver")
-                )
-                  setView("list");
-              });
-            }}
-          >
-            <label>
-              Email
-              <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                required
-                maxLength={254}
-              />
-            </label>
-            <label>
-              Password
-              <input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                maxLength={256}
-              />
-            </label>
-            <button className="primary full" disabled={busy || offline}>
-              {busy ? "Signing in…" : "Sign in"}
-              <ArrowRightIcon size={16} aria-hidden="true" />
-            </button>
-          </form>
+              }}
+            >
+              <label>
+                Authentication code
+                <input
+                  name="code"
+                  autoComplete="one-time-code"
+                  inputMode="text"
+                  required
+                  maxLength={40}
+                  autoFocus
+                />
+                <small>
+                  Enter the 6-digit code from your authenticator app, or one of
+                  your recovery codes.
+                </small>
+              </label>
+              <button className="primary full" disabled={busy || offline}>
+                {busy ? "Verifying…" : "Verify and sign in"}
+                <ArrowRightIcon size={16} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="textButton"
+                onClick={() => {
+                  setMfaChallenge(null);
+                  setError("");
+                }}
+              >
+                Use a different account
+              </button>
+            </form>
+          ) : recovering ? (
+            <form
+              aria-label="Reset password"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                act(async () => {
+                  await api("password-reset/request", {
+                    email: String(f.get("email")).trim(),
+                  });
+                  setRecoveryNotice(
+                    "If an account uses that email, a reset link is on its way. It expires in one hour.",
+                  );
+                });
+              }}
+            >
+              <label>
+                Account email
+                <input
+                  name="email"
+                  type="email"
+                  autoComplete="username"
+                  required
+                  maxLength={254}
+                  autoFocus
+                />
+              </label>
+              <button className="primary full" disabled={busy || offline}>
+                {busy ? "Sending…" : "Email me a reset link"}
+              </button>
+              {recoveryNotice && (
+                <p className="inlineNotice" role="status">
+                  {recoveryNotice}
+                </p>
+              )}
+              <button
+                type="button"
+                className="textButton"
+                onClick={() => {
+                  setRecovering(false);
+                  setRecoveryNotice("");
+                  setError("");
+                }}
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                act(async () => {
+                  const result = await api<{
+                    ok?: boolean;
+                    mfa_required?: boolean;
+                    challenge?: string;
+                  }>("login", {
+                    email: f.get("email"),
+                    password: f.get("password"),
+                  });
+                  if (result.mfa_required && result.challenge) {
+                    setMfaChallenge(result.challenge);
+                    return;
+                  }
+                  const c = await api<Context>("me");
+                  active.current = true;
+                  setContext(c);
+                  if (
+                    c.carriers.length &&
+                    c.carriers.every((v) => v.role === "driver")
+                  )
+                    setView("list");
+                });
+              }}
+            >
+              <label>
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  autoComplete="username"
+                  required
+                  maxLength={254}
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  maxLength={256}
+                />
+              </label>
+              <button className="primary full" disabled={busy || offline}>
+                {busy ? "Signing in…" : "Sign in"}
+                <ArrowRightIcon size={16} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="textButton"
+                onClick={() => {
+                  setRecovering(true);
+                  setError("");
+                }}
+              >
+                Forgot password?
+              </button>
+            </form>
+          )}
           {errorPanel}
           <details className="loginAccess">
             <summary>How do I get access?</summary>
             <p>
               Open your private invitation to create an account and choose a
               password. Ask your carrier contact or dispatcher for a link.
-              Public signup and password recovery are not available yet.
+              Public signup is not available; new dispatch organizations are set
+              up by an administrator. Use “Forgot password?” to reset a password
+              by email.
             </p>
             <p>
               For the fictional QA workspace, use{" "}
@@ -889,6 +1027,14 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               )}
             </section>
           </>
+        ) : section === "account" ? (
+          <AccountSettings onAuthError={handleError} />
+        ) : section === "organization" ? (
+          <OrganizationSettings
+            context={context}
+            onAuthError={handleError}
+            onChanged={async () => setContext(await api<Context>("me"))}
+          />
         ) : section === "notifications" ? (
           <NotificationCenter
             isDispatcher={context.carriers.some((c) => c.role === "dispatcher")}

@@ -30,7 +30,11 @@ export async function verifyPassword(password: string, stored: string) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 export async function consumeLoginAttempt(email: string) {
-  const key = digest(email.trim().toLowerCase());
+  await consumeAttempt(email.trim().toLowerCase(), 8);
+}
+/** Shared fixed-window limiter (one minute) keyed by a hashed identity. */
+export async function consumeAttempt(identity: string, limit: number) {
+  const key = digest(identity);
   await pool.query("DELETE FROM login_attempts WHERE resets_at < now()");
   const result = await pool.query(
     `INSERT INTO login_attempts VALUES($1,1,now()+interval '1 minute')
@@ -40,7 +44,8 @@ export async function consumeLoginAttempt(email: string) {
     RETURNING attempts`,
     [key],
   );
-  if (result.rows[0].attempts > 8) throw new HttpError(429, "TRY_AGAIN_LATER");
+  if (result.rows[0].attempts > limit)
+    throw new HttpError(429, "TRY_AGAIN_LATER");
 }
 
 export class HttpError extends Error {
@@ -74,7 +79,23 @@ export function sameOrigin(request: Request) {
   if (request.headers.get("origin") !== expected)
     throw new HttpError(403, "ORIGIN_REJECTED");
 }
-export async function login(email: string, password: string) {
+export async function createSession(userId: string) {
+  await pool.query(
+    "INSERT INTO audit_logs VALUES($1,$2,'session.created',NULL,now())",
+    [randomUUID(), userId],
+  );
+  const token = randomBytes(32).toString("hex");
+  await pool.query(
+    "INSERT INTO sessions VALUES ($1,$2,now()+interval '12 hours')",
+    [digest(token), userId],
+  );
+  return token;
+}
+export type LoginResult = { token: string } | { mfa_challenge: string };
+export async function login(
+  email: string,
+  password: string,
+): Promise<LoginResult> {
   await consumeLoginAttempt(email);
   const { rows } = await pool.query("SELECT * FROM users WHERE email=$1", [
     email.trim().toLowerCase(),
@@ -88,14 +109,14 @@ export async function login(email: string, password: string) {
   await pool.query("DELETE FROM login_attempts WHERE identity_hash=$1", [
     digest(email.trim().toLowerCase()),
   ]);
-  await pool.query(
-    "INSERT INTO audit_logs VALUES($1,$2,'session.created',NULL,now())",
-    [randomUUID(), rows[0].id],
-  );
-  const token = randomBytes(32).toString("hex");
-  await pool.query(
-    "INSERT INTO sessions VALUES ($1,$2,now()+interval '12 hours')",
-    [digest(token), rows[0].id],
-  );
-  return token;
+  if (rows[0].mfa_enabled_at) {
+    // The password step alone never yields a session for MFA accounts.
+    const challenge = randomBytes(32).toString("hex");
+    await pool.query(
+      "INSERT INTO mfa_challenges(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '5 minutes')",
+      [digest(challenge), rows[0].id],
+    );
+    return { mfa_challenge: challenge };
+  }
+  return { token: await createSession(rows[0].id) };
 }

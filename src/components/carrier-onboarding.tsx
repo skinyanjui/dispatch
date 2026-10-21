@@ -74,6 +74,7 @@ export function CarrierOnboarding({
       return current.id;
     }
   }
+  const [removingDriver, setRemovingDriver] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null),
     pending = useRef<{
       signature: string;
@@ -656,6 +657,52 @@ export function CarrierOnboarding({
                       }
                     >
                       New invite link
+                    </button>
+                  )}
+                  {removingDriver === d.id ? (
+                    <form
+                      className="opsForm setupRemove"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const reason = String(
+                          new FormData(e.currentTarget).get("reason"),
+                        );
+                        act(async () => {
+                          await api(
+                            "carriers/" + data.carrier.id + "/team/remove",
+                            { driver_id: d.id, reason },
+                          );
+                          setRemovingDriver(null);
+                          setNotice(d.name + " was removed from the roster.");
+                          await load();
+                        });
+                      }}
+                    >
+                      <label>
+                        Reason for removing {d.name}
+                        <input name="reason" required maxLength={500} />
+                      </label>
+                      <div className="opsActions">
+                        <button className="primary" disabled={busy}>
+                          Remove driver
+                        </button>
+                        <button
+                          type="button"
+                          className="textButton"
+                          onClick={() => setRemovingDriver(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      className="textButton"
+                      disabled={busy}
+                      aria-label={"Remove " + d.name}
+                      onClick={() => setRemovingDriver(d.id)}
+                    >
+                      Remove
                     </button>
                   )}
                 </article>

@@ -112,8 +112,12 @@ export async function createCarrier(user: string, input: unknown) {
     .strict()
     .parse(input);
   return transaction(async (c) => {
+    // Organization admins, or (compatibility, ADR 0011) a dispatcher of any
+    // carrier in the organization.
     const allowed = await c.query(
-      "SELECT 1 FROM carriers c JOIN memberships m ON m.carrier_id=c.id WHERE c.organization_id=$1 AND m.user_id=$2 AND m.role='dispatcher' LIMIT 1",
+      `SELECT 1 FROM organization_members WHERE organization_id=$1 AND user_id=$2
+      UNION ALL SELECT 1 FROM carriers c JOIN memberships m ON m.carrier_id=c.id
+        WHERE c.organization_id=$1 AND m.user_id=$2 AND m.role='dispatcher' LIMIT 1`,
       [data.organization_id, user],
     );
     if (!allowed.rowCount) throw new HttpError(404, "NOT_FOUND");
@@ -154,7 +158,7 @@ export async function carrierSetup(user: string, id: string) {
     const drivers = await c.query(
       `SELECT d.id,d.name,d.onboarding_status,d.phone,d.timezone,
       COALESCE(d.contact_email,(SELECT u.email FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.driver_id=d.id LIMIT 1)) email
-      FROM drivers d WHERE d.carrier_id=$1 ORDER BY d.name,d.id`,
+      FROM drivers d WHERE d.carrier_id=$1 AND d.onboarding_status<>'removed' ORDER BY d.name,d.id`,
       [id],
     );
     return {
@@ -524,6 +528,11 @@ export async function acceptInvite(
     await c.query(
       "UPDATE onboarding_invites SET accepted_at=now(),accepted_by=$2 WHERE id=$1",
       [invite.id, userId],
+    );
+    // The invitation was delivered to this address, so it is verified.
+    await c.query(
+      "UPDATE users SET email_verified_at=COALESCE(email_verified_at,now()) WHERE id=$1 AND email=$2",
+      [userId, invite.email],
     );
     await emit(c, userId, invite.carrier_id, "invitation.accepted", {
       invite_id: invite.id,

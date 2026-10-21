@@ -17,6 +17,8 @@ import {
   WarningIcon,
   ReceiptIcon,
   BellIcon,
+  UserCircleIcon,
+  GearSixIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
@@ -25,7 +27,9 @@ export type WorkspaceSection =
   | "carriers"
   | "exceptions"
   | "billing"
-  | "notifications";
+  | "notifications"
+  | "account"
+  | "organization";
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
@@ -34,6 +38,8 @@ export const sectionTitles: Record<
   exceptions: "Exceptions",
   billing: "Billing",
   notifications: "Notifications",
+  account: "Account",
+  organization: "Organization",
 };
 export function Brand() {
   return (
@@ -182,6 +188,26 @@ export function WorkspaceShell({
           <BellIcon size={17} aria-hidden="true" />
           Notifications
         </button>
+        <button
+          className={section === "account" ? "active" : ""}
+          disabled={busy}
+          aria-current={section === "account" ? "page" : undefined}
+          onClick={() => navigate(() => onSection("account"))}
+        >
+          <UserCircleIcon size={17} aria-hidden="true" />
+          Account
+        </button>
+        {(context.organizations || []).some((o) => o.role) && (
+          <button
+            className={section === "organization" ? "active" : ""}
+            disabled={busy}
+            aria-current={section === "organization" ? "page" : undefined}
+            onClick={() => navigate(() => onSection("organization"))}
+          >
+            <GearSixIcon size={17} aria-hidden="true" />
+            Organization
+          </button>
+        )}
       </nav>
       {!driverOnly && (
         <nav className="carrierNav" aria-label="Carrier scope">

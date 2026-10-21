@@ -52,6 +52,15 @@ try {
           role === "driver" ? drivers[i] : null,
         ]);
     }
+    // Fictional QA addresses are treated as verified; the dispatcher owns
+    // the QA organization.
+    await c.query(
+      "UPDATE users SET email_verified_at=now() WHERE email LIKE '%@relay.test'",
+    );
+    await c.query(
+      "INSERT INTO organization_members(organization_id,user_id,role) SELECT $1,id,'owner' FROM users WHERE email='dispatcher@relay.test' ON CONFLICT(organization_id,user_id) DO UPDATE SET role='owner'",
+      [org],
+    );
     for (let i = 0; i < 2; i++) {
       const id = randomUUID();
       await c.query(

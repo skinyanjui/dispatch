@@ -65,8 +65,11 @@ test("password verification and authenticated session creation", async () => {
   assert(await verifyPassword("a secure fictional password", hash));
   assert(!(await verifyPassword("wrong", hash)));
   assert(
-    (await login("dispatcher@relay.test", process.env.SEED_PASSWORD!))
-      .length === 64,
+    (
+      (await login("dispatcher@relay.test", process.env.SEED_PASSWORD!)) as {
+        token: string;
+      }
+    ).token.length === 64,
   );
   await assert.rejects(
     login("dispatcher@relay.test", "incorrect"),

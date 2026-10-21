@@ -30,6 +30,21 @@ import {
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
 import {
+  accountSummary,
+  changePassword,
+  completeEmailVerification,
+  completeMfaLogin,
+  completePasswordReset,
+  mfaDisable,
+  mfaEnable,
+  mfaSetup,
+  organization,
+  removeTeamMember,
+  requestEmailVerification,
+  requestPasswordReset,
+  saveOrganization,
+} from "@/lib/account";
+import {
   deliverDue,
   notificationLog,
   preferences,
@@ -138,10 +153,38 @@ async function handle(req: NextRequest) {
           password: z.string().min(1).max(256),
         })
         .parse(await readJson(req));
-      const token = await login(input.email, input.password);
-      const res = NextResponse.json({ ok: true });
-      return withSession(res, token);
+      const result = await login(input.email, input.password);
+      if ("mfa_challenge" in result)
+        return NextResponse.json({
+          mfa_required: true,
+          challenge: result.mfa_challenge,
+        });
+      return withSession(NextResponse.json({ ok: true }), result.token);
     }
+    if (req.method === "POST" && path.join("/") === "login/mfa")
+      return withSession(
+        NextResponse.json({ ok: true }),
+        await completeMfaLogin(await readJson(req)),
+      );
+    if (req.method === "POST" && path.join("/") === "password-reset/request")
+      return NextResponse.json(
+        await requestPasswordReset(
+          await readJson(req),
+          req.headers.get("origin") || undefined,
+        ),
+        { status: 202 },
+      );
+    if (req.method === "POST" && path.join("/") === "password-reset/complete")
+      return NextResponse.json(
+        await completePasswordReset(await readJson(req)),
+      );
+    if (
+      req.method === "POST" &&
+      path.join("/") === "account/verify-email/complete"
+    )
+      return NextResponse.json(
+        await completeEmailVerification(await readJson(req)),
+      );
     if (
       path.length === 3 &&
       path[0] === "onboarding" &&
@@ -198,7 +241,10 @@ async function handle(req: NextRequest) {
         [user.id],
       );
       const organizations = await pool.query(
-        "SELECT DISTINCT o.id,o.name FROM organizations o JOIN carriers c ON c.organization_id=o.id JOIN memberships m ON m.carrier_id=c.id WHERE m.user_id=$1 AND m.role='dispatcher'",
+        `SELECT o.id,o.name,om.role FROM organizations o JOIN organization_members om ON om.organization_id=o.id WHERE om.user_id=$1
+        UNION SELECT DISTINCT o.id,o.name,NULL FROM organizations o JOIN carriers c ON c.organization_id=o.id JOIN memberships m ON m.carrier_id=c.id
+          WHERE m.user_id=$1 AND m.role='dispatcher' AND NOT EXISTS(SELECT 1 FROM organization_members WHERE organization_id=o.id AND user_id=$1)
+        ORDER BY name`,
         [user.id],
       );
       return NextResponse.json({
@@ -323,6 +369,61 @@ async function handle(req: NextRequest) {
           { status: 201 },
         );
     }
+    if (path[0] === "account") {
+      const route = path.slice(1).join("/");
+      if (route === "" && req.method === "GET")
+        return NextResponse.json(await accountSummary(user.id));
+      if (req.method === "POST") {
+        if (route === "password")
+          return NextResponse.json(
+            await changePassword(
+              user.id,
+              await readJson(req),
+              req.cookies.get("relay_session")?.value || "",
+            ),
+          );
+        if (route === "verify-email/request")
+          return NextResponse.json(
+            await requestEmailVerification(
+              user.id,
+              req.headers.get("origin") || undefined,
+            ),
+          );
+        if (route === "mfa/setup")
+          return NextResponse.json(await mfaSetup(user.id));
+        if (route === "mfa/enable")
+          return NextResponse.json(
+            await mfaEnable(user.id, await readJson(req)),
+          );
+        if (route === "mfa/disable")
+          return NextResponse.json(
+            await mfaDisable(user.id, await readJson(req)),
+          );
+      }
+    }
+    if (path[0] === "organizations" && path.length >= 2) {
+      const org = z.uuid().parse(path[1]);
+      if (path.length === 2 && req.method === "GET")
+        return NextResponse.json(await organization(user.id, org));
+      if (path.length === 3 && path[2] === "profile" && req.method === "POST")
+        return NextResponse.json(
+          await saveOrganization(user.id, org, await readJson(req)),
+        );
+    }
+    if (
+      path[0] === "carriers" &&
+      path.length === 4 &&
+      path[2] === "team" &&
+      path[3] === "remove" &&
+      req.method === "POST"
+    )
+      return NextResponse.json(
+        await removeTeamMember(
+          user.id,
+          z.uuid().parse(path[1]),
+          await readJson(req),
+        ),
+      );
     if (path[0] === "notifications") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(await notificationLog(user.id));

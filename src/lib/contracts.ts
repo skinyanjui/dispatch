@@ -61,7 +61,7 @@ export type Context = {
   user: { name: string };
   carriers: { id: string; name: string; role: string }[];
   drivers: { id: string; name: string; carrier_id: string }[];
-  organizations?: { id: string; name: string }[];
+  organizations?: { id: string; name: string; role?: string | null }[];
 };
 export type CarrierSetup = {
   carrier: { id: string; name: string; organization_id: string; role: string };

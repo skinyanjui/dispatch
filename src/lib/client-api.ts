@@ -65,6 +65,23 @@ const messages: Record<string, string> = {
   INVOICE_VOID: "This invoice was voided.",
   INVOICE_HAS_PAYMENTS: "Invoices with recorded payments cannot be voided.",
   INVOICE_NOT_ISSUED: "Issue the invoice before recording payments.",
+  TOKEN_UNAVAILABLE:
+    "This link has expired or was already used. Request a new one.",
+  MFA_UNAVAILABLE:
+    "Two-step verification is not configured on this server yet. Ask your administrator.",
+  MFA_ALREADY_ENABLED: "Two-step verification is already on.",
+  MFA_SETUP_REQUIRED: "Start setup again to get a new key.",
+  MFA_NOT_ENABLED: "Two-step verification is not on.",
+  INVALID_MFA_CODE:
+    "That code didn't match. Use the current 6-digit code or an unused recovery code.",
+  MFA_CHALLENGE_EXPIRED: "Sign-in timed out. Enter your password again.",
+  CANNOT_REMOVE_SELF: "You can't remove your own access.",
+  LAST_DISPATCHER: "Each carrier needs at least one dispatcher.",
+  DRIVER_HAS_ACTIVE_LOADS:
+    "Reassign this driver's undelivered loads before removing them.",
+  JOBS_NOT_CONFIGURED: "Scheduled jobs are not configured.",
+  DEMO_UNAVAILABLE:
+    "Not available in the demo: it has no real accounts. Sign in to Relay to use account security.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

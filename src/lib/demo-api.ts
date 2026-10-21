@@ -677,6 +677,32 @@ export function createDemoApi() {
     const data = body as Record<string, unknown>;
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
+    if (p[0] === "account") {
+      if (!body && p.length === 1)
+        return {
+          name: state.viewer.name,
+          email: "demo@example.test",
+          email_verified: true,
+          mfa_enabled: false,
+          mfa_available: false,
+          recovery_codes_remaining: 0,
+        };
+      fail("DEMO_UNAVAILABLE", 409);
+    }
+    if (p[0] === "carriers" && p[2] === "team" && p[3] === "remove" && data) {
+      const c = writable(p[1]);
+      const d =
+        c.drivers.find((v) => v.id === data.driver_id) ||
+        fail("NOT_FOUND", 404);
+      if (
+        state.loads.some(
+          (l) => l.assignment?.driver_id === d.id && l.stage !== "delivered",
+        )
+      )
+        fail("DRIVER_HAS_ACTIVE_LOADS");
+      c.drivers = c.drivers.filter((v) => v.id !== d.id);
+      return { ok: true };
+    }
     if (p[0] === "notifications") {
       if (p[1] === "preferences") {
         if (data) state.preferences[data.kind as OptionalKind] = !!data.email;

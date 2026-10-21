@@ -179,3 +179,35 @@
   font-weight: 600;
   margin-bottom: 6px;
 }
+.opsTeamName {
+  flex: 1;
+  min-width: 160px;
+  display: grid;
+  font-size: 12px;
+}
+.opsTeamName small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.recoveryCodes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.recoveryCodes code,
+.mfaSecret {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-block;
+  word-break: break-all;
+}
+.setupRemove {
+  flex-basis: 100%;
+}

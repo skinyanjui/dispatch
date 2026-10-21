@@ -19,6 +19,7 @@
     "test:browser": "playwright test",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "org:create": "tsx scripts/create-organization.ts",
     "demo": "node scripts/dev.mjs",
     "build:demo": "node scripts/build.mjs"
   },
