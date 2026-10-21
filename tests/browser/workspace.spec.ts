@@ -113,7 +113,7 @@ test("create, assign, dispatch, reject cross-origin writes and revoke session", 
   expect(denied.status()).toBe(401);
 });
 
-test("Board/List, filters, keyboard search and session recovery", async ({
+test("Board, filters, keyboard search and session recovery", async ({
   page,
 }) => {
   await page.goto("/");
@@ -122,11 +122,11 @@ test("Board/List, filters, keyboard search and session recovery", async ({
     .getByLabel("Password", { exact: true })
     .fill(process.env.SEED_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: false }).click();
+  await expect(page.locator(".kanban")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Board", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await expect(page.getByRole("table")).toBeVisible();
+    page.getByRole("button", { name: "List", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("table")).toHaveCount(0);
   await page.getByRole("button", { name: "Filter", exact: false }).click();
   await expect(page.getByLabel("Carrier", { exact: true })).toBeVisible();
   await page

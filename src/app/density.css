@@ -228,3 +228,21 @@ small {
     padding: 12px 14px 4px;
   }
 }
+
+/* Loads: search, filter and refresh share the header row; the page title is
+   kept for screen readers only. */
+.appShell .topbar.compact {
+  height: auto;
+  min-height: 52px;
+  padding: 8px 20px;
+}
+.appShell .topbar.compact .toolbar {
+  flex: 1;
+  margin-bottom: 0;
+}
+@media (max-width: 760px) {
+  .appShell .topbar.compact {
+    min-height: 0;
+    padding: 10px 16px;
+  }
+}

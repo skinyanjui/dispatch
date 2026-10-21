@@ -2,8 +2,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import {
-  SquaresFourIcon,
-  ListIcon,
   PlusCircleIcon,
   MagnifyingGlassIcon,
   FunnelSimpleIcon,
@@ -95,7 +93,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [creating, setCreating] = useState(false),
     [cursor, setCursor] = useState<string | null>(null),
     [offline, setOffline] = useState(false),
-    [view, setView] = useState<"board" | "list">("board"),
     [filters, setFilters] = useState(false),
     [updated, setUpdated] = useState<Date | null>(null),
     [section, setSection] = useState<WorkspaceSection>("loads"),
@@ -186,8 +183,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       .then((c) => {
         active.current = true;
         setContext(c);
-        if (c.carriers.length && c.carriers.every((v) => v.role === "driver"))
-          setView("list");
         if (
           new URLSearchParams(window.location.search).get("view") ===
             "carriers" &&
@@ -402,11 +397,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   const c = await api<Context>("me");
                   active.current = true;
                   setContext(c);
-                  if (
-                    c.carriers.length &&
-                    c.carriers.every((v) => v.role === "driver")
-                  )
-                    setView("list");
                 });
               }}
             >
@@ -508,11 +498,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   const c = await api<Context>("me");
                   active.current = true;
                   setContext(c);
-                  if (
-                    c.carriers.length &&
-                    c.carriers.every((v) => v.role === "driver")
-                  )
-                    setView("list");
                 });
               }}
             >
@@ -678,36 +663,21 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       onCreate={createLoad}
       onLogout={logout}
     >
-      <header className="topbar">
-        <div className="topbarLeft">
-          <div className="headingGroup">
-            <h1>
-              {section !== "loads"
-                ? sectionTitles[section]
-                : driverOnly && !status
-                  ? "My loads"
-                  : queueTitle(status)}
+      <header className={"topbar" + (section === "loads" ? " compact" : "")}>
+        {section === "loads" ? (
+          <>
+            <h1 className="srOnly">
+              {driverOnly && !status ? "My loads" : queueTitle(status)}
             </h1>
-          </div>
-          {section === "loads" && !driverOnly && (
-            <div className="viewToggle" role="group" aria-label="Load view">
-              <button
-                aria-pressed={view === "board"}
-                onClick={() => setView("board")}
-              >
-                <SquaresFourIcon size={15} aria-hidden="true" />
-                Board
-              </button>
-              <button
-                aria-pressed={view === "list"}
-                onClick={() => setView("list")}
-              >
-                <ListIcon size={16} aria-hidden="true" />
-                List
-              </button>
+            {controls}
+          </>
+        ) : (
+          <div className="topbarLeft">
+            <div className="headingGroup">
+              <h1>{sectionTitles[section]}</h1>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </header>
       <main id="main" className="workspace">
         {offline && (
@@ -724,7 +694,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         )}
         {section === "loads" ? (
           <>
-            {controls}
             {filters && (
               <div className="filterPanel">
                 <label>
@@ -794,7 +763,23 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               aria-label="Load workspace"
               aria-busy={loading}
             >
-              {view === "board" ? (
+              {driverOnly && !loads.length ? (
+                <div className="empty">
+                  <TruckIcon size={28} aria-hidden="true" />
+                  <h2>
+                    {loading
+                      ? "Loading your loads…"
+                      : q
+                        ? "No matching loads"
+                        : "No assigned loads yet"}
+                  </h2>
+                  <p>
+                    {q
+                      ? "Try another reference."
+                      : "Your dispatcher will assign your loads here. You can return when you are ready."}
+                  </p>
+                </div>
+              ) : (
                 <div className="kanban">
                   {stages.map((stage) => {
                     const items = loads.filter((l) => l.stage === stage);
@@ -836,6 +821,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                               <span className="cardCarrier">
                                 <BuildingsIcon size={13} aria-hidden="true" />
                                 {load.carrier_name}
+                                {load.cancelled_at && (
+                                  <span className="badge cancelled">
+                                    Cancelled
+                                  </span>
+                                )}
                               </span>
                               <span className="cardRoute">
                                 <span>
@@ -870,144 +860,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                       </section>
                     );
                   })}
-                </div>
-              ) : driverOnly ? (
-                <div className="driverLoadCards">
-                  {loads.map((l) => (
-                    <button
-                      className="driverLoadCard"
-                      key={l.id}
-                      aria-label={`${l.reference} · ${l.carrier_name}`}
-                      disabled={busy || loading}
-                      onClick={() => open(l.id)}
-                    >
-                      <span className="driverCardHeading">
-                        <strong>{l.reference}</strong>
-                        <span className={"badge " + l.stage}>
-                          {l.cancelled_at ? "Cancelled" : stageLabels[l.stage]}
-                        </span>
-                      </span>
-                      <span className="driverCardRoute">
-                        {l.pickup}
-                        <ArrowRightIcon size={15} />
-                        {l.delivery}
-                        {(l.stop_count ?? 2) > 2 && ` · ${l.stop_count} stops`}
-                      </span>
-                      <span className="driverCardFoot">
-                        {l.carrier_name}
-                        <span>
-                          View load
-                          <ArrowUpRightIcon size={14} />
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                  {!loads.length && (
-                    <div className="empty">
-                      <TruckIcon size={28} />
-                      <h2>
-                        {loading
-                          ? "Loading your loads…"
-                          : q
-                            ? "No matching loads"
-                            : "No assigned loads yet"}
-                      </h2>
-                      <p>
-                        {q
-                          ? "Try another reference."
-                          : "Your dispatcher will assign your loads here. You can return when you are ready."}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="tableWrap">
-                  <table>
-                    <caption className="srOnly">
-                      Authorized loads and their milestones
-                    </caption>
-                    <thead>
-                      <tr>
-                        <th>Load / carrier</th>
-                        <th>Route</th>
-                        <th>Milestone</th>
-                        {!driverOnly && <th>Agreed rate</th>}
-                        <th>
-                          <span className="srOnly">Open load</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loads.map((l) => (
-                        <tr key={l.id}>
-                          <td>
-                            <button
-                              className="loadLink"
-                              aria-label={`${l.reference} · ${l.carrier_name}`}
-                              onClick={() => open(l.id)}
-                              disabled={busy || loading}
-                            >
-                              {l.reference}
-                            </button>
-                            <small>{l.carrier_name}</small>
-                          </td>
-                          <td>
-                            {l.pickup}
-                            <small>
-                              <ArrowDownIcon size={11} aria-hidden="true" />
-                              {l.delivery}
-                              {(l.stop_count ?? 2) > 2 &&
-                                ` · ${l.stop_count} stops`}
-                            </small>
-                          </td>
-                          <td>
-                            <span className={"badge " + l.stage}>
-                              <CircleIcon
-                                size={7}
-                                weight="fill"
-                                aria-hidden="true"
-                              />
-                              {l.cancelled_at
-                                ? "Cancelled"
-                                : stageLabels[l.stage]}
-                            </span>
-                          </td>
-                          {!driverOnly && (
-                            <td className="money">
-                              {formatMoney(l.amount_minor)}
-                            </td>
-                          )}
-                          <td>
-                            <button
-                              className="iconButton"
-                              onClick={() => open(l.id)}
-                              aria-label={`Open ${l.reference} · ${l.carrier_name}`}
-                              disabled={busy || loading}
-                            >
-                              <ArrowUpRightIcon size={17} aria-hidden="true" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!loads.length && (
-                    <div className="empty">
-                      <MagnifyingGlassIcon size={24} aria-hidden="true" />
-                      <h2>
-                        {loading
-                          ? "Loading your queue…"
-                          : driverOnly && !q
-                            ? "No assigned loads yet"
-                            : "No matching loads"}
-                      </h2>
-                      <p>
-                        {driverOnly && !q
-                          ? "Your dispatcher will assign your loads here. You can return when you are ready."
-                          : "Try another search or clear your filters."}
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
               {cursor && (

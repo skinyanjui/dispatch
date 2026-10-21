@@ -175,18 +175,11 @@ test("list actions distinguish the same reference across carriers", async ({
   }
 
   await page.goto("/");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  const table = page.getByRole("table");
+  const table = page.getByRole("region", { name: "Load workspace" });
   for (const carrier of carriers) {
     await expect(
       table.getByRole("button", {
         name: "SHARED-REF · " + carrier.name,
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
-      table.getByRole("button", {
-        name: "Open SHARED-REF · " + carrier.name,
         exact: true,
       }),
     ).toBeVisible();
@@ -204,7 +197,7 @@ test("list actions distinguish the same reference across carriers", async ({
   await details.getByRole("button", { name: "Close load details" }).click();
   await table
     .getByRole("button", {
-      name: "Open SHARED-REF · South QA Logistics",
+      name: "SHARED-REF · South QA Logistics",
       exact: true,
     })
     .click();
