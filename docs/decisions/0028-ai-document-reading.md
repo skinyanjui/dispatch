@@ -8,7 +8,7 @@ Relay can ask Claude to **read one uploaded document** and suggest values for a 
 
 **What is read.** Auto-liability and cargo insurance (insurer, policy number, named insured, effective and expiry dates, coverage limit), rate confirmations (reference, broker, rate, pickup and delivery dates), bills of lading and proofs of delivery (numbers, dates, parties, whether signed, damage noted). **Never sent:** W-9s (tax ID numbers) and dispatch agreements (written authority to book freight is a human, audited decision). Field lists live in `src/lib/extraction.ts`.
 
-**Off by default, twice.** Nothing runs unless the deployment has `ANTHROPIC_API_KEY` *and* an organization owner or admin turns it on under Organization settings (table `organization_ai_settings`). Turning it on is the consent to send that organization's paperwork to the model provider; it is audited (`ai.extraction.enabled/disabled`). A monthly limit in cents (default 10 USD) caps spend.
+**Off by default, twice.** Nothing runs unless the deployment has `ANTHROPIC_API_KEY` _and_ an organization owner or admin turns it on under Organization settings (table `organization_ai_settings`). Turning it on is the consent to send that organization's paperwork to the model provider; it is audited (`ai.extraction.enabled/disabled`). A monthly limit in cents (default 10 USD) caps spend.
 
 **Who can read.** Dispatchers and carrier managers of the document's carrier, on the current version of a file, under the same checks as reviewing it. Drivers and other tenants get `NOT_FOUND`; a cancelled load's documents cannot be read.
 

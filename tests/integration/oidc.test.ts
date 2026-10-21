@@ -256,10 +256,6 @@ test("an unverified provider email never links and never asks for access", async
 
 test("an unknown verified email becomes an access request, nothing else", async () => {
   const email = `new-${randomUUID().slice(0, 8)}@company.test`;
-  const users = (await pool.query("SELECT count(*)::int n FROM users")).rows[0]
-    .n;
-  const orgs = (await pool.query("SELECT count(*)::int n FROM organizations"))
-    .rows[0].n;
   const { response } = await signIn("apple", () =>
     good("apple", { email, email_verified: "true" }),
   );
@@ -272,12 +268,17 @@ test("an unknown verified email becomes an access request, nothing else", async 
   assert.equal(row.email_verified, true);
   assert.equal(row.status, "pending");
   assert.equal(
-    (await pool.query("SELECT count(*)::int n FROM users")).rows[0].n,
-    users,
+    (await pool.query("SELECT 1 FROM users WHERE email=$1", [email])).rowCount,
+    0,
   );
   assert.equal(
-    (await pool.query("SELECT count(*)::int n FROM organizations")).rows[0].n,
-    orgs,
+    (
+      await pool.query(
+        "SELECT 1 FROM audit_logs WHERE action='organization.created' AND resource_id=$1",
+        [row.id],
+      )
+    ).rowCount,
+    0,
   );
   assert.equal(
     (

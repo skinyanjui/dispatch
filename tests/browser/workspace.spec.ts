@@ -630,16 +630,32 @@ test("organization: tabs, a filterable people list and search", async ({
   ).toBeVisible();
 });
 
-test("inbox: filter tabs sit in the conversation column, and the newest click wins", async ({
+test("inbox: filters are stacked in a side rail, and the newest click wins", async ({
   page,
 }) => {
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: /^Inbox/ }).click();
-  const list = page.locator(".inboxList");
+  const list = page.locator(".inboxRail");
   const tabs = list.getByRole("group", { name: "Filter conversations" });
   await expect(tabs).toBeVisible();
-  for (const name of ["All", "Unread", "Relay", "Email", "Texts", "Calls"])
+  // New message heads the rail, with the filters stacked under it.
+  const create = list.getByRole("button", { name: "New message" });
+  const first = await create.boundingBox();
+  const stacked = await tabs
+    .getByRole("button", { name: "All", exact: true })
+    .boundingBox();
+  expect(stacked!.y).toBeGreaterThan(first!.y + first!.height - 1);
+  for (const name of [
+    "All",
+    "Unread",
+    "Relay",
+    "Email",
+    "Texts",
+    "Calls",
+    "Archived",
+    "Trash",
+  ])
     await expect(tabs.getByRole("button", { name, exact: true })).toBeVisible();
   const [t, l] = await Promise.all([tabs.boundingBox(), list.boundingBox()]);
   expect(t!.x).toBeGreaterThanOrEqual(l!.x - 1);
@@ -704,4 +720,111 @@ test("reports: pressed range, KPIs that open their loads, sortable table", async
   await expect(
     page.getByRole("button", { name: "Ready to dispatch", exact: true }),
   ).toHaveAttribute("aria-current", "page");
+});
+
+test("inbox: mark unread, archive, trash and restore, with counts and undo", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Inbox/ }).click();
+  const rail = page.getByRole("group", { name: "Filter conversations" });
+  const rows = page.locator(".threadItem");
+  await expect(rows.first()).toBeVisible();
+  const subject = (
+    await rows.first().locator(".threadSubject").innerText()
+  ).trim();
+  await rows.first().click();
+  const actions = page.getByRole("group", { name: "Conversation actions" });
+  // Mark unread: the Unread tab gets a count and the row is bold again.
+  await actions.getByRole("button", { name: "Mark unread" }).click();
+  await expect(
+    rail.getByRole("button", { name: /^Unread/ }).getByLabel(/unread$/),
+  ).toBeVisible();
+  // Archive, then see it under Archived with a count.
+  await page.locator(".threadItem", { hasText: subject }).first().click();
+  await actions.getByRole("button", { name: "Archive" }).click();
+  await expect(page.getByText("Conversation archived.").first()).toBeVisible();
+  await expect(page.locator(".threadItem", { hasText: subject })).toHaveCount(
+    0,
+  );
+  await rail.getByRole("button", { name: /^Archived/ }).click();
+  await expect(page.locator(".threadItem", { hasText: subject })).toHaveCount(
+    1,
+  );
+  // Undo puts it back, so move it again and use Trash and Restore.
+  await page.locator(".threadItem", { hasText: subject }).click();
+  await actions.getByRole("button", { name: "Unarchive" }).click();
+  await rail.getByRole("button", { name: "All", exact: true }).click();
+  await page.locator(".threadItem", { hasText: subject }).first().click();
+  await actions.getByRole("button", { name: "Move to trash" }).click();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(
+    page.locator(".threadItem", { hasText: subject }).first(),
+  ).toBeVisible();
+  await page.locator(".threadItem", { hasText: subject }).first().click();
+  await actions.getByRole("button", { name: "Move to trash" }).click();
+  await rail.getByRole("button", { name: /^Trash/ }).click();
+  await expect(page.locator(".threadItem", { hasText: subject })).toHaveCount(
+    1,
+  );
+  await page.locator(".threadItem", { hasText: subject }).click();
+  await actions.getByRole("button", { name: "Restore" }).click();
+  await rail.getByRole("button", { name: "All", exact: true }).click();
+  await expect(
+    page.locator(".threadItem", { hasText: subject }).first(),
+  ).toBeVisible();
+  // Keyboard: e archives the focused conversation.
+  await page.locator(".threadItem", { hasText: subject }).first().focus();
+  await page.keyboard.press("e");
+  await expect(page.locator(".threadItem", { hasText: subject })).toHaveCount(
+    0,
+  );
+  await rail.getByRole("button", { name: /^Archived/ }).click();
+  await page.locator(".threadItem", { hasText: subject }).first().focus();
+  await page.keyboard.press("e");
+});
+
+test("carriers: authorization, activity and one-click paths", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Carriers", exact: true }).click();
+  const directory = page.getByRole("region", {
+    name: "Authorized carrier directory",
+  });
+  const filters = directory.getByRole("group", { name: "Filter carriers" });
+  await expect(
+    filters.getByRole("button", { name: /Authorized/ }),
+  ).toBeEnabled();
+  const row = directory.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Blue Ridge Transport" }),
+  });
+  await expect(
+    row.getByRole("button", { name: /Authorized until/ }),
+  ).toBeVisible();
+  await expect(row.getByText("Active loads")).toBeVisible();
+  // Paged: the QA workspace has far more than one page of carriers.
+  expect(await directory.getByRole("article").count()).toBeLessThanOrEqual(25);
+  await directory.getByRole("button", { name: /Show \d+ more/ }).click();
+  expect(await directory.getByRole("article").count()).toBeGreaterThan(25);
+  // The filter narrows, and pressing it again clears it.
+  await filters.getByRole("button", { name: /With open exceptions/ }).click();
+  await expect(
+    filters.getByRole("button", { name: /With open exceptions/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await filters.getByRole("button", { name: /With open exceptions/ }).click();
+  // Sorting by active loads puts the busiest carrier first.
+  await directory.getByLabel("Sort carriers").selectOption("active");
+  await expect(
+    directory.getByRole("article").first().getByRole("heading"),
+  ).toHaveText("Blue Ridge Transport");
+  // Active loads opens that carrier's loads in one click.
+  await directory
+    .getByRole("article")
+    .first()
+    .getByRole("button", { name: /active loads for .* Open loads/ })
+    .click();
+  await expect(page.locator(".loadSurface")).toBeVisible();
 });

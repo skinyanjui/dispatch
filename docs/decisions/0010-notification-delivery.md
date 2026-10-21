@@ -5,6 +5,7 @@ Status: accepted, 2026-10-21.
 ## Decision
 
 Messages are written to a `notifications` table **inside the same transaction** as the change that causes them:
+
 - invitations, queued when the invite is created;
 - driver assignment, sent to the assigned driver's user;
 - exception ownership, sent to the new owner unless they assigned themselves.

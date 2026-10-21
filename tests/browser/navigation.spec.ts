@@ -54,6 +54,26 @@ const loads = [
 }));
 
 async function mockWorkspace(page: Page) {
+  await page.route("**/api/carriers/summary", (route) =>
+    route.fulfill({
+      json: {
+        generated_at: new Date().toISOString(),
+        carriers: context.carriers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          role: c.role,
+          authorization: {
+            state: "current",
+            expires_at: "2027-10-21T00:00:00.000Z",
+            agreement_ref: "QA",
+          },
+          loads: { active: 1, total: 1, delivered: 0, cancelled: 0 },
+          open_exceptions: 0,
+          drivers: 0,
+        })),
+      },
+    }),
+  );
   await page.route("**/api/me", (route) => route.fulfill({ json: context }));
   await page.route("**/api/loads?*", (route) => {
     const params = new URL(route.request().url()).searchParams;

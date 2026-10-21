@@ -83,6 +83,13 @@ type SavedReply = {
   mine: boolean;
   owner_name: string;
 };
+type Counts = {
+  unread: number;
+  by_channel: Record<Channel, number>;
+  archived: number;
+  trash: number;
+};
+type ThreadAction = "unread" | "archive" | "unarchive" | "trash" | "restore";
 type Mode =
   | "in_app"
   | "email"
@@ -165,6 +172,8 @@ const tabLabels: Record<string, string> = {
   email: "Email",
   sms: "Texts",
   call: "Calls",
+  archived: "Archived",
+  trash: "Trash",
 };
 const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
@@ -684,6 +693,13 @@ export function Inbox({
   const [ownQ, setQ] = useState(""),
     [unreadOnly, setUnreadOnly] = useState(false),
     [channel, setChannel] = useState(""),
+    [box, setBox] = useState<"inbox" | "archived" | "trash">("inbox"),
+    [counts, setCounts] = useState<Counts | null>(null),
+    [undo, setUndo] = useState<{
+      id: string;
+      undo: ThreadAction;
+      text: string;
+    } | null>(null),
     [threads, setThreads] = useState<Thread[] | null>(null),
     [next, setNext] = useState<string | null>(null),
     [loading, setLoading] = useState(true),
@@ -719,6 +735,7 @@ export function Inbox({
           ...(q.trim() ? { q: q.trim() } : {}),
           ...(unreadOnly ? { filter: "unread" } : {}),
           ...(channel ? { channel } : {}),
+          ...(box !== "inbox" ? { view: box } : {}),
           ...(cursor ? { cursor } : {}),
         });
         const result = await api<{
@@ -738,7 +755,7 @@ export function Inbox({
         if (id === request.current) setLoading(false);
       }
     },
-    [api, q, unreadOnly, channel, onAuthError],
+    [api, q, unreadOnly, channel, box, onAuthError],
   );
   useEffect(() => {
     const timer = setTimeout(() => void load(), 200);
@@ -756,6 +773,23 @@ export function Inbox({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadReplies();
   }, [loadReplies]);
+  const loadCounts = useCallback(async () => {
+    try {
+      setCounts(await api<Counts>("threads/counts"));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) onAuthError(e);
+    }
+  }, [api, onAuthError]);
+  useEffect(() => {
+    // Fetch once on mount; state is set after the response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadCounts();
+  }, [loadCounts]);
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), 8000);
+    return () => clearTimeout(timer);
+  }, [undo]);
   // Pre-fill the recipient we already know about, so no searching is needed.
   const suggested = newMessage?.suggest;
   useEffect(() => {
@@ -812,6 +846,7 @@ export function Inbox({
             : old,
         );
         onUnreadChanged();
+        void loadCounts();
       } catch (e) {
         if (mine !== openRequest.current) return;
         if (e instanceof ApiError && e.status === 401) onAuthError(e);
@@ -819,7 +854,7 @@ export function Inbox({
         setViewError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
       }
     },
-    [api, onAuthError, onUnreadChanged],
+    [api, onAuthError, onUnreadChanged, loadCounts],
   );
   const others = useMemo(
     () =>
@@ -861,7 +896,50 @@ export function Inbox({
     onComposeDone();
     await load();
     await openThread(threadId);
+    void loadCounts();
   };
+  const inverse: Record<ThreadAction, ThreadAction | null> = {
+    unread: null,
+    archive: "unarchive",
+    unarchive: "archive",
+    trash: "restore",
+    restore: "trash",
+  };
+  const doneText: Record<ThreadAction, string> = {
+    unread: "Marked as unread.",
+    archive: "Conversation archived.",
+    unarchive: "Moved back to the inbox.",
+    trash: "Moved to trash.",
+    restore: "Restored from trash.",
+  };
+  async function changeState(id: string, action: ThreadAction) {
+    setViewError("");
+    try {
+      await api(`threads/${id}/${action}`, {});
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) onAuthError(e);
+      setViewError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
+      return;
+    }
+    setStatus(doneText[action]);
+    setUndo(
+      inverse[action]
+        ? { id, undo: inverse[action]!, text: doneText[action] }
+        : null,
+    );
+    if (action !== "unread") {
+      // It left this list; step back to the list (or the next conversation).
+      setThreads((old) => (old ? old.filter((t) => t.id !== id) : old));
+      back();
+    } else {
+      setThreads((old) =>
+        old ? old.map((t) => (t.id === id ? { ...t, unread: true } : t)) : old,
+      );
+      back();
+    }
+    onUnreadChanged();
+    void loadCounts();
+  }
   const hasDetail = Boolean(newMessage || view || viewError);
   const back = () => {
     setNewMessage(null);
@@ -870,33 +948,29 @@ export function Inbox({
   };
   return (
     <section className="inbox" aria-label="Inbox">
-      <div className="inboxBar">
-        <label className="directorySearch" hidden={query !== undefined}>
-          <MagnifyingGlassIcon size={16} aria-hidden="true" />
-          <span className="srOnly">Search conversations</span>
-          <input
-            type="search"
-            value={ownQ}
-            maxLength={100}
-            placeholder="Search by subject, person or words…"
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </label>
-        <button
-          className="primary"
-          disabled={offline}
-          onClick={() => {
-            setNewMessage({ to: [] });
-            setSelected(null);
-            setView(null);
-          }}
-        >
-          <NotePencilIcon {...icon} /> New message
-        </button>
-      </div>
       <p className="srOnly" role="status">
         {status}
       </p>
+      {undo && (
+        <div className="undoBar" role="status">
+          <span>{undo.text}</span>
+          <button
+            type="button"
+            className="textButton"
+            onClick={() => {
+              const u = undo;
+              setUndo(null);
+              void api(`threads/${u.id}/${u.undo}`, {}).then(() => {
+                void load();
+                void loadCounts();
+                onUnreadChanged();
+              });
+            }}
+          >
+            Undo
+          </button>
+        </div>
+      )}
       {managing && (
         <Modal label="Saved replies" onClose={() => setManaging(false)}>
           <SavedReplies
@@ -908,31 +982,88 @@ export function Inbox({
           />
         </Modal>
       )}
-      <div className={"inboxLayout" + (hasDetail ? " hasDetail" : "")}>
-        <div className="inboxList">
+      <div className={"inboxLayout hasRail" + (hasDetail ? " hasDetail" : "")}>
+        <aside className="inboxRail">
+          <button
+            className="primary"
+            disabled={offline}
+            onClick={() => {
+              setNewMessage({ to: [] });
+              setSelected(null);
+              setView(null);
+            }}
+          >
+            <NotePencilIcon {...icon} /> New message
+          </button>
           <div
             className="inboxTabs"
             role="group"
             aria-label="Filter conversations"
           >
             {Object.keys(tabLabels).map((tab) => {
-              const active = unreadOnly ? "unread" : channel || "all";
+              const active =
+                box !== "inbox"
+                  ? box
+                  : unreadOnly
+                    ? "unread"
+                    : channel || "all";
+              const isBox = tab === "archived" || tab === "trash";
+              const count = !counts
+                ? 0
+                : tab === "unread"
+                  ? counts.unread
+                  : tab === "archived"
+                    ? counts.archived
+                    : tab === "trash"
+                      ? counts.trash
+                      : tab === "all"
+                        ? 0
+                        : counts.by_channel[tab as Channel];
               return (
                 <button
                   key={tab}
                   type="button"
-                  className={"inboxTab" + (active === tab ? " active" : "")}
+                  className={
+                    "inboxTab" +
+                    (active === tab ? " active" : "") +
+                    (tab === "archived" ? " firstBox" : "")
+                  }
                   aria-pressed={active === tab}
                   onClick={() => {
+                    setBox(isBox ? (tab as "archived" | "trash") : "inbox");
                     setUnreadOnly(tab === "unread");
-                    setChannel(tab === "all" || tab === "unread" ? "" : tab);
+                    setChannel(
+                      isBox || tab === "all" || tab === "unread" ? "" : tab,
+                    );
+                    back();
                   }}
                 >
-                  {tabLabels[tab]}
+                  <span>{tabLabels[tab]}</span>
+                  {count > 0 && (
+                    <span
+                      className={"tabCount" + (isBox ? " quiet" : "")}
+                      aria-label={`${count} ${isBox ? "conversations" : "unread"}`}
+                    >
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
+        </aside>
+        <div className="inboxList">
+          <label className="directorySearch" hidden={query !== undefined}>
+            <MagnifyingGlassIcon size={16} aria-hidden="true" />
+            <span className="srOnly">Search conversations</span>
+            <input
+              type="search"
+              value={ownQ}
+              maxLength={100}
+              placeholder="Search by subject, person or words…"
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </label>
           {error && (
             <div className="alert error" role="alert">
               {describe(error)}
@@ -945,6 +1076,27 @@ export function Inbox({
             className="threadList"
             aria-label="Conversations"
             onKeyDown={(e) => {
+              const focused = document.activeElement as HTMLElement | null;
+              const id = focused?.dataset?.threadId;
+              if (id && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const action: ThreadAction | null =
+                  e.key === "e"
+                    ? box === "archived"
+                      ? "unarchive"
+                      : "archive"
+                    : e.key === "#"
+                      ? box === "trash"
+                        ? "restore"
+                        : "trash"
+                      : e.key === "u"
+                        ? "unread"
+                        : null;
+                if (action) {
+                  e.preventDefault();
+                  void changeState(id, action);
+                  return;
+                }
+              }
               if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
               const items = [
                 ...e.currentTarget.querySelectorAll<HTMLButtonElement>(
@@ -967,6 +1119,7 @@ export function Inbox({
             {(threads ?? []).map((t) => (
               <li key={t.id}>
                 <button
+                  data-thread-id={t.id}
                   className={
                     "threadItem" +
                     (selected === t.id ? " active" : "") +
@@ -1009,14 +1162,22 @@ export function Inbox({
             <div className="directoryEmpty">
               <TrayIcon size={36} weight="light" aria-hidden="true" />
               <h2>
-                {q || unreadOnly || channel
-                  ? "No matching conversations"
-                  : "Nothing here yet. Let's fix that!"}
+                {box === "archived"
+                  ? "Nothing archived"
+                  : box === "trash"
+                    ? "Trash is empty"
+                    : q || unreadOnly || channel
+                      ? "No matching conversations"
+                      : "Nothing here yet. Let's fix that!"}
               </h2>
               <p>
-                {q || unreadOnly || channel
-                  ? "Try fewer words or clear the filters."
-                  : "Tap New message to say hello, or open Contacts and choose Message next to anyone."}
+                {box === "archived"
+                  ? "Archived conversations are hidden from your inbox. A new message in one brings it back."
+                  : box === "trash"
+                    ? "Conversations you move to trash stay here. Messages are never deleted, only hidden from you."
+                    : q || unreadOnly || channel
+                      ? "Try fewer words or clear the filters."
+                      : "Tap New message to say hello, or open Contacts and choose Message next to anyone."}
               </p>
             </div>
           )}
@@ -1159,11 +1320,52 @@ export function Inbox({
           {!newMessage && view && (
             <>
               <header className="threadHeader">
-                <h2>{view.subject}</h2>
-                <small>
-                  With {others.map((p) => p.name).join(", ") || "no one else"}
-                  {view.load && ` · Load ${view.load.reference}`}
-                </small>
+                <div>
+                  <h2>{view.subject}</h2>
+                  <small>
+                    With {others.map((p) => p.name).join(", ") || "no one else"}
+                    {view.load && ` · Load ${view.load.reference}`}
+                  </small>
+                </div>
+                <div
+                  className="threadActions"
+                  role="group"
+                  aria-label="Conversation actions"
+                >
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void changeState(view.id, "unread")}
+                  >
+                    Mark unread
+                  </button>
+                  {box !== "trash" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() =>
+                        void changeState(
+                          view.id,
+                          box === "archived" ? "unarchive" : "archive",
+                        )
+                      }
+                    >
+                      {box === "archived" ? "Unarchive" : "Archive"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      void changeState(
+                        view.id,
+                        box === "trash" ? "restore" : "trash",
+                      )
+                    }
+                  >
+                    {box === "trash" ? "Restore" : "Move to trash"}
+                  </button>
+                </div>
               </header>
               <ol className="messageList" aria-label="Messages" ref={messages}>
                 {view.messages.map((m) => (

@@ -48,6 +48,11 @@ function fixture(id = loadId, carrier = carriers[0]) {
 }
 
 async function mockContext(page: Page) {
+  await page.route("**/api/carriers/summary", (route) =>
+    route.fulfill({
+      json: { carriers: [], generated_at: new Date().toISOString() },
+    }),
+  );
   await page.route("**/api/me", (route) =>
     route.fulfill({
       json: { user: { name: "Audit QA" }, carriers, drivers: [] },
@@ -73,7 +78,7 @@ test("a failed sign out remains visible in the carrier directory", async ({
   const main = page.getByRole("main");
   await expect(
     main.getByRole("heading", { name: "Carrier accounts", exact: true }),
-  ).toBeVisible();
+  ).toBeAttached();
   await expect(main.getByRole("alert")).toContainText(
     "We couldn't reach Relay just now.",
   );

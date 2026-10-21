@@ -11,7 +11,8 @@ A **Reports** page (dispatchers and carrier managers) and a loads CSV export, bo
 **Figures.** Load counts by stage and cancelled; freight value (agreed rates, cancelled excluded); on-time pickups and deliveries; exceptions by type (opened, open now, overdue, average hours to resolve); delivered loads with no accepted POD; per-carrier table; loads per pickup week; Relay dispatch invoices issued/paid/outstanding/overdue and carrier freight billed/received/outstanding.
 
 **Honesty rules.**
-- *On time* counts only stops with a reported arrival whose current (non-superseded) report is no later than the window end. Stops past their window with no report are shown as "not reported", never counted on time or late, because arrivals are manual (ADR 0014).
+
+- _On time_ counts only stops with a reported arrival whose current (non-superseded) report is no later than the window end. Stops past their window with no report are shown as "not reported", never counted on time or late, because arrivals are manual (ADR 0014).
 - Money is summed in PostgreSQL as bigint minor units and sent as text; the browser formats it without floating point. Carrier freight "outstanding" is what carriers reported; Relay holds no freight funds (ADR 0009).
 - Dates are UTC; the page says so.
 

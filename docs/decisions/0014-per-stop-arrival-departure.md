@@ -5,6 +5,7 @@ Status: accepted, 2026-10-21. Extends ADR 0013.
 ## Decision
 
 Each stop can carry a manually reported **arrival** and **departure** time (`stop_events`). Reporting follows the same provenance rules as check-ins:
+
 - the server records the actor and receipt time;
 - `source` is always `manual`;
 - times are stored as instants, entered and shown in the stop's own time zone;

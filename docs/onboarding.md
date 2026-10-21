@@ -27,18 +27,18 @@ The driver stays **Waiting to join** and cannot be assigned until they accept. T
 
 ## Server contracts
 
-| Endpoint | Scope / behavior |
-| --- | --- |
-| `POST /api/onboarding/carriers` | Dispatcher in an accessible organization; company details + organization_id + UUID key. |
-| `GET /api/onboarding/carriers/:id` | Own dispatcher/manager scope; saved profile, agreement and drivers. |
-| `POST /api/onboarding/carriers/:id/company` | Own dispatcher/manager; version + company fields + UUID key. |
-| `POST /api/onboarding/carriers/:id/agreement` | Dispatcher only; reference, effective_date, through_date, confirmed=true, UUID key. |
-| `POST /api/onboarding/carriers/:id/complete` | Current agreement required; idempotent completion. |
-| `POST /api/onboarding/carriers/:id/manager-invite` | Dispatcher only; UUID key and random64-hex token. |
-| `POST /api/onboarding/carriers/:id/drivers` | Own manager/dispatcher; name, email, UUID key and random64-hex token. |
-| `POST /api/onboarding/carriers/:id/drivers/:driverId/invite` | Reissue for a pending driver in the same carrier. |
-| `POST /api/onboarding/invitations/inspect` | Private token in JSON; minimal recipient preview. |
-| `POST /api/onboarding/invitations/accept` | Token + name, optional contact/timezone, new password only for a new account; secure session cookie. |
+| Endpoint                                                     | Scope / behavior                                                                                     |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `POST /api/onboarding/carriers`                              | Dispatcher in an accessible organization; company details + organization_id + UUID key.              |
+| `GET /api/onboarding/carriers/:id`                           | Own dispatcher/manager scope; saved profile, agreement and drivers.                                  |
+| `POST /api/onboarding/carriers/:id/company`                  | Own dispatcher/manager; version + company fields + UUID key.                                         |
+| `POST /api/onboarding/carriers/:id/agreement`                | Dispatcher only; reference, effective_date, through_date, confirmed=true, UUID key.                  |
+| `POST /api/onboarding/carriers/:id/complete`                 | Current agreement required; idempotent completion.                                                   |
+| `POST /api/onboarding/carriers/:id/manager-invite`           | Dispatcher only; UUID key and random64-hex token.                                                    |
+| `POST /api/onboarding/carriers/:id/drivers`                  | Own manager/dispatcher; name, email, UUID key and random64-hex token.                                |
+| `POST /api/onboarding/carriers/:id/drivers/:driverId/invite` | Reissue for a pending driver in the same carrier.                                                    |
+| `POST /api/onboarding/invitations/inspect`                   | Private token in JSON; minimal recipient preview.                                                    |
+| `POST /api/onboarding/invitations/accept`                    | Token + name, optional contact/timezone, new password only for a new account; secure session cookie. |
 
 All writes require the same Origin. Invalid/expired/used invite responses reveal no carrier data without the private token. Role/carrier guesses are rejected. Current queue and manual-check-in contracts continue unchanged. Migration004 adds persisted onboarding; no new deployment variable is required beyond the existing database configuration.
 

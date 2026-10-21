@@ -15,11 +15,11 @@ Relay does not read anyone's mailbox or phone. Receiving replies would need inbo
 
 ### Channels
 
-| Channel | How | Failure behaviour |
-|---|---|---|
-| Relay message | stored; recipient must have an account (staff, or a driver who has joined) | always `delivered` once saved; unread badge |
-| Email | existing encrypted outbox (ADR 0010), `kind = message`, one notification per recipient, sender as `Reply-To` | retried with bounded backoff; status mirrors the outbox |
-| Text | Twilio-compatible transport, off unless configured | **attempted once.** A timeout may still have reached the phone, so it is recorded as `unknown` and never retried automatically; the UI says not to resend until confirmed |
+| Channel       | How                                                                                                          | Failure behaviour                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relay message | stored; recipient must have an account (staff, or a driver who has joined)                                   | always `delivered` once saved; unread badge                                                                                                                               |
+| Email         | existing encrypted outbox (ADR 0010), `kind = message`, one notification per recipient, sender as `Reply-To` | retried with bounded backoff; status mirrors the outbox                                                                                                                   |
+| Text          | Twilio-compatible transport, off unless configured                                                           | **attempted once.** A timeout may still have reached the phone, so it is recorded as `unknown` and never retried automatically; the UI says not to resend until confirmed |
 
 Texts need the recipient's recorded consent: users opt in on their account, external contacts carry a consent timestamp, the person who recorded it and a note of how they agreed. Without consent, or without a dialable number, the send is refused. Replying STOP at the provider is not yet reflected in Relay.
 

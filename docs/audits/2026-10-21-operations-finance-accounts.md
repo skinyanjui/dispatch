@@ -1,6 +1,7 @@
 # Documents, exceptions, billing, accounts and notifications — 2026-10-21
 
 Baseline: `0b83d93`. The scope was the five gaps the user identified:
+
 - agreement review recorded a reference only;
 - there was no exception management;
 - carrier billing and dispatch invoicing were mixed or absent;
@@ -9,13 +10,13 @@ Baseline: `0b83d93`. The scope was the five gaps the user identified:
 
 ## Audit findings at baseline
 
-| Area | Finding |
-| --- | --- |
-| Documents | No upload, storage, versioning or review existed. Dispatch authorization stored a free-text reference with no file. The load inspector stated "Delivery does not mark documents complete", but there was nothing to complete. |
-| Exceptions | No table, API or UI. Missed appointments and missing paperwork could not be flagged, owned or resolved. |
-| Billing | No financial records. The build plan required separate carrier billing and dispatcher invoice lifecycles; neither existed. |
-| Accounts | Login only. There was no recovery, verification, MFA or way to remove access. Organizations were implicit in dispatcher memberships and could only be created by the seed. |
-| Notifications | The outbox had no consumer. Invitation links had to be copied manually. No reminders existed. |
+| Area          | Finding                                                                                                                                                                                                                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documents     | No upload, storage, versioning or review existed. Dispatch authorization stored a free-text reference with no file. The load inspector stated "Delivery does not mark documents complete", but there was nothing to complete. |
+| Exceptions    | No table, API or UI. Missed appointments and missing paperwork could not be flagged, owned or resolved.                                                                                                                       |
+| Billing       | No financial records. The build plan required separate carrier billing and dispatcher invoice lifecycles; neither existed.                                                                                                    |
+| Accounts      | Login only. There was no recovery, verification, MFA or way to remove access. Organizations were implicit in dispatcher memberships and could only be created by the seed.                                                    |
+| Notifications | The outbox had no consumer. Invitation links had to be copied manually. No reminders existed.                                                                                                                                 |
 
 ## Changes (one commit each)
 
@@ -90,6 +91,7 @@ Requested next: malware scanning and object storage, plus the workflow limits (o
 - **Check-in amendments and older history** (migration 011): append-only corrections and retractions, plus cursor paging for events and check-ins.
 
 Verification on the final code:
+
 - Lint, TypeScript and the production build pass.
 - **75** unit/integration tests pass. New: object storage and scanning 6, multi-stop 3, history 3.
 - **43** Chromium tests pass. New: multi-stop creation, correct then retract, and older activity/check-in paging.

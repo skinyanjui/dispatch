@@ -7,7 +7,7 @@ Status: accepted, 2026-10-21.
 Organizations were previously implied: anyone holding a dispatcher membership on one of an organization's carriers could act for it. `organization_members` (owner/admin) now records organization administrators explicitly.
 
 - Migration 009 backfills every existing dispatcher as `admin` of the organizations of their carriers. The seed makes the QA dispatcher `owner`.
-- **Dual-read compatibility:** carrier creation and `/api/me` still accept a carrier dispatcher of the organization as before. This keeps existing deployments and fixtures working. The *contract* step — require `organization_members` only — follows once all dispatchers have been confirmed as members.
+- **Dual-read compatibility:** carrier creation and `/api/me` still accept a carrier dispatcher of the organization as before. This keeps existing deployments and fixtures working. The _contract_ step — require `organization_members` only — follows once all dispatchers have been confirmed as members.
 - Organization admins manage the profile (legal name, billing email, phone, address, operating time zone) and may manage the team of every carrier in their organization. Carrier data access is still governed only by carrier `memberships`; organization membership does not by itself expose loads.
 - **Bootstrap:** new organizations are created by an operator with `npm run org:create`. There is no public signup. In-app invitations for additional dispatchers/admins are not built yet.
 

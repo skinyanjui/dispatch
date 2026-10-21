@@ -16,12 +16,12 @@ A dispatcher's four daily questions are answered on the load board itself, witho
 
 ## Actions from question to answer
 
-| Question | Before | After |
-| --- | --- | --- |
-| Which loads need attention? | open every load (N+) | 0 (strip), 1 to filter |
-| Next appointment and driver? | open load, read stops and assignment (2+) | 0 |
-| Is the paperwork in? | open load, open documents (3+) | 0 |
-| What is the next step? | open load, interpret milestones (2+) | 0 |
+| Question                     | Before                                    | After                  |
+| ---------------------------- | ----------------------------------------- | ---------------------- |
+| Which loads need attention?  | open every load (N+)                      | 0 (strip), 1 to filter |
+| Next appointment and driver? | open load, read stops and assignment (2+) | 0                      |
+| Is the paperwork in?         | open load, open documents (3+)            | 0                      |
+| What is the next step?       | open load, interpret milestones (2+)      | 0                      |
 
 ## Consequences
 

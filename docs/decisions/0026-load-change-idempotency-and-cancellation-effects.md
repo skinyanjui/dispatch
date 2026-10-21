@@ -6,12 +6,12 @@ Status: accepted, 2026-10-21. Extends [0019](0019-load-edit-and-cancel.md).
 
 **Editable fields by stage** (unchanged from 0019, restated as the contract):
 
-| Field | booked | dispatched / picked-up | delivered / cancelled |
-|---|---|---|---|
-| Reference, booking source | edit, reason optional | edit, **reason required** | locked |
-| Agreed rate (integer minor units) | edit, reason optional | edit, **reason required** | locked |
-| Stop address, time zone, appointment window | edit, reason optional | edit, **reason required**, only for stops with no arrival/departure | locked |
-| Carrier, stop count/order/kind | never | never | never |
+| Field                                       | booked                | dispatched / picked-up                                              | delivered / cancelled |
+| ------------------------------------------- | --------------------- | ------------------------------------------------------------------- | --------------------- |
+| Reference, booking source                   | edit, reason optional | edit, **reason required**                                           | locked                |
+| Agreed rate (integer minor units)           | edit, reason optional | edit, **reason required**                                           | locked                |
+| Stop address, time zone, appointment window | edit, reason optional | edit, **reason required**, only for stops with no arrival/departure | locked                |
+| Carrier, stop count/order/kind              | never                 | never                                                               | never                 |
 
 **Idempotency.** `POST /api/loads/:id/edit` and `/cancel` accept an optional `Idempotency-Key` (1–128 chars; a blank header is `400 IDEMPOTENCY_KEY_REQUIRED`). The UI always sends one. Results are stored in the append-only `load_change_requests` table (migration 023) keyed by actor and key with a hash of the body. A retry with the same key and body returns the stored result, including after the load was cancelled by that very request; the same key with another body, load or action is `409 IDEMPOTENCY_CONFLICT`. Authorization runs first, so a foreign load ID is `404 NOT_FOUND` whatever key is sent and a stored result is never replayed to another tenant. The UI reuses a key only while the form content is unchanged. Without a key behaviour is as in 0019: a stale retry is `409 VERSION_CONFLICT`. Every applied change still writes `load_changes`, a `load.edited`/`load.cancelled` event, the outbox and an audit log row once; replays write nothing.
 

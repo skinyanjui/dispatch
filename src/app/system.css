@@ -2017,3 +2017,136 @@ select {
     justify-content: center;
   }
 }
+
+/* Inbox rail: New message on top, filters stacked like tabs beneath it. */
+.appShell .inboxLayout.hasRail {
+  grid-template-columns: 180px minmax(240px, 330px) minmax(0, 1fr);
+}
+.appShell .inboxRail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-content: start;
+}
+.appShell .inboxRail .primary {
+  justify-content: center;
+}
+.appShell .inboxRail .inboxTabs {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+}
+.appShell .inboxRail .inboxTab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.appShell .inboxRail .inboxTab:hover {
+  background: var(--panel-soft, #eef1fb);
+  color: var(--ink);
+}
+.appShell .inboxRail .inboxTab.active {
+  background: #e9edfb;
+  color: var(--accent);
+  font-weight: 600;
+}
+.appShell .inboxRail .inboxTab.firstBox {
+  margin-top: var(--space-2);
+  position: relative;
+}
+.appShell .inboxRail .inboxTab.firstBox::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 1px);
+  left: var(--space-3);
+  right: var(--space-3);
+  height: 1px;
+  background: var(--border);
+}
+.appShell .tabCount {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.appShell .tabCount.quiet {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .undoBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: fit-content;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink);
+  color: #fff;
+  border-radius: 10px;
+}
+.appShell .undoBar .textButton {
+  color: #cfd8ff;
+  font-weight: 600;
+}
+.appShell .threadHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.appShell .threadActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+@media (max-width: 1100px) and (min-width: 801px) {
+  .appShell .inboxLayout.hasRail {
+    grid-template-columns: 150px minmax(220px, 300px) minmax(0, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  .appShell .inboxLayout.hasRail {
+    grid-template-columns: 1fr;
+  }
+  .appShell .inboxLayout.hasDetail .inboxRail {
+    display: none;
+  }
+  .appShell .inboxRail {
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .appShell .inboxRail .primary {
+    flex: none;
+  }
+  .appShell .inboxRail .inboxTabs {
+    flex-direction: row;
+    gap: var(--space-1);
+  }
+  .appShell .inboxRail .inboxTab {
+    width: auto;
+  }
+  .appShell .inboxRail .inboxTab.firstBox::before {
+    display: none;
+  }
+}

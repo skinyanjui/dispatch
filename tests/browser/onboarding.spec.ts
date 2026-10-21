@@ -326,6 +326,8 @@ test("a lost carrier creation response retries with the same key and resumes its
     dialog.getByRole("button", { name: "Close carrier setup" }),
   ).toBeEnabled();
   await dialog.getByRole("button", { name: "Close carrier setup" }).click();
+  // The directory is paged, so find the new carrier by name.
+  await page.getByRole("searchbox", { name: "Search carriers" }).fill(name);
   const row = page
     .getByRole("article")
     .filter({ has: page.getByRole("heading", { name, exact: true }) });

@@ -4,12 +4,12 @@ Baseline: `65115b1` on `main`. Scope: the requested carrier/driver onboarding, s
 
 ## Findings and repairs
 
-| Finding | Result |
-| --- | --- |
-| New carriers and drivers required database provisioning with no guided activation. | Add resumable company → signed agreement → team setup. Private one-use invitations grant the stored carrier/role only; new users choose their own passwords. |
-| Driver accounts inherited management navigation and dense operational tables. | Show a focused My loads screen with assigned-load cards, route/status and an action to open details. Server assignment scope still governs every request. |
-| Secondary dashboard text was too faint. | Darken global ink, muted and subtle tokens across the workspace, login, dialogs, onboarding and demo; keep the white/mint visual direction. |
-| The standalone prototype advertised features absent from the authenticated app. | `/demo` shares the actual workspace and onboarding components with a browser-only fictional adapter. `/demo.html` redirects there; preserve the original separately at `/legacy-demo.html`. |
+| Finding                                                                                           | Result                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New carriers and drivers required database provisioning with no guided activation.                | Add resumable company → signed agreement → team setup. Private one-use invitations grant the stored carrier/role only; new users choose their own passwords.                                                           |
+| Driver accounts inherited management navigation and dense operational tables.                     | Show a focused My loads screen with assigned-load cards, route/status and an action to open details. Server assignment scope still governs every request.                                                              |
+| Secondary dashboard text was too faint.                                                           | Darken global ink, muted and subtle tokens across the workspace, login, dialogs, onboarding and demo; keep the white/mint visual direction.                                                                            |
+| The standalone prototype advertised features absent from the authenticated app.                   | `/demo` shares the actual workspace and onboarding components with a browser-only fictional adapter. `/demo.html` redirects there; preserve the original separately at `/legacy-demo.html`.                            |
 | Production-speed context refresh could clear a load-dialog error before a user selected recovery. | Background queue refresh no longer clears action errors. Explicit filter changes clear their prior error. Existing version-conflict and saved-but-refresh-failed browser regressions pass against the optimized build. |
 
 ## Authorization and persistence

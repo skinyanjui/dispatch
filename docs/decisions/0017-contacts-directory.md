@@ -4,7 +4,7 @@ Status: accepted, 2026-10-21.
 
 ## Decision
 
-One searchable **Contacts** page replaces hunting through carrier, driver and load screens. It is a *read view* over records that already exist, plus one new table for people outside the system:
+One searchable **Contacts** page replaces hunting through carrier, driver and load screens. It is a _read view_ over records that already exist, plus one new table for people outside the system:
 
 - **Team** — dispatchers and carrier managers (`memberships` + `users`, with the account phone from ADR 0016).
 - **Drivers** — `drivers` (name, phone, email or the joined account's email).
@@ -14,9 +14,10 @@ One searchable **Contacts** page replaces hunting through carrier, driver and lo
 Nothing is copied, so a changed phone number or removed driver is reflected immediately and there is still one authoritative record for each person.
 
 **Access follows the caller's own memberships** (enforced in the query, not the UI):
-- *Dispatchers* see team, drivers and company contacts of their carriers, and every external contact in their organization.
-- *Carrier managers* see their carrier's dispatchers, managers and drivers, and external contacts linked to that carrier.
-- *Drivers* see only the dispatchers and managers of their carrier, so they can always reach dispatch. They see no other drivers and no external contacts.
+
+- _Dispatchers_ see team, drivers and company contacts of their carriers, and every external contact in their organization.
+- _Carrier managers_ see their carrier's dispatchers, managers and drivers, and external contacts linked to that carrier.
+- _Drivers_ see only the dispatchers and managers of their carrier, so they can always reach dispatch. They see no other drivers and no external contacts.
 - Organization administrators also see their organization's external contacts. Nobody sees themselves. A foreign carrier's people never appear.
 - Dispatchers and administrators add or edit external contacts anywhere in their organization; carrier managers only contacts linked to their own carrier, and cannot move one to another carrier; drivers cannot add any. Contacts are archived, never hard deleted, and writes use optimistic versions, an idempotency key and audit records.
 
