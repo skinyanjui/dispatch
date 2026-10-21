@@ -18,6 +18,8 @@ export function CarrierDirectory({
   onDocuments,
   onAdd,
   busy = false,
+  query,
+  onClearQuery,
 }: {
   context: Context;
   onViewLoads: (carrier: string) => void;
@@ -25,10 +27,15 @@ export function CarrierDirectory({
   onDocuments?: (carrier: string) => void;
   onAdd?: () => void;
   busy?: boolean;
+  /** Search text from the page header; without it the page has its own box. */
+  query?: string;
+  /** Clears the page search (the sidebar box) when it is controlled. */
+  onClearQuery?: () => void;
 }) {
-  const [query, setQuery] = useState("");
+  const [ownQuery, setQuery] = useState("");
+  const text = query ?? ownQuery;
   const carriers = context.carriers.filter((c) =>
-    c.name.toLowerCase().includes(query.toLowerCase()),
+    c.name.toLowerCase().includes(text.toLowerCase()),
   );
   return (
     <section
@@ -47,11 +54,11 @@ export function CarrierDirectory({
               Add carrier
             </button>
           )}
-          <label className="directorySearch">
+          <label className="directorySearch" hidden={query !== undefined}>
             <MagnifyingGlassIcon size={18} aria-hidden="true" />
             <span className="srOnly">Search carriers</span>
             <input
-              value={query}
+              value={ownQuery}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search carriers…"
             />
@@ -118,8 +125,11 @@ export function CarrierDirectory({
               ? "Try a different carrier name."
               : "Ask your workspace administrator to grant carrier access."}
           </p>
-          {query && (
-            <button className="secondary" onClick={() => setQuery("")}>
+          {text && (
+            <button
+              className="secondary"
+              onClick={() => (onClearQuery ?? (() => setQuery("")))()}
+            >
               Clear search
             </button>
           )}

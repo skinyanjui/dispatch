@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   StackIcon,
   TruckIcon,
@@ -70,6 +70,53 @@ const queues = [
   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
 ];
+const dotColors: Record<string, string> = {
+  "": "var(--accent)",
+  booked: "#5b6b7a",
+  dispatched: "#8b5cf6",
+  "picked-up": "#f59e0b",
+  delivered: "#10b981",
+  cancelled: "#ef4444",
+};
+/** The load queues, as a row above the board with a coloured dot each. */
+export function QueueTabs({
+  status,
+  driverOnly,
+  busy,
+  onQueue,
+}: {
+  status: string;
+  driverOnly: boolean;
+  busy: boolean;
+  onQueue: (status: string) => void;
+}) {
+  return (
+    <nav className="queueTabs" aria-label="Dispatch queues">
+      {queues
+        .filter(
+          (q) =>
+            !driverOnly ||
+            ["", "picked-up", "delivered", "cancelled"].includes(q.value),
+        )
+        .map(({ value, label }) => (
+          <button
+            key={value}
+            className={"queueTab" + (status === value ? " active" : "")}
+            disabled={busy}
+            aria-current={status === value ? "page" : undefined}
+            onClick={() => onQueue(value)}
+          >
+            <span
+              className="queueDot"
+              style={{ background: dotColors[value] }}
+              aria-hidden="true"
+            />
+            {driverOnly && value === "" ? "My loads" : label}
+          </button>
+        ))}
+    </nav>
+  );
+}
 const icon = { size: 16, "aria-hidden": true } as const;
 const collapseKey = "relay-sidebar-collapsed";
 
@@ -90,7 +137,7 @@ export function WorkspaceShell({
   onSection,
   onQueue,
   onCarrier,
-  onSearch,
+  search,
   onCreate,
   onLogout,
 }: {
@@ -105,7 +152,14 @@ export function WorkspaceShell({
   onSection: (section: WorkspaceSection) => void;
   onQueue: (status: string) => void;
   onCarrier: (id: string) => void;
-  onSearch: () => void;
+  /** The one search box, at the top of the sidebar; it filters this page. */
+  search: {
+    value: string;
+    onChange: (value: string) => void;
+    label: string;
+    placeholder: string;
+    inputRef: RefObject<HTMLInputElement | null>;
+  } | null;
   onCreate: () => void;
   onLogout: () => void;
 }) {
@@ -225,6 +279,33 @@ export function WorkspaceShell({
             </>
           )}
         </div>
+        {search &&
+          (compact ? (
+            <button
+              className="sidebarIcon sidebarSearchIcon"
+              aria-label={search.label}
+              title={`${search.label} (⌘K)`}
+              onClick={() => {
+                toggle(false);
+                setTimeout(() => search.inputRef.current?.focus(), 50);
+              }}
+            >
+              <MagnifyingGlassIcon {...icon} />
+            </button>
+          ) : (
+            <label className="sidebarSearch">
+              <MagnifyingGlassIcon {...icon} />
+              <span className="srOnly">{search.label}</span>
+              <input
+                ref={sheet ? undefined : search.inputRef}
+                type="search"
+                value={search.value}
+                onChange={(e) => search.onChange(e.target.value)}
+                placeholder={search.placeholder}
+                maxLength={100}
+              />
+            </label>
+          ))}
         <div className="sidebarActions">
           {!driverOnly && (
             <button
@@ -235,18 +316,6 @@ export function WorkspaceShell({
             >
               <PlusIcon {...icon} weight="bold" />
               <span className="navLabel">New load</span>
-            </button>
-          )}
-          {/* On Loads the search box is already in the header. */}
-          {section !== "loads" && (
-            <button
-              className="sidebarItem"
-              title="Search loads"
-              onClick={() => go(onSearch)}
-            >
-              <MagnifyingGlassIcon {...icon} />
-              <span className="navLabel">Search loads</span>
-              {!compact && <kbd aria-hidden="true">⌘K</kbd>}
             </button>
           )}
         </div>
@@ -277,30 +346,6 @@ export function WorkspaceShell({
         </nav>
         {!compact && section === "loads" && (
           <div className="sidebarContext">
-            <nav aria-label="Dispatch queues">
-              <p className="sidebarLabel">Queues</p>
-              {queues
-                .filter(
-                  (q) =>
-                    !driverOnly ||
-                    ["", "picked-up", "delivered", "cancelled"].includes(
-                      q.value,
-                    ),
-                )
-                .map(({ value, label }) => (
-                  <button
-                    key={value}
-                    className={
-                      "sidebarSub" + (status === value ? " active" : "")
-                    }
-                    disabled={busy}
-                    aria-current={status === value ? "page" : undefined}
-                    onClick={() => go(() => onQueue(value))}
-                  >
-                    {driverOnly && value === "" ? "My loads" : label}
-                  </button>
-                ))}
-            </nav>
             {!driverOnly && context.carriers.length > 1 && (
               <nav aria-label="Carrier scope">
                 <p className="sidebarLabel">Carriers</p>

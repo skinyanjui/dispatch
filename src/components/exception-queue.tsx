@@ -12,11 +12,16 @@ import { severityClass, when } from "./load-exceptions";
 export function ExceptionQueue({
   onOpenLoad,
   onShowLoads,
+  query = "",
+  onClearQuery,
   onAuthError,
   driverOnly,
   revision,
 }: {
   revision: number;
+  /** Search text from the page header. */
+  query?: string;
+  onClearQuery?: () => void;
   onShowLoads: () => void;
   onOpenLoad: (id: string) => void;
   onAuthError: (e: unknown) => void;
@@ -26,11 +31,27 @@ export function ExceptionQueue({
   const [status, setStatus] = useState("active"),
     [owner, setOwner] = useState("any"),
     [overdue, setOverdue] = useState(false),
-    [items, setItems] = useState<LoadException[] | null>(null),
+    [all, setItems] = useState<LoadException[] | null>(null),
     [truncated, setTruncated] = useState(false),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [now, setNow] = useState(0);
+  const needle = query.trim().toLowerCase();
+  const items =
+    all && needle
+      ? all.filter((e) =>
+          [
+            e.summary,
+            (e as { load_reference?: string }).load_reference,
+            (e as { carrier_name?: string }).carrier_name,
+            e.owner_name,
+            e.type,
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle),
+        )
+      : all;
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -167,10 +188,23 @@ export function ExceptionQueue({
         <div className="directoryEmpty">
           <WarningIcon size={40} weight="light" aria-hidden="true" />
           <h3>No exceptions match</h3>
-          <p>Exceptions are raised on a load.</p>
-          <button className="secondary" onClick={onShowLoads}>
-            Choose a load
-          </button>
+          {needle ? (
+            <>
+              <p>Try a different load, carrier or word.</p>
+              {onClearQuery && (
+                <button className="secondary" onClick={onClearQuery}>
+                  Clear search
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <p>Exceptions are raised on a load.</p>
+              <button className="secondary" onClick={onShowLoads}>
+                Choose a load
+              </button>
+            </>
+          )}
         </div>
       )}
       {truncated && (

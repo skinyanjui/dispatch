@@ -23,6 +23,7 @@ import {
   WorkspaceShell,
   Brand,
   queueTitle,
+  QueueTabs,
   type WorkspaceSection,
   sectionTitles,
 } from "@/components/workspace-shell";
@@ -111,6 +112,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [offline, setOffline] = useState(false),
     [updated, setUpdated] = useState<Date | null>(null),
     [section, setSection] = useState<WorkspaceSection>("loads"),
+    [pageQ, setPageQ] = useState<Partial<Record<WorkspaceSection, string>>>({}),
     [setupCarrier, setSetupCarrier] = useState<string | null>(null),
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
     [exceptionRevision, setExceptionRevision] = useState(0),
@@ -213,9 +215,14 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     const connection = () => setOffline(!navigator.onLine);
     const keyboard = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        if (!search.current || document.querySelector("dialog[open]")) return;
+        if (document.querySelector("dialog[open]")) return;
         e.preventDefault();
-        search.current.focus();
+        if (search.current) search.current.focus();
+        else
+          // Collapsed sidebar: its search icon expands it and focuses the box.
+          document
+            .querySelector<HTMLButtonElement>(".sidebarSearchIcon")
+            ?.click();
       }
     };
     const timer = setTimeout(connection, 0);
@@ -318,10 +325,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     setError("");
     setExtraStops([]);
     setCreating(true);
-  }
-  function focusSearch() {
-    setSection("loads");
-    requestAnimationFrame(() => search.current?.focus());
   }
   function showQueue(value: string) {
     setSection("loads");
@@ -653,6 +656,29 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
   const nextStage = selected
     ? stages[stages.indexOf(selected.stage) + 1]
     : undefined;
+  const searchLabels: Partial<Record<WorkspaceSection, [string, string]>> = {
+    loads: ["Search loads", "Search reference…"],
+    exceptions: ["Search exceptions", "Search exceptions…"],
+    inbox: ["Search conversations", "Search conversations…"],
+    contacts: ["Search contacts", "Search contacts…"],
+    carriers: ["Search carriers", "Search carriers…"],
+    prospects: ["Search prospects", "Search prospects…"],
+    assistant: ["Search conversations", "Search conversations…"],
+    billing: ["Search invoices and loads", "Search invoices and loads…"],
+    reports: ["Search carriers", "Search carriers…"],
+  };
+  const pageSearch = searchLabels[section]
+    ? {
+        value: section === "loads" ? q : (pageQ[section] ?? ""),
+        onChange: (value: string) =>
+          section === "loads"
+            ? filterChange({ q: value })
+            : setPageQ((old) => ({ ...old, [section]: value })),
+        label: searchLabels[section]![0],
+        placeholder: searchLabels[section]![1],
+        inputRef: search,
+      }
+    : null;
   const controls = (
     <div className="toolbar">
       <div className="toolbarLeft">
@@ -665,18 +691,6 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         </span>
       </div>
       <div className="toolbarRight">
-        <label className="search">
-          <MagnifyingGlassIcon size={17} aria-hidden="true" />
-          <span className="srOnly">Search loads</span>
-          <input
-            ref={search}
-            value={q}
-            onChange={(e) => filterChange({ q: e.target.value })}
-            placeholder="Search reference…"
-            maxLength={100}
-          />
-          <kbd aria-hidden="true">⌘ K</kbd>
-        </label>
         <button
           className="iconButton"
           disabled={busy || loading || offline}
@@ -700,7 +714,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       onSection={setSection}
       onQueue={showQueue}
       onCarrier={showCarrier}
-      onSearch={focusSearch}
+      search={pageSearch}
       onCreate={createLoad}
       onLogout={logout}
     >
@@ -735,6 +749,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         )}
         {section === "loads" ? (
           <>
+            <QueueTabs
+              status={status}
+              driverOnly={driverOnly}
+              busy={busy}
+              onQueue={showQueue}
+            />
             {carrier && (
               <div
                 className="appliedFilters"
@@ -884,6 +904,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           </>
         ) : section === "contacts" ? (
           <ContactsDirectory
+            query={pageQ.contacts ?? ""}
+            onClearQuery={() => setPageQ((old) => ({ ...old, contacts: "" }))}
             offline={offline}
             onAuthError={handleError}
             onMessage={(entry) => {
@@ -893,6 +915,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           />
         ) : section === "assistant" ? (
           <Assistant
+            query={pageQ.assistant ?? ""}
             offline={offline}
             isAdmin={(context.organizations || []).some((o) => o.role)}
             onAuthError={handleError}
@@ -914,17 +937,20 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           />
         ) : section === "prospects" ? (
           <Prospects
+            query={pageQ.prospects ?? ""}
             offline={offline}
             onAuthError={handleError}
             onOpenCarriers={() => setSection("carriers")}
           />
         ) : section === "reports" ? (
           <Reports
+            query={pageQ.reports ?? ""}
             carriers={context.carriers.filter((c) => c.role !== "driver")}
             onAuthError={handleError}
           />
         ) : section === "inbox" ? (
           <Inbox
+            query={pageQ.inbox ?? ""}
             userId={context.user.id ?? ""}
             userName={context.user.name}
             offline={offline}
@@ -950,12 +976,16 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           />
         ) : section === "billing" ? (
           <BillingWorkspace
+            query={pageQ.billing ?? ""}
+            onClearQuery={() => setPageQ((old) => ({ ...old, billing: "" }))}
             context={context}
             offline={offline}
             onAuthError={handleError}
           />
         ) : section === "exceptions" ? (
           <ExceptionQueue
+            query={pageQ.exceptions ?? ""}
+            onClearQuery={() => setPageQ((old) => ({ ...old, exceptions: "" }))}
             revision={exceptionRevision}
             driverOnly={driverOnly}
             onAuthError={handleError}
@@ -964,6 +994,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           />
         ) : (
           <CarrierDirectory
+            query={pageQ.carriers ?? ""}
+            onClearQuery={() => setPageQ((old) => ({ ...old, carriers: "" }))}
             context={context}
             busy={busy || offline}
             onAdd={() => setSetupCarrier("new")}

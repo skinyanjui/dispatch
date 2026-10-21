@@ -94,9 +94,12 @@ const timingHint = (t: Timing) =>
 export function Reports({
   carriers,
   onAuthError,
+  query: search = "",
 }: {
   carriers: { id: string; name: string }[];
   onAuthError: (e: unknown) => void;
+  /** Search text from the sidebar; filters the by-carrier table. */
+  query?: string;
 }) {
   const api = useApi();
   const [from, setFrom] = useState(() => daysAgo(29)),
@@ -295,16 +298,20 @@ export function Reports({
                 </tr>
               </thead>
               <tbody>
-                {data.carriers.map((c) => (
-                  <tr key={c.id}>
-                    <th scope="row">{c.name}</th>
-                    <td>{c.loads}</td>
-                    <td>{c.delivered}</td>
-                    <td>{c.cancelled}</td>
-                    <td>{formatMoney(c.freight_minor)}</td>
-                    <td>{c.open_exceptions}</td>
-                  </tr>
-                ))}
+                {data.carriers
+                  .filter((c) =>
+                    c.name.toLowerCase().includes(search.trim().toLowerCase()),
+                  )
+                  .map((c) => (
+                    <tr key={c.id}>
+                      <th scope="row">{c.name}</th>
+                      <td>{c.loads}</td>
+                      <td>{c.delivered}</td>
+                      <td>{c.cancelled}</td>
+                      <td>{formatMoney(c.freight_minor)}</td>
+                      <td>{c.open_exceptions}</td>
+                    </tr>
+                  ))}
                 {!data.carriers.length && (
                   <tr>
                     <td colSpan={6}>No loads in this range.</td>

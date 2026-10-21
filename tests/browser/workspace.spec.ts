@@ -141,9 +141,9 @@ test("Board, filters, keyboard search and session recovery", async ({
     .click();
   await page.keyboard.press("Control+k");
   await expect(
-    page.getByRole("textbox", { name: "Search loads" }),
+    page.getByRole("searchbox", { name: "Search loads" }),
   ).toBeFocused();
-  await page.getByRole("textbox", { name: "Search loads" }).fill("RL-101");
+  await page.getByRole("searchbox", { name: "Search loads" }).fill("RL-101");
   await expect(
     page.getByRole("button", { name: /^RL-101(?: ·|$)/ }),
   ).toBeVisible();

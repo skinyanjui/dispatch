@@ -157,13 +157,18 @@ export function ContactsDirectory({
   offline,
   onAuthError,
   onMessage,
+  query,
+  onClearQuery,
 }: {
   offline: boolean;
   onAuthError: (e: unknown) => void;
   onMessage?: (entry: DirectoryEntry) => void;
+  /** Search text from the page header; without it the page has its own box. */
+  query?: string;
+  onClearQuery?: () => void;
 }) {
   const api = useApi();
-  const [q, setQ] = useState(""),
+  const [ownQ, setQ] = useState(""),
     [group, setGroup] = useState<"" | DirectoryGroup>(""),
     [carrier, setCarrier] = useState(""),
     [favorites, setFavorites] = useState(false),
@@ -173,6 +178,7 @@ export function ContactsDirectory({
     [notice, setNotice] = useState(""),
     [editing, setEditing] = useState<DirectoryEntry | "new" | null>(null),
     [busy, setBusy] = useState(false);
+  const q = query ?? ownQ;
   const request = useRef(0);
   const load = useCallback(async () => {
     const id = ++request.current;
@@ -242,7 +248,7 @@ export function ContactsDirectory({
         )}
       </div>
       <div className="contactFilters">
-        <label className="directorySearch">
+        <label className="directorySearch" hidden={query !== undefined}>
           <MagnifyingGlassIcon size={16} aria-hidden="true" />
           <span className="srOnly">Search contacts</span>
           <input
@@ -384,6 +390,14 @@ export function ContactsDirectory({
                 ? "Add the brokers, shippers and receivers you work with."
                 : "People you work with will appear here."}
           </p>
+          {q && (
+            <button
+              className="secondary"
+              onClick={() => (onClearQuery ?? (() => setQ("")))()}
+            >
+              Clear search
+            </button>
+          )}
         </div>
       )}
       {data?.truncated && (

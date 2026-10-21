@@ -76,7 +76,17 @@ async function fixture(page: Page, carrierId?: string) {
 
 async function open(page: Page, reference: string) {
   await page.goto("/");
-  await page.getByRole("textbox", { name: "Search loads" }).fill(reference);
+  // On a phone the search is at the top of the navigation drawer.
+  const phone = (page.viewportSize()?.width ?? 1440) <= 1000;
+  if (phone)
+    await page
+      .getByRole("button", { name: "Open navigation", exact: true })
+      .click();
+  await page.getByRole("searchbox", { name: "Search loads" }).fill(reference);
+  if (phone)
+    await page
+      .getByRole("button", { name: "Close navigation", exact: true })
+      .click();
   await page.getByRole("button", { name: new RegExp("^" + reference) }).click();
   const dialog = page.getByRole("dialog", { name: "Load details" });
   await expect(dialog).toBeVisible();

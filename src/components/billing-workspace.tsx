@@ -569,10 +569,15 @@ export function BillingWorkspace({
   context,
   offline,
   onAuthError,
+  query = "",
+  onClearQuery,
 }: {
   context: Context;
   offline: boolean;
   onAuthError: (e: unknown) => void;
+  /** Search text from the page header. */
+  query?: string;
+  onClearQuery?: () => void;
 }) {
   const api = useApi();
   const carriers = context.carriers.filter((c) => c.role !== "driver");
@@ -648,9 +653,17 @@ export function BillingWorkspace({
   }
   const disabled = busy || offline;
   // Delivered loads and any load with a packet need billing attention.
-  const billable = (data?.loads || []).filter(
-    (l) => allLoads || l.stage === "delivered" || l.packet,
-  );
+  const needle = query.trim().toLowerCase();
+  const billable = (data?.loads || [])
+    .filter((l) => allLoads || l.stage === "delivered" || l.packet)
+    .filter(
+      (l) =>
+        !needle ||
+        [l.reference, l.packet?.bill_to, l.packet?.carrier_invoice_number]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle),
+    );
   const now = today();
   const invoices = data?.invoices ?? [];
   const money = (n: bigint) => formatMoney(n.toString());
@@ -671,9 +684,16 @@ export function BillingWorkspace({
       overdueCount++;
     }
   }
-  const shown = invoices.filter(
-    (i) => filter === "all" || shownStatus(i, now).key === filter,
-  );
+  const shown = invoices
+    .filter((i) => filter === "all" || shownStatus(i, now).key === filter)
+    .filter(
+      (i) =>
+        !needle ||
+        [i.number ?? "draft", ...(i.lines ?? []).map((l) => l.reference)]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle),
+    );
   const counts = (key: InvoiceFilter) =>
     key === "all"
       ? invoices.length
@@ -913,6 +933,11 @@ export function BillingWorkspace({
                           ? `${eligible.length} delivered ${eligible.length === 1 ? "load is" : "loads are"} ready to invoice.`
                           : "Invoices appear here once delivered loads are billed."}
                     </p>
+                    {invoices.length > 0 && needle && onClearQuery && (
+                      <button className="secondary" onClick={onClearQuery}>
+                        Clear search
+                      </button>
+                    )}
                     {!invoices.length &&
                       eligible.length > 0 &&
                       data.can_invoice && (

@@ -64,7 +64,7 @@ async function createLoad(page: Page, carrier: string, prefix: string) {
 }
 async function openLoad(page: Page, reference: string) {
   await page.goto("/");
-  await page.getByRole("textbox", { name: "Search loads" }).fill(reference);
+  await page.getByRole("searchbox", { name: "Search loads" }).fill(reference);
   await page.getByRole("button", { name: new RegExp("^" + reference) }).click();
   const dialog = page.getByRole("dialog", { name: "Load details" });
   await expect(dialog).toBeVisible();
@@ -573,7 +573,7 @@ test("multi-stop: add an intermediate stop and see every stop in order", async (
   await fill("delivery", "Louisville, KY", "2026-11-20T18:00");
   await modal.getByRole("button", { name: "Create booked load" }).click();
   await expect(modal).not.toBeVisible();
-  await page.getByRole("textbox", { name: "Search loads" }).fill(reference);
+  await page.getByRole("searchbox", { name: "Search loads" }).fill(reference);
   const card = page.getByRole("button", { name: new RegExp("^" + reference) });
   await expect(card).toContainText("Louisville, KY · 3 stops");
   await card.click();
@@ -884,7 +884,7 @@ test("contacts: search by phone digits, add a broker, quick actions and favorite
     `mailto:riley-${unique}@broker.test`,
   );
   // Search finds it by company, by email and by differently formatted digits.
-  const search = region.getByRole("searchbox", { name: "Search contacts" });
+  const search = page.getByRole("searchbox", { name: "Search contacts" });
   for (const term of [
     "Browser Test Brokerage",
     `riley-${unique}`,
@@ -947,7 +947,7 @@ test("inbox: message a driver from Contacts, driver sees unread and replies, cal
   await page.goto("/");
   await page.getByRole("button", { name: "Contacts", exact: true }).click();
   const contacts = page.getByRole("region", { name: "Contacts" });
-  await contacts.getByRole("searchbox").fill("Jordan");
+  await page.getByRole("searchbox", { name: "Search contacts" }).fill("Jordan");
   await contacts.getByRole("button", { name: /^Message Jordan/ }).click();
   const inbox = page.getByRole("region", { name: "Inbox" });
   const composer = inbox.getByRole("form", { name: "Write a message" });
@@ -998,7 +998,9 @@ test("inbox: message a driver from Contacts, driver sees unread and replies, cal
   // Dispatcher sees the reply, searches for it and logs a phone call.
   await page.reload();
   await page.getByRole("button", { name: /^Inbox/ }).click();
-  await inbox.getByRole("searchbox").fill("Confirmed, 8am");
+  await page
+    .getByRole("searchbox", { name: "Search conversations" })
+    .fill("Confirmed, 8am");
   await inbox
     .getByRole("button", { name: new RegExp("Pickup time " + unique) })
     .click();

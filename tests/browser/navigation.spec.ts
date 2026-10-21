@@ -181,7 +181,7 @@ test("carrier directory reflects membership, supports search and opens carrier-s
     directory.getByText("Carrier manager", { exact: true }),
   ).toBeVisible();
 
-  const search = directory.getByRole("textbox", { name: "Search carriers" });
+  const search = page.getByRole("searchbox", { name: "Search carriers" });
   await search.fill("Prairie");
   await expect(directory.getByRole("article")).toHaveCount(1);
   await expect(
@@ -246,7 +246,11 @@ test("desktop sidebar collapses to icons without duplicating pages and expands a
   await page
     .getByRole("button", { name: "Collapse sidebar", exact: true })
     .click();
-  await expect(queues).not.toBeVisible();
+  // The queues live above the board, so collapsing the sidebar keeps them.
+  await expect(queues).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Dispatch queues" }),
+  ).toHaveCount(1);
   // Collapsed, each page is still reachable exactly once by its name.
   const pages = page.getByRole("navigation", { name: "Workspace navigation" });
   for (const name of ["Loads", "Exceptions", "Carriers", "Billing"])
@@ -279,6 +283,12 @@ test("mobile drawer selects a stage, closes and keeps the document within the vi
     .click();
   const drawer = page.getByRole("dialog", { name: "Workspace navigation" });
   await expect(drawer).toBeVisible();
+  // The drawer lists pages only; queues are chips above the board.
+  await expect(
+    drawer.getByRole("navigation", { name: "Dispatch queues" }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -286,12 +296,11 @@ test("mobile drawer selects a stage, closes and keeps the document within the vi
   ).toBe(true);
 
   const requested = page.waitForRequest(queueRequest({ status: "picked-up" }));
-  await drawer
+  await page
     .getByRole("navigation", { name: "Dispatch queues" })
     .getByRole("button", { name: "In transit", exact: true })
     .click();
   await requested;
-  await expect(drawer).not.toBeVisible();
   await expect(
     page.getByRole("heading", { name: "In transit", exact: true, level: 1 }),
   ).toBeVisible();

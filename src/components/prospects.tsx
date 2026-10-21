@@ -553,13 +553,16 @@ export function Prospects({
   offline,
   onAuthError,
   onOpenCarriers,
+  query,
 }: {
   offline: boolean;
   onAuthError: (e: unknown) => void;
   onOpenCarriers?: () => void;
+  /** Search text from the page header; without it the page has its own box. */
+  query?: string;
 }) {
   const api = useApi();
-  const [q, setQ] = useState(""),
+  const [ownQ, setQ] = useState(""),
     [owner, setOwner] = useState(""),
     [follow, setFollow] = useState<"" | FollowUp>(""),
     [list, setList] = useState<ProspectList | null>(null),
@@ -569,6 +572,7 @@ export function Prospects({
     [selected, setSelected] = useState<string | null>(null),
     [adding, setAdding] = useState(false),
     [busy, setBusy] = useState(false);
+  const q = query ?? ownQ;
   const request = useRef(0);
   const load = useCallback(async () => {
     const id = ++request.current;
@@ -618,7 +622,7 @@ export function Prospects({
         </button>
       </div>
       <div className="contactFilters">
-        <label className="directorySearch">
+        <label className="directorySearch" hidden={query !== undefined}>
           <MagnifyingGlassIcon size={16} aria-hidden="true" />
           <span className="srOnly">Search prospects</span>
           <input

@@ -308,3 +308,53 @@
 .sidebarMore {
   color: var(--subtle);
 }
+
+/* The sidebar is as wide as its longest label (within limits), with the one
+   search box at the top. */
+@media (min-width: 1001px) {
+  .appShell {
+    grid-template-columns: fit-content(260px) minmax(0, 1fr);
+  }
+  .appShell.sidebarCollapsed {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+}
+.sidebarDock {
+  min-width: 168px;
+}
+.appShell.sidebarCollapsed .sidebarDock {
+  min-width: 0;
+}
+.sidebarSearch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0 8px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  /* The box fills the sidebar but never makes it wider. */
+  contain: inline-size;
+  color: var(--subtle);
+}
+.sidebarSearch:focus-within {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+}
+.sidebarSearch input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 12.5px;
+  min-height: 30px;
+}
+.sidebarSearchIcon {
+  margin: 0 auto 8px;
+}

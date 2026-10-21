@@ -78,7 +78,10 @@ export function Assistant({
   isAdmin,
   onAuthError,
   onOpen,
+  query = "",
 }: {
+  /** Search text from the page header; filters past conversations. */
+  query?: string;
   offline: boolean;
   isAdmin: boolean;
   onAuthError: (e: unknown) => void;
@@ -208,11 +211,15 @@ export function Assistant({
                 onChange={(e) => void pick(e.target.value)}
               >
                 <option value="">New conversation</option>
-                {state.conversations.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
+                {state.conversations
+                  .filter((c) =>
+                    c.title.toLowerCase().includes(query.trim().toLowerCase()),
+                  )
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
               </select>
             </label>
           </div>

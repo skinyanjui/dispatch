@@ -639,7 +639,10 @@ export function Inbox({
   onComposeDone,
   onAuthError,
   onUnreadChanged,
+  query,
 }: {
+  /** Search text from the page header; without it the page has its own box. */
+  query?: string;
   userId: string;
   userName: string;
   offline: boolean;
@@ -650,7 +653,7 @@ export function Inbox({
   onUnreadChanged: () => void;
 }) {
   const api = useApi();
-  const [q, setQ] = useState(""),
+  const [ownQ, setQ] = useState(""),
     [unreadOnly, setUnreadOnly] = useState(false),
     [channel, setChannel] = useState(""),
     [threads, setThreads] = useState<Thread[] | null>(null),
@@ -670,6 +673,7 @@ export function Inbox({
     [find, setFind] = useState(""),
     [status, setStatus] = useState(""),
     [resending, setResending] = useState<string | null>(null);
+  const q = query ?? ownQ;
   const request = useRef(0);
   const messages = useRef<HTMLOListElement>(null);
   // Open a conversation at its latest message.
@@ -834,12 +838,12 @@ export function Inbox({
   return (
     <section className="inbox" aria-label="Inbox">
       <div className="inboxBar">
-        <label className="directorySearch">
+        <label className="directorySearch" hidden={query !== undefined}>
           <MagnifyingGlassIcon size={16} aria-hidden="true" />
           <span className="srOnly">Search conversations</span>
           <input
             type="search"
-            value={q}
+            value={ownQ}
             maxLength={100}
             placeholder="Search by subject, person or words…"
             onChange={(e) => setQ(e.target.value)}
