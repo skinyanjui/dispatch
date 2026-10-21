@@ -1,63 +1,59 @@
-# Relay — Freight Dispatch TMS
+# Relay — Dispatch TMS foundation
 
-A **non-asset-based freight dispatch operations** prototype for dispatch teams working on behalf of contracted motor carriers.
+Authenticated Next.js / TypeScript dispatch workspace with PostgreSQL persistence. Built from the supplied Relay prototype. **Not production-ready:** this foundation has no live freight integrations, document storage, messaging, or billing implementation. All QA data is fictional.
 
-> **Status:** Interactive, browser-only proof of concept. Fictional sample data. **Not** a production multi-tenant TMS, connected load board, broker, ELD, communications, or payment system.
+## Local development
 
-![Desktop preview](assets/desktop-preview.png)
+Use Node.js 22 and Docker (or an existing PostgreSQL 17 database).
 
-## Run locally
-
-Requires Node.js 22 or newer.
-
-```bash
-npm install
+```sh
+npm ci
+# Copy .env.example to .env.local, set a local SEED_PASSWORD of at least 12 characters.
+docker compose up -d --wait
+# CLI scripts read process variables, so export DATABASE_URL and SEED_PASSWORD,
+# or use Node's --env-file support as shown below.
+node --env-file=.env.local --import tsx scripts/migrate.ts
+node --env-file=.env.local --import tsx scripts/seed.ts
 npm run dev
 ```
 
-Open `http://localhost:4173`. Alternatively, open `index.html` directly.
+The authenticated workspace is at port 3000. QA sign-in accounts: `dispatcher@relay.test` (both carriers), `carrier@relay.test` (Blue Ridge only), and `driver@relay.test` (assigned Blue Ridge loads only). All use the password you supplied during first seed. Reseeding preserves existing records and passwords. Never seed a production database. Original interactive demo: `/demo.html`, also `npm run demo` on port 4173. Demo storage is browser-only and independent of backend records.
 
-## Quality checks
+## Checks
 
-```bash
+```sh
 npm run lint
-npm run check
+npm run typecheck
+# DATABASE_URL and SEED_PASSWORD must point to a migrated, seeded QA database.
 npm test
 npm run build
+# Start npm run dev or npm start before browser tests.
+npx playwright install chromium
+# Or use an installed Chromium: PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium npm run test:browser
+npm run test:browser
 ```
 
-The build creates a static `dist/` folder, without connecting to third-party services. There are no runtime npm dependencies. The static checks are **not** a substitute for browser E2E tests or production security review.
+Integration tests write fictional fixtures to the selected database. Use an isolated QA database, never production. CI creates a fresh PostgreSQL instance, migrates twice to verify repeatability, seeds, and runs all gates. Test fixture passwords are not production credentials.
 
-## Current prototype features
+## Server contracts
 
-- Prioritized work queue, load list, filtering, and responsive mobile cards
-- Carrier-specific load creation and driver assignment
-- Shipment milestone advancement and manual check-ins
-- Load details, internal notes, activity timeline, and exception resolution
-- Document **receipt flags** for rate confirmation/BOL/POD; **no actual files are uploaded**
-- Separate tracking for carrier billing packet and dispatch service fee invoice
-- Local browser storage with demo data reset
+- `POST /api/login`, `POST /api/logout`, `GET /api/me`: opaque, hashed server sessions (12-hour expiry). HttpOnly, SameSite Strict cookies; Secure defaults on in production. Local HTTP production-mode testing can explicitly use `COOKIE_SECURE=false`; deployed HTTPS must use true.
+- `GET /api/loads?carrier_id=&status=&q=&cursor=`: carrier/assigned-driver scope, 25-record pages.
+- `POST /api/loads`: `Idempotency-Key` required; carrierId, reference, source, integer amountMinor and two ordered stops (pickup/delivery), each with address, IANA timezone and ISO-offset windowStart/windowEnd. Verified effective dispatch agreement required.
+- `GET /api/loads/:id`: scoped load, stops, assignment, append-only timeline.
+- `POST /api/loads/:id/assign`: driverId + expected version; same carrier enforced in app and database.
+- `POST /api/loads/:id/milestones`: stage + expected version; booked → dispatched → picked-up → delivered. Assigned driver required. Drivers are read-only in this release.
 
-## Production implementation
+Writes require a same-origin Origin header. API responses distinguish validation (400), missing session (401), forbidden origin (403), inaccessible/unknown object (404), conflict (409), invalid domain operation (422), throttling (429), and dependency outage (503). Mutation version conflicts require refreshing details before retrying. No carrier transfer operation exists. Carrier-manager and dispatcher can write within explicit memberships. Outbox records are persisted but no external consumer or delivery is enabled.
 
-See [full-stack build plan](docs/build-plan.md), [Codex implementation brief](docs/codex-tasks.md), [product requirements](docs/product-requirements.md), and [engineering decisions](docs/decisions/0001-modular-monolith.md).
+## Vercel build configuration
 
-**Boundary:** Relay acts for specifically authorized carriers; it must not act as an unlicensed broker. Booked loads must be tied to one pre-authorized carrier. Carrier funds and dispatch-service invoices are separate financial workflows. Legal review is required before live operation.
+The previous static build emitted `dist/`, while Vercel expected `public/`, causing STATIC_BUILD_NO_OUT_DIR. This version uses the **Next.js** framework and `.next` output via `vercel.json`. Set the Vercel project Root Directory to this repository root; clear conflicting build/output overrides in Project Settings. Node is pinned to 22.x to avoid automatic major upgrades.
 
-## Codex instructions
+Before deploying the backend, configure an authenticated PostgreSQL connection as `DATABASE_URL`, run migrations through a controlled release job, and set `COOKIE_SECURE=true` and `APP_ORIGIN` to the canonical HTTPS origin. Do not run fictional seed against production. Builds do not require database access, but login and data operations do. No deployment is performed by these instructions.
 
-`AGENTS.md` describes the architecture guardrails, contribution workflow and acceptance criteria. Start with the first task in `docs/codex-tasks.md`. Complete changes through UX → API → authorization → data → events → tests → deployment, with atomic commits.
+## Current limits and next work
 
-## Repository policy
+This is a reviewable foundation, not a completed production TMS. Stop entry currently supports one pickup and one delivery, and the UI captures appointment instants. Sessions support login/logout; invitations, password reset, MFA and session cleanup are not implemented. Login throttling is process-local and must be replaced with shared throttling before multiple instances. Carrier agreements, users and memberships are provisioned through QA seed only; add audited administrative workflows before real use. Database tenant filtering is application-enforced, with relational assignment constraints; independent security review and database role separation are still needed. Event/audit triggers prevent updates/deletes by ordinary statements, not privileged database administrators. No uploads, exceptions, invoicing, outbox worker, monitoring integration or live tracking is implemented. Queue statistics describe the current loaded page.
 
-Keep this repository private until authentication, authorization, privacy and security controls have been implemented and independently reviewed. Do not commit real carrier data, load paperwork, API keys or employee/driver PII.
-
-### Demo limitations
-
-- No persistent backend, shared tenancy, authentication, user management, document storage, GPS, messaging, accounting integration, real payments, or external requests.
-- Client-side mock authorization is **not** production access control.
-- Browser local storage is for fictional sample data only. Use Reset demo to clear saved demo edits.
-
-## License
-
-No license granted yet. Add an explicit license if and when you decide to publish or distribute this project.
+See `docs/build-plan.md`, `docs/product-requirements.md`, and `docs/decisions/0002-foundation.md` for design context and remaining phases. Static prototype documentation is retained in `docs/prototype-readme.md`.

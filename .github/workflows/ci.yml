@@ -1,10 +1,23 @@
-name: Prototype CI
-on:
-  push:
-  pull_request:
+name: Foundation CI
+on: [push, pull_request]
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: relay
+          POSTGRES_PASSWORD: relay_local
+          POSTGRES_DB: relay
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U relay"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://relay:relay_local@127.0.0.1:5432/relay
+      SEED_PASSWORD: FictionalCIOnly2026
+      COOKIE_SECURE: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -12,8 +25,17 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run check
-      - run: npm test
-      - run: npm run build
-      # TypeScript typecheck, DB migrations and E2E are gates for production Task 1.
+      - run: npm run db:migrate && npm run db:migrate && npm run db:seed
+      - run: npm run lint && npm run typecheck && npm test && npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          npm start > /tmp/relay-server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ > /dev/null && break; sleep 1; done
+          npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-results
+          path: |
+            test-results/
+            artifacts/

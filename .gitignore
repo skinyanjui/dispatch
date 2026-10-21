@@ -7,3 +7,9 @@ coverage/
 !.env.example
 *.log
 *.tsbuildinfo
+
+.next/
+artifacts/
+playwright-report/
+test-results/
+next-env.d.ts
