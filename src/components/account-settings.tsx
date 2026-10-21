@@ -7,6 +7,7 @@ type Account = {
   name: string;
   email: string;
   phone?: string;
+  sms_opt_in?: boolean;
   email_verified: boolean;
   mfa_enabled: boolean;
   mfa_available: boolean;
@@ -93,6 +94,7 @@ export function AccountSettings({
                   await api("account/profile", {
                     name: String(f.get("name")).trim(),
                     phone: String(f.get("phone")).trim(),
+                    sms_opt_in: f.get("sms_opt_in") === "on",
                   });
                   return "Profile saved.";
                 });
@@ -117,6 +119,17 @@ export function AccountSettings({
                   autoComplete="tel"
                   defaultValue={account.phone || ""}
                 />
+              </label>
+              <label className="setupCheckbox">
+                <input
+                  type="checkbox"
+                  name="sms_opt_in"
+                  defaultChecked={account.sms_opt_in}
+                />
+                <span>
+                  Teammates may text me from Relay (message rates may apply;
+                  untick to stop)
+                </span>
               </label>
               <button className="secondary" disabled={busy}>
                 Save profile

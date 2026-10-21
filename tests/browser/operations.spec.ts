@@ -766,3 +766,110 @@ test("a driver can reach dispatch from Contacts but sees no brokers or other dri
     0,
   );
 });
+
+test("inbox: message a driver from Contacts, driver sees unread and replies, calls can be logged", async ({
+  page,
+  browser,
+}) => {
+  const unique = randomUUID().slice(0, 6);
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contacts", exact: true }).click();
+  const contacts = page.getByRole("region", { name: "Contacts" });
+  await contacts.getByRole("searchbox").fill("Jordan");
+  await contacts.getByRole("button", { name: /^Message Jordan/ }).click();
+  const inbox = page.getByRole("region", { name: "Inbox" });
+  const composer = inbox.getByRole("form", { name: "Write a message" });
+  await expect(
+    composer.getByRole("button", { name: /Remove Jordan/ }),
+  ).toBeVisible();
+  await composer.getByLabel("Subject").fill("Pickup time " + unique);
+  await composer.locator("textarea").fill("Please confirm 8am.");
+  await composer.getByRole("button", { name: "Send" }).click();
+  await expect(
+    inbox.getByRole("heading", { name: "Pickup time " + unique }),
+  ).toBeVisible();
+  await expect(
+    inbox.getByText("Jordan Ellis: Delivered in Relay"),
+  ).toBeVisible();
+
+  // The driver sees an unread badge, opens the thread and replies.
+  const driverContext = await browser.newContext();
+  const driverPage = await driverContext.newPage();
+  await login(driverPage, "driver@relay.test");
+  await driverPage.goto("/");
+  await expect(
+    driverPage.getByRole("button", { name: /^Inbox/ }),
+  ).toContainText("unread");
+  await driverPage.getByRole("button", { name: /^Inbox/ }).click();
+  const driverInbox = driverPage.getByRole("region", { name: "Inbox" });
+  await driverInbox
+    .getByRole("button", { name: new RegExp("Pickup time " + unique) })
+    .click();
+  await expect(
+    driverInbox
+      .getByRole("list", { name: "Messages" })
+      .getByText("Please confirm 8am."),
+  ).toBeVisible();
+  // Drivers cannot log calls or send email or texts.
+  await expect(
+    driverInbox.getByRole("option", { name: "Send email" }),
+  ).toHaveCount(0);
+  await driverInbox.locator("textarea").fill("Confirmed, 8am.");
+  await driverInbox.getByRole("button", { name: "Send" }).click();
+  await expect(
+    driverInbox
+      .getByRole("list", { name: "Messages" })
+      .getByText("Confirmed, 8am."),
+  ).toBeVisible();
+  await driverContext.close();
+
+  // Dispatcher sees the reply, searches for it and logs a phone call.
+  await page.reload();
+  await page.getByRole("button", { name: /^Inbox/ }).click();
+  await inbox.getByRole("searchbox").fill("Confirmed, 8am");
+  await inbox
+    .getByRole("button", { name: new RegExp("Pickup time " + unique) })
+    .click();
+  await expect(
+    inbox.getByRole("list", { name: "Messages" }).getByText("Confirmed, 8am."),
+  ).toBeVisible();
+  await inbox.getByLabel("Action").selectOption({ label: "Log call I made" });
+  await inbox.getByLabel("Notes").fill("Called Jordan; on the way.");
+  await inbox.getByRole("button", { name: "Save to log" }).click();
+  await expect(
+    inbox
+      .getByRole("list", { name: "Messages" })
+      .getByText("Call · logged by hand"),
+  ).toBeVisible();
+});
+
+test("inbox: saved replies fill in names and can be inserted", async ({
+  page,
+}) => {
+  const unique = randomUUID().slice(0, 6);
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Inbox/ }).click();
+  const inbox = page.getByRole("region", { name: "Inbox" });
+  await inbox.getByRole("button", { name: "New message" }).click();
+  await inbox.getByRole("button", { name: "Manage replies" }).click();
+  const replies = inbox.getByRole("region", { name: "Saved replies" });
+  await replies.getByRole("button", { name: "New reply" }).click();
+  await replies.getByLabel("Title").fill("ETA " + unique);
+  await replies
+    .getByLabel("Text")
+    .fill("Hi {name}, what is your ETA? — {sender}");
+  await replies.getByRole("button", { name: "Save reply" }).click();
+  await expect(replies.getByText("ETA " + unique)).toBeVisible();
+  await replies.getByRole("button", { name: "Close" }).click();
+  const composer = inbox.getByRole("form", { name: "Write a message" });
+  await composer.getByRole("searchbox", { name: "Find people" }).fill("Jordan");
+  await composer.getByRole("button", { name: /^Add Jordan/ }).click();
+  await composer
+    .getByLabel("Saved reply")
+    .selectOption({ label: "ETA " + unique });
+  await expect(composer.locator("textarea")).toHaveValue(
+    /^Hi Jordan, what is your ETA\? — .+/,
+  );
+});

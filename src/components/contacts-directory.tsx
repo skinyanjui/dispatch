@@ -451,6 +451,8 @@ function ContactForm({
           phone: String(f.get("phone")).trim(),
           notes: String(f.get("notes")).trim(),
           carrier_id: String(f.get("carrier")) || null,
+          sms_consent: f.get("sms_consent") === "on",
+          sms_consent_note: String(f.get("sms_consent_note") || "").trim(),
         };
         if (!entry) {
           const signature = JSON.stringify(body);
@@ -537,6 +539,23 @@ function ContactForm({
           rows={2}
           maxLength={1000}
           defaultValue={entry?.notes}
+        />
+      </label>
+      <label className="setupCheckbox">
+        <input
+          type="checkbox"
+          name="sms_consent"
+          defaultChecked={entry?.sms_ok}
+        />
+        <span>This person agreed to receive texts from us</span>
+      </label>
+      <label>
+        How they agreed <small>(required with consent)</small>
+        <input
+          name="sms_consent_note"
+          maxLength={300}
+          defaultValue={entry?.contact?.sms_consent_note}
+          placeholder="e.g. Said yes by phone on Oct 3"
         />
       </label>
       <small>An email address or a phone number is required.</small>

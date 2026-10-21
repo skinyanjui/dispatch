@@ -18,6 +18,7 @@ import {
   ListIcon,
   CaretUpDownIcon,
   AddressBookIcon,
+  TrayIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
@@ -29,7 +30,8 @@ export type WorkspaceSection =
   | "notifications"
   | "account"
   | "organization"
-  | "contacts";
+  | "contacts"
+  | "inbox";
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
@@ -41,6 +43,7 @@ export const sectionTitles: Record<
   account: "Account",
   organization: "Organization",
   contacts: "Contacts",
+  inbox: "Inbox",
 };
 export function Brand() {
   return (
@@ -73,6 +76,7 @@ export function WorkspaceShell({
   carrier,
   busy,
   offline,
+  unread = 0,
   onSection,
   onQueue,
   onCarrier,
@@ -87,6 +91,7 @@ export function WorkspaceShell({
   carrier: string;
   busy: boolean;
   offline: boolean;
+  unread?: number;
   onSection: (section: WorkspaceSection) => void;
   onQueue: (status: string) => void;
   onCarrier: (id: string) => void;
@@ -150,6 +155,7 @@ export function WorkspaceShell({
   }[] = [
     { key: "loads", label: "Loads", Icon: TruckIcon, show: true },
     { key: "exceptions", label: "Exceptions", Icon: WarningIcon, show: true },
+    { key: "inbox", label: "Inbox", Icon: TrayIcon, show: true },
     { key: "contacts", label: "Contacts", Icon: AddressBookIcon, show: true },
     {
       key: "carriers",
@@ -231,6 +237,12 @@ export function WorkspaceShell({
               >
                 <Icon {...icon} weight={section === key ? "fill" : "regular"} />
                 <span className="navLabel">{label}</span>
+                {key === "inbox" && unread > 0 && (
+                  <span className="navBadge">
+                    {unread > 99 ? "99+" : unread}
+                    <span className="srOnly"> unread</span>
+                  </span>
+                )}
               </button>
             ))}
         </nav>

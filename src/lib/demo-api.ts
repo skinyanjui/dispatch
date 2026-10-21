@@ -34,7 +34,7 @@ import { ApiError, api as httpApi } from "./client-api";
 
 // This adapter is used only by /demo. It never calls the server or stores a
 // password. Shared production components provide the interface and controls.
-const storageKey = "relay-current-demo-v4";
+const storageKey = "relay-current-demo-v5";
 type Role = "dispatcher" | "carrier-manager" | "driver";
 type Invite = {
   token: string;
@@ -54,7 +54,42 @@ type DemoDocument = DocumentVersion & {
   load_id: string | null;
   type: DocumentType;
 };
+// Demo conversations live only in this browser; nothing is sent anywhere.
+type DemoMessage = {
+  id: string;
+  channel: string;
+  direction: "in" | "out";
+  source: "relay" | "logged";
+  body: string;
+  counterpart: string;
+  occurred_at: string;
+  sender_user_id: string;
+  sender_name: string;
+  deliveries: {
+    key: string;
+    name: string;
+    channel: string;
+    status: string;
+    error: string | null;
+  }[];
+};
+type DemoThread = {
+  id: string;
+  subject: string;
+  load: { id: string; reference: string } | null;
+  participants: {
+    key: string;
+    name: string;
+    email: string;
+    phone: string;
+    user_id: string | null;
+  }[];
+  messages: DemoMessage[];
+  read: boolean;
+};
 type State = {
+  threads: DemoThread[];
+  savedReplies: { id: string; title: string; body: string; shared: boolean }[];
   contacts: DirectoryEntry[];
   favorites: string[];
   notifications: NotificationLogEntry[];
@@ -218,6 +253,15 @@ function fixtures(): State {
     },
   ];
   return {
+    threads: [],
+    savedReplies: [
+      {
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
+        title: "Pickup confirmed",
+        body: "Hi {name}, pickup for {load} is confirmed. — {sender}",
+        shared: false,
+      },
+    ],
     packets: {},
     invoices: [],
     exceptions,
@@ -244,7 +288,9 @@ function fixtures(): State {
           carrier_id: null,
           version: 1,
           editable: true,
+          sms_consent_note: "",
         },
+        sms_ok: false,
       },
     ],
     notifications: [],
@@ -725,6 +771,7 @@ export function createDemoApi() {
       email,
       phone,
       favorite: state.favorites.includes(key),
+      sms_ok: false,
     });
     if (path[1] === "favorites" && body) {
       const key = String(body.key);
@@ -746,6 +793,7 @@ export function createDemoApi() {
         phone: String(body.phone || ""),
         notes: String(body.notes || ""),
         favorite: false,
+        sms_ok: !!body.sms_consent,
         contact: {
           id,
           kind: body.kind as ContactKind,
@@ -753,6 +801,7 @@ export function createDemoApi() {
           carrier_id: (body.carrier_id as string) || null,
           version: 1,
           editable: true,
+          sms_consent_note: "",
         },
       });
       return { id, version: 1 };
@@ -863,6 +912,150 @@ export function createDemoApi() {
       organizations: role === "dispatcher" ? [org] : [],
     };
   };
+  const messagingRequest = (
+    path: string[],
+    body: Record<string, unknown> | undefined,
+    url: URL,
+  ) => {
+    if (path[0] === "inbox")
+      return { unread: state.threads.filter((t) => !t.read).length };
+    if (path[0] === "saved-replies") {
+      if (!body) {
+        return {
+          replies: state.savedReplies.map((r) => ({
+            ...r,
+            mine: true,
+            owner_name: state.viewer.name,
+          })),
+          can_share: false,
+        };
+      }
+      if (path[2] === "delete") {
+        state.savedReplies = state.savedReplies.filter((r) => r.id !== path[1]);
+        return { ok: true };
+      }
+      const fields = {
+        title: String(body.title || "").trim(),
+        body: String(body.body || "").trim(),
+        shared: false,
+      };
+      if (!fields.title || !fields.body) fail("VALIDATION_FAILED");
+      if (path[1]) {
+        const found =
+          state.savedReplies.find((r) => r.id === path[1]) ||
+          fail("NOT_FOUND", 404);
+        Object.assign(found, fields);
+        return { id: found.id };
+      }
+      const id = crypto.randomUUID();
+      state.savedReplies.push({ id, ...fields });
+      return { id };
+    }
+    if (path[0] === "messages" && body) {
+      const mode = body.mode === "log" ? "log" : "send";
+      const channel = String(body.channel);
+      const known = (
+        contactsRequest(["contacts"], undefined, new URL("https://x/")) as {
+          entries: DirectoryEntry[];
+        }
+      ).entries;
+      const to = (body.to as string[]).map(
+        (k) => known.find((e) => e.key === k) || fail("NOT_FOUND", 404),
+      );
+      if (mode === "send" && channel === "sms") fail("SMS_UNAVAILABLE", 409);
+      let thread = body.thread_id
+        ? state.threads.find((t) => t.id === body.thread_id) ||
+          fail("NOT_FOUND", 404)
+        : undefined;
+      if (!thread) {
+        thread = {
+          id: crypto.randomUUID(),
+          subject: String(body.subject || "Conversation"),
+          load: null,
+          participants: to.map((e) => ({
+            key: e.key,
+            name: e.name,
+            email: e.email,
+            phone: e.phone,
+            user_id: null,
+          })),
+          messages: [],
+          read: true,
+        };
+        state.threads.unshift(thread);
+      }
+      const logged = mode === "log";
+      thread.messages.push({
+        id: crypto.randomUUID(),
+        channel,
+        direction: logged && body.direction === "in" ? "in" : "out",
+        source: logged ? "logged" : "relay",
+        body: String(body.body),
+        counterpart: String(body.counterpart || ""),
+        occurred_at: String(body.occurred_at || now()),
+        sender_user_id: "",
+        sender_name: state.viewer.name,
+        deliveries: logged
+          ? []
+          : to.map((e) => ({
+              key: e.key,
+              name: e.name,
+              channel,
+              status: "not_sent",
+              error: "Demo: nothing leaves this browser",
+            })),
+      });
+      return { thread_id: thread.id, message_id: thread.messages.at(-1)!.id };
+    }
+    if (path[0] === "threads") {
+      const q = (url.searchParams.get("q") || "").toLowerCase();
+      if (path.length === 1) {
+        const rows = state.threads
+          .filter(
+            (t) =>
+              (!q ||
+                `${t.subject} ${t.participants.map((p) => p.name).join(" ")} ${t.messages.map((m) => m.body).join(" ")}`
+                  .toLowerCase()
+                  .includes(q)) &&
+              (url.searchParams.get("filter") !== "unread" || !t.read) &&
+              (!url.searchParams.get("channel") ||
+                t.messages.some(
+                  (m) => m.channel === url.searchParams.get("channel"),
+                )),
+          )
+          .map((t) => {
+            const last = t.messages.at(-1)!;
+            return {
+              id: t.id,
+              subject: t.subject,
+              unread: !t.read,
+              message_count: t.messages.length,
+              load_reference: t.load?.reference ?? null,
+              carrier_name: null,
+              with_names: t.participants.map((p) => p.name),
+              last_message_at: last.occurred_at,
+              last: {
+                channel: last.channel,
+                direction: last.direction,
+                source: last.source,
+                preview: last.body.slice(0, 140),
+                sender: last.sender_name,
+                occurred_at: last.occurred_at,
+              },
+            };
+          });
+        return { threads: rows, nextCursor: null };
+      }
+      const thread =
+        state.threads.find((t) => t.id === path[1]) || fail("NOT_FOUND", 404);
+      if (path[2] === "read") {
+        thread.read = true;
+        return { ok: true };
+      }
+      return thread;
+    }
+    return fail("NOT_FOUND", 404);
+  };
   const implementation = async (
     path: string,
     body?: unknown,
@@ -873,6 +1066,13 @@ export function createDemoApi() {
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
     if (p[0] === "contacts") return contactsRequest(p, data, url);
+    if (
+      p[0] === "threads" ||
+      p[0] === "messages" ||
+      p[0] === "inbox" ||
+      p[0] === "saved-replies"
+    )
+      return messagingRequest(p, data, url);
     if (p[0] === "account") {
       if (!body && p.length === 1)
         return {

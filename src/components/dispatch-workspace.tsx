@@ -39,6 +39,7 @@ import { BillingWorkspace } from "@/components/billing-workspace";
 import { NotificationCenter } from "@/components/notification-center";
 import { AccountSettings } from "@/components/account-settings";
 import { ContactsDirectory } from "@/components/contacts-directory";
+import { Inbox, type Compose } from "@/components/inbox";
 import { OrganizationSettings } from "@/components/organization-settings";
 import { driverUploadTypes } from "@/lib/compliance";
 import { CarrierOnboarding } from "@/components/carrier-onboarding";
@@ -99,6 +100,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [setupCarrier, setSetupCarrier] = useState<string | null>(null),
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
     [exceptionRevision, setExceptionRevision] = useState(0),
+    [unread, setUnread] = useState(0),
+    [compose, setCompose] = useState<Compose | null>(null),
     [mfaChallenge, setMfaChallenge] = useState<string | null>(null),
     [extraStops, setExtraStops] = useState<string[]>([]),
     [olderEvents, setOlderEvents] = useState<{
@@ -113,6 +116,18 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     revision = useRef(0),
     active = useRef(false),
     queueRequest = useRef(0);
+  const refreshUnread = useCallback(() => {
+    api<{ unread: number }>("inbox/unread")
+      .then((r) => setUnread(r.unread))
+      .catch(() => undefined); // the badge is a convenience; the inbox shows errors
+  }, [api]);
+  const signedIn = !!context;
+  useEffect(() => {
+    if (!signedIn) return;
+    refreshUnread();
+    const timer = setInterval(refreshUnread, 60000);
+    return () => clearInterval(timer);
+  }, [signedIn, refreshUnread]);
   const query = useCallback(
     () =>
       new URLSearchParams({
@@ -644,6 +659,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       carrier={carrier}
       busy={busy || !!setupCarrier}
       offline={offline}
+      unread={unread}
       onSection={setSection}
       onQueue={showQueue}
       onCarrier={showCarrier}
@@ -1029,7 +1045,25 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             </section>
           </>
         ) : section === "contacts" ? (
-          <ContactsDirectory offline={offline} onAuthError={handleError} />
+          <ContactsDirectory
+            offline={offline}
+            onAuthError={handleError}
+            onMessage={(entry) => {
+              setCompose({ to: [entry] });
+              setSection("inbox");
+            }}
+          />
+        ) : section === "inbox" ? (
+          <Inbox
+            userId={context.user.id ?? ""}
+            userName={context.user.name}
+            offline={offline}
+            staff={!driverOnly}
+            compose={compose}
+            onComposeDone={() => setCompose(null)}
+            onAuthError={handleError}
+            onUnreadChanged={refreshUnread}
+          />
         ) : section === "account" ? (
           <AccountSettings onAuthError={handleError} />
         ) : section === "organization" ? (
@@ -1309,6 +1343,22 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 setNotice(message);
               }}
             />
+            {selectedRole !== "driver" && (
+              <button
+                className="secondary"
+                onClick={() => {
+                  setCompose({
+                    to: [],
+                    subject: `About ${selected.reference}`,
+                    load: { id: selected.id, reference: selected.reference },
+                  });
+                  setSelected(null);
+                  setSection("inbox");
+                }}
+              >
+                Message about this load
+              </button>
+            )}
             <h3>Documents</h3>
             <p className="helpText">
               Paperwork readiness is tracked separately from the shipment
