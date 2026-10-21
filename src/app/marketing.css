@@ -342,3 +342,66 @@
 .mkSteps li a {
   font-weight: 600;
 }
+
+/* Sticky navigation: a plain bar that stays at the top while scrolling. */
+.mkBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgb(246 248 253 / 0.86);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid transparent;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .mkBar {
+    background: #f6f8fd;
+  }
+}
+.mkBar .mkHeader {
+  padding: 12px 0;
+}
+.mk {
+  scroll-padding-top: 72px;
+}
+/* Simple and centered, in the spirit of a single clear message per page. */
+.mkCenter {
+  text-align: center;
+}
+.mkCenter h1,
+.mkCenter .mkLead {
+  margin-inline: auto;
+}
+.mkPlan {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 520px;
+  padding: clamp(24px, 5vw, 40px);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  text-align: center;
+}
+.mkPlan h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.mkPlanPrice {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 44px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.mkPlan .mkChecks {
+  width: 100%;
+  margin-top: 16px;
+  text-align: left;
+}
+.mkPlan .mkNote {
+  margin: 0 0 12px;
+}
+@media (max-width: 720px) {
+  .mkBar .mkHeader {
+    padding: 8px 0;
+  }
+}

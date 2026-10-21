@@ -7,6 +7,7 @@ const nav = [
   { href: "/welcome", label: "Product" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/get-started", label: "Get started" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 /** Shared frame for the public pages: header, content, footer. */
@@ -22,28 +23,30 @@ export function MarketingShell({
       <a className="mkSkip" href="#content">
         Skip to content
       </a>
-      <header className="mkHeader">
-        <Link href="/welcome" aria-label="Relay home">
-          <Brand />
-        </Link>
-        <nav aria-label="Main">
-          {nav.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              aria-current={n.href === current ? "page" : undefined}
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mkActions">
-          <Link href="/">Sign in</Link>
-          <Link className="mkButton" href="/request-access">
-            Request access
+      <div className="mkBar">
+        <header className="mkHeader">
+          <Link href="/welcome" aria-label="Relay home">
+            <Brand />
           </Link>
-        </div>
-      </header>
+          <nav aria-label="Main">
+            {nav.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={n.href === current ? "page" : undefined}
+              >
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="mkActions">
+            <Link href="/">Sign in</Link>
+            <Link className="mkButton" href="/request-access">
+              Request access
+            </Link>
+          </div>
+        </header>
+      </div>
       <main id="content">{children}</main>
       <footer className="mkFooter">
         <div>

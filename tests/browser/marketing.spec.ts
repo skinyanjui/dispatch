@@ -34,6 +34,7 @@ const pages: [string, string][] = [
   ["/welcome", "Everything in motion. All in one place."],
   ["/how-it-works", "From rate confirmation to dispatch invoice"],
   ["/get-started", "From request to first load"],
+  ["/pricing", "Free while Relay is in early access"],
 ];
 
 test("public pages render, are accessible, fit phones and link to real destinations", async ({
@@ -73,8 +74,12 @@ test("public pages render, are accessible, fit phones and link to real destinati
     /\$\d|testimonial|trusted by/i,
   );
   await expect(page.getByRole("main")).toContainText("fictional sample data");
+  // The top bar stays put while the page scrolls.
+  await page.mouse.wheel(0, 1500);
+  await expect(page.locator(".mkBar")).toBeInViewport({ ratio: 1 });
+  expect((await page.locator(".mkBar").boundingBox())!.y).toBeLessThan(2);
   await page.getByRole("link", { name: "Get started" }).first().click();
   await expect(page).toHaveURL(/\/get-started$/);
   await page.getByText("Does it cost anything?").click();
-  await expect(page.getByText("no pricing yet")).toBeVisible();
+  await expect(page.getByText("nothing is billed")).toBeVisible();
 });

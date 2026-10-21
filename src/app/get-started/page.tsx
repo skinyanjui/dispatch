@@ -49,7 +49,7 @@ const faq = [
   ],
   [
     "Does it cost anything?",
-    "There is no pricing yet. Relay is early software, so nothing is billed.",
+    "No. Relay is early software and nothing is billed. See the pricing page.",
   ],
   [
     "Is my freight data live?",
