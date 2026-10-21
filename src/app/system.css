@@ -2150,3 +2150,26 @@ select {
     display: none;
   }
 }
+
+/* ---- Billing ---- */
+.appShell .billing .reportTile.link.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.appShell .billingTable .clickRow {
+  cursor: pointer;
+}
+.appShell .billingTable .clickRow:hover {
+  background: var(--panel-soft, #f6f8fd);
+}
+.appShell .agingNote {
+  display: block;
+  color: var(--muted);
+}
+.appShell .agingNote.late {
+  color: #b42318;
+  font-weight: 600;
+}
+.appShell .billingTable .sortButton {
+  font-size: inherit;
+}

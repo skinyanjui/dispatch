@@ -828,3 +828,47 @@ test("carriers: authorization, activity and one-click paths", async ({
     .click();
   await expect(page.locator(".loadSurface")).toBeVisible();
 });
+
+test("billing: summary cards filter the invoices, columns sort, long lists page", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Billing", exact: true }).click();
+  const region = page.getByRole("region", { name: "Billing and payments" });
+  const table = region.getByRole("table", { name: "Dispatch invoices" });
+  await expect(table).toBeVisible();
+  // The QA carrier has more than one page of invoices.
+  const rows = table.locator("tbody tr");
+  expect(await rows.count()).toBeLessThanOrEqual(25);
+  await region.getByRole("button", { name: /^Show \d+ more/ }).click();
+  expect(await rows.count()).toBeGreaterThan(25);
+  // Sort by total, announced on the header.
+  const total = table.getByRole("columnheader", { name: "Total" });
+  await total.getByRole("button").click();
+  await expect(total).toHaveAttribute("aria-sort", "descending");
+  await total.getByRole("button").click();
+  await expect(total).toHaveAttribute("aria-sort", "ascending");
+  // A summary card is a filter: Collected shows the paid invoices.
+  await region
+    .getByRole("button", { name: /^Collected: .* Show paid/ })
+    .click();
+  await expect(
+    region.getByRole("button", { name: "Paid", exact: false }).first(),
+  ).toHaveAttribute("aria-pressed", "true");
+  // Carrier freight has its own filters.
+  await region.getByRole("tab", { name: /^Carrier freight/ }).click();
+  const freight = region.getByRole("group", { name: "Show freight bills" });
+  await freight.getByRole("button", { name: /^Needs packet/ }).click();
+  await expect(
+    freight.getByRole("button", { name: /^Needs packet/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  // Rows open their invoice from anywhere on the row.
+  await region.getByRole("tab", { name: /^Invoices/ }).click();
+  await region
+    .getByRole("group", { name: "Show invoices" })
+    .getByRole("button", { name: /^All/ })
+    .click();
+  await table.locator("tbody tr").first().locator("td").first().click();
+  await expect(page.getByRole("dialog", { name: "Invoice" })).toBeVisible();
+});

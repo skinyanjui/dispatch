@@ -397,7 +397,11 @@ test("billing: carrier packet and Relay dispatch invoice stay separate", async (
   await create.getByLabel("Dispatch fee (%)").fill("8.5");
   await expect(create).toContainText("Invoice total: $212.50");
   await create.getByRole("button", { name: "Create draft invoice" }).click();
-  // The new draft is a row in the invoice table; opening it shows its lines.
+  // The new draft is a row in the invoice table; search finds it by load, so
+  // drafts left over from earlier runs cannot be mistaken for it.
+  await page
+    .getByRole("searchbox", { name: "Search invoices and loads" })
+    .fill(load.reference);
   await page
     .getByRole("button", { name: "Open invoice draft" })
     .first()

@@ -32,3 +32,16 @@ test that covers it.
 | Open a carrier's loads, exceptions or agreement        | 2 to 3 clicks             | 1 click on the number or badge                     | workspace: carriers                   |
 
 Permanent delete is intentionally not offered (ADR 0035).
+
+## Billing
+
+| Flow                                   | Before                                                    | After                                              | Test                  |
+| -------------------------------------- | --------------------------------------------------------- | -------------------------------------------------- | --------------------- |
+| See overdue invoices                   | Summary number was inert; Invoices tab, then Overdue chip | 1 click on the Overdue card                        | workspace: billing    |
+| See what is outstanding or collected   | Same                                                      | 1 click on the card (filters Open or Paid)         | workspace: billing    |
+| Start billing delivered loads          | Tab, then New invoice                                     | 1 click on "Ready to invoice"                      | workspace: billing    |
+| Find the largest or latest-due invoice | Fixed order                                               | Sort Invoice, Due, Total or Balance; `aria-sort`   | workspace: billing    |
+| Open an invoice                        | Click the number only                                     | Click anywhere on the row                          | workspace: billing    |
+| Know how late                          | Date only                                                 | "N days overdue" or "Due in N days" under the date | rendered in the table |
+| Work through 100 invoices              | All rendered at once                                      | 25 at a time with Show more                        | workspace: billing    |
+| Find loads that need a packet          | Scan the table                                            | Needs packet / Submitted / Paid filters            | workspace: billing    |

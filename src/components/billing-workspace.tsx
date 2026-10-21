@@ -1,6 +1,12 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PlusIcon, ReceiptIcon, FileTextIcon } from "@phosphor-icons/react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  FileTextIcon,
+  PlusIcon,
+  ReceiptIcon,
+} from "@phosphor-icons/react";
 import { Sheet } from "@/components/modal";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type {
@@ -531,6 +537,24 @@ const invoiceFilters: [InvoiceFilter, string][] = [
   ["void", "Void"],
 ];
 /** What a person calls an invoice's state, from its status, balance and due date. */
+const pageSize = 25;
+const DAY = 86_400_000;
+type InvoiceSort = "number" | "due" | "total" | "balance";
+type FreightFilter = "all" | "needs-packet" | "submitted" | "paid";
+const freightFilters: [FreightFilter, string][] = [
+  ["all", "All"],
+  ["needs-packet", "Needs packet"],
+  ["submitted", "Submitted"],
+  ["paid", "Paid"],
+];
+/** "3 days overdue", "due today", "due in 5 days"; nothing once settled. */
+function aging(due: string, now: string, settled: boolean) {
+  if (settled) return "";
+  const days = Math.round((Date.parse(due) - Date.parse(now)) / DAY);
+  if (days < 0) return `${-days} day${days === -1 ? "" : "s"} overdue`;
+  if (days === 0) return "Due today";
+  return `Due in ${days} day${days === 1 ? "" : "s"}`;
+}
 function shownStatus(i: DispatchInvoice, now: string) {
   if (i.status === "draft")
     return { key: "draft" as const, label: "Draft", tone: "" };
@@ -550,18 +574,38 @@ function Tile({
   value,
   hint,
   tone,
+  onOpen,
+  openLabel,
+  active,
 }: {
   label: string;
   value: string;
   hint?: string;
   tone?: "good" | "bad";
+  onOpen?: () => void;
+  openLabel?: string;
+  active?: boolean;
 }) {
-  return (
-    <div className={"reportTile" + (tone ? " " + tone : "")}>
+  const cls = "reportTile" + (tone ? " " + tone : "");
+  const body = (
+    <>
       <small>{label}</small>
       <strong>{value}</strong>
       {hint && <small>{hint}</small>}
-    </div>
+    </>
+  );
+  return onOpen ? (
+    <button
+      type="button"
+      className={cls + " link" + (active ? " active" : "")}
+      aria-pressed={active}
+      aria-label={`${label}: ${value}. ${openLabel}`}
+      onClick={onOpen}
+    >
+      {body}
+    </button>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }
 
@@ -591,6 +635,13 @@ export function BillingWorkspace({
     [allLoads, setAllLoads] = useState(false),
     [tab, setTab] = useState<"invoices" | "freight">("invoices"),
     [filter, setFilter] = useState<InvoiceFilter>("all"),
+    [freightFilter, setFreightFilter] = useState<FreightFilter>("all"),
+    [sort, setSort] = useState<{ key: InvoiceSort; desc: boolean }>({
+      key: "number",
+      desc: true,
+    }),
+    [shownInvoices, setShownInvoices] = useState(pageSize),
+    [shownFreight, setShownFreight] = useState(pageSize),
     [open, setOpen] = useState<
       { kind: "invoice" | "packet"; id: string } | "new" | null
     >(null);
@@ -694,6 +745,43 @@ export function BillingWorkspace({
           .toLowerCase()
           .includes(needle),
     );
+  const balanceOf = (i: DispatchInvoice) =>
+    i.status === "issued" ? BigInt(i.total_minor) - BigInt(i.paid_minor) : 0n;
+  const sorted = (() => {
+    const value = (i: DispatchInvoice): bigint | string =>
+      sort.key === "number"
+        ? // Newest first; drafts have no number yet and count as the newest.
+          BigInt(/(\d+)\s*$/.exec(i.number ?? "")?.[1] ?? "999999999999")
+        : sort.key === "due"
+          ? i.due_on
+          : sort.key === "total"
+            ? BigInt(i.total_minor)
+            : i.status === "issued"
+              ? BigInt(i.total_minor) - BigInt(i.paid_minor)
+              : 0n;
+    return [...shown].sort((a, b) => {
+      const x = value(a),
+        y = value(b);
+      const order = x < y ? -1 : x > y ? 1 : 0;
+      return sort.desc ? -order : order;
+    });
+  })();
+  const freightKind = (l: (typeof billable)[number]): FreightFilter =>
+    l.packet?.payment_state === "paid"
+      ? "paid"
+      : l.packet?.status === "submitted"
+        ? "submitted"
+        : "needs-packet";
+  const freightShown = billable.filter(
+    (l) => freightFilter === "all" || freightKind(l) === freightFilter,
+  );
+  const sortBy = (key: InvoiceSort) => {
+    setSort((old) => ({
+      key,
+      desc: old.key === key ? !old.desc : key !== "due",
+    }));
+    setShownInvoices(pageSize);
+  };
   const counts = (key: InvoiceFilter) =>
     key === "all"
       ? invoices.length
@@ -781,24 +869,54 @@ export function BillingWorkspace({
               label="Outstanding"
               value={money(outstanding)}
               hint={`${openCount} open ${openCount === 1 ? "invoice" : "invoices"}`}
+              openLabel="Show open invoices"
+              active={tab === "invoices" && filter === "open"}
+              onOpen={() => {
+                setTab("invoices");
+                setFilter("open");
+                setShownInvoices(pageSize);
+              }}
             />
             <Tile
               label="Overdue"
               value={money(overdue)}
               hint={`${overdueCount} past due`}
               tone={overdueCount ? "bad" : undefined}
+              openLabel="Show overdue invoices"
+              active={tab === "invoices" && filter === "overdue"}
+              onOpen={() => {
+                setTab("invoices");
+                setFilter("overdue");
+                setShownInvoices(pageSize);
+              }}
             />
             <Tile
               label="Collected"
               value={money(collected)}
               hint="On issued invoices"
               tone="good"
+              openLabel="Show paid invoices"
+              active={tab === "invoices" && filter === "paid"}
+              onOpen={() => {
+                setTab("invoices");
+                setFilter("paid");
+                setShownInvoices(pageSize);
+              }}
             />
             <Tile
               label="Ready to invoice"
               value={String(eligible.length)}
               hint={
                 eligible.length === 1 ? "delivered load" : "delivered loads"
+              }
+              openLabel={data.can_invoice ? "Start a new invoice" : undefined}
+              onOpen={
+                data.can_invoice && eligible.length
+                  ? () => {
+                      setTab("invoices");
+                      setOpen("new");
+                    }
+                  : undefined
               }
             />
           </div>
@@ -854,7 +972,10 @@ export function BillingWorkspace({
                           "attentionChip" + (key === "overdue" ? " late" : "")
                         }
                         aria-pressed={filter === key}
-                        onClick={() => setFilter(key)}
+                        onClick={() => {
+                          setFilter(key);
+                          setShownInvoices(pageSize);
+                        }}
                       >
                         {label}
                         <b>{n}</b>
@@ -862,29 +983,85 @@ export function BillingWorkspace({
                     );
                   })}
                 </div>
+                {sorted.length > shownInvoices && (
+                  <p className="helpText" role="status">
+                    Showing {shownInvoices} of {sorted.length}
+                  </p>
+                )}
                 {shown.length ? (
                   <div className="tableScroll billingTable">
                     <table className="reportTable">
                       <caption className="srOnly">Dispatch invoices</caption>
                       <thead>
                         <tr>
-                          <th scope="col">Invoice</th>
-                          <th scope="col">Status</th>
-                          <th scope="col">Due</th>
-                          <th scope="col">Total</th>
-                          <th scope="col">Paid</th>
-                          <th scope="col">Balance</th>
+                          {(
+                            [
+                              ["number", "Invoice"],
+                              [null, "Status"],
+                              ["due", "Due"],
+                              ["total", "Total"],
+                              [null, "Paid"],
+                              ["balance", "Balance"],
+                            ] as [InvoiceSort | null, string][]
+                          ).map(([key, label]) => (
+                            <th
+                              key={label}
+                              scope="col"
+                              aria-sort={
+                                key && sort.key === key
+                                  ? sort.desc
+                                    ? "descending"
+                                    : "ascending"
+                                  : key
+                                    ? "none"
+                                    : undefined
+                              }
+                            >
+                              {key ? (
+                                <button
+                                  type="button"
+                                  className="sortButton"
+                                  onClick={() => sortBy(key)}
+                                >
+                                  {label}
+                                  {sort.key === key &&
+                                    (sort.desc ? (
+                                      <ArrowDownIcon
+                                        size={11}
+                                        aria-hidden="true"
+                                      />
+                                    ) : (
+                                      <ArrowUpIcon
+                                        size={11}
+                                        aria-hidden="true"
+                                      />
+                                    ))}
+                                </button>
+                              ) : (
+                                label
+                              )}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {shown.map((i) => {
+                        {sorted.slice(0, shownInvoices).map((i) => {
                           const st = shownStatus(i, now);
                           const balance =
                             i.status === "issued"
                               ? BigInt(i.total_minor) - BigInt(i.paid_minor)
                               : 0n;
                           return (
-                            <tr key={i.id}>
+                            <tr
+                              key={i.id}
+                              className="clickRow"
+                              onClick={(e) => {
+                                if (
+                                  !(e.target as HTMLElement).closest("button")
+                                )
+                                  setOpen({ kind: "invoice", id: i.id });
+                              }}
+                            >
                               <th scope="row" data-label="Invoice">
                                 <button
                                   className="textButton"
@@ -902,7 +1079,25 @@ export function BillingWorkspace({
                                   {st.label}
                                 </span>
                               </td>
-                              <td data-label="Due">{i.due_on}</td>
+                              <td data-label="Due">
+                                {i.due_on}
+                                {aging(
+                                  i.due_on,
+                                  now,
+                                  st.key !== "open" &&
+                                    st.key !== "overdue" &&
+                                    st.key !== "partial",
+                                ) && (
+                                  <small
+                                    className={
+                                      "agingNote" +
+                                      (st.key === "overdue" ? " late" : "")
+                                    }
+                                  >
+                                    {aging(i.due_on, now, false)}
+                                  </small>
+                                )}
+                              </td>
                               <td data-label="Total">
                                 {formatMoney(i.total_minor)}
                               </td>
@@ -951,6 +1146,16 @@ export function BillingWorkspace({
                       )}
                   </div>
                 )}
+                {sorted.length > shownInvoices && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setShownInvoices((n) => n + pageSize)}
+                  >
+                    Show {Math.min(pageSize, sorted.length - shownInvoices)}{" "}
+                    more
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -958,6 +1163,33 @@ export function BillingWorkspace({
                   The carrier&apos;s invoice to the broker or shipper. Proceeds
                   belong to the carrier; receipts are recorded as reported.
                 </p>
+                <div
+                  className="attentionChips"
+                  role="group"
+                  aria-label="Show freight bills"
+                >
+                  {freightFilters.map(([key, label]) => {
+                    const n =
+                      key === "all"
+                        ? billable.length
+                        : billable.filter((l) => freightKind(l) === key).length;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className="attentionChip"
+                        aria-pressed={freightFilter === key}
+                        onClick={() => {
+                          setFreightFilter(key);
+                          setShownFreight(pageSize);
+                        }}
+                      >
+                        {label}
+                        <b>{n}</b>
+                      </button>
+                    );
+                  })}
+                </div>
                 <label className="setupCheckbox">
                   <input
                     type="checkbox"
@@ -966,7 +1198,7 @@ export function BillingWorkspace({
                   />
                   <span>Show loads not yet delivered</span>
                 </label>
-                {billable.length ? (
+                {freightShown.length ? (
                   <div className="tableScroll billingTable">
                     <table className="reportTable">
                       <caption className="srOnly">
@@ -982,7 +1214,7 @@ export function BillingWorkspace({
                         </tr>
                       </thead>
                       <tbody>
-                        {billable.map((l) => {
+                        {freightShown.slice(0, shownFreight).map((l) => {
                           const pk = l.packet;
                           return (
                             <tr key={l.id}>
@@ -1042,6 +1274,17 @@ export function BillingWorkspace({
                         : "No delivered loads or packets yet"}
                     </h3>
                   </div>
+                )}
+                {freightShown.length > shownFreight && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setShownFreight((n) => n + pageSize)}
+                  >
+                    Show{" "}
+                    {Math.min(pageSize, freightShown.length - shownFreight)}{" "}
+                    more
+                  </button>
                 )}
               </>
             )}
