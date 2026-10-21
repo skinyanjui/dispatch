@@ -51,6 +51,7 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import { carrierSummaries } from "@/lib/carrier-summary";
 import { loadsCsv, reportOverview } from "@/lib/reports";
 import { receiveEmail, receiveSms } from "@/lib/inbound";
 import { appOrigin } from "@/lib/notifications";
@@ -583,6 +584,23 @@ async function handle(req: NextRequest) {
         );
       if (path[2] === "dismiss")
         return NextResponse.json(await dismissExtraction(user.id, id));
+    }
+    if (
+      path[0] === "carriers" &&
+      path.length === 2 &&
+      path[1] === "summary" &&
+      req.method === "GET"
+    ) {
+      const summary = await carrierSummaries(user.id);
+      // Drivers have no carrier overview; same answer as Reports.
+      if (!summary.carriers.length) {
+        const driver = await pool.query(
+          "SELECT 1 FROM memberships WHERE user_id=$1 AND role='driver' LIMIT 1",
+          [user.id],
+        );
+        if (driver.rowCount) throw new HttpError(404, "NOT_FOUND");
+      }
+      return NextResponse.json(summary);
     }
     if (
       path[0] === "carriers" &&
