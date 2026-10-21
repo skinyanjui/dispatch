@@ -49,3 +49,9 @@ Keep migration 016 (additive). Disable by unsetting the SMS transport; the Inbox
 ## Addendum: resending texts (2026-10-21)
 
 A failed or unconfirmed text can be resent from the thread (`POST /api/message-deliveries/:id/resend`). The caller must name the attempt number they saw (`DELIVERY_CHANGED` otherwise), so a double click or two dispatchers cannot send it twice. An "unknown" outcome additionally needs `confirm_unknown` because the first text may have arrived. Consent and the number are re-checked at resend time, each resend is audited, and a text stuck "queued" for over five minutes is shown as unknown. Resends are still single attempts with no automatic retry.
+
+## Addendum: attachments (2026-10-21)
+
+Messages can carry up to three PDF/PNG/JPEG files of up to 4 MB each. A file is uploaded first (`POST /api/message-attachments`): its type is sniffed from the bytes, it is scanned by the same ClamAV client as documents (infected files are never stored; a missing scanner fails closed when `RELAY_REQUIRE_MALWARE_SCAN` is set), and its bytes go to the same object store as documents (`document_objects`, write-once, S3 or PostgreSQL). It is then linked once, by its uploader, to a message; the link is permanent (migration 020 trigger). Before it is attached only the uploader can open it; afterwards anyone who can see the conversation can, through the same access rule as the thread, with an audit record per download and a 60-second signed URL on S3.
+
+**Attachments stay inside Relay.** They are allowed on Relay messages and hand-logged entries (to keep a file from an outside email). Texts cannot carry files and outgoing email goes through a body-only outbox, so those channels refuse them (`ATTACHMENTS_NOT_SUPPORTED`). Emailing a file to a broker still happens from the user's own mail client. Unattached uploads are capped at 20 per user per day; cleanup of abandoned uploads is not automated yet. The demo does not support attachments.

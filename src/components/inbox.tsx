@@ -54,6 +54,7 @@ type Message = {
   occurred_at: string;
   sender_user_id: string;
   sender_name: string;
+  attachments?: { id: string; filename: string; size_bytes: number }[];
   deliveries: Delivery[];
 };
 type ThreadView = {
@@ -188,11 +189,40 @@ function Composer({
     [body, setBody] = useState(""),
     [counterpart, setCounterpart] = useState(""),
     [occurred, setOccurred] = useState(""),
+    [files, setFiles] = useState<
+      { id: string; filename: string; size_bytes: number }[]
+    >([]),
+    [uploading, setUploading] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   // One key per composed message so a retry after a dropped response cannot duplicate it.
   const key = useRef(crypto.randomUUID());
   const log = isLog(mode);
+  // Files stay inside Relay: texts and outgoing email cannot carry them.
+  const canAttach = mode === "in_app" || log;
+  async function attach(list: FileList | null) {
+    if (!list?.length) return;
+    setUploading(true);
+    setError("");
+    try {
+      for (const file of Array.from(list)) {
+        if (files.length >= 3) throw new Error("TOO_MANY_FILES");
+        const form = new FormData();
+        form.set("file", file);
+        const saved = await api<{
+          id: string;
+          filename: string;
+          size_bytes: number;
+        }>("message-attachments", form);
+        setFiles((old) => [...old, saved]);
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) onAuthError(err);
+      setError(err instanceof Error ? err.message : "SERVICE_UNAVAILABLE");
+    } finally {
+      setUploading(false);
+    }
+  }
   const limit = mode === "sms" ? 480 : 5000;
   const first = recipients[0];
   async function submit(e: React.FormEvent) {
@@ -207,6 +237,9 @@ function Composer({
         ...(load ? { load_id: load.id } : {}),
         to: recipients.map((r) => r.key),
         body,
+        ...(files.length && canAttach
+          ? { attachment_ids: files.map((f) => f.id) }
+          : {}),
         ...modeParts(mode),
         ...(log && counterpart.trim()
           ? { counterpart: counterpart.trim() }
@@ -218,6 +251,7 @@ function Composer({
       key.current = crypto.randomUUID();
       setBody("");
       setOccurred("");
+      setFiles([]);
       onSent(sent.thread_id);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) onAuthError(err);
@@ -328,6 +362,34 @@ function Composer({
           onChange={(e) => setBody(e.target.value)}
         />
       </label>
+      {canAttach && (
+        <div className="attachRow">
+          <label className="secondary attachButton">
+            {uploading ? "Uploading…" : "Attach PDF or image"}
+            <input
+              type="file"
+              accept="application/pdf,image/png,image/jpeg"
+              multiple
+              disabled={uploading || files.length >= 3}
+              onChange={(e) => {
+                void attach(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {files.map((f) => (
+            <button
+              type="button"
+              key={f.id}
+              className="chip"
+              aria-label={`Remove ${f.filename}`}
+              onClick={() => setFiles(files.filter((x) => x.id !== f.id))}
+            >
+              {f.filename} ×
+            </button>
+          ))}
+        </div>
+      )}
       <small>
         {log
           ? "Logging records this on the conversation. Nothing is sent."
@@ -942,6 +1004,21 @@ export function Inbox({
                       </time>
                     </div>
                     <p>{m.body}</p>
+                    {(m.attachments?.length ?? 0) > 0 && (
+                      <ul className="attachments" aria-label="Attachments">
+                        {m.attachments!.map((a) => (
+                          <li key={a.id}>
+                            <a href={`/api/message-attachments/${a.id}`}>
+                              {a.filename}
+                            </a>
+                            <small>
+                              {" "}
+                              {(a.size_bytes / 1024).toFixed(0)} KB
+                            </small>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     {m.deliveries.length > 0 && (
                       <ul className="deliveries">
                         {m.deliveries.map((d) => (

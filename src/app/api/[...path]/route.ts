@@ -36,6 +36,7 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import { attachmentContent, uploadAttachment } from "@/lib/message-attachments";
 import {
   accountSummary,
   changePassword,
@@ -61,6 +62,7 @@ import {
   markRead,
   sendMessage,
   resendText,
+  visibleThread,
   unreadCount,
   updateSavedReply,
 } from "@/lib/messaging";
@@ -524,6 +526,31 @@ async function handle(req: NextRequest) {
       return NextResponse.json(
         await resendText(user.id, z.uuid().parse(path[1]), await readJson(req)),
       );
+    if (path[0] === "message-attachments") {
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await uploadAttachment(user.id, (await readUpload(req)).file),
+          { status: 201 },
+        );
+      if (path.length === 2 && req.method === "GET") {
+        const file = await attachmentContent(
+          user.id,
+          z.uuid().parse(path[1]),
+          visibleThread,
+        );
+        if (file.kind === "redirect")
+          return NextResponse.redirect(file.url, 302);
+        return new NextResponse(new Uint8Array(file.content), {
+          headers: {
+            "Content-Type": file.content_type,
+            "Content-Length": String(file.content.length),
+            "Content-Disposition": `attachment; filename="attachment"; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "sandbox; default-src 'none'",
+          },
+        });
+      }
+    }
     if (path[0] === "messages" && path.length === 1 && req.method === "POST")
       return NextResponse.json(
         await sendMessage(

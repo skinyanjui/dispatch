@@ -119,6 +119,11 @@ const messages: Record<string, string> = {
   THREAD_SCOPE_UNKNOWN: "Choose a carrier or load for this conversation.",
   LOG_TIME_OUT_OF_RANGE:
     "Use a time within the last 90 days and no more than five minutes ahead.",
+  ATTACHMENTS_NOT_SUPPORTED:
+    "Files can be attached to Relay messages and logged entries only, not to texts or email.",
+  TOO_MANY_FILES: "Attach up to three files per message.",
+  TOO_MANY_ATTACHMENTS:
+    "Too many unsent attachments today. Send or remove some first.",
   LOAD_CANCELLED: "This load was cancelled, so it can't be changed.",
   LOAD_LOCKED: "Delivered loads can't be edited.",
   REASON_REQUIRED: "Add a reason; this load has already been dispatched.",

@@ -901,3 +901,54 @@ test("loads: fix an address with history, then cancel with a reason", async ({
     0,
   );
 });
+
+test("inbox: attach a PDF to a message and download it as the recipient", async ({
+  page,
+  browser,
+}) => {
+  const unique = randomUUID().slice(0, 6);
+  await login(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Inbox/ }).click();
+  const inbox = page.getByRole("region", { name: "Inbox" });
+  await inbox.getByRole("button", { name: "New message" }).click();
+  const composer = inbox.getByRole("form", { name: "Write a message" });
+  await composer.getByRole("searchbox", { name: "Find people" }).fill("Jordan");
+  await composer.getByRole("button", { name: /^Add Jordan/ }).click();
+  await composer.getByLabel("Subject").fill("Docs " + unique);
+  await composer.locator("textarea").fill("Rate con attached.");
+  await composer
+    .locator('input[type="file"]')
+    .setInputFiles(pdf("ratecon" + unique));
+  await expect(
+    composer.getByRole("button", { name: /Remove ratecon/ }),
+  ).toBeVisible();
+  // Email and text cannot carry files, so the control goes away.
+  await composer.getByLabel("Action").selectOption({ label: "Send email" });
+  await expect(composer.locator('input[type="file"]')).toHaveCount(0);
+  await composer
+    .getByLabel("Action")
+    .selectOption({ label: "Message in Relay" });
+  await composer.getByRole("button", { name: "Send" }).click();
+  await expect(
+    inbox
+      .getByRole("list", { name: "Attachments" })
+      .getByRole("link", { name: "ratecon" + unique + ".pdf" }),
+  ).toBeVisible();
+  const other = await browser.newContext();
+  const driverPage = await other.newPage();
+  await login(driverPage, "driver@relay.test");
+  await driverPage.goto("/");
+  await driverPage.getByRole("button", { name: /^Inbox/ }).click();
+  const driverInbox = driverPage.getByRole("region", { name: "Inbox" });
+  await driverInbox
+    .getByRole("button", { name: new RegExp("Docs " + unique) })
+    .click();
+  const href = await driverInbox
+    .getByRole("link", { name: "ratecon" + unique + ".pdf" })
+    .getAttribute("href");
+  const download = await driverPage.request.get(href!);
+  expect(download.status()).toBe(200);
+  expect(download.headers()["content-type"]).toBe("application/pdf");
+  await other.close();
+});

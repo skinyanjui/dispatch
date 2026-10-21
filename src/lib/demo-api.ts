@@ -1073,6 +1073,8 @@ export function createDemoApi() {
       p[0] === "saved-replies"
     )
       return messagingRequest(p, data, url);
+    if (p[0] === "message-attachments" || p[0] === "message-deliveries")
+      fail("DEMO_UNAVAILABLE", 409);
     if (p[0] === "account") {
       if (!body && p.length === 1)
         return {

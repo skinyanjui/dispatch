@@ -7,6 +7,10 @@ import { access, collect } from "./contacts";
 import { scoped } from "./loads";
 import { appOrigin, enqueueForEmail, enqueueForUser } from "./notifications";
 import { smsTransport, toE164 } from "./sms";
+import {
+  linkAttachments,
+  maxAttachmentsPerMessage,
+} from "./message-attachments";
 import type { DirectoryEntry } from "./contact-types";
 
 // Inbox (ADR 0018): conversations with in-app, email and text messages that
@@ -29,6 +33,7 @@ export const sendSchema = z
     counterpart: z.string().trim().max(160).default(""),
     body: z.string().trim().min(1).max(5000),
     occurred_at: z.iso.datetime({ offset: true }).optional(),
+    attachment_ids: z.array(z.uuid()).max(maxAttachmentsPerMessage).default([]),
   })
   .strict()
   .refine((d) => d.thread_id || d.subject, {
@@ -127,7 +132,7 @@ async function resolveRecipients(
 }
 
 /** Visibility of a thread: participants, its creator, dispatchers of its carrier, org admins. */
-const visibleThread = `(
+export const visibleThread = `(
   t.created_by=$1
   OR EXISTS(SELECT 1 FROM thread_participants p WHERE p.thread_id=t.id AND p.user_id=$1)
   OR (t.carrier_id IS NOT NULL AND EXISTS(SELECT 1 FROM memberships m WHERE m.user_id=$1 AND m.carrier_id=t.carrier_id AND m.role='dispatcher'))
@@ -334,6 +339,15 @@ export async function sendMessage(
         hash,
       ],
     );
+    // Files travel inside Relay only: texts cannot carry them and outgoing
+    // email goes through a body-only outbox, so those channels refuse.
+    if (
+      data.attachment_ids.length &&
+      data.mode === "send" &&
+      data.channel !== "in_app"
+    )
+      throw new HttpError(422, "ATTACHMENTS_NOT_SUPPORTED");
+    await linkAttachments(c, user, data.attachment_ids, messageId);
     const deliveries: { id: string; key: string; address: string }[] = [];
     if (data.mode === "send") {
       const origin_ = appOrigin(origin);
@@ -611,7 +625,9 @@ export async function getThread(user: string, id: string) {
           'error',COALESCE(d.last_error,n.last_error)) ORDER BY p.name),'[]')
           FROM message_deliveries d LEFT JOIN notifications n ON n.id=d.notification_id
           LEFT JOIN thread_participants p ON p.thread_id=m.thread_id AND p.participant_key=d.participant_key
-          WHERE d.message_id=m.id) deliveries
+          WHERE d.message_id=m.id) deliveries,
+        (SELECT COALESCE(json_agg(json_build_object('id',a.id,'filename',a.filename,'content_type',a.content_type,'size_bytes',a.size_bytes) ORDER BY a.created_at),'[]')
+          FROM message_attachments a WHERE a.message_id=m.id) attachments
       FROM messages m JOIN users u ON u.id=m.sender_user_id
       WHERE m.thread_id=$1 ORDER BY m.occurred_at DESC,m.id DESC LIMIT 200`,
       [id],

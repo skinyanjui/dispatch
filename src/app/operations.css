@@ -570,3 +570,46 @@
     grid-template-columns: 1fr;
   }
 }
+.attachRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.attachButton {
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+}
+.attachButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.attachButton:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.attachments {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 12px;
+}
+.changeLog ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.stopFields {
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
