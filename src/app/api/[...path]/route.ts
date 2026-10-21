@@ -28,6 +28,8 @@ import {
 } from "@/lib/loads";
 import {
   uploadDocument,
+  createUploadSession,
+  finalizeUpload,
   documentContent,
   reviewDocument,
   carrierDocuments,
@@ -324,6 +326,18 @@ async function handle(req: NextRequest) {
           await uploadDocument(user.id, upload.fields, upload.file),
           { status: 201 },
         );
+      }
+      if (path[1] === "uploads" && req.method === "POST") {
+        if (path.length === 2)
+          return NextResponse.json(
+            await createUploadSession(user.id, await readJson(req)),
+            { status: 201 },
+          );
+        if (path.length === 4 && path[3] === "finalize")
+          return NextResponse.json(
+            await finalizeUpload(user.id, z.uuid().parse(path[2])),
+            { status: 201 },
+          );
       }
       const versionId = z.uuid().parse(path[1]);
       if (path.length === 3 && path[2] === "content" && req.method === "GET") {

@@ -101,7 +101,12 @@ export function presignUrl(
   url: URL,
   expiresSeconds: number,
   date = new Date(),
+  /** Extra headers the client must send unchanged (e.g. content-length). */
+  headers: Record<string, string> = {},
 ) {
+  const extra = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v.trim()]),
+  );
   const amzDate = stamp(date);
   const signed = new URL(url);
   const scope = `${amzDate.slice(0, 8)}/${creds.region}/${creds.service ?? "s3"}/aws4_request`;
@@ -109,13 +114,15 @@ export function presignUrl(
   signed.searchParams.set("X-Amz-Credential", `${creds.accessKeyId}/${scope}`);
   signed.searchParams.set("X-Amz-Date", amzDate);
   signed.searchParams.set("X-Amz-Expires", String(expiresSeconds));
-  signed.searchParams.set("X-Amz-SignedHeaders", "host");
+  const all: Record<string, string> = { ...extra, host: signed.host };
+  const names = Object.keys(all).sort();
+  signed.searchParams.set("X-Amz-SignedHeaders", names.join(";"));
   const canonical = [
     method,
     canonicalPath(signed.pathname),
     canonicalQuery(signed.searchParams),
-    `host:${signed.host}\n`,
-    "host",
+    names.map((n) => `${n}:${all[n]}\n`).join(""),
+    names.join(";"),
     "UNSIGNED-PAYLOAD",
   ].join("\n");
   const sig = signature(creds, amzDate, canonical);

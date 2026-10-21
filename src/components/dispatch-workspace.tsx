@@ -1321,6 +1321,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               }
               canReview={selectedRole === "dispatcher" && !offline}
               downloads={!demo}
+              demo={demo}
               disabled={busy || offline}
               onChanged={async (message) => {
                 setSelected(await api<Load>("loads/" + selected.id));

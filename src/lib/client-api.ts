@@ -34,7 +34,7 @@ const messages: Record<string, string> = {
   CHECK_IN_TIME_OUT_OF_RANGE:
     "Use an observed time within the last 30 days and no more than five minutes ahead.",
   FILE_REQUIRED: "Choose a file to upload.",
-  FILE_TOO_LARGE: "Files must be 4 MB or smaller. Compress or split the scan.",
+  FILE_TOO_LARGE: "Files must be 25 MB or smaller. Compress or split the scan.",
   UNSUPPORTED_FILE_TYPE: "Upload a PDF, PNG or JPEG file.",
   INVALID_UPLOAD: "The upload could not be read. Choose the file again.",
   DUPLICATE_DOCUMENT_VERSION:
@@ -99,6 +99,15 @@ const messages: Record<string, string> = {
     "That time would run backwards along the route. Check this stop's arrival/departure and the neighbouring stops.",
   STOP_TIME_OUT_OF_RANGE:
     "Use a time within the last 30 days and no more than five minutes ahead.",
+  DIRECT_UPLOAD_UNAVAILABLE:
+    "Files over 4 MB need document storage (an S3-compatible bucket) to be configured. Compress the file or ask your administrator.",
+  UPLOAD_NOT_RECEIVED:
+    "The file didn't reach storage. Check your connection and retry the upload.",
+  UPLOAD_SIZE_MISMATCH:
+    "The stored file doesn't match the selected file's size. Choose the file again.",
+  UPLOAD_CHECKSUM_MISMATCH:
+    "The stored file doesn't match the selected file. Choose the file again.",
+  UPLOAD_EXPIRED: "This upload expired. Choose the file again to restart it.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

@@ -24,7 +24,10 @@ export const expiringTypes: readonly DocumentType[] = [
 ];
 // Drivers may submit pickup and delivery paperwork for assigned loads only.
 export const driverUploadTypes: readonly DocumentType[] = ["bol", "pod"];
+/** Uploads through the app server (Vercel request bodies cap near 4.5 MB). */
 export const maxDocumentBytes = 4 * 1024 * 1024;
+/** Uploads sent straight to the bucket, then verified and scanned. */
+export const maxDirectUploadBytes = 25 * 1024 * 1024;
 export const expiringWithinDays = 30;
 
 export type DocumentStatus =

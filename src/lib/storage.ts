@@ -122,6 +122,41 @@ export function s3Client(config: S3Config, fetcher: typeof fetch = fetch) {
         throw new StorageUnavailable(`GET responded ${response.status}`);
       return Buffer.from(await response.arrayBuffer());
     },
+    /**
+     * Presigned PUT for a browser upload. Content-Length is a signed header,
+     * so the provider rejects a body of any other size.
+     */
+    presignUpload(key: string, size: number, seconds = 900) {
+      return presignUrl(creds, "PUT", objectUrl(key), seconds, new Date(), {
+        "content-length": String(size),
+        "content-type": "application/octet-stream",
+      });
+    },
+    /** Server-side copy to a write-once key, keeping a checksum tag. */
+    async copy(fromKey: string, toKey: string, sha256: string) {
+      const existing = await this.head(toKey);
+      if (existing) {
+        if (existing.sha256 === sha256) return;
+        throw new StorageUnavailable(
+          "A different object already uses this key",
+        );
+      }
+      const source =
+        "/" +
+        rfc3986(config.bucket) +
+        "/" +
+        fromKey.split("/").map(rfc3986).join("/");
+      const response = await call("PUT", toKey, {
+        "x-amz-copy-source": source,
+        "x-amz-metadata-directive": "REPLACE",
+        "content-type": "application/octet-stream",
+        "x-amz-meta-sha256": sha256,
+      });
+      // S3 can report a failed copy inside a 200 response body.
+      const text = response.ok ? await response.text() : "";
+      if (!response.ok || text.includes("<Error>"))
+        throw new StorageUnavailable(`COPY responded ${response.status}`);
+    },
     /** Short-lived download URL that forces an attachment download. */
     presignDownload(
       key: string,

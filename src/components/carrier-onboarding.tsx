@@ -9,7 +9,7 @@ import {
   BuildingsIcon,
 } from "@phosphor-icons/react";
 import type { CarrierDocuments, CarrierSetup, Context } from "@/lib/contracts";
-import { maxDocumentBytes } from "@/lib/compliance";
+import { uploadDocumentFile } from "@/lib/upload-client";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { Modal } from "./modal";
 
@@ -48,17 +48,22 @@ export function CarrierOnboarding({
   // version that the dispatcher is verifying. Re-submitting identical bytes
   // reuses the current version instead of creating a duplicate.
   async function uploadAgreement(carrierId: string, file: File) {
-    if (file.size > maxDocumentBytes) throw new ApiError(413, "FILE_TOO_LARGE");
     const signature = [file.name, file.size, file.lastModified].join("|");
     if (agreementUpload.current?.signature !== signature)
       agreementUpload.current = { signature, key: crypto.randomUUID() };
-    const body = new FormData();
-    body.set("carrier_id", carrierId);
-    body.set("type", "dispatch_agreement");
-    body.set("idempotency_key", agreementUpload.current.key);
-    body.set("file", file);
     try {
-      return (await api<{ version_id: string }>("documents", body)).version_id;
+      return (
+        await uploadDocumentFile(
+          api,
+          {
+            carrier_id: carrierId,
+            type: "dispatch_agreement",
+            idempotency_key: agreementUpload.current.key,
+          },
+          file,
+          { demo },
+        )
+      ).version_id;
     } catch (e) {
       if (
         !(e instanceof ApiError && e.message === "DUPLICATE_DOCUMENT_VERSION")
@@ -469,7 +474,7 @@ export function CarrierOnboarding({
                       required
                     />
                     <small>
-                      PDF, PNG or JPEG up to 4 MB. The file is stored as an
+                      PDF, PNG or JPEG up to 25 MB. The file is stored as an
                       immutable version and linked to this review.
                     </small>
                   </label>

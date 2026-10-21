@@ -22,7 +22,7 @@ import {
   documentStatus,
   driverUploadTypes,
   loadDocumentTypes,
-  maxDocumentBytes,
+  maxDirectUploadBytes,
   todayUtc,
   type DocumentSlot,
   type DocumentType,
@@ -422,7 +422,7 @@ export function createDemoApi() {
       const file = body.get("file");
       if (!(file instanceof File) || !file.size) fail("FILE_REQUIRED", 400);
       const upload = file as File;
-      if (upload.size > maxDocumentBytes) fail("FILE_TOO_LARGE", 413);
+      if (upload.size > maxDirectUploadBytes) fail("FILE_TOO_LARGE", 413);
       const loadId = field("load_id") || null;
       if (loadId) {
         const l =

@@ -100,6 +100,7 @@ export function CarrierDocumentsDialog({
               canUpload={() => !offline}
               canReview={data.can_review && !offline}
               downloads={!demo}
+              demo={demo}
               disabled={loading || offline}
               onChanged={async (message) => {
                 await load();

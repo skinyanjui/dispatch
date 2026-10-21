@@ -6,11 +6,12 @@ import {
   DownloadSimpleIcon,
 } from "@phosphor-icons/react";
 import { describe, useApi, ApiError } from "@/lib/client-api";
+import { uploadDocumentFile } from "@/lib/upload-client";
 import {
   documentLabels,
   documentStatusLabels,
   expiringTypes,
-  maxDocumentBytes,
+  maxDirectUploadBytes,
   type DocumentSlot,
   type DocumentType,
   type DocumentVersion,
@@ -81,7 +82,9 @@ function Slot({
   downloads,
   disabled,
   onChanged,
+  demo,
 }: {
+  demo: boolean;
   slot: DocumentSlot;
   carrierId: string;
   loadId?: string;
@@ -206,7 +209,7 @@ function Slot({
               setError(describe("FILE_REQUIRED"));
               return;
             }
-            if (file.size > maxDocumentBytes) {
+            if (file.size > maxDirectUploadBytes) {
               setError(describe("FILE_TOO_LARGE"));
               return;
             }
@@ -219,15 +222,15 @@ function Slot({
             ].join("|");
             if (attempt.current?.signature !== signature)
               attempt.current = { signature, key: crypto.randomUUID() };
-            const body = new FormData();
-            body.set("carrier_id", carrierId);
-            if (loadId) body.set("load_id", loadId);
-            body.set("type", slot.type);
-            if (expires) body.set("expires_on", expires);
-            body.set("idempotency_key", attempt.current.key);
-            body.set("file", file);
+            const fields = {
+              carrier_id: carrierId,
+              ...(loadId ? { load_id: loadId } : {}),
+              type: slot.type,
+              ...(expires ? { expires_on: expires } : {}),
+              idempotency_key: attempt.current.key,
+            };
             run(async () => {
-              await api("documents", body);
+              await uploadDocumentFile(api, fields, file, { demo });
               attempt.current = null;
               formElement.reset();
               return `${label} uploaded for review.`;
@@ -258,7 +261,7 @@ function Slot({
             {busy ? "Uploading…" : "Upload"}
           </button>
           <small>
-            PDF, PNG or JPEG up to 4 MB. Each version shows its malware scan
+            PDF, PNG or JPEG up to 25 MB. Each version shows its malware scan
             result.
           </small>
         </form>
@@ -281,7 +284,9 @@ export function DocumentPanel({
   downloads,
   disabled = false,
   onChanged,
+  demo = false,
 }: {
+  demo?: boolean;
   slots: DocumentSlot[];
   carrierId: string;
   loadId?: string;
@@ -304,6 +309,7 @@ export function DocumentPanel({
           downloads={downloads}
           disabled={disabled}
           onChanged={onChanged}
+          demo={demo}
         />
       ))}
     </div>
