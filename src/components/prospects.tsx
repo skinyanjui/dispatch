@@ -606,7 +606,7 @@ export function Prospects({
     <section className="carrierDirectory" aria-label="Prospects">
       <div className="directoryIntro">
         <div>
-          <h2>Prospects</h2>
+          <h2 className="srOnly">Prospects</h2>
           <p>
             Carriers you are courting, from first contact to signed. Starting
             carrier setup creates the carrier record only.

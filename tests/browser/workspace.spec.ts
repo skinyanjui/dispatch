@@ -239,7 +239,7 @@ for (const [label, size] of [
   ["desktop", { width: 1440, height: 900 }],
   ["phone", { width: 390, height: 844 }],
 ] as const) {
-  test(`page headers line up with their content on ${label}`, async ({
+  test(`pages start with their content, no visible title, on ${label}`, async ({
     page,
   }) => {
     await page.setViewportSize(size);
@@ -263,25 +263,26 @@ for (const [label, size] of [
           ? page.getByRole("dialog", { name: "Workspace navigation" })
           : page.getByRole("navigation").first();
       await nav.getByRole("button", { name, exact: true }).first().click();
+      // The title stays for screen readers but takes no room on screen.
       await expect(
         page.getByRole("heading", { name, exact: true, level: 1 }),
-      ).toBeVisible();
+      ).toBeAttached();
       const edges = await page.evaluate(() => {
         const main = document.querySelector("main.workspace")!;
         const box = main.getBoundingClientRect();
         const pad = getComputedStyle(main);
-        const title = document
-          .querySelector("header.topbar h1")!
+        const bar = document
+          .querySelector("header.topbar")!
           .getBoundingClientRect();
         const block = main.firstElementChild!.getBoundingClientRect();
         return {
           contentLeft: box.left + parseFloat(pad.paddingLeft),
-          title: title.left,
+          barHeight: bar.height,
           block: block.left,
           overflow: document.documentElement.scrollWidth > innerWidth,
         };
       });
-      expect(edges.title, name + " title").toBeCloseTo(edges.contentLeft, 0);
+      expect(edges.barHeight, name + " header").toBeLessThan(4);
       expect(edges.block, name + " content").toBeCloseTo(edges.contentLeft, 0);
       expect(edges.overflow, name + " overflow").toBe(false);
     }

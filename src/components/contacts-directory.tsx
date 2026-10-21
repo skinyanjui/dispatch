@@ -230,7 +230,7 @@ export function ContactsDirectory({
     <section className="carrierDirectory" aria-label="Contacts">
       <div className="directoryIntro">
         <div>
-          <h2>Contacts</h2>
+          <h2 className="srOnly">Contacts</h2>
           <p>
             Everyone you work with, one search away. Tap call, text or email to
             reach out from this device, or Message to keep it in Relay.

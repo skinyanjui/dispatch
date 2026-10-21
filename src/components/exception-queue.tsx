@@ -87,8 +87,7 @@ export function ExceptionQueue({
     <section className="carrierDirectory" aria-label="Exception queue">
       <div className="directoryIntro">
         <div>
-          <p className="eyebrow">OPERATIONS</p>
-          <h2>Exceptions</h2>
+          <h2 className="srOnly">Exceptions</h2>
           <p>
             Delays, missed appointments and missing paperwork, with an owner and
             a resolution trail.

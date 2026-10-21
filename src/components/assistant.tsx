@@ -196,7 +196,7 @@ export function Assistant({
     <section className="carrierDirectory assistant" aria-label="Assistant">
       <div className="directoryIntro">
         <div>
-          <h2>Assistant</h2>
+          <h2 className="srOnly">Assistant</h2>
           <p>
             Ask about loads, exceptions, billing, prospects, contacts and
             carriers. It reads your records and can&apos;t change anything.

@@ -44,8 +44,7 @@ export function CarrierDirectory({
     >
       <div className="directoryIntro">
         <div>
-          <p className="eyebrow">YOUR WORKSPACE</p>
-          <h2>Carrier accounts</h2>
+          <h2 className="srOnly">Carrier accounts</h2>
           <p>The carriers you can work with, and your access to each.</p>
         </div>
         <div className="directoryControls">

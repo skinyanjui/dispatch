@@ -713,7 +713,7 @@ export function BillingWorkspace({
     >
       <div className="directoryIntro">
         <div>
-          <h2>Billing and payments</h2>
+          <h2 className="srOnly">Billing and payments</h2>
           <p>
             Invoices Relay sends carriers for dispatch services, and the freight
             bills carriers send brokers. Nothing here sends an invoice or moves

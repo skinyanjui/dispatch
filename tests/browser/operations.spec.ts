@@ -867,6 +867,8 @@ test("contacts: search by phone digits, add a broker, quick actions and favorite
   await form.getByLabel("Email").fill(`riley-${unique}@broker.test`);
   const phone = await form.getByLabel("Phone").inputValue();
   await form.getByRole("button", { name: "Add contact" }).click();
+  // The list is paged; narrow it so a long-lived QA database still shows it.
+  await page.getByRole("searchbox", { name: "Search contacts" }).fill(unique);
   const row = region.getByRole("article", {
     name: new RegExp("Riley Broker " + unique),
   });
@@ -904,7 +906,7 @@ test("contacts: search by phone digits, add a broker, quick actions and favorite
   await expect(
     region.getByRole("heading", { name: "No matching contacts" }),
   ).toBeVisible();
-  await search.fill("");
+  await search.fill(unique);
   // Favorites move to the top and persist.
   await region
     .getByRole("button", {

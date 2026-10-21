@@ -1707,3 +1707,172 @@ select {
 .appShell .orgMeta {
   font-size: 13px;
 }
+
+/* ---- Reports ---- */
+.appShell .reportBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.appShell .segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--panel-soft, #eef1fb);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.appShell .segment {
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .segment.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(15 27 61 / 0.12);
+}
+.appShell .reportDates {
+  display: flex;
+  gap: var(--space-2);
+}
+.appShell .reportDates label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .reportExport {
+  margin-left: auto;
+}
+.appShell .reportTile.link {
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.appShell .reportTile.link:hover {
+  border-color: var(--accent);
+}
+.appShell .reportOpen {
+  margin-top: var(--space-1);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.appShell .reportDelta {
+  color: var(--muted);
+}
+.appShell .reportDelta.up {
+  color: #15803d;
+}
+.appShell .reportDelta.down {
+  color: #b42318;
+}
+.appShell .reportTile.skeleton {
+  min-height: 92px;
+  background: linear-gradient(90deg, #f1f3fb, #e6eaf8, #f1f3fb);
+}
+.appShell .reportStale {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.appShell .pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.appShell .pipelineStep {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.appShell .pipelineStep strong {
+  font-size: 22px;
+}
+.appShell .pipelineStep:not(:disabled):hover {
+  border-color: var(--accent);
+}
+.appShell .weekChart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 150px;
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.appShell .weekChart li {
+  flex: 1 0 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 100%;
+}
+.appShell .weekChart .column {
+  width: 100%;
+  max-width: 36px;
+  min-height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+}
+.appShell .weekChart small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.appShell .sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+}
+@media (max-width: 640px) {
+  .appShell .pipeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .appShell .reportExport {
+    margin-left: 0;
+  }
+}
+.appShell .segmented {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.appShell .segment {
+  flex: none;
+  white-space: nowrap;
+}
+.appShell .reportTile.link {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.appShell .reportTile {
+  padding: var(--space-3) var(--space-4);
+}

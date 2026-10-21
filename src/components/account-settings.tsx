@@ -64,8 +64,7 @@ export function AccountSettings({
     <section className="carrierDirectory" aria-label="Account settings">
       <div className="directoryIntro">
         <div>
-          <p className="eyebrow">YOUR ACCOUNT</p>
-          <h2>Account and security</h2>
+          <h2 className="srOnly">Account and security</h2>
           {account && (
             <p>
               {account.name} · {account.email}

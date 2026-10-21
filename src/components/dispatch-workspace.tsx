@@ -844,7 +844,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       onCreate={createLoad}
       onLogout={logout}
     >
-      <header className={"topbar" + (section === "loads" ? " compact" : "")}>
+      <header className="topbar compact">
         {section === "loads" ? (
           <>
             <h1 className="srOnly">
@@ -852,11 +852,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             </h1>
           </>
         ) : (
-          <div className="topbarLeft">
-            <div className="headingGroup">
-              <h1>{sectionTitles[section]}</h1>
-            </div>
-          </div>
+          <h1 className="srOnly">{sectionTitles[section]}</h1>
         )}
       </header>
       <main id="main" className="workspace">
@@ -1071,6 +1067,13 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
         ) : section === "reports" ? (
           <Reports
             query={pageQ.reports ?? ""}
+            onOpenLoads={({ carrier: c, status: st, attention: a }) => {
+              setSection("loads");
+              filterChange({ carrier: c ?? "", status: st ?? "", q: "" });
+              setAttentionKey(a ?? null);
+            }}
+            onOpenExceptions={() => setSection("exceptions")}
+            onOpenBilling={() => setSection("billing")}
             carriers={context.carriers.filter((c) => c.role !== "driver")}
             onAuthError={handleError}
           />

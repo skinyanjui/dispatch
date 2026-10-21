@@ -92,8 +92,7 @@ export function NotificationCenter({
     <section className="carrierDirectory" aria-label="Notifications">
       <div className="directoryIntro">
         <div>
-          <p className="eyebrow">COMMUNICATION</p>
-          <h2>Notifications</h2>
+          <h2 className="srOnly">Notifications</h2>
           <p>
             Invitations, assignment updates and reminders are emailed
             automatically when email delivery is configured.
