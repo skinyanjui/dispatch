@@ -9,6 +9,7 @@ import {
   FunnelSimpleIcon,
   ArrowClockwiseIcon,
   ArrowRightIcon,
+  PlusIcon,
   ArrowDownIcon,
   BuildingsIcon,
   TruckIcon,
@@ -106,6 +107,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
     [exceptionRevision, setExceptionRevision] = useState(0),
     [mfaChallenge, setMfaChallenge] = useState<string | null>(null),
+    [extraStops, setExtraStops] = useState<string[]>([]),
     [recovering, setRecovering] = useState(false),
     [recoveryNotice, setRecoveryNotice] = useState("");
   const search = useRef<HTMLInputElement>(null),
@@ -267,6 +269,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     if (busy || offline || selected || creating || setupCarrier) return;
     createRequest.current = null;
     setError("");
+    setExtraStops([]);
     setCreating(true);
   }
   function focusSearch() {
@@ -821,6 +824,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                                 <ArrowDownIcon size={12} aria-hidden="true" />
                                 <span>
                                   {load.delivery || "Delivery not recorded"}
+                                  {(load.stop_count ?? 2) > 2 &&
+                                    ` · ${load.stop_count} stops`}
                                 </span>
                               </span>
                               <span className="cardBottom">
@@ -866,6 +871,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                         {l.pickup}
                         <ArrowRightIcon size={15} />
                         {l.delivery}
+                        {(l.stop_count ?? 2) > 2 && ` · ${l.stop_count} stops`}
                       </span>
                       <span className="driverCardFoot">
                         {l.carrier_name}
@@ -930,6 +936,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                             <small>
                               <ArrowDownIcon size={11} aria-hidden="true" />
                               {l.delivery}
+                              {(l.stop_count ?? 2) > 2 &&
+                                ` · ${l.stop_count} stops`}
                             </small>
                           </td>
                           <td>
@@ -1405,15 +1413,18 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                     reference: f.get("reference"),
                     source: f.get("source"),
                     amountMinor: dollarsToMinor(String(f.get("amount"))),
-                    stops: ["pickup", "delivery"].map((kind) => {
-                      const zone = String(f.get(kind + "Zone"));
+                    stops: ["pickup", ...extraStops, "delivery"].map((key) => {
+                      const zone = String(f.get(key + "Zone"));
                       const instant = appointmentToInstant(
-                        String(f.get(kind + "Time")),
+                        String(f.get(key + "Time")),
                         zone,
                       );
                       return {
-                        kind,
-                        address: f.get(kind),
+                        kind:
+                          key === "pickup" || key === "delivery"
+                            ? key
+                            : String(f.get(key + "Kind")),
+                        address: f.get(key),
                         timezone: zone,
                         windowStart: instant,
                         windowEnd: instant,
@@ -1484,23 +1495,46 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   required
                 />
               </label>
-              {["pickup", "delivery"].map((kind, i) => (
+              {["pickup", ...extraStops, "delivery"].map((kind, i) => (
                 <fieldset key={kind}>
                   <legend>
                     <span aria-hidden="true">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    {kind}
+                    {kind === "pickup" || kind === "delivery"
+                      ? kind
+                      : `Stop ${i + 1}`}
                   </legend>
+                  {kind !== "pickup" && kind !== "delivery" && (
+                    <div className="formGrid">
+                      <label>
+                        Stop type
+                        <select name={kind + "Kind"} defaultValue="delivery">
+                          <option value="pickup">Pickup</option>
+                          <option value="delivery">Delivery</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="textButton"
+                        aria-label={`Remove stop ${i + 1}`}
+                        onClick={() =>
+                          setExtraStops((s) => s.filter((v) => v !== kind))
+                        }
+                      >
+                        Remove stop
+                      </button>
+                    </div>
+                  )}
                   <label>
                     Address
                     <input
                       name={kind}
                       maxLength={500}
                       placeholder={
-                        kind === "pickup"
-                          ? "Pickup facility and city"
-                          : "Delivery facility and city"
+                        kind === "delivery"
+                          ? "Delivery facility and city"
+                          : "Facility and city"
                       }
                       required
                     />
@@ -1536,6 +1570,22 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   </p>
                 </fieldset>
               ))}
+              {extraStops.length < 8 && (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() =>
+                    setExtraStops((s) => [...s, "stop" + crypto.randomUUID()])
+                  }
+                >
+                  <PlusIcon size={15} aria-hidden="true" />
+                  Add stop before final delivery
+                </button>
+              )}
+              <p className="helpText">
+                Stops run in order: the first is a pickup, the last a delivery,
+                and each appointment is no earlier than the one before.
+              </p>
               {errorPanel}
               <div className="formActions">
                 <button

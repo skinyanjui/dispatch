@@ -33,15 +33,20 @@ export const createSchema = z
     reference: z.string().trim().min(1).max(100),
     source: z.string().trim().min(1).max(100),
     amountMinor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-    stops: z.array(stop).length(2),
+    stops: z.array(stop).min(2).max(10),
   })
   .refine(
     (s) =>
-      s.stops.length === 2 &&
+      // Refinements still run after a count error; guard before indexing.
+      s.stops.length >= 2 &&
       s.stops[0].kind === "pickup" &&
-      s.stops[1].kind === "delivery" &&
-      Date.parse(s.stops[1].windowStart) >= Date.parse(s.stops[0].windowEnd),
-    "Pickup must precede delivery",
+      s.stops[s.stops.length - 1].kind === "delivery" &&
+      s.stops.every(
+        (stop, i) =>
+          i === 0 ||
+          Date.parse(stop.windowStart) >= Date.parse(s.stops[i - 1].windowEnd),
+      ),
+    "Stops start with a pickup, end with a delivery and run in time order",
   );
 export async function auditDenied(user: string, resource: string) {
   await pool.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
@@ -209,7 +214,7 @@ export async function listLoads(user: string, params: URLSearchParams) {
       q: params.get("q") ?? undefined,
     });
   const { rows } = await pool.query(
-    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=2) delivery FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND ($3::text IS NULL OR l.stage=$3) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
+    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id ORDER BY sequence DESC LIMIT 1) delivery,(SELECT count(*)::int FROM load_stops WHERE load_id=l.id) stop_count FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND ($3::text IS NULL OR l.stage=$3) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
     [
       user,
       filters.carrier_id ?? null,
@@ -390,7 +395,8 @@ export async function mutate(
           (SELECT address FROM load_stops WHERE load_id=$1 AND sequence=1) pickup,
           (SELECT window_start FROM load_stops WHERE load_id=$1 AND sequence=1) pickup_at,
           (SELECT timezone FROM load_stops WHERE load_id=$1 AND sequence=1) pickup_zone,
-          (SELECT address FROM load_stops WHERE load_id=$1 AND sequence=2) delivery
+          (SELECT address FROM load_stops WHERE load_id=$1 ORDER BY sequence DESC LIMIT 1) delivery,
+          (SELECT count(*)::int FROM load_stops WHERE load_id=$1) stop_count
         FROM memberships m JOIN carriers c ON c.id=m.carrier_id
         WHERE m.carrier_id=$2 AND m.driver_id=$3`,
         [id, load.carrier_id, data.driverId],
@@ -401,7 +407,7 @@ export async function mutate(
           organization: r.organization_id,
           dedupe: `assignment:${id}:${data.driverId}:${load.version + 1}`,
           subject: `Load ${load.reference} assigned to you`,
-          text: `You've been assigned load ${load.reference}.\n\nPickup: ${r.pickup} — ${new Date(r.pickup_at).toLocaleString("en-US", { timeZone: r.pickup_zone, dateStyle: "medium", timeStyle: "short" })} (${r.pickup_zone})\nDelivery: ${r.delivery}\n\nOpen Relay for details and to record check-ins.`,
+          text: `You've been assigned load ${load.reference}.\n\nPickup: ${r.pickup} — ${new Date(r.pickup_at).toLocaleString("en-US", { timeZone: r.pickup_zone, dateStyle: "medium", timeStyle: "short" })} (${r.pickup_zone})\nFinal delivery: ${r.delivery}${r.stop_count > 2 ? ` (${r.stop_count} stops in total)` : ""}\n\nOpen Relay for details and to record check-ins.`,
         });
     } else {
       const stages = ["booked", "dispatched", "picked-up", "delivered"];

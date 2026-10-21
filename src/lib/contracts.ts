@@ -38,6 +38,7 @@ export type Load = {
   amount_minor: string;
   pickup: string;
   delivery: string;
+  stop_count?: number;
   version: number;
   created_at: string;
   source: string;

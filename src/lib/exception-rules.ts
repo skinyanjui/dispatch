@@ -70,7 +70,10 @@ export function suggestExceptions(
   const reached = (stage: string) =>
     order.indexOf(load.stage) >= order.indexOf(stage);
   const pickup = load.stops?.find((s) => s.kind === "pickup");
-  const delivery = load.stops?.find((s) => s.kind === "delivery");
+  // Milestones are load-level: the first pickup and the final delivery.
+  const delivery = [...(load.stops || [])]
+    .reverse()
+    .find((s) => s.kind === "delivery");
   if (
     pickup &&
     !reached("picked-up") &&

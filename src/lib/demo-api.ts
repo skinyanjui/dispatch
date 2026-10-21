@@ -775,6 +775,14 @@ export function createDemoApi() {
           windowStart: string;
           windowEnd: string;
         }[];
+        if (
+          stops.some(
+            (stop, i) =>
+              i > 0 &&
+              Date.parse(stop.windowStart) < Date.parse(stops[i - 1].windowEnd),
+          )
+        )
+          fail("VALIDATION_ERROR", 400);
         const l: Load = {
           id: crypto.randomUUID(),
           reference: String(data.reference),
@@ -783,7 +791,8 @@ export function createDemoApi() {
           stage: "booked",
           amount_minor: String(data.amountMinor),
           pickup: stops[0].address,
-          delivery: stops[1].address,
+          delivery: stops[stops.length - 1].address,
+          stop_count: stops.length,
           version: 1,
           created_at: now(),
           source: String(data.source),
