@@ -14,7 +14,9 @@ import {
   XIcon,
   CircleIcon,
   CheckIcon,
+  AppleLogoIcon,
   ArrowUpRightIcon,
+  GoogleLogoIcon,
   EnvelopeSimpleIcon,
   LockSimpleIcon,
   EyeIcon,
@@ -129,7 +131,26 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [unread, setUnread] = useState(0),
     [showPassword, setShowPassword] = useState(false),
     [compose, setCompose] = useState<Compose | null>(null),
-    [mfaChallenge, setMfaChallenge] = useState<string | null>(null),
+    [mfaChallenge, setMfaChallenge] = useState<string | null>(() => {
+      // A Google or Apple sign-in for an account with two-step verification
+      // comes back with the challenge in the address fragment.
+      if (typeof window === "undefined") return null;
+      return /^#mfa=([0-9a-f]{64})$/.exec(window.location.hash)?.[1] ?? null;
+    }),
+    [providers, setProviders] = useState<{
+      google: boolean;
+      apple: boolean;
+    } | null>(null),
+    [socialNote] = useState<{ requested: boolean; error: string }>(() => {
+      if (typeof window === "undefined") return { requested: false, error: "" };
+      const q = new URLSearchParams(window.location.search);
+      return {
+        requested: q.get("social") === "requested",
+        error: /^[A-Z_]{3,40}$/.test(q.get("social_error") ?? "")
+          ? (q.get("social_error") as string)
+          : "",
+      };
+    }),
     [extraStops, setExtraStops] = useState<string[]>([]),
     [olderEvents, setOlderEvents] = useState<{
       loadId: string;
@@ -209,6 +230,15 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     }
   }, [query, api]);
   useEffect(() => {
+    // The one-time hints from a social sign-in are not kept in the address bar.
+    if (
+      /[?&]social(_error)?=/.test(window.location.search) ||
+      window.location.hash
+    )
+      window.history.replaceState(null, "", window.location.pathname);
+    api<{ google: boolean; apple: boolean }>("auth/providers")
+      .then(setProviders)
+      .catch(() => setProviders({ google: false, apple: false }));
     api<Context>("me")
       .then((c) => {
         active.current = true;
@@ -625,6 +655,18 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             </form>
           )}
           {errorPanel}
+          {socialNote.requested && (
+            <p className="inlineNotice" role="status">
+              Thanks. You don&apos;t have a Relay account yet, so we recorded a
+              request for access with your verified email. Nothing was created;
+              a person reviews it.
+            </p>
+          )}
+          {socialNote.error && (
+            <p className="alert error" role="alert">
+              {describe(socialNote.error)}
+            </p>
+          )}
           <details className="loginAccess">
             <summary>How do I get access?</summary>
             <p>
@@ -648,6 +690,42 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           </p>
           {!mfaChallenge && !recovering && (
             <>
+              {providers && (providers.google || providers.apple) && (
+                <>
+                  <p className="orDivider">
+                    <span>or continue with</span>
+                  </p>
+                  <div className="socialButtons">
+                    {(["google", "apple"] as const)
+                      .filter((p) => providers[p])
+                      .map((p) => (
+                        <a
+                          key={p}
+                          className="secondary full"
+                          href={`/api/auth/oidc/${p}/start`}
+                          onClick={(e) => {
+                            const keep =
+                              document.querySelector<HTMLInputElement>(
+                                'input[name="remember"]',
+                              )?.checked;
+                            e.currentTarget.href = `/api/auth/oidc/${p}/start${keep ? "?remember=1" : ""}`;
+                          }}
+                        >
+                          {p === "google" ? (
+                            <GoogleLogoIcon size={18} aria-hidden="true" />
+                          ) : (
+                            <AppleLogoIcon size={18} aria-hidden="true" />
+                          )}
+                          {p === "google" ? "Google" : "Apple"}
+                        </a>
+                      ))}
+                  </div>
+                  <small className="helpText">
+                    No account yet? Signing in this way sends an access request
+                    for your verified email; it does not create an account.
+                  </small>
+                </>
+              )}
               <p className="orDivider">
                 <span>or</span>
               </p>

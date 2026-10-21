@@ -499,3 +499,14 @@
   color: var(--login-blue);
   font-weight: 600;
 }
+
+.socialButtons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.socialButtons + .helpText {
+  display: block;
+  margin: 10px 0 0;
+  color: var(--login-muted);
+}

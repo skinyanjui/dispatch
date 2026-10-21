@@ -116,14 +116,24 @@ export async function login(
   await pool.query("DELETE FROM login_attempts WHERE identity_hash=$1", [
     digest(email.trim().toLowerCase()),
   ]);
-  if (rows[0].mfa_enabled_at) {
-    // The password step alone never yields a session for MFA accounts.
+  return startSession(rows[0].id, !!rows[0].mfa_enabled_at, remember);
+}
+/**
+ * After any first factor (password, Google, Apple): MFA accounts get a
+ * challenge, never a session, until the second step is done.
+ */
+export async function startSession(
+  userId: string,
+  mfaEnabled: boolean,
+  remember: boolean,
+): Promise<LoginResult> {
+  if (mfaEnabled) {
     const challenge = randomBytes(32).toString("hex");
     await pool.query(
       "INSERT INTO mfa_challenges(token_hash,user_id,expires_at,remember) VALUES($1,$2,now()+interval '5 minutes',$3)",
-      [digest(challenge), rows[0].id, remember],
+      [digest(challenge), userId, remember],
     );
     return { mfa_challenge: challenge, remember };
   }
-  return { token: await createSession(rows[0].id, remember), remember };
+  return { token: await createSession(userId, remember), remember };
 }

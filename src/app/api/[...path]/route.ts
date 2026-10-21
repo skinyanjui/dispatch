@@ -95,6 +95,7 @@ import {
   setFavorite,
   updateContact,
 } from "@/lib/contacts";
+import { beginOidc, finishOidc, isProvider, oidcConfigured } from "@/lib/oidc";
 import { submitAccessRequest } from "@/lib/access-requests";
 import { rateReadStatus, readRateConfirmation } from "@/lib/rate-reads";
 import { ask, assistantState, getConversation } from "@/lib/assistant";
@@ -217,6 +218,83 @@ async function readUpload(req: NextRequest) {
   }
   return { fields, file };
 }
+const socialCookie = "relay_oidc";
+const secureCookies = () =>
+  process.env.COOKIE_SECURE !== "false" &&
+  process.env.NODE_ENV === "production";
+async function authRoutes(req: NextRequest, path: string[]) {
+  if (path.length === 2 && path[1] === "providers" && req.method === "GET")
+    return NextResponse.json(oidcConfigured());
+  if (path[1] !== "oidc" || path.length !== 4 || !isProvider(path[2]))
+    throw new HttpError(404, "NOT_FOUND");
+  const provider = path[2];
+  const origin = new URL(req.url).origin;
+  const home = (search = "", hash = "") =>
+    new URL("/" + search + hash, appOrigin(origin));
+  if (path[3] === "start" && req.method === "GET") {
+    const remember = req.nextUrl.searchParams.get("remember") === "1";
+    try {
+      const { url, state } = await beginOidc(provider, remember, origin);
+      const res = NextResponse.redirect(url, 303);
+      res.cookies.set(socialCookie, state, {
+        httpOnly: true,
+        // Apple returns by cross-site POST, which a Lax cookie would not join.
+        sameSite: secureCookies() ? "none" : "lax",
+        secure: secureCookies(),
+        path: "/api/auth/oidc",
+        maxAge: 600,
+      });
+      return res;
+    } catch (e) {
+      if (!(e instanceof HttpError)) throw e;
+      return NextResponse.redirect(home("?social_error=" + e.code), 303);
+    }
+  }
+  if (path[3] === "callback" && ["GET", "POST"].includes(req.method)) {
+    let fields: Record<string, string> = {};
+    if (req.method === "POST") {
+      const form = await req.formData();
+      for (const [k, v] of form.entries())
+        if (typeof v === "string") fields[k] = v;
+    } else fields = Object.fromEntries(req.nextUrl.searchParams);
+    let res: NextResponse;
+    try {
+      if (fields.error) throw new HttpError(400, "SOCIAL_SIGNIN_CANCELLED");
+      const outcome = await finishOidc(
+        provider,
+        {
+          code: fields.code,
+          state: fields.state,
+          cookieState: req.cookies.get(socialCookie)?.value,
+          user: fields.user,
+        },
+        origin,
+      );
+      if (outcome.kind === "requested")
+        res = NextResponse.redirect(home("?social=requested"), 303);
+      else if ("mfa_challenge" in outcome.result)
+        res = NextResponse.redirect(
+          home("", "#mfa=" + outcome.result.mfa_challenge),
+          303,
+        );
+      else
+        res = withSession(
+          NextResponse.redirect(home(), 303),
+          outcome.result.token,
+          outcome.result.remember,
+        );
+    } catch (e) {
+      if (!(e instanceof HttpError)) throw e;
+      res = NextResponse.redirect(home("?social_error=" + e.code), 303);
+    }
+    res.cookies.set(socialCookie, "", {
+      path: "/api/auth/oidc",
+      maxAge: 0,
+    });
+    return res;
+  }
+  throw new HttpError(404, "NOT_FOUND");
+}
 async function handle(req: NextRequest) {
   let actor: string | undefined;
   try {
@@ -243,6 +321,12 @@ async function handle(req: NextRequest) {
           await receiveEmail(raw, req.headers.get("x-relay-signature")),
         );
       throw new HttpError(404, "NOT_FOUND");
+    }
+    // Google and Apple sign-in (ADR 0034). The Apple callback is a cross-site
+    // form POST, so it cannot pass the same-origin check; the state cookie and
+    // the single-use state row authenticate it instead.
+    if (path[0] === "auth") {
+      return await authRoutes(req, path);
     }
     if (req.method === "POST") sameOrigin(req);
     if (path.length === 1 && path[0] === "login" && req.method === "POST") {

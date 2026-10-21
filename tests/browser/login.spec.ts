@@ -241,3 +241,56 @@ test("request access submits one generic confirmation and is accessible", async 
   await page.getByRole("link", { name: /Back to sign in/ }).click();
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("Google and Apple appear only when configured, and explain what they do", async ({
+  page,
+}) => {
+  await page.route("**/api/me", (route) =>
+    route.fulfill({ status: 401, json: { error: "AUTH_REQUIRED" } }),
+  );
+  await page.route("**/api/auth/providers", (route) =>
+    route.fulfill({ json: { google: true, apple: false } }),
+  );
+  await page.goto("/");
+  const card = page.locator(".loginPanel");
+  const google = card.getByRole("link", { name: "Google" });
+  await expect(google).toHaveAttribute("href", "/api/auth/oidc/google/start");
+  await expect(card.getByRole("link", { name: "Apple" })).toHaveCount(0);
+  await expect(card).toContainText("does not create an account");
+  await card.getByLabel("Keep me signed in for 30 days").check();
+  await google.focus();
+  await page.evaluate(() =>
+    document.addEventListener("click", (e) => e.preventDefault(), true),
+  );
+  await google.click();
+  await expect(google).toHaveAttribute(
+    "href",
+    "/api/auth/oidc/google/start?remember=1",
+  );
+  await scan(page, "sign-in with Google");
+});
+
+test("returning from a provider shows what happened and keeps nothing in the address bar", async ({
+  page,
+}) => {
+  await page.route("**/api/me", (route) =>
+    route.fulfill({ status: 401, json: { error: "AUTH_REQUIRED" } }),
+  );
+  await page.goto("/?social=requested");
+  await expect(page.getByRole("status")).toContainText(
+    "recorded a request for access",
+  );
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/?social_error=SOCIAL_EMAIL_UNVERIFIED");
+  await expect(page.locator(".loginPanel").getByRole("alert")).toContainText(
+    "isn't verified",
+  );
+  await expect(page).toHaveURL(/\/$/);
+  // A fresh load, as when the provider redirects back.
+  await page.goto("about:blank");
+  await page.goto("/#mfa=" + "a".repeat(64));
+  await expect(
+    page.getByRole("form", { name: "Two-step verification" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+});

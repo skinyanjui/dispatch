@@ -174,6 +174,15 @@ const messages: Record<string, string> = {
     "Please confirm the earlier text didn't arrive before sending it again.",
   AI_NOT_ENABLED:
     "AI reading is off for this organization. An owner or admin can turn it on in Organization settings.",
+  SOCIAL_SIGNIN_FAILED:
+    "That sign-in didn't complete, so nothing was changed. Try again, or use your email and password.",
+  SOCIAL_SIGNIN_CANCELLED: "Sign-in was cancelled, so nothing was changed.",
+  SOCIAL_EMAIL_UNVERIFIED:
+    "That account's email address isn't verified with the provider, so it can't be used here. Use your email and password instead.",
+  PROVIDER_UNAVAILABLE:
+    "That sign-in service isn't responding right now. Try again in a moment, or use your email and password.",
+  PROVIDER_NOT_CONFIGURED:
+    "That sign-in option isn't set up for this workspace.",
   TERMS_CHANGED:
     "The Terms or Privacy pages were updated while you were filling this in. Reload the page, read them, and send again.",
   ATTACH_FAILED:
