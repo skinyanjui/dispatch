@@ -66,7 +66,7 @@ try {
       );
       for (let j = 0; j < 2; j++)
         await c.query(
-          "INSERT INTO load_stops VALUES($1,$2,$3,$4,$5,$6,now()+interval '1 day',now()+interval '2 days')",
+          "INSERT INTO load_stops VALUES($1,$2,$3,$4,$5,$6,now()+($7*interval '1 day'),now()+($7*interval '1 day')+interval '1 hour')",
           [
             randomUUID(),
             id,
@@ -74,6 +74,7 @@ try {
             j === 0 ? "pickup" : "delivery",
             j === 0 ? "Chicago, IL" : "Nashville, TN",
             "America/Chicago",
+            j + 1,
           ],
         );
       await c.query(

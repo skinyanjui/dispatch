@@ -9,7 +9,13 @@ import {
   mutate,
   createSchema,
 } from "../../src/lib/loads";
-import { login, verifyPassword, hashPassword } from "../../src/lib/auth";
+import {
+  login,
+  verifyPassword,
+  hashPassword,
+  consumeLoginAttempt,
+  digest,
+} from "../../src/lib/auth";
 let dispatcher: string,
   manager: string,
   driverUser: string,
@@ -56,8 +62,8 @@ function input(carrierId: string) {
 }
 test("password verification and authenticated session creation", async () => {
   const hash = hashPassword("a secure fictional password");
-  assert(verifyPassword("a secure fictional password", hash));
-  assert(!verifyPassword("wrong", hash));
+  assert(await verifyPassword("a secure fictional password", hash));
+  assert(!(await verifyPassword("wrong", hash)));
   assert(
     (await login("dispatcher@relay.test", process.env.SEED_PASSWORD!))
       .length === 64,
@@ -214,5 +220,131 @@ test("stop ordering, timezone and integer money validation", () => {
       ...data,
       stops: [{ ...data.stops[0], timezone: "Invalid/Zone" }, data.stops[1]],
     }).success,
+  );
+});
+
+test("expired dispatch authorization prevents assignment without changing the load", async () => {
+  const org = (await pool.query("SELECT id FROM organizations LIMIT 1")).rows[0]
+    .id;
+  const carrier = randomUUID(),
+    driver = randomUUID(),
+    authorization = randomUUID();
+  await pool.query("INSERT INTO carriers VALUES($1,$2,$3)", [
+    carrier,
+    org,
+    "Expired agreement QA",
+  ]);
+  await pool.query("INSERT INTO drivers VALUES($1,$2,$3)", [
+    driver,
+    carrier,
+    "Expired agreement driver",
+  ]);
+  await pool.query("INSERT INTO memberships VALUES($1,$2,$3,NULL)", [
+    dispatcher,
+    carrier,
+    "dispatcher",
+  ]);
+  await pool.query(
+    "INSERT INTO carrier_dispatch_authorizations VALUES($1,$2,'QA',now(),now()-interval '2 days',now()+interval '1 day')",
+    [authorization, carrier],
+  );
+  const load = await createLoad(dispatcher, input(carrier), randomUUID());
+  await pool.query(
+    "UPDATE carrier_dispatch_authorizations SET expires_at=now()-interval '1 day' WHERE id=$1",
+    [authorization],
+  );
+  await assert.rejects(
+    mutate(dispatcher, load.id, "assign", { version: 1, driverId: driver }),
+    /CARRIER_AUTHORIZATION_REQUIRED/,
+  );
+  assert.equal((await detail(dispatcher, load.id)).version, 1);
+});
+
+test("foreign-carrier detail requests do not wait for a lock on another tenant", async () => {
+  const load = await createLoad(dispatcher, input(carrierB), randomUUID());
+  const locker = await pool.connect();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await locker.query("BEGIN");
+    await locker.query("SELECT id FROM loads WHERE id=$1 FOR UPDATE", [
+      load.id,
+    ]);
+    const denied = detail(manager, load.id).then(
+      () => false,
+      (e) => e.message === "NOT_FOUND",
+    );
+    const result = await Promise.race([
+      denied,
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), 1000);
+      }),
+    ]);
+    assert.equal(
+      result,
+      true,
+      "Authorization should reject without locking a foreign load",
+    );
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    await locker.query("ROLLBACK");
+    locker.release();
+  }
+});
+
+test("login throttling is atomic and shared by independent connections", async () => {
+  const email = "rate-" + randomUUID() + "@relay.test";
+  const results = await Promise.allSettled(
+    Array.from({ length: 12 }, () => consumeLoginAttempt(email)),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 8);
+  assert.equal(
+    results.filter(
+      (r) => r.status === "rejected" && r.reason.message === "TRY_AGAIN_LATER",
+    ).length,
+    4,
+  );
+  const row = await pool.query(
+    "SELECT attempts FROM login_attempts WHERE identity_hash=$1",
+    [digest(email)],
+  );
+  assert.equal(row.rows[0].attempts, 12);
+});
+
+test("queue cursor does not duplicate records when a new load arrives", async () => {
+  const carrier = randomUUID();
+  const org = (await pool.query("SELECT id FROM organizations LIMIT 1")).rows[0]
+    .id;
+  await pool.query("INSERT INTO carriers VALUES($1,$2,$3)", [
+    carrier,
+    org,
+    "Pagination QA",
+  ]);
+  await pool.query("INSERT INTO memberships VALUES($1,$2,$3,NULL)", [
+    dispatcher,
+    carrier,
+    "dispatcher",
+  ]);
+  await pool.query(
+    "INSERT INTO carrier_dispatch_authorizations VALUES($1,$2,'QA',now(),now()-interval '1 day',now()+interval '1 year')",
+    [randomUUID(), carrier],
+  );
+  for (let i = 0; i < 26; i++)
+    await createLoad(dispatcher, input(carrier), randomUUID());
+  const first = await listLoads(
+    dispatcher,
+    new URLSearchParams({ carrier_id: carrier }),
+  );
+  assert.equal(first.loads.length, 25);
+  assert(first.nextCursor);
+  await createLoad(dispatcher, input(carrier), randomUUID());
+  const second = await listLoads(
+    dispatcher,
+    new URLSearchParams({ carrier_id: carrier, cursor: first.nextCursor }),
+  );
+  assert.equal(second.loads.length, 1);
+  assert(second.loads.every((b) => !first.loads.some((a) => a.id === b.id)));
+  await assert.rejects(
+    listLoads(dispatcher, new URLSearchParams({ cursor: "malformed" })),
+    /INVALID_CURSOR/,
   );
 });

@@ -61,18 +61,15 @@ async function member(
   return rows[0];
 }
 async function scoped(c: PoolClient, user: string, id: string, write = false) {
-  const { rows } = await c.query("SELECT * FROM loads WHERE id=$1 FOR UPDATE", [
-    id,
-  ]);
+  const { rows } = await c.query(
+    `SELECT l.* FROM loads l
+    JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$2
+    WHERE l.id=$1 AND ($3::boolean=false OR m.role<>'driver')
+      AND (m.role<>'driver' OR EXISTS(SELECT 1 FROM load_assignments a WHERE a.load_id=l.id AND a.driver_id=m.driver_id))
+    ${write ? "FOR UPDATE OF l" : ""}`,
+    [id, user, write],
+  );
   if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
-  const m = await member(c, user, rows[0].carrier_id, write);
-  if (m.role === "driver") {
-    const a = await c.query(
-      "SELECT 1 FROM load_assignments WHERE load_id=$1 AND driver_id=$2",
-      [id, m.driver_id],
-    );
-    if (!a.rowCount) throw new HttpError(404, "NOT_FOUND");
-  }
   return rows[0];
 }
 async function event(
@@ -98,6 +95,14 @@ async function event(
     load.id,
   ]);
 }
+async function requireAgreement(c: PoolClient, carrierId: string) {
+  const auth = await c.query(
+    "SELECT 1 FROM carrier_dispatch_authorizations WHERE carrier_id=$1 AND verified_at<=now() AND effective_at<=now() AND expires_at>now() FOR SHARE",
+    [carrierId],
+  );
+  if (!auth.rowCount)
+    throw new HttpError(422, "CARRIER_AUTHORIZATION_REQUIRED");
+}
 export async function createLoad(user: string, input: unknown, key: string) {
   const data = createSchema.parse(input);
   if (!key || key.length > 128)
@@ -119,12 +124,7 @@ export async function createLoad(user: string, input: unknown, key: string) {
         await c.query("SELECT * FROM loads WHERE id=$1", [old.rows[0].load_id])
       ).rows[0];
     }
-    const auth = await c.query(
-      "SELECT 1 FROM carrier_dispatch_authorizations WHERE carrier_id=$1 AND verified_at<=now() AND effective_at<=now() AND expires_at>now() FOR SHARE",
-      [data.carrierId],
-    );
-    if (!auth.rowCount)
-      throw new HttpError(422, "CARRIER_AUTHORIZATION_REQUIRED");
+    await requireAgreement(c, data.carrierId);
     const id = randomUUID();
     const result = await c.query(
       "INSERT INTO loads(id,carrier_id,reference,source,amount_minor) VALUES($1,$2,$3,$4,$5) RETURNING *",
@@ -153,23 +153,65 @@ export async function createLoad(user: string, input: unknown, key: string) {
 }
 export async function listLoads(user: string, params: URLSearchParams) {
   const limit = 25;
-  const offset = Number(params.get("cursor") || 0);
-  if (!Number.isSafeInteger(offset) || offset < 0)
-    throw new HttpError(400, "INVALID_CURSOR");
+  const raw = params.get("cursor");
+  let cursor: { at: string; id: string } | null = null;
+  if (raw) {
+    if (raw.length > 200) throw new HttpError(400, "INVALID_CURSOR");
+    try {
+      cursor = z
+        .object({
+          at: z
+            .string()
+            .max(50)
+            .regex(
+              /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/,
+            ),
+          id: z.uuid(),
+        })
+        .parse(JSON.parse(Buffer.from(raw, "base64url").toString()));
+    } catch {
+      throw new HttpError(400, "INVALID_CURSOR");
+    }
+  }
+  z.object({
+    carrier_id: z.uuid().optional(),
+    status: z
+      .enum(["booked", "dispatched", "picked-up", "delivered"])
+      .optional(),
+    q: z.string().max(100).optional(),
+  }).parse(
+    Object.fromEntries(
+      [...params].filter(([key]) =>
+        ["carrier_id", "status", "q"].includes(key),
+      ),
+    ),
+  );
   const { rows } = await pool.query(
-    `SELECT l.*,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=2) delivery FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND ($3::text IS NULL OR l.stage=$3) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') ORDER BY l.created_at DESC,l.id LIMIT $5 OFFSET $6`,
+    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=2) delivery FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND ($3::text IS NULL OR l.stage=$3) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
     [
       user,
       params.get("carrier_id"),
       params.get("status"),
       params.get("q"),
       limit + 1,
-      offset,
+      cursor?.at ?? null,
+      cursor?.id ?? null,
     ],
   );
   return {
-    loads: rows.slice(0, limit),
-    nextCursor: rows.length > limit ? String(offset + limit) : null,
+    loads: rows.slice(0, limit).map(({ cursor_at, ...load }) => {
+      void cursor_at;
+      return load;
+    }),
+    nextCursor:
+      rows.length > limit
+        ? Buffer.from(
+            JSON.stringify({
+              at: rows[limit - 1].cursor_at,
+              id: rows[limit - 1].id,
+            }),
+          ).toString("base64url")
+        : null,
   };
 }
 export async function detail(user: string, id: string) {
@@ -213,6 +255,7 @@ export async function mutate(
     if (load.version !== data.version)
       throw new HttpError(409, "VERSION_CONFLICT");
     if (action === "assign") {
+      await requireAgreement(c, load.carrier_id);
       if (!data.driverId) throw new HttpError(400, "DRIVER_REQUIRED");
       const driver = await c.query(
         "SELECT 1 FROM drivers WHERE id=$1 AND carrier_id=$2",

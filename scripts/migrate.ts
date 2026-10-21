@@ -6,17 +6,19 @@ try {
     await c.query(
       "CREATE TABLE IF NOT EXISTS schema_migrations(version text PRIMARY KEY)",
     );
-    const exists = await c.query(
-      "SELECT 1 FROM schema_migrations WHERE version='001'",
-    );
-    if (!exists.rowCount) {
-      await c.query(
-        await readFile(
-          new URL("../db/001_foundation.sql", import.meta.url),
-          "utf8",
-        ),
+    for (const version of ["001", "002"]) {
+      const exists = await c.query(
+        "SELECT 1 FROM schema_migrations WHERE version=$1",
+        [version],
       );
-      await c.query("INSERT INTO schema_migrations VALUES('001')");
+      if (!exists.rowCount) {
+        const filename =
+          version === "001" ? "001_foundation.sql" : "002_auth_controls.sql";
+        await c.query(
+          await readFile(new URL("../db/" + filename, import.meta.url), "utf8"),
+        );
+        await c.query("INSERT INTO schema_migrations VALUES($1)", [version]);
+      }
     }
   });
   console.log("Migrations current");

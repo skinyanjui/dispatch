@@ -10,26 +10,47 @@ import {
   auditDenied,
 } from "@/lib/loads";
 export const runtime = "nodejs";
-const attempts = new Map<string, { count: number; until: number }>();
+async function readJson(req: NextRequest): Promise<unknown> {
+  if (
+    !req.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .startsWith("application/json")
+  )
+    throw new HttpError(415, "JSON_REQUIRED");
+  const reader = req.body?.getReader();
+  if (!reader) throw new HttpError(400, "INVALID_JSON");
+  let size = 0;
+  const chunks: Uint8Array[] = [];
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 65536) {
+        await reader.cancel();
+        throw new HttpError(413, "REQUEST_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
 async function handle(req: NextRequest) {
   let actor: string | undefined;
   try {
     const path = req.nextUrl.pathname.slice(5).split("/");
     if (req.method === "POST") sameOrigin(req);
-    if (path[0] === "login" && req.method === "POST") {
+    if (path.length === 1 && path[0] === "login" && req.method === "POST") {
       const input = z
-        .object({ email: z.email(), password: z.string().min(1).max(256) })
-        .parse(await req.json());
-      const key = input.email.toLowerCase();
-      const a = attempts.get(key);
-      if (a && a.until > Date.now() && a.count >= 8)
-        throw new HttpError(429, "TRY_AGAIN_LATER");
-      attempts.set(key, {
-        count: a && a.until > Date.now() ? a.count + 1 : 1,
-        until: a && a.until > Date.now() ? a.until : Date.now() + 60000,
-      });
+        .object({
+          email: z.string().trim().max(254).pipe(z.email()),
+          password: z.string().min(1).max(256),
+        })
+        .parse(await readJson(req));
       const token = await login(input.email, input.password);
-      attempts.delete(key);
       const res = NextResponse.json({ ok: true });
       res.cookies.set("relay_session", token, {
         httpOnly: true,
@@ -44,7 +65,7 @@ async function handle(req: NextRequest) {
     }
     const user = await session(req);
     actor = user.id;
-    if (path[0] === "logout" && req.method === "POST") {
+    if (path.length === 1 && path[0] === "logout" && req.method === "POST") {
       const t = req.cookies.get("relay_session")?.value;
       if (t)
         await pool.query("DELETE FROM sessions WHERE token_hash=$1", [
@@ -54,7 +75,7 @@ async function handle(req: NextRequest) {
       res.cookies.delete("relay_session");
       return res;
     }
-    if (path[0] === "me" && req.method === "GET") {
+    if (path.length === 1 && path[0] === "me" && req.method === "GET") {
       const carriers = await pool.query(
         "SELECT c.*,m.role FROM carriers c JOIN memberships m ON m.carrier_id=c.id WHERE m.user_id=$1",
         [user.id],
@@ -78,7 +99,7 @@ async function handle(req: NextRequest) {
         return NextResponse.json(
           await createLoad(
             user.id,
-            await req.json(),
+            await readJson(req),
             req.headers.get("idempotency-key") || "",
           ),
           { status: 201 },
@@ -92,14 +113,16 @@ async function handle(req: NextRequest) {
         req.method === "POST"
       )
         return NextResponse.json(
-          await mutate(user.id, id, path[2], await req.json()),
+          await mutate(user.id, id, path[2], await readJson(req)),
         );
     }
     throw new HttpError(404, "NOT_FOUND");
   } catch (e) {
     if (e instanceof HttpError) {
       if (e.status === 404 && actor)
-        await auditDenied(actor, req.nextUrl.pathname);
+        await auditDenied(actor, req.nextUrl.pathname).catch(() =>
+          console.error("audit.denied.unavailable"),
+        );
       return NextResponse.json({ error: e.code }, { status: e.status });
     }
     if (e instanceof z.ZodError)
@@ -121,5 +144,12 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
   }
 }
-export const GET = handle;
-export const POST = handle;
+async function response(req: NextRequest) {
+  const result = await handle(req);
+  result.headers.set("Cache-Control", "private, no-store");
+  result.headers.set("Vary", "Cookie");
+  if (result.status === 429) result.headers.set("Retry-After", "60");
+  return result;
+}
+export const GET = response;
+export const POST = response;
