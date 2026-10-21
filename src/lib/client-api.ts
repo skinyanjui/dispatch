@@ -119,6 +119,23 @@ const messages: Record<string, string> = {
   THREAD_SCOPE_UNKNOWN: "Choose a carrier or load for this conversation.",
   LOG_TIME_OUT_OF_RANGE:
     "Use a time within the last 90 days and no more than five minutes ahead.",
+  LOAD_CANCELLED: "This load was cancelled, so it can't be changed.",
+  LOAD_LOCKED: "Delivered loads can't be edited.",
+  REASON_REQUIRED: "Add a reason; this load has already been dispatched.",
+  NO_CHANGES: "Nothing was changed.",
+  STOP_ALREADY_STARTED:
+    "A stop with a recorded arrival or departure can't be changed.",
+  INVALID_STOP_WINDOWS:
+    "Appointment windows must end after they start and stay in order.",
+  REFERENCE_TAKEN: "This carrier already has a load with that reference.",
+  CANNOT_CANCEL_STARTED:
+    "Loads already picked up can't be cancelled. Open an exception instead.",
+  DELIVERY_CHANGED:
+    "This text changed since you opened it. Refresh and check its status first.",
+  ALREADY_SENT: "That text was already sent.",
+  DELIVERY_IN_PROGRESS: "That text is still being sent. Check again shortly.",
+  CONFIRM_UNKNOWN_REQUIRED:
+    "Confirm the earlier text didn't arrive before sending it again.",
   IDEMPOTENCY_CONFLICT:
     "This retry differs from the original request. Refresh the details before recording a new report.",
 };

@@ -36,6 +36,8 @@ type Thread = {
   last_message_at: string;
 };
 type Delivery = {
+  id: string;
+  attempts: number;
   key: string;
   name: string | null;
   channel: string;
@@ -97,6 +99,7 @@ export const channelLabels: Record<Channel, string> = {
 const deliveryLabels: Record<string, string> = {
   delivered: "Delivered in Relay",
   queued: "Queued",
+  pending: "Queued",
   sent: "Handed to provider",
   failed: "Failed",
   unknown: "Outcome unknown — do not resend until you confirm",
@@ -560,7 +563,8 @@ export function Inbox({
     [newMessage, setNewMessage] = useState<Compose | null>(compose),
     [people, setPeople] = useState<DirectoryEntry[]>([]),
     [find, setFind] = useState(""),
-    [status, setStatus] = useState("");
+    [status, setStatus] = useState(""),
+    [resending, setResending] = useState<string | null>(null);
   const request = useRef(0);
   const load = useCallback(
     async (cursor?: string) => {
@@ -657,6 +661,31 @@ export function Inbox({
       ),
     [view, userId],
   );
+  async function resend(d: Delivery) {
+    if (
+      d.status === "unknown" &&
+      !window.confirm(
+        `The earlier text to ${d.name ?? "this person"} may have arrived. Resend only if you have confirmed it did not. Send again?`,
+      )
+    )
+      return;
+    setResending(d.id);
+    setViewError("");
+    let failure = "";
+    try {
+      await api(`message-deliveries/${d.id}/resend`, {
+        attempt: d.attempts,
+        confirm_unknown: d.status === "unknown",
+      });
+      setStatus("Text sent again.");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) onAuthError(e);
+      failure = e instanceof Error ? e.message : "SERVICE_UNAVAILABLE";
+    }
+    if (selected) await openThread(selected);
+    setResending(null);
+    if (failure) setViewError(failure);
+  }
   const finish = async (threadId: string) => {
     setStatus("Saved.");
     onComposeDone();
@@ -923,6 +952,20 @@ export function Inbox({
                             {d.name ?? d.key}:{" "}
                             {deliveryLabels[d.status] ?? d.status}
                             {d.error && ` (${d.error})`}
+                            {staff &&
+                              d.channel === "sms" &&
+                              (d.status === "failed" ||
+                                d.status === "unknown") && (
+                                <button
+                                  className="textButton"
+                                  disabled={offline || resending === d.id}
+                                  onClick={() => void resend(d)}
+                                >
+                                  {d.status === "unknown"
+                                    ? "Check, then resend"
+                                    : "Resend"}
+                                </button>
+                              )}
                           </li>
                         ))}
                       </ul>

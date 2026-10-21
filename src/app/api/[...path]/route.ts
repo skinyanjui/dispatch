@@ -60,6 +60,7 @@ import {
   listThreads,
   markRead,
   sendMessage,
+  resendText,
   unreadCount,
   updateSavedReply,
 } from "@/lib/messaging";
@@ -514,6 +515,15 @@ async function handle(req: NextRequest) {
       if (path.length === 3 && path[2] === "read" && req.method === "POST")
         return NextResponse.json(await markRead(user.id, threadId));
     }
+    if (
+      path[0] === "message-deliveries" &&
+      path.length === 3 &&
+      path[2] === "resend" &&
+      req.method === "POST"
+    )
+      return NextResponse.json(
+        await resendText(user.id, z.uuid().parse(path[1]), await readJson(req)),
+      );
     if (path[0] === "messages" && path.length === 1 && req.method === "POST")
       return NextResponse.json(
         await sendMessage(

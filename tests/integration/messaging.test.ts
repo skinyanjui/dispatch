@@ -11,6 +11,7 @@ import {
   listThreads,
   markRead,
   sendMessage,
+  resendText,
   unreadCount,
   updateSavedReply,
 } from "../../src/lib/messaging";
@@ -630,4 +631,80 @@ test("HTTP: authenticated, origin-checked, and thread reads do not leak", async 
   );
   assert.equal(unread.status, 200);
   assert.equal(typeof (await unread.json()).unread, "number");
+});
+
+test("failed and unconfirmed texts can be resent once, with consent re-checked", async () => {
+  useTransports();
+  smsOutcome = "refused";
+  const sent = await sendMessage(
+    t.dispatcher,
+    msg({ channel: "sms", to: [broker], subject: "Resend", body: "ETA 4pm" }),
+  );
+  const delivery = async () =>
+    (await getThread(t.dispatcher, sent.thread_id)).messages[0].deliveries[0];
+  let d = await delivery();
+  assert.equal(d.status, "failed");
+  assert.equal(d.attempts, 1);
+  // A stale attempt number (double click, second dispatcher) is refused.
+  smsOutcome = "timeout";
+  await assert.rejects(resendText(t.dispatcher, d.id, { attempt: 7 }), {
+    code: "DELIVERY_CHANGED",
+  });
+  assert.equal(sentTexts.length, 1);
+  // Unknown outcome needs explicit confirmation before sending again.
+  const again = await resendText(t.dispatcher, d.id, { attempt: 1 });
+  assert.equal(again.status, "unknown");
+  assert.equal(sentTexts.length, 2);
+  await assert.rejects(resendText(t.dispatcher, d.id, { attempt: 2 }), {
+    code: "CONFIRM_UNKNOWN_REQUIRED",
+  });
+  smsOutcome = "ok";
+  const done = await resendText(t.dispatcher, d.id, {
+    attempt: 2,
+    confirm_unknown: true,
+  });
+  assert.equal(done.status, "sent");
+  assert.equal(sentTexts.length, 3);
+  assert.deepEqual(sentTexts[2], { to: "+12145550199", body: "ETA 4pm" });
+  d = await delivery();
+  assert.equal(d.attempts, 3);
+  await assert.rejects(resendText(t.dispatcher, d.id, { attempt: 3 }), {
+    code: "ALREADY_SENT",
+  });
+  const audits = await pool.query(
+    "SELECT action FROM audit_logs WHERE resource_id=$1 ORDER BY created_at",
+    [d.id],
+  );
+  assert.deepEqual(
+    audits.rows.map((r) => r.action),
+    ["message.sms_resent", "message.sms_resent_unconfirmed"],
+  );
+  // Consent withdrawn since: refused. Other tenants and drivers see nothing.
+  smsOutcome = "refused";
+  const second = await sendMessage(
+    t.dispatcher,
+    msg({ channel: "sms", to: [broker], subject: "Resend 2", body: "Again" }),
+  );
+  const failed = (await getThread(t.dispatcher, second.thread_id)).messages[0]
+    .deliveries[0];
+  await assert.rejects(
+    resendText(t.foreignManager, failed.id, { attempt: 1 }),
+    {
+      code: "NOT_FOUND",
+    },
+  );
+  await assert.rejects(resendText(t.driverUser, failed.id, { attempt: 1 }), {
+    code: "NOT_FOUND",
+  });
+  await pool.query(
+    "UPDATE contacts SET sms_consent_at=NULL,sms_consent_by=NULL WHERE id=$1",
+    [broker.slice(8)],
+  );
+  await assert.rejects(resendText(t.dispatcher, failed.id, { attempt: 1 }), {
+    code: "RECIPIENT_CHANNEL_UNAVAILABLE",
+  });
+  await pool.query(
+    "UPDATE contacts SET sms_consent_at=now(),sms_consent_by=$2 WHERE id=$1",
+    [broker.slice(8), t.dispatcher],
+  );
 });

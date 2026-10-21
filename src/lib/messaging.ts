@@ -416,11 +416,101 @@ export async function sendMessage(
   return { thread_id: result.thread_id, message_id: result.message_id };
 }
 
+export const resendSchema = z
+  .object({
+    attempt: z.number().int().positive(),
+    /** Required when the earlier outcome is unknown: it may have arrived. */
+    confirm_unknown: z.boolean().default(false),
+  })
+  .strict();
+
+/**
+ * Sends a failed or unconfirmed text again. The caller names the attempt they
+ * saw, so a double click or a second dispatcher cannot send it twice, and
+ * consent is checked again in case the person has since opted out.
+ */
+export async function resendText(
+  user: string,
+  deliveryId: string,
+  input: unknown,
+) {
+  const data = resendSchema.parse(input);
+  const transport = smsTransport();
+  if (!transport) throw new HttpError(409, "SMS_UNAVAILABLE");
+  const prepared = await transaction(async (c) => {
+    const found = (
+      await c.query(
+        `SELECT d.*,m.thread_id,m.body,CASE WHEN d.status='pending' AND d.updated_at<now()-interval '5 minutes' THEN 'unknown' ELSE d.status END shown
+        FROM message_deliveries d JOIN messages m ON m.id=d.message_id WHERE d.id=$1 AND d.channel='sms'`,
+        [deliveryId],
+      )
+    ).rows[0];
+    if (!found) throw new HttpError(404, "NOT_FOUND");
+    await lockThread(c, user, found.thread_id);
+    const a = await access(c, user);
+    if (
+      a.dispatchCarriers.length +
+        a.managerCarriers.length +
+        a.organizations.length ===
+      0
+    )
+      throw new HttpError(403, "ROLE_NOT_PERMITTED");
+    const locked = (
+      await c.query(
+        "SELECT attempts,status FROM message_deliveries WHERE id=$1 FOR UPDATE",
+        [deliveryId],
+      )
+    ).rows[0];
+    if (locked.attempts !== data.attempt)
+      throw new HttpError(409, "DELIVERY_CHANGED");
+    if (found.shown === "sent" || found.shown === "delivered")
+      throw new HttpError(409, "ALREADY_SENT");
+    if (found.shown === "pending")
+      throw new HttpError(409, "DELIVERY_IN_PROGRESS");
+    if (found.shown === "unknown" && !data.confirm_unknown)
+      throw new HttpError(409, "CONFIRM_UNKNOWN_REQUIRED");
+    const [recipient] = await resolveRecipients(c, user, [
+      found.participant_key,
+    ]);
+    const number = recipient.smsOk ? toE164(recipient.phone) : null;
+    if (!number) throw new HttpError(422, "RECIPIENT_CHANNEL_UNAVAILABLE");
+    await c.query(
+      "UPDATE message_deliveries SET status='pending',attempts=attempts+1,address=$2,last_error=NULL,updated_at=now() WHERE id=$1",
+      [deliveryId, number],
+    );
+    await c.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
+      randomUUID(),
+      user,
+      found.shown === "unknown"
+        ? "message.sms_resent_unconfirmed"
+        : "message.sms_resent",
+      deliveryId,
+    ]);
+    return { number, body: found.body as string, attempts: data.attempt + 1 };
+  });
+  const outcome = await transport.send(prepared.number, prepared.body);
+  await pool.query(
+    "UPDATE message_deliveries SET status=$2,provider_message_id=$3,last_error=$4,updated_at=now() WHERE id=$1",
+    [
+      deliveryId,
+      outcome.ok ? "sent" : outcome.definite ? "failed" : "unknown",
+      outcome.ok ? outcome.providerId : null,
+      outcome.ok ? null : outcome.error,
+    ],
+  );
+  return {
+    id: deliveryId,
+    attempts: prepared.attempts,
+    status: outcome.ok ? "sent" : outcome.definite ? "failed" : "unknown",
+  };
+}
+
 // ---------- Reading ----------
 
 const deliveryStatus = `CASE d.channel
   WHEN 'email' THEN CASE n.status WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'suppressed' THEN 'not_sent' ELSE 'queued' END
-  WHEN 'sms' THEN CASE d.status WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'unknown' THEN 'unknown' ELSE 'queued' END
+  WHEN 'sms' THEN CASE d.status WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'unknown' THEN 'unknown'
+    ELSE CASE WHEN d.updated_at<now()-interval '5 minutes' THEN 'unknown' ELSE 'queued' END END
   ELSE 'delivered' END`;
 
 export const threadFilters = z
@@ -517,7 +607,7 @@ export async function getThread(user: string, id: string) {
     );
     const messages = await c.query(
       `SELECT m.id,m.channel,m.direction,m.source,m.body,m.counterpart,m.occurred_at,m.sender_user_id,u.name sender_name,
-        (SELECT COALESCE(json_agg(json_build_object('key',d.participant_key,'name',p.name,'channel',d.channel,'status',${deliveryStatus},
+        (SELECT COALESCE(json_agg(json_build_object('id',d.id,'attempts',d.attempts,'key',d.participant_key,'name',p.name,'channel',d.channel,'status',${deliveryStatus},
           'error',COALESCE(d.last_error,n.last_error)) ORDER BY p.name),'[]')
           FROM message_deliveries d LEFT JOIN notifications n ON n.id=d.notification_id
           LEFT JOIN thread_participants p ON p.thread_id=m.thread_id AND p.participant_key=d.participant_key

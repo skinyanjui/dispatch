@@ -45,3 +45,7 @@ Inbound email/SMS, attachments, per-message edit/delete, message retention rules
 ## Rollback
 
 Keep migration 016 (additive). Disable by unsetting the SMS transport; the Inbox page can be hidden without data loss.
+
+## Addendum: resending texts (2026-10-21)
+
+A failed or unconfirmed text can be resent from the thread (`POST /api/message-deliveries/:id/resend`). The caller must name the attempt number they saw (`DELIVERY_CHANGED` otherwise), so a double click or two dispatchers cannot send it twice. An "unknown" outcome additionally needs `confirm_unknown` because the first text may have arrived. Consent and the number are re-checked at resend time, each resend is audited, and a text stuck "queued" for over five minutes is shown as unknown. Resends are still single attempts with no automatic retry.
