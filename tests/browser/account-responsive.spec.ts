@@ -55,3 +55,50 @@ test("notifications: the delivery log shows 20 at a time", async ({ page }) => {
   }
   expect(await noOverflow(page)).toBe(true);
 });
+
+test("organization: People use one type scale and the AI limit field is short", async ({
+  page,
+}) => {
+  await login(page);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/organization");
+    await page.getByRole("tab", { name: /^People/ }).click();
+    const sizes = await page.evaluate(() => {
+      const px = (s: string) =>
+        parseFloat(getComputedStyle(document.querySelector(s)!).fontSize);
+      return {
+        name: px(".orgPeople .opsTeamName"),
+        role: px(".orgPeople .orgMeta"),
+        email: px(".orgPeople .opsTeamName small"),
+      };
+    });
+    expect(sizes.role).toBeLessThanOrEqual(sizes.name);
+    expect(sizes.email).toBeLessThanOrEqual(sizes.role);
+    await page.getByRole("tab", { name: "AI" }).click();
+    const field = page.getByLabel("Monthly limit (USD)");
+    await expect(field).toBeVisible();
+    expect((await field.boundingBox())!.width).toBeLessThanOrEqual(201);
+    expect(await noOverflow(page)).toBe(true);
+  }
+});
+
+test("link pages: the heading fits the card and the form has room", async ({
+  page,
+}) => {
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/reset-password#" + "a".repeat(64));
+    const heading = page.getByRole("heading", { name: "Choose a new password." });
+    await expect(heading).toBeVisible();
+    const size = await heading.evaluate((el) =>
+      parseFloat(getComputedStyle(el).fontSize),
+    );
+    expect(size).toBeLessThanOrEqual(28);
+    const h = (await heading.boundingBox())!;
+    const field = (await page.getByLabel(/^New password/).first().boundingBox())!;
+    // The first field sits clear of the heading, not jammed under it.
+    expect(field.y - (h.y + h.height)).toBeGreaterThan(12);
+    expect(await noOverflow(page)).toBe(true);
+  }
+});

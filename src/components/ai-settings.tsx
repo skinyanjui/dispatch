@@ -141,6 +141,7 @@ export function AiSettings({
           <label>
             Monthly limit (USD)
             <input
+              className="narrowField"
               inputMode="decimal"
               value={limit}
               disabled={busy}

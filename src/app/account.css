@@ -61,3 +61,56 @@
   width: 100%;
   max-width: 900px;
 }
+
+/* People: name, role and security pills use one type scale, so the role line
+   is not larger than the person's name. */
+.appShell .orgPeople .opsTeamName {
+  font-size: 14px;
+  font-weight: 600;
+}
+.appShell .orgPeople .opsTeamName small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.appShell .orgPeople .orgMeta {
+  color: var(--muted);
+  font-size: 13px;
+}
+.appShell .narrowField {
+  width: 100%;
+  max-width: 200px;
+}
+
+/* Link pages (reset password, verify email, invitation): a heading that fits
+   the card, with room around the label, the fields and the button. */
+.linkPage .loginPanel h1 {
+  margin: 0 0 14px;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.linkPage .loginPanel .eyebrow {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+}
+.linkPage .loginPanel form {
+  display: grid;
+  gap: 14px;
+}
+.linkPage .loginPanel form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.linkPage .loginPanel form small {
+  margin-top: -4px;
+  font-weight: 400;
+}
+.linkPage .loginPanel .setupIntro {
+  margin: 0 0 20px;
+}

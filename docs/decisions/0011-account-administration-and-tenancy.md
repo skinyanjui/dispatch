@@ -44,3 +44,7 @@ Revert the application; keep migration 009 (additive, plus a widened check const
 ## Account and notification pages
 
 Presentation only; no API, schema or permission change. The Account page is two aligned columns (profile and password on the left, email and two-step verification on the right) that collapse to one on narrow screens; before, its four cards sat in a ragged row of different widths. The Notifications delivery log is a compact bordered list that shows 20 messages at a time with "Show more"; before, it rendered every message at once (about 5,400px tall on a desktop and 13,000px on a phone with a busy workspace). The Organization page already fit and was left as it is. Playwright now keeps a screenshot of any failing test.
+
+## Organization tabs and link pages
+
+Presentation only; no API, schema or permission change. In the Organization People list the person's name, email and role line now share one type scale (the role line was larger than the name). The AI tab's monthly limit is a short field instead of a full-width one. The reset-password, verify-email and invitation-result pages get a heading that fits the card (26px) with room around the small label, the fields and the button; these styles are scoped to a `linkPage` class used only by the reset and verify pages, because the request-access and invitation pages share `joinPage` and have their own form styling (an unscoped rule once made the request-access terms text bold and failed the accessibility scan).

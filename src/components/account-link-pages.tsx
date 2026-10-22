@@ -26,7 +26,7 @@ export function ResetPasswordPage() {
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(false);
   return (
-    <AuthLayout className="joinPage">
+    <AuthLayout className="joinPage linkPage">
       <section className="loginPanel">
         {token === null ? (
           <p role="status">Opening your reset link…</p>
@@ -134,7 +134,7 @@ export function VerifyEmailPage() {
       );
   }, [api, token]);
   return (
-    <AuthLayout className="joinPage">
+    <AuthLayout className="joinPage linkPage">
       <section className="loginPanel">
         {state === "working" ? (
           <p role="status">Confirming your email…</p>
