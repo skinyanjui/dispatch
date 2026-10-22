@@ -60,7 +60,17 @@ test("sealed bodies round-trip and do not contain the plaintext", () => {
   const sealed = encrypt("secret link https://relay.test/join#abc")!;
   assert.ok(!sealed.includes("join#abc"));
   assert.equal(decrypt(sealed), "secret link https://relay.test/join#abc");
-  assert.throws(() => decrypt(sealed.replace(/.$/, "A") + "A"));
+  // Tampering must be detected. Flip a real bit (the last base64 character can
+  // carry unused bits, so editing it is sometimes a no-op) in the ciphertext
+  // and, separately, in the authentication tag.
+  const [version, iv, tag, body] = sealed.split(".");
+  const flip = (b64: string) => {
+    const bytes = Buffer.from(b64, "base64");
+    bytes[0] ^= 1;
+    return bytes.toString("base64");
+  };
+  assert.throws(() => decrypt([version, iv, tag, flip(body)].join(".")));
+  assert.throws(() => decrypt([version, iv, flip(tag), body].join(".")));
 });
 
 test("invitations queue an encrypted email in the same transaction and deliver once", async () => {
