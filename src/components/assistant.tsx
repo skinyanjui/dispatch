@@ -1,6 +1,10 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PaperPlaneTiltIcon, SparkleIcon } from "@phosphor-icons/react";
+import {
+  ArrowUpIcon,
+  PlusIcon,
+  SparkleIcon,
+} from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import {
   examplePrompts,
@@ -31,7 +35,7 @@ function Answer({ text }: { text: string }) {
     else blocks.push({ list, lines: [item ? item[1] : line] });
   }
   return (
-    <div className="assistantAnswer">
+    <div className="asstAnswer">
       {blocks.map((b, i) =>
         b.list ? (
           <ul key={i}>
@@ -56,13 +60,13 @@ function Sources({
 }) {
   if (!sources.length) return null;
   return (
-    <div className="assistantSources" role="group" aria-label="Sources">
+    <div className="asstSources" role="group" aria-label="Sources">
       <small>Based on</small>
       {sources.slice(0, 12).map((s) => (
         <button
           key={s.kind + s.id}
           type="button"
-          className="attentionChip"
+          className="asstChip"
           onClick={() => onOpen(s)}
         >
           {s.label}
@@ -97,6 +101,7 @@ export function Assistant({
     [busy, setBusy] = useState(false);
   const attempt = useRef<Pending | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
   const fail = useCallback(
     (e: unknown) => {
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
@@ -117,6 +122,13 @@ export function Assistant({
   useEffect(() => {
     void loadState();
   }, [loadState]);
+  // The box grows with its text, up to a limit, and shrinks after sending.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  }, [draft, state?.enabled]);
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: "end" });
   }, [conversation?.turns.length, pending]);
@@ -192,41 +204,12 @@ export function Assistant({
   }
 
   const turns = conversation?.turns ?? [];
+  const history = (state?.conversations ?? []).filter((c) =>
+    c.title.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   return (
-    <section className="carrierDirectory assistant" aria-label="Assistant">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Assistant</h2>
-          <p>
-            Ask about loads, exceptions, billing, prospects, contacts and
-            carriers. It reads your records. The only thing it can create is a
-            draft document from your templates, for you to review; it sends
-            nothing.
-          </p>
-        </div>
-        {state?.enabled && (state.conversations.length > 0 || conversation) && (
-          <div className="directoryControls">
-            <label>
-              <span className="srOnly">Conversation</span>
-              <select
-                value={conversation?.id ?? ""}
-                onChange={(e) => void pick(e.target.value)}
-              >
-                <option value="">New conversation</option>
-                {state.conversations
-                  .filter((c) =>
-                    c.title.toLowerCase().includes(query.trim().toLowerCase()),
-                  )
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          </div>
-        )}
-      </div>
+    <section className="assistant" aria-label="Assistant">
+      <h2 className="srOnly">Assistant</h2>
       {loadError && (
         <div className="alert error" role="alert">
           {describe(loadError)}
@@ -236,7 +219,7 @@ export function Assistant({
         </div>
       )}
       {state && !state.enabled && (
-        <div className="directoryEmpty">
+        <div className="asstOff">
           <SparkleIcon size={32} weight="light" aria-hidden="true" />
           <h3>The assistant is off</h3>
           {isAdmin ? (
@@ -271,107 +254,175 @@ export function Assistant({
         </div>
       )}
       {state?.enabled && (
-        <>
-          <div
-            className="assistantThread"
-            role="log"
-            aria-label="Conversation"
-            aria-live="polite"
-          >
-            {!turns.length && !pending && (
-              <div className="assistantStart">
-                <p>Try one of these:</p>
-                <div className="assistantExamples">
-                  {examplePrompts.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className="attentionChip"
-                      disabled={busy || offline}
-                      onClick={() => void submit(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {turns.map((t) => (
-              <div key={t.id} className="assistantTurn">
-                <p className="assistantQuestion">{t.question}</p>
-                {t.status === "succeeded" && t.answer ? (
-                  <>
-                    <Answer text={t.answer} />
-                    <Sources sources={t.sources} onOpen={onOpen} />
-                  </>
-                ) : (
-                  <p className="alert error">
-                    {failureText[t.error_code ?? ""] ??
-                      "That question couldn't be answered."}
-                  </p>
-                )}
-              </div>
-            ))}
-            {pending && (
-              <div className="assistantTurn">
-                <p className="assistantQuestion">{pending.question}</p>
-                <p className="helpText" role="status">
-                  Looking through your records…
-                </p>
-              </div>
-            )}
-            <div ref={end} />
-          </div>
-          {error && (
-            <div className="alert error" role="alert">
-              {describe(error)}
-              <button
-                className="secondary"
-                disabled={busy}
-                onClick={() => void submit(attempt.current?.question ?? draft)}
-              >
-                Try again
-              </button>
-            </div>
-          )}
-          <form
-            className="assistantComposer"
-            aria-label="Ask the assistant"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void submit(draft);
-            }}
-          >
-            <label>
-              <span className="srOnly">Your question</span>
-              <textarea
-                rows={2}
-                maxLength={2000}
-                value={draft}
-                placeholder="Ask about a load, a carrier, an invoice or a prospect…"
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void submit(draft);
-                  }
-                }}
-              />
-            </label>
+        <div className="asstLayout">
+          <aside className="asstHistory" aria-label="Conversations">
             <button
-              className="primary"
-              disabled={busy || offline || !draft.trim()}
+              type="button"
+              className="secondary asstNew"
+              onClick={() => void pick("")}
             >
-              <PaperPlaneTiltIcon size={15} aria-hidden="true" />
-              Ask
+              <PlusIcon size={14} aria-hidden="true" />
+              New chat
             </button>
-          </form>
-          <small className="assistantNote">
-            {state.provider?.name === "fixture"
-              ? "Sample answers from fixed rules. No AI is used."
-              : "Answers come from your records through an AI model. Check anything important before you act on it."}
-          </small>
-        </>
+            {history.length > 0 && (
+              <ul>
+                {history.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      className="asstHistoryItem"
+                      aria-current={conversation?.id === c.id || undefined}
+                      onClick={() => void pick(c.id)}
+                    >
+                      {c.title}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+          <div className="asstMain">
+            <div className="asstBar">
+              <label>
+                <span className="srOnly">Conversation</span>
+                <select
+                  value={conversation?.id ?? ""}
+                  onChange={(e) => void pick(e.target.value)}
+                >
+                  <option value="">New conversation</option>
+                  {history.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div
+              className="asstThread"
+              role="log"
+              aria-label="Conversation"
+              aria-live="polite"
+            >
+              {!turns.length && !pending && (
+                <div className="asstStart">
+                  <span className="asstMark" aria-hidden="true">
+                    <SparkleIcon size={22} weight="fill" />
+                  </span>
+                  <h3>What can I help with?</h3>
+                  <p>
+                    I read your loads, exceptions, billing, prospects, contacts
+                    and carriers. I send nothing and change nothing.
+                  </p>
+                  <div className="asstExamples">
+                    {examplePrompts.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        disabled={busy || offline}
+                        onClick={() => void submit(p)}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {turns.map((t) => (
+                <div key={t.id} className="asstTurn">
+                  <p className="asstUser">{t.question}</p>
+                  <div className="asstReply">
+                    <span className="asstAvatar" aria-hidden="true">
+                      <SparkleIcon size={14} weight="fill" />
+                    </span>
+                    <div className="asstBody">
+                      {t.status === "succeeded" && t.answer ? (
+                        <>
+                          <Answer text={t.answer} />
+                          <Sources sources={t.sources} onOpen={onOpen} />
+                        </>
+                      ) : (
+                        <p className="alert error">
+                          {failureText[t.error_code ?? ""] ??
+                            "That question couldn't be answered."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {pending && (
+                <div className="asstTurn">
+                  <p className="asstUser">{pending.question}</p>
+                  <div className="asstReply">
+                    <span className="asstAvatar" aria-hidden="true">
+                      <SparkleIcon size={14} weight="fill" />
+                    </span>
+                    <p className="asstWorking" role="status">
+                      Looking through your records
+                      <span className="asstDots" aria-hidden="true" />
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div ref={end} />
+            </div>
+            <div className="asstDock">
+              {error && (
+                <div className="alert error" role="alert">
+                  {describe(error)}
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      void submit(attempt.current?.question ?? draft)
+                    }
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+              <form
+                className="asstComposer"
+                aria-label="Ask the assistant"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submit(draft);
+                }}
+              >
+                <label>
+                  <span className="srOnly">Your question</span>
+                  <textarea
+                    ref={box}
+                    rows={1}
+                    maxLength={2000}
+                    value={draft}
+                    placeholder="Ask about a load, a carrier, an invoice or a prospect"
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void submit(draft);
+                      }
+                    }}
+                  />
+                </label>
+                <button
+                  className="asstSend"
+                  aria-label="Ask"
+                  disabled={busy || offline || !draft.trim()}
+                >
+                  <ArrowUpIcon size={16} weight="bold" aria-hidden="true" />
+                </button>
+              </form>
+              <small className="asstNote">
+                {state.provider?.name === "fixture"
+                  ? "Sample answers from fixed rules. No AI is used."
+                  : "Answers come from your records through an AI model. Check anything important before you act on it."}
+              </small>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

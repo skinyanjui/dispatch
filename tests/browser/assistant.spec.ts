@@ -86,10 +86,10 @@ test("assistant: an admin turns it on with a button, asks, and opens a source", 
   await expect(
     page.getByRole("form", { name: "Ask the assistant" }),
   ).toBeVisible();
-  await page
+  const log = page.getByRole("log", { name: "Conversation" });
+  await log
     .getByRole("button", { name: "What needs my attention right now?" })
     .click();
-  const log = page.getByRole("log", { name: "Conversation" });
   await expect(log).toContainText("loads need attention");
   await expect(log).toContainText("no AI used");
   // A long-lived database has many loads needing attention, so look this one

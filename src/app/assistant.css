@@ -1,0 +1,331 @@
+/* Assistant chat: history beside the thread on wide screens, a select on
+   narrow ones; the composer stays pinned to the bottom of the panel.
+   Controls use the shared 32px scale (ADR 0044). */
+.appShell .assistant {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 120px);
+  min-height: 420px;
+}
+.appShell .asstLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  gap: var(--space-4);
+}
+@media (min-width: 900px) {
+  .appShell .asstLayout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+}
+/* History */
+.appShell .asstHistory {
+  display: none;
+}
+@media (min-width: 900px) {
+  .appShell .asstHistory {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .appShell .asstBar {
+    display: none;
+  }
+}
+.appShell .asstNew {
+  justify-content: center;
+  gap: 6px;
+}
+.appShell .asstHistory ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.appShell .asstHistoryItem {
+  display: block;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.appShell .asstHistoryItem:hover {
+  background: var(--panel-soft, #eef1fb);
+  color: var(--ink);
+}
+.appShell .asstHistoryItem[aria-current] {
+  background: #e9edfb;
+  color: var(--accent);
+  font-weight: 600;
+}
+.appShell .asstBar label {
+  display: block;
+  margin: 0;
+}
+.appShell .asstBar select {
+  width: 100%;
+}
+/* Thread */
+.appShell .asstMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 780px;
+  margin-inline: auto;
+}
+.appShell .asstThread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) 0 var(--space-4);
+}
+.appShell .asstStart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: auto 0;
+  padding: var(--space-5) 0;
+  text-align: center;
+}
+.appShell .asstMark,
+.appShell .asstAvatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: #e9edfb;
+  color: var(--accent);
+}
+.appShell .asstMark {
+  width: 44px;
+  height: 44px;
+}
+.appShell .asstAvatar {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+}
+.appShell .asstStart h3 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 20px;
+  font-weight: 600;
+}
+.appShell .asstStart p {
+  max-width: 46ch;
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+}
+.appShell .asstExamples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}
+.appShell .asstExamples button {
+  flex: 1 1 200px;
+}
+.appShell .asstExamples button {
+  min-height: 52px;
+  height: auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font-weight: 500;
+  text-align: left;
+  white-space: normal;
+}
+.appShell .asstExamples button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #f6f8fd;
+}
+.appShell .asstTurn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.appShell .asstUser {
+  align-self: flex-end;
+  max-width: min(85%, 560px);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius) var(--radius) 2px var(--radius);
+  background: var(--sidebar-hover, #edeef3);
+  overflow-wrap: anywhere;
+}
+.appShell .asstReply {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.appShell .asstBody {
+  flex: 1;
+  min-width: 0;
+}
+.appShell .asstAnswer p {
+  margin: 0 0 var(--space-2);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.appShell .asstAnswer ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-5);
+}
+.appShell .asstSources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.appShell .asstSources small {
+  color: var(--muted);
+}
+.appShell .asstChip {
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 12.5px;
+}
+.appShell .asstChip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.appShell .asstWorking {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.appShell .asstDots::after {
+  content: "...";
+  display: inline-block;
+  width: 1.2em;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: asstDots 1.2s steps(4, end) infinite;
+}
+@keyframes asstDots {
+  from {
+    width: 0;
+  }
+  to {
+    width: 1.2em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .appShell .asstDots::after {
+    animation: none;
+  }
+}
+/* Composer */
+.appShell .asstDock {
+  flex: none;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-3);
+  background: var(--panel, #fff);
+}
+.appShell .asstComposer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: 6px 6px 6px var(--space-3);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 14px;
+  background: #fff;
+}
+.appShell .asstComposer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(47 76 245 / 0.14);
+}
+.appShell .asstComposer label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.appShell .asstComposer textarea {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  max-height: 200px;
+  padding: 6px 0;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  resize: none;
+  line-height: 1.45;
+}
+.appShell .asstSend {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+.appShell .asstSend:disabled {
+  background: #d9dce6;
+  color: #fff;
+}
+.appShell .asstNote {
+  color: var(--muted);
+  text-align: center;
+}
+.appShell .asstOff {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  max-width: 460px;
+  margin: auto;
+  padding: var(--space-6, 32px) 0;
+  text-align: center;
+}
+.appShell .asstOff p {
+  margin: 0;
+  color: var(--muted);
+}
+.appShell .asstOff h3 {
+  margin: 0;
+}
+@media (max-width: 560px) {
+  .appShell .assistant {
+    height: calc(100dvh - 150px);
+  }
+  .appShell .asstUser {
+    max-width: 92%;
+  }
+  .appShell .asstSend {
+    width: 40px;
+    height: 40px;
+  }
+}

@@ -261,8 +261,7 @@
 /* ---- Rows that pair a captioned field with a button ----
    The button lines up with the field's box, not with its caption: align to the
    bottom edge and drop the label's own margin. */
-.appShell .opsFilters,
-.appShell .assistantComposer {
+.appShell .opsFilters {
   align-items: flex-end;
 }
 .appShell .reportBar {
@@ -272,9 +271,6 @@
 .appShell .reportBar > label,
 .appShell .reportCarrier {
   margin-bottom: 0;
-}
-.appShell .assistantComposer .primary {
-  align-self: flex-end;
 }
 .appShell .carrierStats {
   align-items: stretch;
