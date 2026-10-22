@@ -50,13 +50,13 @@
   .appShell .attentionTitle {
     flex: 1 1 100%;
   }
-  .appShell .attentionChips {
+  .appShell .attention .attentionChips {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     flex: 1 1 100%;
     gap: 6px;
   }
-  .appShell .attentionChip {
+  .appShell .attention .attentionChip {
     justify-content: center;
     padding: 0 6px;
     gap: 6px;
