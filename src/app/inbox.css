@@ -1,0 +1,60 @@
+/* Inbox composer: the send-via switch, log-activity and saved-reply choices
+   share one row on wide screens and wrap to full-width rows on phones. The
+   filter rail fades at its edge on phones so a clipped chip reads as "more". */
+.appShell .composerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.appShell .composerVia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .composerRow > label,
+.appShell .composerVia > label {
+  margin: 0;
+}
+.appShell .composerRow .composerReply select,
+.appShell .composerLog select {
+  min-width: 140px;
+}
+.appShell .composerRow > .textButton {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .appShell .composerVia {
+    display: contents;
+  }
+  .appShell .composerVia .segmented {
+    display: flex;
+    flex: 1 1 100%;
+  }
+  .appShell .composerVia .segment {
+    flex: 1 1 0;
+    text-align: center;
+  }
+  .appShell .composerLog,
+  .appShell .composerRow .composerReply {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .appShell .composerLog select,
+  .appShell .composerRow .composerReply select {
+    width: 100%;
+    min-width: 0;
+  }
+  .appShell .composerRow > .textButton {
+    flex: 1 1 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+}
+@media (max-width: 800px) {
+  .appShell .inboxRail {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  }
+}

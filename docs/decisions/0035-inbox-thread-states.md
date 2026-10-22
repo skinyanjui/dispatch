@@ -19,3 +19,7 @@ Read state was one row per person and conversation, so the inbox could not mark 
 ## Rollback
 
 Both are additive. Leave `thread_states` unused (or drop it) and the code paths that read it fall back to the previous behaviour once reverted; no existing column changed.
+
+## Composer layout
+
+Presentation only; no API, schema or permission change. The send-via switch (Relay, Email, Text), Log activity and Saved reply now share one row on wide screens, with Manage replies at the end, instead of a floating "Saved reply" caption above its select (the label is still there for screen readers). On phones the switch fills its own row, the two selects share the next, and Manage replies sits below. The filter rail on phones fades at its right edge so a clipped chip reads as "scroll for more".

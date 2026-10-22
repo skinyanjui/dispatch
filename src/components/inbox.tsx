@@ -362,8 +362,8 @@ function Composer({
             </label>
           </div>
         ) : null}
-        <label>
-          Saved reply
+        <label className="composerReply">
+          <span className="srOnly">Saved reply</span>
           <select
             value=""
             onChange={(e) => {
