@@ -183,6 +183,10 @@ const messages: Record<string, string> = {
     "That sign-in service isn't responding right now. Try again in a moment, or use your email and password.",
   PROVIDER_NOT_CONFIGURED:
     "That sign-in option isn't set up for this workspace.",
+  MOVE_ONE_STEP:
+    "Loads move one step at a time. Drop it on the next column, or open the load to record the milestone.",
+  VIEW_NAME_TAKEN: "You already have a view with that name.",
+  NO_ORGANIZATION: "Only members of a dispatch organization can share a view.",
   TERMS_CHANGED:
     "The Terms or Privacy pages were updated while you were filling this in. Reload the page, read them, and send again.",
   ATTACH_FAILED:

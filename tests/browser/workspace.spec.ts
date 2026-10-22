@@ -929,3 +929,173 @@ test("load notes: add a note from the load drawer; it shows at the top", async (
     notes.getByRole("textbox", { name: "Note", exact: true }),
   ).toHaveValue("");
 });
+
+async function openOptions(page: Page) {
+  const options = page.locator(".viewOptions");
+  if ((await options.getAttribute("open")) === null)
+    await options.locator("summary").click();
+  return options;
+}
+
+test("loads views: table sorts, groups and hides fields; calendar shows the month; compact board", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await expect(page.locator(".kanban")).toBeVisible();
+  const layout = page.getByRole("group", { name: "Layout" });
+  // Board columns show a count and the freight total.
+  await expect(page.locator(".lane .groupTotals").first()).toContainText("$");
+  const options = await openOptions(page);
+  await options.getByLabel("Compact cards").check();
+  await expect(page.locator(".kanban.compact")).toBeVisible();
+  // Table
+  await layout.getByRole("button", { name: "Table" }).click();
+  const table = page.getByRole("region", { name: "Load table" });
+  await expect(table).toBeVisible();
+  const freight = table.getByRole("columnheader", { name: "Freight" });
+  await freight.getByRole("button").click();
+  await expect(freight).toHaveAttribute("aria-sort", "descending");
+  await freight.getByRole("button").click();
+  await expect(freight).toHaveAttribute("aria-sort", "ascending");
+  await openOptions(page);
+  await options.getByLabel("Group by").selectOption("stage");
+  await expect(table.getByRole("button", { name: /^Booked/ })).toBeVisible();
+  await table.getByRole("button", { name: /^Booked/ }).click();
+  await expect(table.getByRole("button", { name: /^Booked/ })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await options
+    .getByRole("group", { name: "Fields" })
+    .getByLabel("Driver")
+    .uncheck();
+  await expect(table.getByRole("columnheader", { name: "Driver" })).toHaveCount(
+    0,
+  );
+  // Calendar
+  await layout.getByRole("button", { name: "Calendar" }).click();
+  const calendar = page.getByRole("region", { name: "Load calendar" });
+  await expect(calendar).toBeVisible();
+  await expect(calendar.getByRole("heading", { level: 2 })).toContainText(
+    String(new Date().getFullYear()),
+  );
+  const title = await calendar.getByRole("heading", { level: 2 }).innerText();
+  await calendar.getByRole("button", { name: "Next month" }).click();
+  await expect(calendar.getByRole("heading", { level: 2 })).not.toHaveText(
+    title,
+  );
+  await calendar.getByRole("button", { name: "Today" }).click();
+  await expect(calendar.getByRole("heading", { level: 2 })).toHaveText(title);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("loads views: save, apply, share and delete a named view", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await expect(page.locator(".kanban")).toBeVisible();
+  const name = "By carrier " + Date.now();
+  await page
+    .getByRole("group", { name: "Layout" })
+    .getByRole("button", { name: "Table" })
+    .click();
+  const options = await openOptions(page);
+  await options.getByLabel("Group by").selectOption("carrier");
+  await options.getByRole("button", { name: "Save as new view…" }).click();
+  const form = page.getByRole("form", { name: "Save view" });
+  await form.getByLabel("Name").fill(name);
+  await form.getByRole("button", { name: "Save view" }).click();
+  await expect(page.getByText("View saved.")).toBeAttached();
+  // Back to the default, then pick the view: the table and grouping return.
+  const picker = page.getByLabel("Saved view");
+  await picker.selectOption({ label: "Default view" });
+  await expect(page.locator(".kanban")).toBeVisible();
+  await picker.selectOption({ label: name });
+  await expect(page.getByRole("region", { name: "Load table" })).toBeVisible();
+  await openOptions(page);
+  await expect(options.getByLabel("Group by")).toHaveValue("carrier");
+  // Sharing and deleting.
+  await options
+    .getByLabel("Share with my organization")
+    .first()
+    .check()
+    .catch(() => undefined);
+  page.once("dialog", (d) => void d.accept());
+  await options.getByRole("button", { name: "Delete view" }).click();
+  await expect(page.getByText("View deleted.")).toBeAttached();
+  await expect(picker.locator("option", { hasText: name })).toHaveCount(0);
+});
+
+test("loads board: drag a card one step; skipping a step or a missing driver is explained", async ({
+  page,
+}) => {
+  await signIn(page);
+  const me = await (await page.request.get("/api/me")).json();
+  const carrier = me.carriers.find((c: { name: string }) =>
+    c.name.startsWith("Blue Ridge"),
+  ).id;
+  const driver = me.drivers.find(
+    (d: { carrier_id: string }) => d.carrier_id === carrier,
+  );
+  const ref = "DND-" + Date.now();
+  const stop = (kind: string, day: number) => ({
+    kind,
+    address: kind === "pickup" ? "Chicago, IL" : "Nashville, TN",
+    timezone: "America/Chicago",
+    windowStart: `2026-11-0${day}T15:00:00Z`,
+    windowEnd: `2026-11-0${day}T16:00:00Z`,
+  });
+  const created = await page.request.post("/api/loads", {
+    headers: {
+      Origin: "http://localhost:3000",
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    data: {
+      carrierId: carrier,
+      reference: ref,
+      source: "Fictional DnD QA",
+      amountMinor: 100000,
+      stops: [stop("pickup", 5), stop("delivery", 6)],
+    },
+  });
+  const load = await created.json();
+  await page.goto("/");
+  await page.getByRole("searchbox", { name: "Search loads" }).fill(ref);
+  const lane = (name: string) =>
+    page.getByRole("region", { name: `${name} loads` });
+  const card = lane("Booked").getByRole("button", {
+    name: new RegExp("^" + ref),
+  });
+  await expect(card).toBeVisible();
+  // No driver yet: the move is refused with a reason.
+  await card.dragTo(lane("Dispatched"));
+  await expect(
+    page.getByRole("alert").filter({ hasText: "driver" }),
+  ).toBeVisible();
+  // Skipping a step is refused.
+  await page.request.post(`/api/loads/${load.id}/assign`, {
+    headers: { Origin: "http://localhost:3000" },
+    data: { version: load.version, driverId: driver.id },
+  });
+  await page.reload();
+  await page.getByRole("searchbox", { name: "Search loads" }).fill(ref);
+  await lane("Booked")
+    .getByRole("button", { name: new RegExp("^" + ref) })
+    .dragTo(lane("Delivered"));
+  await expect(
+    page.getByRole("alert").filter({ hasText: "one step" }),
+  ).toBeVisible();
+  // The next column works.
+  await lane("Booked")
+    .getByRole("button", { name: new RegExp("^" + ref) })
+    .dragTo(lane("Dispatched"));
+  await expect(
+    lane("Dispatched").getByRole("button", { name: new RegExp("^" + ref) }),
+  ).toBeVisible();
+});

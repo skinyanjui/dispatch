@@ -89,6 +89,8 @@ The build then initializes the three QA logins and fictional carrier/load fixtur
 
 **Inbox.** Each person can mark a conversation unread, archive it or move it to trash; this is personal, nothing is deleted, and a new message brings it back ([ADR 0035](docs/decisions/0035-inbox-thread-states.md)). The Carriers page shows each carrier's dispatch authorization, active loads, open exceptions and drivers.
 
+**Views.** Loads can be shown as a board, table or calendar, with grouping, sorting, field choices and named views that are private or shared with your organization; cards can be dragged one step ([ADR 0038](docs/decisions/0038-loads-views.md)).
+
 **Load notes.** The load drawer has internal notes for the dispatch team and carrier managers (not drivers); they are append-only and audited ([ADR 0037](docs/decisions/0037-load-notes.md)).
 
 **Command menu.** Press Ctrl or ⌘ + Shift + K to go to any page, start a load, open a queue or jump to a carrier. Ctrl+K still focuses the page search. Ideas were taken from the Twenty CRM, but no code (it is AGPL); see [ADR 0036](docs/decisions/0036-twenty-crm-review.md).

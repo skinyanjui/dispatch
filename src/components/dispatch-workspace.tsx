@@ -34,6 +34,14 @@ import {
   sectionTitles,
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
+import { LoadsViewBar } from "@/components/loads-view-bar";
+import {
+  CalendarView,
+  defaultView,
+  TableView,
+  Totals,
+  type ViewConfig,
+} from "@/components/loads-views";
 import { LoadNotes } from "@/components/load-notes";
 import { LoadCheckIns } from "@/components/load-check-ins";
 import { DocumentPanel } from "@/components/document-panel";
@@ -69,6 +77,7 @@ import {
   stages,
   stageLabels,
   type Load,
+  type Stage,
   type Context,
   type Queue,
 } from "@/lib/contracts";
@@ -117,6 +126,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       loads: Load[];
     } | null>(null),
     [attentionKey, setAttentionKey] = useState<AttentionKey | null>(null),
+    [view, setView] = useState<ViewConfig>(defaultView),
+    [dragOver, setDragOver] = useState<string | null>(null),
     [q, setQ] = useState(""),
     [carrier, setCarrier] = useState(""),
     [status, setStatus] = useState(""),
@@ -378,6 +389,32 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       carrier || context?.carriers.find((c) => c.role !== "driver")?.id || "",
     );
     setCreating(true);
+  }
+  /** Drag a card to the next column: the same milestone as the drawer button. */
+  async function moveLoad(id: string, target: Stage) {
+    const load = loads.find((l) => l.id === id);
+    if (!load || load.stage === target) return;
+    const role = context?.carriers.find((c) => c.id === load.carrier_id)?.role;
+    if (role === "driver" || load.cancelled_at) return;
+    if (stages[stages.indexOf(load.stage) + 1] !== target) {
+      setNotice("");
+      setError("MOVE_ONE_STEP");
+      return;
+    }
+    if (!load.summary?.driver_name) {
+      setNotice("");
+      setError("ASSIGN_DRIVER_FIRST");
+      return;
+    }
+    await act(async () => {
+      await api("loads/" + id + "/milestones", {
+        version: load.version,
+        stage: target,
+      });
+      await refreshAfterSave(
+        `${load.reference} moved to ${stageLabels[target]}.`,
+      );
+    });
   }
   function showQueue(value: string) {
     setSection("loads");
@@ -886,6 +923,21 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               onQueue={showQueue}
               trailing={controls}
             />
+            {!driverOnly && (
+              <LoadsViewBar
+                config={view}
+                onConfig={(patch) => setView((old) => ({ ...old, ...patch }))}
+                filters={{ status, carrier_id: carrier || null }}
+                onApply={(config, filters) => {
+                  setView(config);
+                  filterChange({
+                    status: filters.status,
+                    carrier: filters.carrier_id ?? "",
+                  });
+                }}
+                onAuthError={handleError}
+              />
+            )}
             {carrier && (
               <div
                 className="appliedFilters"
@@ -938,9 +990,24 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                       : "Your dispatcher will assign your loads here. You can return when you are ready."}
                   </p>
                 </div>
+              ) : view.layout === "table" && !driverOnly ? (
+                <TableView
+                  loads={shownLoads}
+                  config={view}
+                  onConfig={(patch) => setView((old) => ({ ...old, ...patch }))}
+                  onOpen={open}
+                  disabled={busy || loading}
+                />
+              ) : view.layout === "calendar" && !driverOnly ? (
+                <CalendarView
+                  loads={shownLoads}
+                  config={view}
+                  onOpen={open}
+                  disabled={busy || loading}
+                />
               ) : (
                 <div
-                  className="kanban"
+                  className={"kanban" + (view.compact ? " compact" : "")}
                   role="region"
                   aria-label="Load board"
                   tabIndex={0}
@@ -949,9 +1016,24 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                     const items = shownLoads.filter((l) => l.stage === stage);
                     return (
                       <section
-                        className={"lane " + stage}
+                        className={
+                          "lane " +
+                          stage +
+                          (dragOver === stage ? " dropping" : "")
+                        }
                         key={stage}
                         aria-label={stageLabels[stage] + " loads"}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDragOver(stage);
+                        }}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOver(null);
+                          const id = e.dataTransfer.getData("text/plain");
+                          if (id) void moveLoad(id, stage);
+                        }}
                       >
                         <div className="laneHeading">
                           <CircleIcon
@@ -960,16 +1042,26 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                             aria-hidden="true"
                           />
                           <h2>{stageLabels[stage]}</h2>
-                          <span className="laneCount">{items.length}</span>
+                          <span className="laneCount">
+                            <Totals loads={items} />
+                          </span>
                         </div>
                         <div className="laneCards">
                           {items.map((load) => (
-                            <LoadCard
+                            <div
                               key={load.id}
-                              load={load}
-                              disabled={busy || loading}
-                              onOpen={open}
-                            />
+                              className="cardDrag"
+                              draggable={!busy && !loading && !offline}
+                              onDragStart={(e) =>
+                                e.dataTransfer.setData("text/plain", load.id)
+                              }
+                            >
+                              <LoadCard
+                                load={load}
+                                disabled={busy || loading}
+                                onOpen={open}
+                              />
+                            </div>
                           ))}
                           {!items.length && (
                             <div className="laneEmpty">
