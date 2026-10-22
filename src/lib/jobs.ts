@@ -57,12 +57,14 @@ export async function runNotificationJob(
 ) {
   const client = await pool.connect();
   const key = `job:notifications:${scope}`;
+  let locked = false;
   try {
     const got = await client.query(
       "SELECT pg_try_advisory_lock(hashtextextended($1,0)) ok",
       [key],
     );
     if (!got.rows[0].ok) return { skipped: "running" as const };
+    locked = true;
     const id = randomUUID();
     await client.query(
       "INSERT INTO job_runs(id,job,scope) VALUES($1,'notifications',$2)",
@@ -97,9 +99,11 @@ export async function runNotificationJob(
       throw e;
     }
   } finally {
-    await client
-      .query("SELECT pg_advisory_unlock(hashtextextended($1,0))", [key])
-      .catch(() => undefined);
+    // Only release a lock this run took; a skipped run never held it.
+    if (locked)
+      await client
+        .query("SELECT pg_advisory_unlock(hashtextextended($1,0))", [key])
+        .catch(() => undefined);
     client.release();
   }
 }
