@@ -14,3 +14,7 @@ The hero picture is plain markup with made-up sample values and says "A drawing 
 ## Not done
 
 The reference design system's published component gallery could not be reached from this environment, so colors and spacing come from the screenshots supplied by the product owner rather than from that gallery.
+
+## Second pass: preview, footer and hero copy
+
+Presentation and copy only. The product preview on the home page is drawn like the real compact load card (amount beside the reference, one-line route, a documents chip) with four stages on wide screens; on phones it shows the first two stages, the table preview drops its Route column, and calendar events stay on one line, so nothing is squeezed or cut off. The site footer's links now line up with its brand (the app's status-footer link margin had leaked onto them), and the plan checklist on the pricing page sits flush in its card. The sign-in and request-access heroes use the same one-line description as the product page: "Book, track and bill freight for your carriers, with each carrier's data kept separate."

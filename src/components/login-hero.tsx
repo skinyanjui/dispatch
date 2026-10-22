@@ -17,8 +17,8 @@ export function LoginHero() {
           All in one place.
         </h2>
         <p className="heroLead">
-          Relay helps dispatch teams book, track and bill freight for their
-          carriers without the busywork.
+          Book, track and bill freight for your carriers, with each
+          carrier&apos;s data kept separate.
         </p>
         <ul>
           <li>

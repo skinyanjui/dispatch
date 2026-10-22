@@ -107,3 +107,43 @@ test("tabs and header links share one row on a phone instead of stranding one", 
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true);
 });
+
+test("marketing on a phone: the footer lines up with the brand and the product preview fits", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/welcome");
+  const brand = await page.locator(".mkFooter .brand").boundingBox();
+  const link = await page.locator(".mkFooter nav a").first().boundingBox();
+  expect(Math.abs(brand!.x - link!.x)).toBeLessThan(2);
+  // Two stages are drawn (the rest would be squeezed), and nothing overflows.
+  const lanes = page.locator(".pvBoard > div:visible");
+  await expect(lanes).toHaveCount(2);
+  for (const tab of ["Table", "Calendar", "Documents"]) {
+    await page.getByRole("tab", { name: tab }).click();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.getByRole("tab", { name: "Table" }).click();
+  const cols = await page.locator(".pvTable th:visible").count();
+  expect(cols).toBe(3);
+  await page.goto("/pricing");
+  const plan = (await page.locator(".mkPlan").boundingBox())!;
+  const item = (await page.locator(".mkPlan .listItem").first().boundingBox())!;
+  expect(item.x - plan.x).toBeLessThan(40);
+});
+
+test("sign-in and request-access heroes use the same short line as the product page", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const path of ["/", "/request-access"]) {
+    await page.goto(path);
+    await expect(
+      page.getByText("Book, track and bill freight for your carriers"),
+    ).toBeVisible();
+  }
+});

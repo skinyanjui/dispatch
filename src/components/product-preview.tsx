@@ -98,19 +98,24 @@ export function ProductPreview() {
         <div className="previewMain" aria-hidden="true">
           {tab === "board" && (
             <div className="pvBoard">
-              {["Booked", "Dispatched", "In transit"].map((col, i) => (
-                <div key={col}>
-                  <b>{col}</b>
-                  {loads.slice(0, 3 - i).map((l) => (
-                    <div key={l[0]} className="pvCard">
-                      <strong>{l[0]}</strong>
-                      <span>{l[1]}</span>
-                      <span>{l[2]}</span>
-                      <em>{l[3]}</em>
-                    </div>
-                  ))}
-                </div>
-              ))}
+              {["Booked", "Dispatched", "In transit", "Delivered"].map(
+                (col, i) => (
+                  <div key={col}>
+                    <b>{col}</b>
+                    {loads.slice(0, [3, 2, 1, 1][i]).map((l) => (
+                      <div key={l[0]} className="pvCard">
+                        <span className="pvHead">
+                          <strong>{l[0]}</strong>
+                          <em>{l[3]}</em>
+                        </span>
+                        <span>{l[1]}</span>
+                        <span className="pvRoute">{l[2]}</span>
+                        <span className="pvChip">Docs {i === 3 ? 3 : 0}/3</span>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
             </div>
           )}
           {tab === "table" && (

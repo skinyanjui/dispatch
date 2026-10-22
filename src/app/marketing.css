@@ -886,3 +886,68 @@
     padding: 0 8px;
   }
 }
+
+/* Product preview: four stages drawn like the real compact card (amount beside
+   the reference). On phones only the first two stages fit, so only they show. */
+.pvBoard {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.pvCard {
+  gap: 3px;
+}
+.pvHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.pvHead strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvCard .pvRoute {
+  margin-top: 2px;
+  color: var(--mk-ink);
+  font-weight: 500;
+}
+.pvCard .pvChip {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #f3f3f3;
+  font-size: 11px;
+}
+@media (max-width: 640px) {
+  .pvBoard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pvBoard > div:nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  /* Table preview keeps Load, Carrier and Freight; Route would be cut off. */
+  .pvTable th:nth-child(3),
+  .pvTable td:nth-child(3) {
+    display: none;
+  }
+  /* Calendar events stay on one line instead of breaking "QA-" from "1043". */
+  .pvCal span {
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* The app's status-footer link margin must not indent the site footer, and the
+   plan checklist sits flush inside its card. */
+.mkFooter a {
+  margin-left: 0;
+}
+.mkPlan .listItem {
+  padding-inline: 0;
+}
