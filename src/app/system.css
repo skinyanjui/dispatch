@@ -2486,3 +2486,144 @@ select {
   gap: var(--space-2);
   align-items: center;
 }
+
+/* ---- Load record page ---- */
+.inspector.record {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, calc(100% - 32px));
+  height: calc(100% - 32px);
+  margin: 16px auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.35);
+}
+.recordHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.recordCrumbs ol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+.recordCrumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.recordCrumbs li:last-child span {
+  overflow: hidden;
+  max-width: 40ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.recordBody {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+.recordFields {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.recordFields h3 {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.recordAvatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e8f3d9;
+  font-weight: 600;
+  font-size: 18px;
+}
+.recordAdded {
+  color: var(--muted);
+}
+.recordList {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+}
+.recordList > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.recordList dt {
+  color: var(--muted);
+}
+.recordList dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.recordMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.recordMain .orgTabs {
+  padding: 0 var(--space-4);
+}
+.recordPanel {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+  flex: 1;
+}
+.inspector.record .detailFoot {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 800px) {
+  .inspector.record {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
+  }
+  .recordBody {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+  .recordFields {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+  .recordMain,
+  .recordPanel {
+    overflow: visible;
+  }
+}

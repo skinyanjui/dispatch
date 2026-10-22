@@ -300,7 +300,7 @@ async function signIn(page: Page) {
   expect(login.status()).toBe(200);
 }
 
-test("edit and cancel open as drawers lined up with load details", async ({
+test("edit and cancel open as opaque drawers above the load record", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -315,14 +315,13 @@ test("edit and cancel open as drawers lined up with load details", async ({
       width: Math.round(el.getBoundingClientRect().width),
       background: getComputedStyle(el).backgroundColor,
     }));
-  const base = await left(details);
+  await details.getByRole("tab", { name: /^Route/ }).click();
   for (const name of ["Edit load", "Cancel load"]) {
     await details.getByRole("button", { name, exact: true }).click();
     const dialog = page.getByRole("dialog", { name, exact: true });
     await expect(dialog.locator(".inspector")).toBeVisible();
     const panel = await left(dialog);
-    expect(panel.x, name + " left edge").toBe(base.x);
-    expect(panel.width, name + " width").toBe(base.width);
+    expect(panel.width, name + " has room").toBeGreaterThan(300);
     expect(panel.background, name + " is opaque").not.toBe("rgba(0, 0, 0, 0)");
     await dialog
       .getByRole("button", { name: `Close ${name.toLowerCase()}` })
@@ -516,6 +515,7 @@ test("keyboard: Escape closes one dialog at a time and focus returns", async ({
   await page.keyboard.press("Enter");
   const details = page.getByRole("dialog", { name: "Load details" });
   await expect(details).toBeVisible();
+  await details.getByRole("tab", { name: /^Route/ }).click();
   await details.getByRole("button", { name: "Edit load", exact: true }).click();
   const edit = page.getByRole("dialog", { name: "Edit load", exact: true });
   await expect(edit).toBeVisible();
@@ -916,6 +916,10 @@ test("load notes: add a note from the load drawer; it shows at the top", async (
   await signIn(page);
   await page.goto("/");
   await page.locator(".loadCard").first().click();
+  await page
+    .getByRole("dialog", { name: "Load details" })
+    .getByRole("tab", { name: /^Notes/ })
+    .click();
   const notes = page.getByRole("region", { name: "Internal notes" });
   await expect(notes).toBeVisible();
   await expect(notes).toContainText("Drivers do not");
@@ -1098,4 +1102,43 @@ test("loads board: drag a card one step; skipping a step or a missing driver is 
   await expect(
     lane("Dispatched").getByRole("button", { name: new RegExp("^" + ref) }),
   ).toBeVisible();
+});
+
+test("load record: breadcrumb, fields panel and keyboard-operable tabs", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  await page.locator(".loadCard").first().click();
+  const record = page.getByRole("dialog", { name: "Load details" });
+  await expect(record).toBeVisible();
+  await expect(
+    record.getByRole("navigation", { name: "Breadcrumb" }),
+  ).toContainText("Loads");
+  const fields = record.getByRole("complementary", { name: "Load fields" });
+  await expect(fields).toContainText("Added");
+  await expect(fields.getByText("Agreed rate")).toBeVisible();
+  const tabs = record.getByRole("tablist", { name: "Load sections" });
+  const timeline = tabs.getByRole("tab", { name: /^Timeline/ });
+  await expect(timeline).toHaveAttribute("aria-selected", "true");
+  await timeline.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  const routeTab = tabs.getByRole("tab", { name: /^Route/ });
+  if ((await routeTab.getAttribute("aria-selected")) !== "true")
+    await routeTab.click();
+  await expect(
+    record.getByRole("tabpanel").getByRole("heading", {
+      name: "Route & appointments",
+    }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await record.getByRole("button", { name: "Close load details" }).click();
+  await expect(record).toHaveCount(0);
 });

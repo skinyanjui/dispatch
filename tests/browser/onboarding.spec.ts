@@ -267,6 +267,7 @@ test("dispatcher onboards a carrier, manager invites a driver, and the driver re
   ).toBe(200);
   await driver.getByRole("button", { name: "Refresh loads" }).click();
   await driver.getByRole("button", { name: new RegExp("^" + ref) }).click();
+  await driver.getByRole("tab", { name: /^Check-ins/ }).click();
   await expect(
     driver.getByRole("button", { name: "Add check-in", exact: true }),
   ).toBeVisible();

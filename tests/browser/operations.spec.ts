@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import pg from "pg";
 import { hashNewPassword } from "../../src/lib/auth";
 import { codeAt, stepAt } from "../../src/lib/totp";
@@ -62,14 +62,17 @@ async function createLoad(page: Page, carrier: string, prefix: string) {
   expect(created.status()).toBe(201);
   return { ...(await created.json()), reference };
 }
-async function openLoad(page: Page, reference: string) {
+async function openLoad(page: Page, reference: string, tab?: RegExp) {
   await page.goto("/");
   await page.getByRole("searchbox", { name: "Search loads" }).fill(reference);
   await page.getByRole("button", { name: new RegExp("^" + reference) }).click();
   const dialog = page.getByRole("dialog", { name: "Load details" });
   await expect(dialog).toBeVisible();
+  if (tab) await dialog.getByRole("tab", { name: tab }).click();
   return dialog;
 }
+const goTab = (dialog: Locator, name: RegExp) =>
+  dialog.getByRole("tab", { name }).click();
 
 test("the board answers the usual questions without opening a load", async ({
   page,
@@ -162,7 +165,7 @@ test("AI reading: an admin opts in, a dispatcher reads a rate confirmation and c
 
   const { carrier } = await blueRidge(page);
   const load = await createLoad(page, carrier, "AI");
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Documents/);
   const rate = dialog.getByRole("article", { name: "Rate confirmation" });
   await expect(rate.getByRole("button", { name: "Read with AI" })).toHaveCount(
     0,
@@ -222,7 +225,7 @@ test("documents: upload a BOL, accept it, and see versioned status on the load",
   await login(page);
   const { carrier } = await blueRidge(page);
   const load = await createLoad(page, carrier, "DOC");
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Documents/);
   const bol = dialog.getByRole("article", { name: "Bill of lading" });
   await expect(bol.locator(".docStatus")).toHaveText("Missing");
   await bol.getByLabel("Upload file").setInputFiles(pdf("bol-scan"));
@@ -250,6 +253,7 @@ test("documents: upload a BOL, accept it, and see versioned status on the load",
   const file = await page.request.get(href!);
   expect(file.headers()["content-disposition"]).toContain("attachment");
   expect((await file.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  await goTab(dialog, /^Timeline/);
   await expect(
     dialog.locator(".event").filter({ hasText: "Document reviewed" }),
   ).toHaveCount(2);
@@ -273,7 +277,7 @@ test("exceptions: flag with owner from a suggestion, work it from the queue and 
     },
   );
   expect(dispatched.status()).toBe(200);
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Exceptions/);
   const suggestions = dialog.getByLabel("Suggested exceptions");
   await expect(suggestions).toContainText("Rate confirmation is missing");
   await suggestions.getByRole("button", { name: "Flag this" }).click();
@@ -298,6 +302,7 @@ test("exceptions: flag with owner from a suggestion, work it from the queue and 
   await expect(row).toBeVisible();
   await row.click();
   const again = page.getByRole("dialog", { name: "Load details" });
+  await goTab(again, /^Exceptions/);
   const item = again.getByRole("article", {
     name: "Missing document exception: Rate confirmation is missing",
   });
@@ -309,6 +314,7 @@ test("exceptions: flag with owner from a suggestion, work it from the queue and 
     .fill("Broker resent the rate con");
   await item.getByRole("button", { name: "Resolve exception" }).click();
   await expect(item).toContainText("Resolved by Alex Morgan");
+  await goTab(again, /^Timeline/);
   await expect(
     again.locator(".event").filter({ hasText: "Exception resolved" }),
   ).toHaveCount(1);
@@ -583,6 +589,7 @@ test("multi-stop: add an intermediate stop and see every stop in order", async (
   await expect(card).toContainText("Louisville, KY · 3 stops");
   await card.click();
   const dialog = page.getByRole("dialog", { name: "Load details" });
+  await goTab(dialog, /^Route/);
   await expect(dialog.locator(".stop")).toHaveCount(3);
   await expect(dialog.locator(".stop").nth(1)).toContainText(
     "Indianapolis, IN",
@@ -606,7 +613,7 @@ test("check-ins can be corrected and retracted while the original stays on recor
     },
   });
   expect(report.status()).toBe(201);
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Check-ins/);
   await dialog
     .getByRole("button", { name: "Correct check-in at Jolliet, IL" })
     .click();
@@ -627,6 +634,7 @@ test("check-ins can be corrected and retracted while the original stays on recor
   await retract.getByLabel("Reason").fill("Reported on the wrong load");
   await retract.getByRole("button", { name: "Retract report" }).click();
   await expect(dialog.getByText("Retracted check-ins (1)")).toBeVisible();
+  await goTab(dialog, /^Timeline/);
   await expect(
     dialog.locator(".event").filter({ hasText: "Check-in retracted" }),
   ).toHaveCount(1);
@@ -658,6 +666,7 @@ test("older activity loads on demand without duplicates", async ({ page }) => {
     dialog.getByRole("button", { name: "Show older activity" }),
   ).toHaveCount(0);
   await expect(dialog.locator(".event").first()).toContainText("Load created");
+  await goTab(dialog, /^Check-ins/);
   await dialog.getByText(/Previous check-ins/).click();
   // 105 reports: the newest 50, then two older pages (50 and 5).
   const more = dialog.getByRole("button", { name: "Show older check-ins" });
@@ -678,7 +687,7 @@ test("stops: record arrival and departure, then correct a time with a reason", a
   await login(page);
   const { carrier } = await blueRidge(page);
   const load = await createLoad(page, carrier, "STOP");
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Route/);
   const first = dialog.getByRole("article", { name: "Stop 1: Chicago, IL" });
   await first.getByRole("button", { name: "Record arrival at stop 1" }).click();
   const arrival = first.getByRole("form", { name: "Arrived time for stop 1" });
@@ -715,10 +724,11 @@ test("stops: record arrival and departure, then correct a time with a reason", a
   await fix.getByRole("button", { name: "Save correction" }).click();
   await first.getByText("Time history (3)").click();
   await expect(first).toContainText("corrected: Gate time, not dock");
+  await goTab(dialog, /^Timeline/);
   await expect(
     dialog.locator(".event").filter({ hasText: "Stop arrival corrected" }),
   ).toHaveCount(1);
-  await expect(dialog.locator(".badge")).toHaveText("Booked");
+  await expect(dialog.locator(".badge").first()).toHaveText("Booked");
 });
 
 test("files over 4 MB upload directly to the bucket and retry with the same key", async ({
@@ -764,7 +774,7 @@ test("files over 4 MB upload directly to the bucket and retry with the same key"
       json: { document_id: randomUUID(), version_id: randomUUID(), version: 1 },
     }),
   );
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Documents/);
   const pod = dialog.getByRole("article", { name: "Proof of delivery" });
   await pod.getByLabel("Upload file").setInputFiles({
     name: "big-pod.pdf",
@@ -1065,7 +1075,7 @@ test("loads: fix an address with history, then cancel with a reason", async ({
   await login(page);
   const { carrier } = await blueRidge(page);
   const load = await createLoad(page, carrier, "EDIT");
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Route/);
   await dialog.getByRole("button", { name: "Edit load" }).click();
   const edit = page.getByRole("dialog", { name: "Edit load" });
   await edit.getByLabel("Address").first().fill("Chicago, IL 60601 (Dock 4)");
@@ -1093,7 +1103,7 @@ test("loads: a cancel whose response is lost can be retried safely", async ({
   await login(page);
   const { carrier } = await blueRidge(page);
   const load = await createLoad(page, carrier, "RETRY");
-  const dialog = await openLoad(page, load.reference);
+  const dialog = await openLoad(page, load.reference, /^Route/);
   let attempts = 0;
   const keys: (string | undefined)[] = [];
   await page.route("**/api/loads/*/cancel", async (route) => {

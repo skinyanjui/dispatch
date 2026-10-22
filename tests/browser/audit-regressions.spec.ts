@@ -156,9 +156,9 @@ test("load details preserve same-day and overnight appointment windows", async (
       exact: true,
     })
     .click();
-  const stops = page
-    .getByRole("dialog", { name: "Load details" })
-    .locator(".stop");
+  const record = page.getByRole("dialog", { name: "Load details" });
+  await record.getByRole("tab", { name: /^Route/ }).click();
+  const stops = record.locator(".stop");
   await expect(stops.nth(0)).toContainText("9:00 AM");
   await expect(stops.nth(0)).toContainText("12:00 PM");
   await expect(stops.nth(1)).toContainText("Nov 5");
@@ -266,6 +266,7 @@ test("refreshing after a lost check-in response preserves the original retry ide
     })
     .click();
   const details = page.getByRole("dialog", { name: "Load details" });
+  await details.getByRole("tab", { name: /^Check-ins/ }).click();
   await details
     .getByRole("button", { name: "Add check-in", exact: true })
     .click();

@@ -13,6 +13,7 @@ test("current demo shares app workflows, saves locally and never calls authentic
     page.getByRole("heading", { name: "All loads", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /^RL-103/ }).click();
+  await page.getByRole("tab", { name: /^Check-ins/ }).click();
   await expect(
     page.getByRole("article", { name: "Check-in: Chattanooga, TN" }),
   ).toBeVisible();

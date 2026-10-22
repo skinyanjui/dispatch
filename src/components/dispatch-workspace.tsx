@@ -34,6 +34,13 @@ import {
   sectionTitles,
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
+type RecordTab =
+  | "timeline"
+  | "route"
+  | "check-ins"
+  | "documents"
+  | "exceptions"
+  | "notes";
 import { DocumentsPage } from "@/components/documents-page";
 import { LoadDraft } from "@/components/load-draft";
 import { LoadsViewBar } from "@/components/loads-view-bar";
@@ -129,6 +136,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     } | null>(null),
     [attentionKey, setAttentionKey] = useState<AttentionKey | null>(null),
     [view, setView] = useState<ViewConfig>(defaultView),
+    [recordTab, setRecordTab] = useState<RecordTab>("timeline"),
     [draftToOpen, setDraftToOpen] = useState<string | null>(null),
     [dragOver, setDragOver] = useState<string | null>(null),
     [q, setQ] = useState(""),
@@ -437,6 +445,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
   }
 
   async function open(id: string) {
+    if (selected?.id !== id) setRecordTab("timeline");
     await act(async () => {
       const [load, c] = await Promise.all([
         api<Load>("loads/" + id),
@@ -819,6 +828,25 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
           l.summary?.attention.reasons.some((r) => r.key === activeKey),
         )
       : loads;
+  const recordTabs: { id: RecordTab; label: string; count?: number }[] = [
+    { id: "timeline", label: "Timeline", count: timeline.length },
+    { id: "route", label: "Route", count: selected?.stops?.length },
+    { id: "check-ins", label: "Check-ins", count: selected?.check_ins?.length },
+    {
+      id: "documents",
+      label: "Documents",
+      count: selected?.documents?.filter((d) => d.status === "accepted").length,
+    },
+    {
+      id: "exceptions",
+      label: "Exceptions",
+      count: selected?.exceptions?.filter((x) => x.status !== "resolved")
+        .length,
+    },
+    ...(selectedRole !== "driver" && selectedRole !== undefined
+      ? [{ id: "notes" as const, label: "Notes" }]
+      : []),
+  ];
   const nextStage = selected
     ? stages[stages.indexOf(selected.stage) + 1]
     : undefined;
@@ -1304,9 +1332,31 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             }
           }}
         >
-          <section className="inspector">
-            <div className="inspectorHeader">
-              <p className="eyebrow">LOAD WORKSPACE</p>
+          <section className="inspector record">
+            <header className="recordHeader">
+              <nav aria-label="Breadcrumb" className="crumbs recordCrumbs">
+                <ol>
+                  <li>
+                    <button
+                      type="button"
+                      className="textButton"
+                      disabled={busy}
+                      onClick={() => {
+                        setSelected(null);
+                        setError("");
+                      }}
+                    >
+                      Loads
+                    </button>
+                    <span className="crumbSep" aria-hidden="true">
+                      /
+                    </span>
+                  </li>
+                  <li>
+                    <span aria-current="page">{selected.reference}</span>
+                  </li>
+                </ol>
+              </nav>
               <button
                 autoFocus
                 className="iconButton"
@@ -1319,322 +1369,439 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               >
                 <XIcon size={20} aria-hidden="true" />
               </button>
-            </div>
-            <h2 className="detailTitle">{selected.reference}</h2>
-            <p className="detailCarrier">
-              <BuildingsIcon size={15} aria-hidden="true" />
-              {selectedCarrier}
-            </p>
-            <span className={"badge " + selected.stage}>
-              <CircleIcon size={7} weight="fill" aria-hidden="true" />
-              {selected.cancelled_at
-                ? "Cancelled"
-                : stageLabels[selected.stage]}
-            </span>
-            <div className="detailFacts">
-              <div>
-                <small>Agreed rate</small>
-                <strong>{formatMoney(selected.amount_minor)}</strong>
-              </div>
-              <div>
-                <small>Booking source</small>
-                <span>{selected.source}</span>
-              </div>
-            </div>
-            <h3>Route & appointments</h3>
-            <StopList
-              load={selected}
-              canReport={!offline}
-              disabled={busy || offline}
-              onChanged={async (message) => {
-                setSelected(await api<Load>("loads/" + selected.id));
-                await refreshAfterSave(message);
-              }}
-            />
-            <LoadChanges
-              load={selected}
-              canChange={
-                selectedRole !== "driver" && selectedRole !== undefined
-              }
-              disabled={busy || offline}
-              onAuthError={handleError}
-              onChanged={async (message) => {
-                setSelected(await api<Load>("loads/" + selected.id));
-                await refreshAfterSave(message);
-              }}
-            />
-            <h3>Driver assignment</h3>
-            <div className="assignedDriver">
-              <TruckIcon size={18} aria-hidden="true" />
-              <span>{selected.assignment?.name || "No driver assigned"}</span>
-            </div>
-            {selectedRole !== "driver" &&
-              selected.stage !== "delivered" &&
-              !selected.cancelled_at && (
-                <>
-                  <form
-                    className="assignForm"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const f = new FormData(e.currentTarget);
-                      act(async () => {
-                        await api("loads/" + selected.id + "/assign", {
-                          version: selected.version,
-                          driverId: f.get("driver"),
-                        });
-                        setNotice("Driver assignment saved.");
-                        setSelected(await api<Load>("loads/" + selected.id));
-                        await refreshAfterSave("Driver assignment saved.");
+            </header>
+            <div className="recordBody">
+              <aside className="recordFields" aria-label="Load fields">
+                <span className="recordAvatar" aria-hidden="true">
+                  {selected.reference.charAt(0).toUpperCase()}
+                </span>
+                <h2 className="detailTitle">{selected.reference}</h2>
+                <small className="recordAdded">
+                  Added{" "}
+                  {new Date(selected.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </small>
+                <span className={"badge " + selected.stage}>
+                  <CircleIcon size={7} weight="fill" aria-hidden="true" />
+                  {selected.cancelled_at
+                    ? "Cancelled"
+                    : stageLabels[selected.stage]}
+                </span>
+                <h3>Fields</h3>
+                <dl className="recordList">
+                  <div>
+                    <dt>Carrier</dt>
+                    <dd className="detailCarrier">{selectedCarrier}</dd>
+                  </div>
+                  <div>
+                    <dt>Agreed rate</dt>
+                    <dd>{formatMoney(selected.amount_minor)}</dd>
+                  </div>
+                  <div>
+                    <dt>Booking source</dt>
+                    <dd>{selected.source}</dd>
+                  </div>
+                  <div>
+                    <dt>Pickup</dt>
+                    <dd>{selected.stops?.[0]?.address || "Not recorded"}</dd>
+                  </div>
+                  <div>
+                    <dt>Delivery</dt>
+                    <dd>
+                      {selected.stops?.[selected.stops.length - 1]?.address ||
+                        "Not recorded"}
+                    </dd>
+                  </div>
+                </dl>
+                <h3>Driver assignment</h3>
+                <div className="assignedDriver">
+                  <TruckIcon size={18} aria-hidden="true" />
+                  <span>
+                    {selected.assignment?.name || "No driver assigned"}
+                  </span>
+                </div>
+                {selectedRole !== "driver" &&
+                  selected.stage !== "delivered" &&
+                  !selected.cancelled_at && (
+                    <>
+                      <form
+                        className="assignForm"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const f = new FormData(e.currentTarget);
+                          act(async () => {
+                            await api("loads/" + selected.id + "/assign", {
+                              version: selected.version,
+                              driverId: f.get("driver"),
+                            });
+                            setNotice("Driver assignment saved.");
+                            setSelected(
+                              await api<Load>("loads/" + selected.id),
+                            );
+                            await refreshAfterSave("Driver assignment saved.");
+                          });
+                        }}
+                      >
+                        <label>
+                          <span className="srOnly">Authorized driver</span>
+                          <select
+                            name="driver"
+                            required
+                            defaultValue={selected.assignment?.driver_id || ""}
+                          >
+                            <option value="">Choose driver</option>
+                            {context.drivers
+                              .filter(
+                                (d) => d.carrier_id === selected.carrier_id,
+                              )
+                              .map((d) => (
+                                <option value={d.id} key={d.id}>
+                                  {d.name}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                        <button
+                          className="secondary"
+                          disabled={busy || offline}
+                        >
+                          Assign driver
+                        </button>
+                      </form>
+                      {nextStage && (
+                        <button
+                          className="primary full nextMilestone"
+                          disabled={busy || offline}
+                          onClick={() => {
+                            // Blocked on a driver: the button leads there.
+                            if (!selected.assignment) {
+                              document
+                                .querySelector<HTMLSelectElement>(
+                                  ".assignForm select",
+                                )
+                                ?.focus();
+                              return;
+                            }
+                            void act(async () => {
+                              await api(
+                                "loads/" + selected.id + "/milestones",
+                                {
+                                  version: selected.version,
+                                  stage: nextStage,
+                                },
+                              );
+                              setNotice("Milestone recorded.");
+                              setSelected(
+                                await api<Load>("loads/" + selected.id),
+                              );
+                              await refreshAfterSave("Milestone recorded.");
+                            });
+                          }}
+                        >
+                          {selected.assignment
+                            ? "Record next milestone"
+                            : "Choose a driver to continue"}
+                          <ArrowRightIcon size={15} aria-hidden="true" />
+                          <small>{stageLabels[nextStage]}</small>
+                        </button>
+                      )}
+                    </>
+                  )}
+                {selectedRole === "driver" && (
+                  <p className="helpText">
+                    You can record manual check-ins for your assigned loads.
+                    Contact dispatch for other changes.
+                  </p>
+                )}
+                {notice && (
+                  <p className="inlineNotice" role="status">
+                    {notice}
+                  </p>
+                )}
+                {errorPanel}
+                {error && (
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => open(selected.id)}
+                  >
+                    Refresh load details
+                  </button>
+                )}
+                {selectedRole !== "driver" && (
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      setCompose({
+                        to: [],
+                        suggest: selected.assignment
+                          ? {
+                              key: "driver:" + selected.assignment.driver_id,
+                              name: selected.assignment.name,
+                            }
+                          : undefined,
+                        subject: `About ${selected.reference}`,
+                        load: {
+                          id: selected.id,
+                          reference: selected.reference,
+                        },
                       });
+                      setSelected(null);
+                      setSection("inbox");
                     }}
                   >
-                    <label>
-                      <span className="srOnly">Authorized driver</span>
-                      <select
-                        name="driver"
-                        required
-                        defaultValue={selected.assignment?.driver_id || ""}
-                      >
-                        <option value="">Choose driver</option>
-                        {context.drivers
-                          .filter((d) => d.carrier_id === selected.carrier_id)
-                          .map((d) => (
-                            <option value={d.id} key={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                    <button className="secondary" disabled={busy || offline}>
-                      Assign driver
-                    </button>
-                  </form>
-                  {nextStage && (
+                    Message about this load
+                  </button>
+                )}
+              </aside>
+              <div className="recordMain">
+                <div
+                  className="orgTabs"
+                  role="tablist"
+                  aria-label="Load sections"
+                >
+                  {recordTabs.map((t) => (
                     <button
-                      className="primary full nextMilestone"
-                      disabled={busy || offline}
-                      onClick={() => {
-                        // Blocked on a driver: the button leads there.
-                        if (!selected.assignment) {
-                          document
-                            .querySelector<HTMLSelectElement>(
-                              ".assignForm select",
-                            )
-                            ?.focus();
-                          return;
-                        }
-                        void act(async () => {
-                          await api("loads/" + selected.id + "/milestones", {
-                            version: selected.version,
-                            stage: nextStage,
-                          });
-                          setNotice("Milestone recorded.");
-                          setSelected(await api<Load>("loads/" + selected.id));
-                          await refreshAfterSave("Milestone recorded.");
-                        });
-                      }}
+                      key={t.id}
+                      role="tab"
+                      id={"record-tab-" + t.id}
+                      aria-selected={recordTab === t.id}
+                      aria-controls="record-panel"
+                      className={
+                        "orgTab" + (recordTab === t.id ? " active" : "")
+                      }
+                      onClick={() => setRecordTab(t.id)}
                     >
-                      {selected.assignment
-                        ? "Record next milestone"
-                        : "Choose a driver to continue"}
-                      <ArrowRightIcon size={15} aria-hidden="true" />
-                      <small>{stageLabels[nextStage]}</small>
+                      {t.label}
+                      {t.count !== undefined && (
+                        <span className="orgCount">{t.count}</span>
+                      )}
                     </button>
+                  ))}
+                </div>
+                <div
+                  role="tabpanel"
+                  id="record-panel"
+                  aria-labelledby={"record-tab-" + recordTab}
+                  className="recordPanel"
+                >
+                  {recordTab === "timeline" && (
+                    <>
+                      <h3>Activity timeline</h3>
+                      {timelineCursor && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            act(async () => {
+                              const page = await api<{
+                                events: NonNullable<Load["events"]>;
+                                cursor: string | null;
+                              }>(
+                                `loads/${selected.id}/events?before=${encodeURIComponent(timelineCursor)}`,
+                              );
+                              setOlderEvents({
+                                loadId: selected.id,
+                                events: [
+                                  ...page.events,
+                                  ...(olderEvents?.loadId === selected.id
+                                    ? olderEvents.events
+                                    : []),
+                                ],
+                                cursor: page.cursor,
+                              });
+                            })
+                          }
+                        >
+                          Show older activity
+                        </button>
+                      )}
+                      <div className="timeline">
+                        {timeline.length ? (
+                          timeline.map((e) => (
+                            <p className="event" key={e.id}>
+                              <CircleIcon
+                                size={7}
+                                weight="fill"
+                                aria-hidden="true"
+                              />
+                              {eventLabels[e.type] || "Load updated"}
+                              <small>
+                                {new Date(e.created_at).toLocaleString()}
+                              </small>
+                            </p>
+                          ))
+                        ) : (
+                          <p className="helpText">
+                            Imported fictional fixture. No operational events
+                            recorded yet.
+                          </p>
+                        )}
+                      </div>
+                    </>
                   )}
-                </>
-              )}
-            {selectedRole === "driver" && (
-              <p className="helpText">
-                You can record manual check-ins for your assigned loads. Contact
-                dispatch for other changes.
-              </p>
-            )}
-            {notice && (
-              <p className="inlineNotice" role="status">
-                {notice}
-              </p>
-            )}
-            {errorPanel}
-            {error && (
-              <button
-                className="secondary"
-                disabled={busy}
-                onClick={() => open(selected.id)}
-              >
-                Refresh load details
-              </button>
-            )}
-            {selectedRole !== "driver" && selectedRole !== undefined && (
-              <LoadDraft
-                key={"draft-" + selected.id}
-                loadId={selected.id}
-                offline={offline}
-                onAuthError={handleError}
-                onOpen={(id) => {
-                  setDraftToOpen(id);
-                  setSelected(null);
-                  setSection("documents");
-                }}
-              />
-            )}
-            {selectedRole !== "driver" && selectedRole !== undefined && (
-              <LoadNotes
-                key={"notes-" + selected.id}
-                loadId={selected.id}
-                offline={offline}
-                onAuthError={handleError}
-              />
-            )}
-            <LoadCheckIns
-              key={selected.id}
-              load={selected}
-              busy={busy}
-              offline={offline}
-              userId={context.user.id}
-              role={selectedRole}
-              onAmended={async (message) => {
-                setSelected(await api<Load>("loads/" + selected.id));
-                await refreshAfterSave(message);
-              }}
-              onRecord={async (input) => {
-                let result: "saved" | "retry" | "version-conflict" = "retry";
-                await act(async () => {
-                  let response: { version: number };
-                  try {
-                    response = await api<{ version: number }>(
-                      "loads/" + selected.id + "/check-ins",
-                      input,
-                    );
-                  } catch (e) {
-                    if (
-                      e instanceof ApiError &&
-                      e.message === "VERSION_CONFLICT"
-                    )
-                      result = "version-conflict";
-                    throw e;
-                  }
-                  result = "saved";
-                  setNotice("Manual check-in recorded.");
-                  setSelected(
-                    (current) =>
-                      current && {
-                        ...current,
-                        version: Math.max(current.version, response.version),
-                      },
-                  );
-                  setSelected(await api<Load>("loads/" + selected.id));
-                  await refreshAfterSave("Manual check-in recorded.");
-                });
-                return result;
-              }}
-            />
-            <LoadExceptions
-              load={selected}
-              role={selectedRole}
-              disabled={busy || offline}
-              onChanged={async (message) => {
-                setExceptionRevision((r) => r + 1);
-                setSelected(await api<Load>("loads/" + selected.id));
-                setNotice(message);
-              }}
-            />
-            {selectedRole !== "driver" && (
-              <button
-                className="secondary"
-                onClick={() => {
-                  setCompose({
-                    to: [],
-                    suggest: selected.assignment
-                      ? {
-                          key: "driver:" + selected.assignment.driver_id,
-                          name: selected.assignment.name,
+                  {recordTab === "route" && (
+                    <>
+                      <h3>Route & appointments</h3>
+                      <StopList
+                        load={selected}
+                        canReport={!offline}
+                        disabled={busy || offline}
+                        onChanged={async (message) => {
+                          setSelected(await api<Load>("loads/" + selected.id));
+                          await refreshAfterSave(message);
+                        }}
+                      />
+                      <LoadChanges
+                        load={selected}
+                        canChange={
+                          selectedRole !== "driver" &&
+                          selectedRole !== undefined
                         }
-                      : undefined,
-                    subject: `About ${selected.reference}`,
-                    load: { id: selected.id, reference: selected.reference },
-                  });
-                  setSelected(null);
-                  setSection("inbox");
-                }}
-              >
-                Message about this load
-              </button>
-            )}
-            <h3>Documents</h3>
-            <p className="helpText">
-              Paperwork readiness is tracked separately from the shipment
-              milestone and from billing.
-            </p>
-            <DocumentPanel
-              slots={selected.documents || []}
-              carrierId={selected.carrier_id}
-              loadId={selected.id}
-              recordedLoad={{
-                amount_minor: selected.amount_minor,
-                stops: (selected.stops || []).map((stop) => ({
-                  window_start: stop.window_start,
-                  window_end: stop.window_end,
-                  timezone: stop.timezone,
-                })),
-              }}
-              canUpload={(type) =>
-                !offline &&
-                (selectedRole !== "driver" || driverUploadTypes.includes(type))
-              }
-              canReview={selectedRole === "dispatcher" && !offline}
-              downloads={!demo}
-              demo={demo}
-              disabled={busy || offline}
-              onChanged={async (message) => {
-                setSelected(await api<Load>("loads/" + selected.id));
-                setNotice(message);
-              }}
-            />
-            <h3>Activity timeline</h3>
-            {timelineCursor && (
-              <button
-                type="button"
-                className="secondary"
-                disabled={busy}
-                onClick={() =>
-                  act(async () => {
-                    const page = await api<{
-                      events: NonNullable<Load["events"]>;
-                      cursor: string | null;
-                    }>(
-                      `loads/${selected.id}/events?before=${encodeURIComponent(timelineCursor)}`,
-                    );
-                    setOlderEvents({
-                      loadId: selected.id,
-                      events: [
-                        ...page.events,
-                        ...(olderEvents?.loadId === selected.id
-                          ? olderEvents.events
-                          : []),
-                      ],
-                      cursor: page.cursor,
-                    });
-                  })
-                }
-              >
-                Show older activity
-              </button>
-            )}
-            <div className="timeline">
-              {timeline.length ? (
-                timeline.map((e) => (
-                  <p className="event" key={e.id}>
-                    <CircleIcon size={7} weight="fill" aria-hidden="true" />
-                    {eventLabels[e.type] || "Load updated"}
-                    <small>{new Date(e.created_at).toLocaleString()}</small>
-                  </p>
-                ))
-              ) : (
-                <p className="helpText">
-                  Imported fictional fixture. No operational events recorded
-                  yet.
-                </p>
-              )}
+                        disabled={busy || offline}
+                        onAuthError={handleError}
+                        onChanged={async (message) => {
+                          setSelected(await api<Load>("loads/" + selected.id));
+                          await refreshAfterSave(message);
+                        }}
+                      />
+                    </>
+                  )}
+                  {recordTab === "check-ins" && (
+                    <>
+                      <LoadCheckIns
+                        key={selected.id}
+                        load={selected}
+                        busy={busy}
+                        offline={offline}
+                        userId={context.user.id}
+                        role={selectedRole}
+                        onAmended={async (message) => {
+                          setSelected(await api<Load>("loads/" + selected.id));
+                          await refreshAfterSave(message);
+                        }}
+                        onRecord={async (input) => {
+                          let result: "saved" | "retry" | "version-conflict" =
+                            "retry";
+                          await act(async () => {
+                            let response: { version: number };
+                            try {
+                              response = await api<{ version: number }>(
+                                "loads/" + selected.id + "/check-ins",
+                                input,
+                              );
+                            } catch (e) {
+                              if (
+                                e instanceof ApiError &&
+                                e.message === "VERSION_CONFLICT"
+                              )
+                                result = "version-conflict";
+                              throw e;
+                            }
+                            result = "saved";
+                            setNotice("Manual check-in recorded.");
+                            setSelected(
+                              (current) =>
+                                current && {
+                                  ...current,
+                                  version: Math.max(
+                                    current.version,
+                                    response.version,
+                                  ),
+                                },
+                            );
+                            setSelected(
+                              await api<Load>("loads/" + selected.id),
+                            );
+                            await refreshAfterSave("Manual check-in recorded.");
+                          });
+                          return result;
+                        }}
+                      />
+                    </>
+                  )}
+                  {recordTab === "documents" && (
+                    <>
+                      <h3>Documents</h3>
+                      <p className="helpText">
+                        Paperwork readiness is tracked separately from the
+                        shipment milestone and from billing.
+                      </p>
+                      <DocumentPanel
+                        slots={selected.documents || []}
+                        carrierId={selected.carrier_id}
+                        loadId={selected.id}
+                        recordedLoad={{
+                          amount_minor: selected.amount_minor,
+                          stops: (selected.stops || []).map((stop) => ({
+                            window_start: stop.window_start,
+                            window_end: stop.window_end,
+                            timezone: stop.timezone,
+                          })),
+                        }}
+                        canUpload={(type) =>
+                          !offline &&
+                          (selectedRole !== "driver" ||
+                            driverUploadTypes.includes(type))
+                        }
+                        canReview={selectedRole === "dispatcher" && !offline}
+                        downloads={!demo}
+                        demo={demo}
+                        disabled={busy || offline}
+                        onChanged={async (message) => {
+                          setSelected(await api<Load>("loads/" + selected.id));
+                          setNotice(message);
+                        }}
+                      />
+                      {selectedRole !== "driver" &&
+                        selectedRole !== undefined && (
+                          <LoadDraft
+                            key={"draft-" + selected.id}
+                            loadId={selected.id}
+                            offline={offline}
+                            onAuthError={handleError}
+                            onOpen={(id) => {
+                              setDraftToOpen(id);
+                              setSelected(null);
+                              setSection("documents");
+                            }}
+                          />
+                        )}
+                    </>
+                  )}
+                  {recordTab === "exceptions" && (
+                    <>
+                      <LoadExceptions
+                        load={selected}
+                        role={selectedRole}
+                        disabled={busy || offline}
+                        onChanged={async (message) => {
+                          setExceptionRevision((r) => r + 1);
+                          setSelected(await api<Load>("loads/" + selected.id));
+                          setNotice(message);
+                        }}
+                      />
+                    </>
+                  )}
+                  {recordTab === "notes" && (
+                    <>
+                      {selectedRole !== "driver" &&
+                        selectedRole !== undefined && (
+                          <LoadNotes
+                            key={"notes-" + selected.id}
+                            loadId={selected.id}
+                            offline={offline}
+                            onAuthError={handleError}
+                          />
+                        )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
             <p className="detailFoot">
               Delivery does not mark documents or invoices complete.

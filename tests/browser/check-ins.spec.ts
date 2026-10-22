@@ -90,6 +90,7 @@ async function open(page: Page, reference: string) {
   await page.getByRole("button", { name: new RegExp("^" + reference) }).click();
   const dialog = page.getByRole("dialog", { name: "Load details" });
   await expect(dialog).toBeVisible();
+  await dialog.getByRole("tab", { name: /^Check-ins/ }).click();
   return dialog;
 }
 
@@ -119,7 +120,8 @@ test("manual reports show stale observation time, receipt time and authenticated
   await expect(report).toContainText("Observed 3h ago");
   await expect(report).toContainText(load.context.user.name + " · Manual");
   await expect(report.locator("time")).toHaveCount(2);
-  await expect(dialog.locator(".badge")).toHaveText("Booked");
+  await expect(dialog.locator(".badge").first()).toHaveText("Booked");
+  await dialog.getByRole("tab", { name: /^Timeline/ }).click();
   await expect(
     dialog.locator(".event").filter({ hasText: "Manual check-in recorded" }),
   ).toHaveCount(1);
