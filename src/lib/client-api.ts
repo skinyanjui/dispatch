@@ -187,6 +187,10 @@ const messages: Record<string, string> = {
     "Loads move one step at a time. Drop it on the next column, or open the load to record the milestone.",
   VIEW_NAME_TAKEN: "You already have a view with that name.",
   NO_ORGANIZATION: "Only members of a dispatch organization can share a view.",
+  TEMPLATE_NAME_TAKEN: "You already have a template with that name.",
+  UNKNOWN_MERGE_FIELD:
+    "That text uses a merge field this kind of template doesn't offer. Use the field buttons.",
+  ALREADY_DECIDED: "Someone already reviewed this draft.",
   TERMS_CHANGED:
     "The Terms or Privacy pages were updated while you were filling this in. Reload the page, read them, and send again.",
   ATTACH_FAILED:

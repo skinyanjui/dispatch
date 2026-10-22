@@ -25,6 +25,7 @@ import {
   ListIcon,
   CaretUpDownIcon,
   AddressBookIcon,
+  FileTextIcon,
   HandshakeIcon,
   SparkleIcon,
   TrayIcon,
@@ -44,7 +45,8 @@ export type WorkspaceSection =
   | "prospects"
   | "assistant"
   | "inbox"
-  | "reports";
+  | "reports"
+  | "documents";
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
@@ -55,6 +57,7 @@ export const sectionTitles: Record<
   notifications: "Notifications",
   account: "Account",
   organization: "Organization",
+  documents: "Documents",
   contacts: "Contacts",
   prospects: "Prospects",
   assistant: "Assistant",
@@ -272,6 +275,12 @@ export function WorkspaceShell({
       key: "assistant",
       label: "Assistant",
       Icon: SparkleIcon,
+      show: !driverOnly && orgStaff,
+    },
+    {
+      key: "documents",
+      label: "Documents",
+      Icon: FileTextIcon,
       show: !driverOnly && orgStaff,
     },
     { key: "billing", label: "Billing", Icon: ReceiptIcon, show: !driverOnly },

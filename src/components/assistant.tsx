@@ -199,7 +199,9 @@ export function Assistant({
           <h2 className="srOnly">Assistant</h2>
           <p>
             Ask about loads, exceptions, billing, prospects, contacts and
-            carriers. It reads your records and can&apos;t change anything.
+            carriers. It reads your records. The only thing it can create is a
+            draft document from your templates, for you to review; it sends
+            nothing.
           </p>
         </div>
         {state?.enabled && (state.conversations.length > 0 || conversation) && (

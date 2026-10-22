@@ -9,12 +9,16 @@ import { listProspects } from "./prospects";
 import { formatMoney } from "./entry";
 import { followUpText, stageLabels } from "./prospect-types";
 import type { Source } from "./assistant-types";
+import { createHash } from "node:crypto";
+import { generateDraft, targets, type Target } from "./drafts";
 
-// Read-only tools for the dispatch assistant (ADR 0031). Every tool runs as
-// the signed-in person, through the same scoped functions the screens use,
-// and is then limited to the one organization that consented. A tool never
-// changes anything and returns compact, formatted records so the model works
-// from facts instead of raw rows.
+// Tools for the dispatch assistant (ADR 0031, 0040). Every tool runs as the
+// signed-in person, through the same scoped functions the screens use, and is
+// then limited to the one organization that consented. All tools only read,
+// except draft_document, which creates a text draft from one of the
+// organization's templates for a person to review. It sends nothing and
+// changes no load, document, invoice or record. Tools return compact,
+// formatted records so the model works from facts instead of raw rows.
 
 export type ToolDefinition = {
   name: string;
@@ -121,6 +125,28 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
   {
+    name: "list_document_templates",
+    description:
+      "The organization's document templates (for example a check call message, a carrier welcome note, a broker update). Use before draft_document to find the right template and the kind of record it fills from (load, carrier or contact).",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "draft_document",
+    description:
+      "Fill in one document template for one record and save it as a DRAFT for a person to review. Nothing is sent. `template` is a template name or id from list_document_templates. `record` is what to fill it from: a load reference (for a load template), a carrier name (carrier template) or a contact name (contact template). Fields that have no value show as [missing: ...] in the draft; tell the person which are missing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        template: { type: "string", description: "Template name or id." },
+        record: {
+          type: "string",
+          description: "Load reference, carrier name or contact name.",
+        },
+      },
+      required: ["template", "record"],
+    },
+  },
+  {
     name: "list_carriers",
     description:
       "The carriers you work with: id, name, whether a verified dispatch agreement is current, and the carrier's contact.",
@@ -179,7 +205,7 @@ const loadSource = (l: LoadRow): Source => ({
   label: l.reference,
 });
 
-/** Runs one tool for a person inside one organization. Never writes. */
+/** Runs one tool for a person inside one organization. Reads, except draft_document. */
 export async function runTool(
   user: string,
   organization: string,
@@ -323,13 +349,11 @@ export async function runTool(
           delivered_loads_not_yet_invoiced: uninvoiced,
         },
         sources: [
-          ...overview.invoices
-            .slice(0, 25)
-            .map((i) => ({
-              kind: "invoice" as const,
-              id: i.id,
-              label: i.number ?? "Draft invoice",
-            })),
+          ...overview.invoices.slice(0, 25).map((i) => ({
+            kind: "invoice" as const,
+            id: i.id,
+            label: i.number ?? "Draft invoice",
+          })),
         ],
       };
     }
@@ -395,6 +419,113 @@ export async function runTool(
           id: e.contact!.id,
           label: e.name,
         })),
+      };
+    }
+    case "list_document_templates": {
+      const { rows } = await pool.query(
+        "SELECT id,name,target FROM document_templates WHERE organization_id=$1 AND archived_at IS NULL ORDER BY created_at DESC,id LIMIT 50",
+        [organization],
+      );
+      return {
+        data: {
+          templates: rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            fills_from: r.target,
+          })),
+        },
+        sources: [],
+      };
+    }
+    case "draft_document": {
+      const template = z.string().trim().min(1).max(100).parse(input.template);
+      const record = z.string().trim().min(1).max(160).parse(input.record);
+      const tpl = await pool.query(
+        `SELECT id,name,target FROM document_templates WHERE organization_id=$1 AND archived_at IS NULL
+        AND (id::text=$2 OR lower(name)=lower($2))`,
+        [organization, template],
+      );
+      if (!tpl.rows[0])
+        throw new ToolError(
+          "No such template. Call list_document_templates for the names.",
+        );
+      const target = tpl.rows[0].target as Target;
+      if (!targets.includes(target))
+        throw new ToolError("Unsupported template.");
+      let targetId: string | undefined;
+      if (target === "load") {
+        const r = await pool.query(
+          "SELECT id FROM loads WHERE carrier_id=ANY($1::uuid[]) AND lower(reference)=lower($2) LIMIT 3",
+          [[...ids], record],
+        );
+        if (r.rowCount! > 1)
+          throw new ToolError(
+            "More than one load has that reference; ask which carrier.",
+          );
+        targetId = r.rows[0]?.id;
+      } else if (target === "carrier") {
+        const r = await pool.query(
+          "SELECT id FROM carriers WHERE id=ANY($1::uuid[]) AND (id::text=$2 OR lower(name)=lower($2)) LIMIT 3",
+          [[...ids], record],
+        );
+        if (r.rowCount! > 1)
+          throw new ToolError("More than one carrier matches.");
+        targetId = r.rows[0]?.id;
+      } else {
+        const r = await pool.query(
+          "SELECT id FROM contacts WHERE organization_id=$1 AND (id::text=$2 OR lower(name)=lower($2)) LIMIT 3",
+          [organization, record],
+        );
+        if (r.rowCount! > 1)
+          throw new ToolError(
+            "More than one contact has that name; ask for the company.",
+          );
+        targetId = r.rows[0]?.id;
+      }
+      if (!targetId)
+        throw new ToolError(
+          `No ${target} matches "${record}" (this template fills from a ${target}).`,
+        );
+      // The same request in the same minute is the same draft, so a retried
+      // step cannot create two.
+      const h = createHash("sha256")
+        .update(
+          `${user}|${tpl.rows[0].id}|${targetId}|${new Date().toISOString().slice(0, 16)}`,
+        )
+        .digest("hex");
+      // Shaped like a version-4 UUID so it passes the same validation as any key.
+      const key = `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${"89ab"[parseInt(h[16], 16) % 4]}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+      let result;
+      try {
+        result = await generateDraft(
+          user,
+          {
+            template_id: tpl.rows[0].id,
+            target_id: targetId,
+            idempotency_key: key,
+          },
+          "assistant",
+          organization,
+        );
+      } catch (e) {
+        throw new ToolError(
+          e instanceof Error ? e.message : "Could not draft.",
+        );
+      }
+      return {
+        data: {
+          status: "draft saved for review; nothing was sent",
+          template: tpl.rows[0].name,
+          for: record,
+          missing_fields: result.missing,
+        },
+        sources: [
+          {
+            kind: "document" as const,
+            id: result.id,
+            label: `Draft: ${tpl.rows[0].name} · ${record}`,
+          },
+        ],
       };
     }
     case "list_carriers": {

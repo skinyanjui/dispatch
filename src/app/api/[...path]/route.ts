@@ -52,6 +52,15 @@ import {
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
 import {
+  archiveTemplate,
+  createTemplate,
+  decideDraft,
+  generateDraft,
+  listDrafts,
+  listTemplates,
+  updateTemplate,
+} from "@/lib/drafts";
+import {
   createView,
   deleteView,
   listViews,
@@ -733,6 +742,44 @@ async function handle(req: NextRequest) {
           await readJson(req),
         ),
       );
+    if (path[0] === "document-templates") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(await listTemplates(user.id));
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await createTemplate(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const templateId = z.uuid().parse(path[1]);
+      if (path.length === 2 && req.method === "POST")
+        return NextResponse.json(
+          await updateTemplate(user.id, templateId, await readJson(req)),
+        );
+      if (path.length === 3 && path[2] === "archive" && req.method === "POST")
+        return NextResponse.json(await archiveTemplate(user.id, templateId));
+    }
+    if (path[0] === "drafts") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await listDrafts(user.id, req.nextUrl.searchParams),
+        );
+      if (path.length === 2 && path[1] === "generate" && req.method === "POST")
+        return NextResponse.json(
+          await generateDraft(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const draftId = z.uuid().parse(path[1]);
+      if (path.length === 3 && req.method === "POST") {
+        if (path[2] === "approve")
+          return NextResponse.json(
+            await decideDraft(user.id, draftId, "approved"),
+          );
+        if (path[2] === "discard")
+          return NextResponse.json(
+            await decideDraft(user.id, draftId, "discarded"),
+          );
+      }
+    }
     if (path[0] === "views") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(await listViews(user.id));

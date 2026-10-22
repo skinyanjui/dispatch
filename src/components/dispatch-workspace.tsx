@@ -34,6 +34,8 @@ import {
   sectionTitles,
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
+import { DocumentsPage } from "@/components/documents-page";
+import { LoadDraft } from "@/components/load-draft";
 import { LoadsViewBar } from "@/components/loads-view-bar";
 import {
   CalendarView,
@@ -127,6 +129,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     } | null>(null),
     [attentionKey, setAttentionKey] = useState<AttentionKey | null>(null),
     [view, setView] = useState<ViewConfig>(defaultView),
+    [draftToOpen, setDraftToOpen] = useState<string | null>(null),
     [dragOver, setDragOver] = useState<string | null>(null),
     [q, setQ] = useState(""),
     [carrier, setCarrier] = useState(""),
@@ -830,6 +833,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     billing: ["Search invoices and loads", "Search invoices and loads…"],
     reports: ["Search carriers", "Search carriers…"],
     organization: ["Search people", "Search people…"],
+    documents: ["Search drafts", "Search drafts…"],
   };
   // Every page has a search. Pages with nothing of their own to filter
   // (account, organization, notifications) search loads and jump to them.
@@ -1144,7 +1148,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             onAuthError={handleError}
             onOpen={(source) => {
               if (source.kind === "load") void open(source.id);
-              else
+              else if (source.kind === "document") {
+                setDraftToOpen(source.id);
+                setSection("documents");
+              } else
                 setSection(
                   (
                     {
@@ -1164,6 +1171,14 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             offline={offline}
             onAuthError={handleError}
             onOpenCarriers={() => setSection("carriers")}
+          />
+        ) : section === "documents" ? (
+          <DocumentsPage
+            key={draftToOpen ?? "documents"}
+            query={pageQ.documents ?? ""}
+            offline={offline}
+            openDraft={draftToOpen}
+            onAuthError={handleError}
           />
         ) : section === "reports" ? (
           <Reports
@@ -1448,6 +1463,19 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               >
                 Refresh load details
               </button>
+            )}
+            {selectedRole !== "driver" && selectedRole !== undefined && (
+              <LoadDraft
+                key={"draft-" + selected.id}
+                loadId={selected.id}
+                offline={offline}
+                onAuthError={handleError}
+                onOpen={(id) => {
+                  setDraftToOpen(id);
+                  setSelected(null);
+                  setSection("documents");
+                }}
+              />
             )}
             {selectedRole !== "driver" && selectedRole !== undefined && (
               <LoadNotes

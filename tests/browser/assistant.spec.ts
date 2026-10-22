@@ -146,3 +146,68 @@ test("assistant on a phone fits, and the demo answers from sample data only", as
   ).toBe(true);
   expect(requests).toEqual([]);
 });
+
+test("documents: make a template, draft from a load and from the assistant, review it", async ({
+  page,
+}) => {
+  await page.request.post("/api/login", {
+    headers: { Origin: "http://localhost:3000" },
+    data: {
+      email: "dispatcher@relay.test",
+      password: process.env.SEED_PASSWORD,
+    },
+  });
+  const me = await (await page.request.get("/api/me")).json();
+  const org = me.organizations.find((o: { role?: string }) => o.role).id;
+  const ai = await (
+    await page.request.get(`/api/organizations/${org}/ai`)
+  ).json();
+  await page.request.post(`/api/organizations/${org}/ai`, {
+    headers: { Origin: "http://localhost:3000" },
+    data: {
+      version: ai.version,
+      enabled: ai.enabled,
+      assistant_enabled: true,
+      monthly_limit_cents: 1000,
+    },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Documents", exact: true }).click();
+  const docs = page.getByRole("region", { name: "Documents" });
+  await docs.getByRole("tab", { name: /^Templates/ }).click();
+  const name = "Check call " + Date.now();
+  await docs.getByRole("button", { name: "New template" }).click();
+  const form = page.getByRole("form", { name: "Template" });
+  await form.getByLabel("Name").fill(name);
+  await form.getByRole("button", { name: "Load reference" }).click();
+  await form
+    .getByLabel("Text")
+    .fill("Update on {{load.reference}} from {{sender.name}}");
+  await form.getByRole("button", { name: "Save template" }).click();
+  await expect(docs.getByRole("list", { name: "Templates" })).toContainText(
+    name,
+  );
+  // Ask the assistant to draft it for a load.
+  const loadRef = (
+    await (await page.request.get("/api/loads?status=booked")).json()
+  ).loads[0].reference;
+  await page.getByRole("button", { name: "Assistant", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Your question" })
+    .fill(`Draft the ${name} for ${loadRef}`);
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await expect(page.getByText(/Nothing was sent/)).toBeVisible();
+  await page
+    .getByRole("button", { name: new RegExp("^Draft: " + name) })
+    .click();
+  // The draft opens for review, and the missing/reviewed controls are there.
+  const sheet = page.getByRole("dialog", { name: "Draft" });
+  await expect(sheet.getByLabel("Draft text")).toContainText(loadRef);
+  await expect(sheet).toContainText("Written by the assistant");
+  await sheet.getByRole("button", { name: "Mark as reviewed" }).click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Draft" })
+      .getByText("Reviewed means a person read it"),
+  ).toBeVisible();
+});

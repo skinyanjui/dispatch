@@ -2434,3 +2434,55 @@ select {
 .appShell .cardDrag > .loadCard {
   width: 100%;
 }
+
+/* ---- Documents ---- */
+.appShell .draftBody {
+  margin: 0;
+  padding: var(--space-3);
+  max-height: 50dvh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  background: var(--panel-soft, #f5f5f5);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.appShell .templateList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.appShell .templateList li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.appShell .templateList p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+.appShell .templateList small {
+  display: block;
+  color: var(--muted);
+}
+.appShell .mergeFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.appShell .loadDraft {
+  display: grid;
+  gap: var(--space-2);
+}
+.appShell .loadDraft h3 {
+  margin: 0;
+}
+.appShell .loadDraft form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}

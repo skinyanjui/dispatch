@@ -5,7 +5,8 @@ export type SourceKind =
   | "contact"
   | "carrier"
   | "invoice"
-  | "exception";
+  | "exception"
+  | "document";
 /** A record a tool actually returned. Built by the server, never by the model. */
 export type Source = { kind: SourceKind; id: string; label: string };
 export type AssistantTurn = {
@@ -38,4 +39,5 @@ export const examplePrompts = [
   "Which loads have no driver?",
   "Which prospects need a follow-up?",
   "What invoices are overdue?",
+  "Draft a document from a template",
 ];
