@@ -106,7 +106,7 @@ export function RequestAccess() {
                     required
                     maxLength={254}
                     autoComplete="email"
-                    placeholder="you@company.com"
+                    placeholder="you@work.com"
                   />
                 </div>
               </div>

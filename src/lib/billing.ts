@@ -474,7 +474,7 @@ export async function billingOverview(user: string, params: URLSearchParams) {
       `SELECT i.id,i.number,i.status,i.fee_bps,i.total_minor::text,to_char(i.due_on,'YYYY-MM-DD') due_on,
         i.issued_at,i.voided_at,i.void_reason,i.created_at,i.version,
         (SELECT COALESCE(sum(amount_minor),0)::text FROM dispatch_invoice_payments WHERE invoice_id=i.id) paid_minor,
-        (SELECT json_agg(json_build_object('load_id',dl.load_id,'reference',l.reference,'load_amount_minor',dl.load_amount_minor::text,'fee_minor',dl.fee_minor::text) ORDER BY l.reference)
+        (SELECT COALESCE(json_agg(json_build_object('load_id',dl.load_id,'reference',l.reference,'load_amount_minor',dl.load_amount_minor::text,'fee_minor',dl.fee_minor::text) ORDER BY l.reference),'[]')
           FROM dispatch_invoice_lines dl JOIN loads l ON l.id=dl.load_id WHERE dl.invoice_id=i.id) lines,
         (SELECT COALESCE(json_agg(json_build_object('id',p.id,'amount_minor',p.amount_minor::text,'received_on',p.received_on,'method',p.method,'reference',p.reference) ORDER BY p.received_on),'[]')
           FROM dispatch_invoice_payments p WHERE p.invoice_id=i.id) payments
