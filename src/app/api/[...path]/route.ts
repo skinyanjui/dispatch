@@ -51,6 +51,12 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import {
+  createView,
+  deleteView,
+  listViews,
+  updateView,
+} from "@/lib/saved-views";
 import { addNote, listNotes } from "@/lib/load-notes";
 import { carrierSummaries } from "@/lib/carrier-summary";
 import { loadsCsv, reportOverview } from "@/lib/reports";
@@ -727,6 +733,22 @@ async function handle(req: NextRequest) {
           await readJson(req),
         ),
       );
+    if (path[0] === "views") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(await listViews(user.id));
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await createView(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      const viewId = z.uuid().parse(path[1]);
+      if (path.length === 2 && req.method === "POST")
+        return NextResponse.json(
+          await updateView(user.id, viewId, await readJson(req)),
+        );
+      if (path.length === 3 && path[2] === "delete" && req.method === "POST")
+        return NextResponse.json(await deleteView(user.id, viewId));
+    }
     if (path[0] === "threads") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(
