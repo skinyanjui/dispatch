@@ -359,6 +359,13 @@ export function DocumentsPage({
               >
                 Copy text
               </button>
+              <a
+                className="secondary"
+                href={`/api/drafts/${current.id}/pdf`}
+                download
+              >
+                Download PDF
+              </a>
               {current.status === "draft" && (
                 <>
                   <button

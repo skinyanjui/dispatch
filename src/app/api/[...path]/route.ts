@@ -55,6 +55,7 @@ import {
   archiveTemplate,
   createTemplate,
   decideDraft,
+  draftPdf,
   generateDraft,
   listDrafts,
   listTemplates,
@@ -769,6 +770,16 @@ async function handle(req: NextRequest) {
           { status: 201 },
         );
       const draftId = z.uuid().parse(path[1]);
+      if (path.length === 3 && path[2] === "pdf" && req.method === "GET") {
+        const file = await draftPdf(user.id, draftId);
+        return new NextResponse(new Uint8Array(file.bytes), {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${file.filename}"`,
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
       if (path.length === 3 && req.method === "POST") {
         if (path[2] === "approve")
           return NextResponse.json(

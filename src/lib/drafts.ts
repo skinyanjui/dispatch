@@ -4,6 +4,8 @@ import { pool, transaction } from "./db";
 import { HttpError } from "./auth";
 import { detail } from "./loads";
 import { formatMoney } from "./entry";
+import { FIELD, render } from "./draft-render";
+import { textPdf } from "./simple-pdf";
 
 /**
  * Document templates and drafts (ADR 0040). A template is plain text with
@@ -45,7 +47,6 @@ const common: Record<string, string> = {
 };
 export const allFields = (t: Target) => ({ ...mergeFields[t], ...common });
 
-const FIELD = /\{\{\s*([a-z_.]+)\s*\}\}/g;
 /** Fields in a body that this target does not offer. */
 export const unknownFields = (target: Target, body: string) =>
   [...body.matchAll(FIELD)]
@@ -269,20 +270,6 @@ async function recordValues(
   };
 }
 
-/** Fills a body. Empty values stay visible as [missing: field] for the reviewer. */
-export function render(body: string, values: Record<string, string>) {
-  const missing: string[] = [];
-  const text = body.replace(FIELD, (_, field: string) => {
-    const v = values[field];
-    if (v === undefined || v === "") {
-      if (!missing.includes(field)) missing.push(field);
-      return `[missing: ${field}]`;
-    }
-    return v;
-  });
-  return { text, missing };
-}
-
 export async function generateDraft(
   user: string,
   input: unknown,
@@ -400,4 +387,27 @@ export async function decideDraft(
     id,
   ]);
   return { ok: true };
+}
+
+/** A PDF of one draft, made on request and never stored. */
+export async function draftPdf(user: string, id: string) {
+  const org = await staffOrganization(user);
+  const { rows } = await pool.query(
+    "SELECT template_name,target_label,body,status FROM document_drafts WHERE id=$1 AND organization_id=$2",
+    [id, org],
+  );
+  if (!rows[0]) throw new HttpError(404, "NOT_FOUND");
+  const d = rows[0];
+  const bytes = textPdf({
+    title: `${d.template_name} - ${d.target_label}`,
+    banner:
+      d.status === "approved"
+        ? "Reviewed by a person"
+        : "DRAFT - not reviewed. Check every line before use.",
+    body: d.body,
+  });
+  const safe = `${d.template_name}-${d.target_label}`
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .slice(0, 80);
+  return { filename: `${safe}.pdf`, bytes };
 }

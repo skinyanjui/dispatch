@@ -165,6 +165,30 @@ test("generating fills fields, marks missing ones, is idempotent and fixes the t
     audit.rows.map((r) => r.action),
     ["draft.generated", "draft.approved"],
   );
+  // A PDF is made on request: marked as reviewed once approved, never stored.
+  const pdf = await GET(
+    request(`drafts/${id}/pdf`, { token: await sessionFor(t.dispatcher) }),
+  );
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.headers.get("content-type"), "application/pdf");
+  assert.match(
+    pdf.headers.get("content-disposition") ?? "",
+    /attachment; filename="[A-Za-z0-9._-]+\.pdf"/,
+  );
+  const bytes = Buffer.from(await pdf.arrayBuffer()).toString("latin1");
+  assert.ok(bytes.startsWith("%PDF-"));
+  assert.match(bytes, /Reviewed by a person/);
+  assert.equal(
+    (
+      await GET(
+        request(`drafts/${id}/pdf`, {
+          token: await sessionFor(other.dispatcher),
+        }),
+      )
+    ).status,
+    404,
+  );
+  assert.equal((await GET(request(`drafts/${id}/pdf`))).status, 401);
   // Nothing was sent or attached to the load.
   const sent = await pool.query(
     "SELECT count(*)::int n FROM messages m JOIN threads th ON th.id=m.thread_id WHERE th.load_id=$1",
@@ -241,7 +265,11 @@ test("the assistant drafts from a template, says nothing was sent, and stays ins
     randomUUID(),
   );
   assert.equal(result.turn.status, "succeeded");
-  assert.match(result.turn.answer ?? "", /Nothing was sent/, result.turn.answer ?? "");
+  assert.match(
+    result.turn.answer ?? "",
+    /Nothing was sent/,
+    result.turn.answer ?? "",
+  );
   const source = result.turn.sources.find((s) => s.kind === "document");
   assert.ok(source, "a document source");
   const draft = (

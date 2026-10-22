@@ -204,6 +204,11 @@ test("documents: make a template, draft from a load and from the assistant, revi
   const sheet = page.getByRole("dialog", { name: "Draft" });
   await expect(sheet.getByLabel("Draft text")).toContainText(loadRef);
   await expect(sheet).toContainText("Written by the assistant");
+  const pdf = sheet.getByRole("link", { name: "Download PDF" });
+  await expect(pdf).toHaveAttribute("href", /\/api\/drafts\/[0-9a-f-]+\/pdf$/);
+  const file = await page.request.get((await pdf.getAttribute("href"))!);
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toBe("application/pdf");
   await sheet.getByRole("button", { name: "Mark as reviewed" }).click();
   await expect(
     page
