@@ -65,6 +65,9 @@ export function DocumentsPage({
     [error, setError] = useState(""),
     [status, setStatus] = useState(""),
     [busy, setBusy] = useState(false);
+  // On the first load, an empty "Needs review" list would hide the drafts that
+  // exist; show all of them instead.
+  const chosenFilter = useRef(false);
   const fail = useCallback(
     (e: unknown) => {
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
@@ -79,6 +82,11 @@ export function DocumentsPage({
         api<{ templates: Template[]; fields: Fields }>("document-templates"),
       ]);
       setDrafts(d.drafts);
+      if (!chosenFilter.current) {
+        chosenFilter.current = true;
+        if (d.drafts.length && !d.drafts.some((x) => x.status === "draft"))
+          setFilter("all");
+      }
       setTemplates(t.templates);
       setFields(t.fields);
       setError("");
@@ -127,9 +135,9 @@ export function DocumentsPage({
       <div className="directoryIntro">
         <div>
           <h2 className="srOnly">Documents</h2>
-          <p>
-            Templates with merge fields, and the drafts made from them. A draft
-            is text for you to review and copy; nothing is sent from here.
+          <p className="dirNote">
+            A draft is text for you to review and copy; nothing is sent from
+            here.
           </p>
         </div>
         {tab === "templates" && (

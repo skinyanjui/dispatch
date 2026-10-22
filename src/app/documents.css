@@ -1,0 +1,102 @@
+/* Documents: drafts as compact cards on phones, templates as a bordered list
+   with a two-line preview, and status chips that fill their rows. */
+.appShell .documents .attentionChips {
+  flex-wrap: wrap;
+}
+.appShell .documents .attentionChip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.appShell .documents .templateList {
+  display: grid;
+  gap: 0;
+  max-width: 1000px;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+.appShell .documents .templateList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 0;
+}
+.appShell .documents .templateList li + li {
+  border-top: 1px solid var(--border);
+}
+.appShell .documents .templateList strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.appShell .documents .templateList small {
+  color: var(--muted);
+}
+.appShell .documents .templateList p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.appShell .documents .templateList .actionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+@media (max-width: 640px) {
+  .appShell .documents .attentionChip {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .appShell .documents .templateList li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .appShell .documents .templateList .actionRow .secondary,
+  .appShell .documents .templateList .actionRow .textButton {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 40px;
+  }
+  /* Drafts: name first, then the facts in two columns. */
+  .appShell .documents .billingTable tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3);
+  }
+  .appShell .documents .billingTable tbody th[scope="row"] {
+    grid-column: 1 / -1;
+    padding: 0;
+  }
+  .appShell .documents .billingTable td {
+    display: grid;
+    align-content: start;
+    justify-content: stretch;
+    justify-items: start;
+    gap: 1px;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+  .appShell .documents .billingTable td::before {
+    font-size: 12px;
+  }
+  .appShell .documents .billingTable td > .opsPill {
+    align-self: start;
+    justify-self: start;
+    margin: 0;
+  }
+  .appShell .documents .billingTable td[data-label="Made by"] {
+    grid-column: 1 / -1;
+  }
+}

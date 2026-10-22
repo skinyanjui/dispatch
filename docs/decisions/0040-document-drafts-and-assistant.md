@@ -21,3 +21,7 @@ Sending a draft as a message with one click (copy only for now), PDF export, ver
 ## Rollback
 
 Additive. Leave both tables unused, or remove the two assistant tools; nothing else depends on them.
+
+## Page polish
+
+Presentation only; no API, schema or permission change. The page opens on "All" when nothing needs review (it used to open on an empty "Needs review" list while approved drafts existed); "Needs review" is still the default when something does. The intro keeps one sentence. Templates are a bordered list with a two-line preview and their actions on the right, or full-width under the text on phones. Drafts become compact cards on phones (name, then For and Status side by side), and the status chips wrap and fill their rows.
