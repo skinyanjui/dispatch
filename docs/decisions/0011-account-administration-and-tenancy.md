@@ -40,3 +40,7 @@ Dispatcher/admin invitations, email change, WebAuthn/passkeys, organization-enfo
 ## Rollback
 
 Revert the application; keep migration 009 (additive, plus a widened check constraint). Users with MFA enabled would be able to sign in with a password alone under older code. Before rolling back past this change, warn users or keep a forward fix.
+
+## Account and notification pages
+
+Presentation only; no API, schema or permission change. The Account page is two aligned columns (profile and password on the left, email and two-step verification on the right) that collapse to one on narrow screens; before, its four cards sat in a ragged row of different widths. The Notifications delivery log is a compact bordered list that shows 20 messages at a time with "Show more"; before, it rendered every message at once (about 5,400px tall on a desktop and 13,000px on a phone with a busy workspace). The Organization page already fit and was left as it is. Playwright now keeps a screenshot of any failing test.

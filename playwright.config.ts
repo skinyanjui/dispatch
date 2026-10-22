@@ -4,6 +4,7 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3000",
     headless: true,
+    screenshot: "only-on-failure",
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
       : {},

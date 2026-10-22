@@ -1,0 +1,63 @@
+/* Account and notification pages: a two-column account layout that collapses
+   to one column, and a delivery log that is a compact, paged list. */
+.appShell .accountPage .billingColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+  max-width: 960px;
+}
+.appShell .accountPage .billingColumns > .opsList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+}
+@media (max-width: 800px) {
+  .appShell .accountPage .billingColumns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+.appShell .notificationPage {
+  max-width: 900px;
+}
+.appShell .notificationPage .opsList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+.appShell .notificationPage .opsList .opsCard {
+  border: 0;
+  border-radius: 0;
+  padding: var(--space-3);
+  gap: var(--space-1);
+}
+.appShell .notificationPage .opsList .opsCard + .opsCard {
+  border-top: 1px solid var(--border);
+}
+.appShell .notificationPage .opsCardHeading h3 {
+  font-size: 13.5px;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.appShell .notificationPage .opsMeta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.appShell .notificationPage .opsCard > .secondary {
+  justify-self: start;
+}
+.appShell .notificationMore {
+  width: 100%;
+  max-width: 900px;
+}

@@ -61,7 +61,10 @@ export function AccountSettings({
     }
   }
   return (
-    <section className="carrierDirectory" aria-label="Account settings">
+    <section
+      className="carrierDirectory accountPage"
+      aria-label="Account settings"
+    >
       <div className="directoryIntro">
         <div>
           <h2 className="srOnly">Account and security</h2>
@@ -134,35 +137,6 @@ export function AccountSettings({
                 Save profile
               </button>
             </form>
-            <article className="opsCard">
-              <div className="opsCardHeading">
-                <h3>Email address</h3>
-                <span
-                  className={
-                    "opsPill " + (account.email_verified ? "good" : "warn")
-                  }
-                >
-                  {account.email_verified ? "Verified" : "Not verified"}
-                </span>
-              </div>
-              <p className="opsMeta">
-                Password reset links and notifications go to {account.email}.
-              </p>
-              {!account.email_verified && (
-                <button
-                  className="secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    void act(async () => {
-                      await api("account/verify-email/request", {});
-                      return "Verification link sent if email delivery is configured. It expires in 24 hours.";
-                    })
-                  }
-                >
-                  Send verification email
-                </button>
-              )}
-            </article>
             <form
               className="opsCard opsForm"
               aria-label="Change password"
@@ -223,6 +197,35 @@ export function AccountSettings({
             </form>
           </div>
           <div className="opsList">
+            <article className="opsCard">
+              <div className="opsCardHeading">
+                <h3>Email address</h3>
+                <span
+                  className={
+                    "opsPill " + (account.email_verified ? "good" : "warn")
+                  }
+                >
+                  {account.email_verified ? "Verified" : "Not verified"}
+                </span>
+              </div>
+              <p className="opsMeta">
+                Password reset links and notifications go to {account.email}.
+              </p>
+              {!account.email_verified && (
+                <button
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      await api("account/verify-email/request", {});
+                      return "Verification link sent if email delivery is configured. It expires in 24 hours.";
+                    })
+                  }
+                >
+                  Send verification email
+                </button>
+              )}
+            </article>
             <article className="opsCard">
               <div className="opsCardHeading">
                 <ShieldCheckIcon size={16} aria-hidden="true" />

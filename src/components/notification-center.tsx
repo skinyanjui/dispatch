@@ -41,7 +41,8 @@ export function NotificationCenter({
     } | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [shown, setShown] = useState(20);
   const load = useCallback(async () => {
     setBusy(true);
     setError("");
@@ -89,7 +90,10 @@ export function NotificationCenter({
         : k !== "assignment" && k !== "appointment_reminder"),
   );
   return (
-    <section className="carrierDirectory" aria-label="Notifications">
+    <section
+      className="carrierDirectory notificationPage"
+      aria-label="Notifications"
+    >
       <div className="directoryIntro">
         <div>
           <h2 className="srOnly">Notifications</h2>
@@ -149,7 +153,7 @@ export function NotificationCenter({
           </p>
           {log.notifications.length ? (
             <div className="opsList">
-              {log.notifications.map((n) => (
+              {log.notifications.slice(0, shown).map((n) => (
                 <article className="opsCard" key={n.id}>
                   <div className="opsCardHeading">
                     <EnvelopeSimpleIcon size={16} aria-hidden="true" />
@@ -199,6 +203,15 @@ export function NotificationCenter({
             </div>
           ) : (
             <p className="helpText">No messages yet.</p>
+          )}
+          {log.notifications.length > shown && (
+            <button
+              type="button"
+              className="secondary notificationMore"
+              onClick={() => setShown((n) => n + 20)}
+            >
+              Show more ({log.notifications.length - shown} more)
+            </button>
           )}
         </>
       )}
