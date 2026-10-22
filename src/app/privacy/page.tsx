@@ -5,8 +5,18 @@ export const metadata: Metadata = { title: "Privacy · Relay" };
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy">
-      <h2>What Relay stores</h2>
+    <LegalPage
+      title="Privacy"
+      sections={[
+        { id: "what-relay-stores", title: "What Relay stores" },
+        { id: "cookies", title: "Cookies" },
+        { id: "who-else-sees-your-information", title: "Who else sees your information" },
+        { id: "security", title: "Security" },
+        { id: "keeping-and-deleting-information", title: "Keeping and deleting information" },
+        { id: "contact", title: "Contact" },
+      ]}
+    >
+      <h2 id="what-relay-stores">What Relay stores</h2>
       <ul>
         <li>
           <strong>Accounts:</strong> name, email, optional phone, a password
@@ -30,7 +40,7 @@ export default function Privacy() {
           you submit, which version of these pages you saw, and the decision.
         </li>
       </ul>
-      <h2>Cookies</h2>
+      <h2 id="cookies">Cookies</h2>
       <p>
         Relay sets one cookie, <code>relay_session</code>, to keep you signed
         in. It is not readable by page scripts and is only sent to Relay. It
@@ -38,7 +48,7 @@ export default function Privacy() {
         which case it lasts 30 days. Relay uses no advertising or analytics
         cookies.
       </p>
-      <h2>Who else sees your information</h2>
+      <h2 id="who-else-sees-your-information">Who else sees your information</h2>
       <ul>
         <li>
           <strong>Your own organization and its carriers</strong>, according to
@@ -69,21 +79,21 @@ export default function Privacy() {
         </li>
       </ul>
       <p>Relay does not sell personal information.</p>
-      <h2>Security</h2>
+      <h2 id="security">Security</h2>
       <p>
         Information is separated by carrier and organization on the server, not
         only in the screens. Files are malware-scanned when a scanner is
         configured. Sign-in attempts are rate-limited. Significant actions are
         written to an audit log that cannot be edited.
       </p>
-      <h2>Keeping and deleting information</h2>
+      <h2 id="keeping-and-deleting-information">Keeping and deleting information</h2>
       <p>
         Original uploaded documents are kept as versions, not overwritten.
         [Retention periods and how to request export or deletion: to be
         completed by the operator.] Until then, ask your organization
         administrator.
       </p>
-      <h2>Contact</h2>
+      <h2 id="contact">Contact</h2>
       <p>[Operator name and privacy contact: to be completed.]</p>
     </LegalPage>
   );

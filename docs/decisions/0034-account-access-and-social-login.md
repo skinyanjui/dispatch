@@ -36,3 +36,7 @@ OpenID Connect authorization code flow with PKCE (`src/lib/oidc.ts`, `node:crypt
 A customer quote on the sign-in hero: there are no customers to quote and inventing one would be a fabricated testimonial. The note "Fictional QA data. No live freight connections." stays instead.
 
 Also not done: an in-app screen for approving requests (needs a platform-administrator role, which is a tenancy decision for a later ADR); CAPTCHA and email-domain rules (honeypot and throttling only); legal review of Terms and Privacy; live testing against Google and Apple.
+
+## Terms and Privacy pages
+
+Presentation only; the legal text, version and "not reviewed by a lawyer" notice are unchanged. The pages now use the site's top bar, breadcrumb and footer (they were a separate pale page with only Terms and Privacy links), the text sits in a column of about 70 characters, and each page has an "On this page" list built from its headings, which now have stable anchors. On wide screens the list is sticky beside the text; on phones it is a wrapping row of links above it. "Back to sign in" is still at the end, and the sign-in and request-access forms still link here.

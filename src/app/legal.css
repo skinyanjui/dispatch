@@ -1,0 +1,107 @@
+/* Terms and Privacy inside the marketing frame: the text in a readable
+   column, with "On this page" beside it on wide screens and as a wrapping row
+   of links on phones. */
+.mk .legalLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4, 16px);
+  padding-block: clamp(16px, 4vh, 40px) 32px;
+}
+.legalToc p {
+  margin: 0 0 6px;
+  color: var(--mk-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.legalToc ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.legalToc a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--mk-line);
+  border-radius: 7px;
+  color: var(--mk-ink);
+  font-size: 13px;
+  text-decoration: none;
+}
+.legalToc a:hover {
+  background: var(--mk-soft);
+}
+.legalDoc {
+  min-width: 0;
+  font-size: 15.5px;
+  line-height: 1.65;
+}
+.legalDoc h1 {
+  margin: 12px 0 4px;
+  font-size: clamp(30px, 5vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.legalDoc h2 {
+  margin: 32px 0 8px;
+  font-size: 19px;
+  scroll-margin-top: 76px;
+}
+.legalDoc p,
+.legalDoc ul {
+  margin: 0 0 12px;
+}
+.legalDoc ul {
+  padding-left: 22px;
+}
+.legalDoc li {
+  margin-bottom: 6px;
+}
+.legalDoc a {
+  color: var(--accent);
+  font-weight: 600;
+}
+.legalMeta {
+  color: var(--mk-muted);
+  font-size: 13px;
+}
+.legalDraft {
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  border: 1px solid #f0e2b8;
+  border-radius: 10px;
+  background: #fff8e6;
+  color: #6b4a00;
+  font-size: 14px;
+}
+.legalBack {
+  margin-top: 28px;
+}
+@media (min-width: 960px) {
+  .mk .legalLayout {
+    grid-template-columns: 220px minmax(0, 70ch);
+    gap: 56px;
+    align-items: start;
+  }
+  .legalToc {
+    position: sticky;
+    top: 76px;
+  }
+  .legalToc ol {
+    display: grid;
+    gap: 1px;
+  }
+  .legalToc a {
+    min-height: 30px;
+    padding: 0 8px;
+    border: 0;
+    color: var(--mk-muted);
+  }
+  .legalToc a:hover {
+    color: var(--mk-ink);
+  }
+}
