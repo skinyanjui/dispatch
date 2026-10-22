@@ -48,7 +48,7 @@ export default function HowItWorks() {
         <p className="mkEyebrow">How it works</p>
         <h1>From rate confirmation to dispatch invoice</h1>
         <p className="mkLead">
-          Six steps, each with one place to do it and a record of who did.
+          Six steps, each recorded with who did it.
         </p>
       </section>
       <section className="mkSection">
@@ -72,10 +72,7 @@ export default function HowItWorks() {
           payments are records you keep.
         </p>
       </section>
-      <Cta
-        title="Walk through it yourself"
-        text="The demo has sample loads, carriers and documents you can click through."
-      />
+      <Cta title="Walk through it yourself" />
     </MarketingShell>
   );
 }

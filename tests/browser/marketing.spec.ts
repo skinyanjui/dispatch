@@ -34,7 +34,7 @@ const pages: [string, string][] = [
   ["/welcome", "Everything in motion. All in one place."],
   ["/how-it-works", "From rate confirmation to dispatch invoice"],
   ["/get-started", "From request to first load"],
-  ["/pricing", "Free while Relay is in early access"],
+  ["/pricing", "Free during early access"],
 ];
 
 test("public pages render, are accessible, fit phones and link to real destinations", async ({
@@ -85,6 +85,25 @@ test("public pages render, are accessible, fit phones and link to real destinati
   expect((await page.locator(".mkBar").boundingBox())!.y).toBeLessThan(2);
   await page.getByRole("link", { name: "Get started" }).first().click();
   await expect(page).toHaveURL(/\/get-started$/);
-  await page.getByText("Does it cost anything?").click();
-  await expect(page.getByText("nothing is billed")).toBeVisible();
+  await page.getByRole("link", { name: "Pricing" }).first().click();
+  await expect(page).toHaveURL(/\/pricing$/);
+  await page.getByText("Does AI cost extra?").click();
+  await expect(page.getByText("monthly limit")).toBeVisible();
+});
+
+test("tabs and header links share one row on a phone instead of stranding one", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("/welcome");
+  const rows = (sel: string) =>
+    page.locator(sel).evaluateAll(
+      (els) =>
+        new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size,
+    );
+  expect(await rows(".previewTabs button")).toBe(1);
+  expect(await rows(".mkHeader nav a")).toBe(1);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
 });

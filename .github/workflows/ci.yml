@@ -29,7 +29,8 @@ jobs:
       - run: echo "RELAY_DATA_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: npm run db:migrate && npm run db:migrate && npm run db:seed
       - run: npm run lint && npm run typecheck && npm test
-      - run: VERCEL_ENV=production npm run build:vercel
+      # The upload test fakes a bucket host; the CSP must allow it.
+      - run: VERCEL_ENV=production RELAY_CSP_CONNECT_EXTRA=https://bucket.example.test npm run build:vercel
       - run: npx playwright install --with-deps chromium
       - run: |
           RELAY_AI_PROVIDER=fixture npm start > /tmp/relay-server.log 2>&1 &

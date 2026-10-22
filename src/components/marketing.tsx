@@ -62,10 +62,7 @@ export function MarketingShell({
       <footer className="mkFooter">
         <div>
           <Brand />
-          <p>
-            Dispatch operations for non-asset freight teams. Early software,
-            shown with fictional sample data.
-          </p>
+          <p>Dispatch operations for non-asset freight teams.</p>
         </div>
         <nav aria-label="Footer">
           {nav.map((n) => (
@@ -82,11 +79,11 @@ export function MarketingShell({
   );
 }
 
-export function Cta({ title, text }: { title: string; text: string }) {
+export function Cta({ title, text }: { title: string; text?: string }) {
   return (
     <section className="mkCta">
       <h2>{title}</h2>
-      <p>{text}</p>
+      {text && <p>{text}</p>}
       <div className="mkRow">
         <Link className="mkButton" href="/request-access">
           Request access
