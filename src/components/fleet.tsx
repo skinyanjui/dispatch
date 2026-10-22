@@ -131,44 +131,52 @@ export function FleetPage({
       void load();
     }
   }
+  const all = data?.vehicles ?? [];
+  const inService = all.filter((v) => v.status === "active");
+  const tiles: [string, number][] = [
+    ["Vehicles in service", inService.length],
+    ["On active loads", inService.filter((v) => v.active_loads > 0).length],
+    [
+      "Drivers active",
+      (data?.drivers ?? []).filter((d) => d.status === "ready").length,
+    ],
+    [
+      "Invites pending",
+      (data?.drivers ?? []).filter((d) => d.status === "pending").length,
+    ],
+  ];
   return (
-    <section className="carrierDirectory fleetPage" aria-label="Fleet">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Fleet</h2>
-          <p>
-            Each carrier’s drivers and vehicles. Drivers are invited and removed
-            in carrier setup; vehicles are managed here.
-          </p>
-        </div>
-        <div className="directoryControls">
-          {carriers.length > 1 && (
-            <label>
-              <span className="srOnly">Carrier</span>
-              <select
-                value={carrierId}
-                onChange={(e) => {
-                  setData(null);
-                  setCarrierId(e.target.value);
-                }}
-              >
-                {carriers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <button
-            type="button"
-            className="primary"
-            disabled={offline || !data}
-            onClick={() => setForm("new")}
-          >
-            <PlusIcon size={14} weight="bold" aria-hidden="true" /> Add vehicle
-          </button>
-        </div>
+    <section className="fleetPage" aria-label="Fleet">
+      <h2 className="srOnly">Fleet</h2>
+      <div className="fleetBar">
+        {carriers.length > 1 ? (
+          <label>
+            <span className="srOnly">Carrier</span>
+            <select
+              value={carrierId}
+              onChange={(e) => {
+                setData(null);
+                setCarrierId(e.target.value);
+              }}
+            >
+              {carriers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <strong className="fleetCarrier">{data?.carrier.name}</strong>
+        )}
+        <button
+          type="button"
+          className="primary"
+          disabled={offline || !data}
+          onClick={() => setForm("new")}
+        >
+          <PlusIcon size={14} weight="bold" aria-hidden="true" /> Add vehicle
+        </button>
       </div>
       {error && (
         <div className="alert error" role="alert">
@@ -190,202 +198,216 @@ export function FleetPage({
               ? `${drivers.length} drivers and ${vehicles.length} vehicles shown`
               : "")}
       </p>
+      {loading && !data && !error && (
+        <div className="fleetSkeleton" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
       {data && (
         <>
-          <h3 className="fleetHeading">
-            Drivers <span className="orgCount">{drivers.length}</span>
-          </h3>
-          {drivers.length ? (
-            <div
-              className="tableScroll"
-              role="region"
-              aria-label="Drivers"
-              tabIndex={0}
-            >
-              <table className="reportTable fleetTable">
-                <caption className="srOnly">Drivers</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Driver</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Phone</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Active loads</th>
-                    <th scope="col">
-                      <span className="srOnly">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {drivers.map((d) => (
-                    <tr key={d.id}>
-                      <th scope="row" data-label="Driver">
-                        {d.name}
-                      </th>
-                      <td data-label="Status">
-                        <span
-                          className={
-                            "opsPill " +
-                            (d.status === "ready" ? "good" : "warn")
-                          }
-                        >
-                          {d.status === "ready" ? "Active" : "Invite pending"}
-                        </span>
-                      </td>
-                      <td data-label="Phone">{d.phone || "—"}</td>
-                      <td data-label="Email">{d.email || "—"}</td>
-                      <td data-label="Active loads">{d.active_loads}</td>
-                      <td data-label="Actions">
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={() => onManageDrivers(carrierId)}
-                        >
-                          Manage<span className="srOnly"> {d.name}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="directoryEmpty">
-              <h2>{needle ? "No drivers match" : "No drivers yet"}</h2>
-              <p className="helpText">
-                {needle
-                  ? "Try another name."
-                  : "Invite drivers in carrier setup so loads can be assigned."}
-              </p>
-              {!needle && (
-                <button
-                  className="secondary"
-                  onClick={() => onManageDrivers(carrierId)}
-                >
-                  Open carrier setup
-                </button>
-              )}
-            </div>
-          )}
-          <div className="fleetHeadingRow">
-            <h3 className="fleetHeading">
-              Vehicles <span className="orgCount">{vehicles.length}</span>
-            </h3>
-            {retiredCount > 0 && (
-              <label className="filterCheck">
-                <input
-                  type="checkbox"
-                  checked={showRetired}
-                  onChange={(e) => setShowRetired(e.target.checked)}
-                />
-                <span>Show retired ({retiredCount})</span>
-              </label>
-            )}
+          <div className="fleetTiles" role="group" aria-label="Fleet summary">
+            {tiles.map(([label, n]) => (
+              <div key={label} className="fleetTile">
+                <strong>{n}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
           </div>
-          {vehicles.length ? (
-            <div
-              className="tableScroll"
-              role="region"
-              aria-label="Vehicles"
-              tabIndex={0}
-            >
-              <table className="reportTable fleetTable">
-                <caption className="srOnly">Vehicles</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Unit</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Plate</th>
-                    <th scope="col">VIN</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Active loads</th>
-                    <th scope="col">
-                      <span className="srOnly">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vehicles.map((v) => (
-                    <tr
-                      key={v.id}
-                      className={v.status === "retired" ? "retired" : undefined}
-                    >
-                      <th scope="row" data-label="Unit">
-                        {v.label}
-                      </th>
-                      <td data-label="Type">
-                        {vehicleKindLabels[v.kind] ?? v.kind}
-                      </td>
-                      <td data-label="Plate">{v.plate || "—"}</td>
-                      <td data-label="VIN">
-                        {v.vin ? <code>{v.vin}</code> : "—"}
-                      </td>
-                      <td data-label="Status">
-                        <span
-                          className={
-                            "opsPill " + (v.status === "active" ? "good" : "")
-                          }
-                        >
-                          {v.status === "active" ? "In service" : "Retired"}
-                        </span>
-                      </td>
-                      <td data-label="Active loads">{v.active_loads}</td>
-                      <td data-label="Actions">
-                        <div className="fleetActions">
-                          <button
-                            type="button"
-                            className="secondary"
-                            disabled={offline}
-                            onClick={() => setForm(v)}
-                          >
-                            Edit<span className="srOnly"> {v.label}</span>
-                          </button>
-                          {v.status === "active" ? (
-                            <button
-                              type="button"
-                              className="secondary"
-                              disabled={offline}
-                              onClick={() => setRetiring(v)}
-                            >
-                              Retire<span className="srOnly"> {v.label}</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="secondary"
-                              disabled={offline}
-                              onClick={() => void setStatus(v, "active")}
-                            >
-                              Reactivate
-                              <span className="srOnly"> {v.label}</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="directoryEmpty">
-              <h2>{needle ? "No vehicles match" : "No vehicles yet"}</h2>
-              <p className="helpText">
-                {needle
-                  ? "Try another unit, plate or VIN."
-                  : "Add the tractors, trucks, vans and trailers this carrier runs, then choose one when you assign a driver."}
-              </p>
-              {needle ? (
-                <button className="secondary" onClick={onClearQuery}>
-                  Clear search
-                </button>
-              ) : (
-                <button className="primary" onClick={() => setForm("new")}>
-                  Add vehicle
-                </button>
+          <section className="fleetPanel" aria-labelledby="fleet-vehicles">
+            <header>
+              <h3 id="fleet-vehicles">
+                Vehicles <span className="orgCount">{vehicles.length}</span>
+              </h3>
+              {retiredCount > 0 && (
+                <label className="filterCheck">
+                  <input
+                    type="checkbox"
+                    checked={showRetired}
+                    onChange={(e) => setShowRetired(e.target.checked)}
+                  />
+                  <span>Show retired ({retiredCount})</span>
+                </label>
               )}
-            </div>
-          )}
+            </header>
+            {vehicles.length ? (
+              <div
+                className="tableScroll"
+                role="region"
+                aria-label="Vehicles"
+                tabIndex={0}
+              >
+                <table className="reportTable fleetTable">
+                  <caption className="srOnly">Vehicles</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Unit</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Plate</th>
+                      <th scope="col">VIN</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Active loads</th>
+                      <th scope="col">
+                        <span className="srOnly">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vehicles.map((v) => (
+                      <tr
+                        key={v.id}
+                        className={
+                          v.status === "retired" ? "retired" : undefined
+                        }
+                      >
+                        <th scope="row" data-label="Unit">
+                          {v.label}
+                        </th>
+                        <td data-label="Type">
+                          {vehicleKindLabels[v.kind] ?? v.kind}
+                        </td>
+                        <td data-label="Plate">{v.plate || "—"}</td>
+                        <td data-label="VIN">
+                          {v.vin ? <code>{v.vin}</code> : "—"}
+                        </td>
+                        <td data-label="Status">
+                          <span
+                            className={
+                              "opsPill " + (v.status === "active" ? "good" : "")
+                            }
+                          >
+                            {v.status === "active" ? "In service" : "Retired"}
+                          </span>
+                        </td>
+                        <td data-label="Active loads">{v.active_loads}</td>
+                        <td data-label="Actions">
+                          <div className="fleetActions">
+                            <button
+                              type="button"
+                              className="secondary"
+                              disabled={offline}
+                              onClick={() => setForm(v)}
+                            >
+                              Edit<span className="srOnly"> {v.label}</span>
+                            </button>
+                            {v.status === "active" ? (
+                              <button
+                                type="button"
+                                className="secondary"
+                                disabled={offline}
+                                onClick={() => setRetiring(v)}
+                              >
+                                Retire
+                                <span className="srOnly"> {v.label}</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="secondary"
+                                disabled={offline}
+                                onClick={() => void setStatus(v, "active")}
+                              >
+                                Reactivate
+                                <span className="srOnly"> {v.label}</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="fleetEmpty">
+                <h4>{needle ? "No vehicles match" : "No vehicles yet"}</h4>
+                <p>
+                  {needle
+                    ? "Try another unit, plate or VIN."
+                    : "Add the tractors, trucks, vans and trailers this carrier runs, then choose one when you assign a driver."}
+                </p>
+                {needle ? (
+                  <button className="secondary" onClick={onClearQuery}>
+                    Clear search
+                  </button>
+                ) : (
+                  <button className="primary" onClick={() => setForm("new")}>
+                    Add vehicle
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+          <section className="fleetPanel" aria-labelledby="fleet-drivers">
+            <header>
+              <h3 id="fleet-drivers">
+                Drivers <span className="orgCount">{drivers.length}</span>
+              </h3>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => onManageDrivers(carrierId)}
+              >
+                Invite or remove drivers
+              </button>
+            </header>
+            {drivers.length ? (
+              <div
+                className="tableScroll"
+                role="region"
+                aria-label="Drivers"
+                tabIndex={0}
+              >
+                <table className="reportTable fleetTable">
+                  <caption className="srOnly">Drivers</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Driver</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Phone</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Active loads</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drivers.map((d) => (
+                      <tr key={d.id}>
+                        <th scope="row" data-label="Driver">
+                          {d.name}
+                        </th>
+                        <td data-label="Status">
+                          <span
+                            className={
+                              "opsPill " +
+                              (d.status === "ready" ? "good" : "warn")
+                            }
+                          >
+                            {d.status === "ready"
+                              ? "Active"
+                              : "Invite pending"}
+                          </span>
+                        </td>
+                        <td data-label="Phone">{d.phone || "—"}</td>
+                        <td data-label="Email">{d.email || "—"}</td>
+                        <td data-label="Active loads">{d.active_loads}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="fleetEmpty">
+                <h4>{needle ? "No drivers match" : "No drivers yet"}</h4>
+                <p>
+                  {needle
+                    ? "Try another name."
+                    : "Invite drivers in carrier setup so loads can be assigned."}
+                </p>
+              </div>
+            )}
+          </section>
         </>
       )}
       {form && (

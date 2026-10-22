@@ -1,0 +1,194 @@
+/* Fleet page: a toolbar, four summary tiles that share one row, and two
+   panels (vehicles, drivers). Tables turn into cards on phones.
+   Controls use the shared 32px scale (ADR 0044). */
+.appShell .fleetPage {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  max-width: 1100px;
+}
+.appShell .fleetBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.appShell .fleetBar label {
+  margin: 0;
+}
+.appShell .fleetCarrier {
+  font-size: 15px;
+  font-weight: 600;
+}
+.appShell .fleetTiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.appShell .fleetTile {
+  display: grid;
+  flex: 1 1 140px;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.appShell .fleetTile strong {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .fleetTile span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.appShell .fleetPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+.appShell .fleetPanel > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.appShell .fleetPanel h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.appShell .fleetPanel .tableScroll {
+  border: 0;
+  border-radius: 0;
+}
+.appShell .fleetTable {
+  width: 100%;
+  margin: 0;
+}
+.appShell .fleetTable th,
+.appShell .fleetTable td {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.appShell .fleetTable td:nth-child(n + 3) {
+  color: var(--muted);
+}
+.appShell .fleetTable td[data-label="Actions"] {
+  text-align: right;
+}
+.appShell .fleetActions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+.appShell .fleetEmpty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6, 32px) var(--space-3);
+  text-align: center;
+}
+.appShell .fleetEmpty h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.appShell .fleetEmpty p {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--muted);
+}
+.appShell .fleetSkeleton {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.appShell .fleetSkeleton span {
+  flex: 1 1 140px;
+  height: 66px;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, #f1f3f8, #f8f9fc, #f1f3f8);
+  background-size: 200% 100%;
+  animation: fleetPulse 1.4s ease-in-out infinite;
+}
+@keyframes fleetPulse {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .appShell .fleetSkeleton span {
+    animation: none;
+  }
+}
+/* Phones: each row becomes a card. */
+@media (max-width: 720px) {
+  .appShell .fleetTable,
+  .appShell .fleetTable tbody,
+  .appShell .fleetTable tr,
+  .appShell .fleetTable th,
+  .appShell .fleetTable td {
+    display: block;
+    white-space: normal;
+  }
+  .appShell .fleetTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .appShell .fleetTable tr {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+  .appShell .fleetTable tr:last-child {
+    border-bottom: 0;
+  }
+  .appShell .fleetTable tbody th[scope="row"] {
+    padding: 0 0 var(--space-2);
+    border: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .appShell .fleetTable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 3px 0;
+    border: 0;
+    text-align: right;
+  }
+  .appShell .fleetTable td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    text-align: left;
+  }
+  .appShell .fleetTable td[data-label="Actions"]::before {
+    content: none;
+  }
+  .appShell .fleetTable td[data-label="Actions"] {
+    justify-content: flex-start;
+    padding-top: var(--space-2);
+  }
+  .appShell .fleetTable td[data-label="VIN"] code {
+    overflow-wrap: anywhere;
+  }
+  .appShell .fleetActions {
+    width: 100%;
+  }
+  .appShell .fleetActions button {
+    flex: 1 1 0;
+    min-height: 40px;
+  }
+}

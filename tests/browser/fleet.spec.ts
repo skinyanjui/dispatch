@@ -232,3 +232,30 @@ test("the fleet page has no accessibility violations and fits a phone", async ({
     ),
   ).toBe(true);
 });
+
+test("fleet: summary tiles, and on a phone rows become cards without overflow", async ({
+  page,
+}) => {
+  await login(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/fleet");
+  const tiles = page.getByRole("group", { name: "Fleet summary" });
+  await expect(tiles).toContainText("Vehicles in service");
+  await expect(tiles).toContainText("Drivers active");
+  await expect(
+    page.getByRole("table", { name: "Drivers" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  // Table headers are hidden on phones, but each cell keeps its label.
+  const cell = page
+    .getByRole("table", { name: "Drivers" })
+    .locator('td[data-label="Status"]')
+    .first();
+  expect(
+    await cell.evaluate((el) => getComputedStyle(el, "::before").content),
+  ).toContain("Status");
+});

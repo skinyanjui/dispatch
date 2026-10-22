@@ -468,34 +468,6 @@
   font-weight: 400;
 }
 
-/* ---- Fleet ---- */
-.appShell .fleetHeading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 var(--space-2);
-  font-size: 13px;
-}
-.appShell .fleetHeadingRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-.appShell .fleetActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.appShell .fleetTable tr.retired td,
-.appShell .fleetTable tr.retired th {
-  color: var(--muted);
-}
-.appShell .fleetTable code {
-  font-size: 12px;
-}
-
 /* Visually hidden text inside a scrolling table must be clipped with it, or
    its off-screen position widens the whole page. */
 .appShell .tableScroll {
@@ -503,8 +475,9 @@
 }
 .appShell .fleetTable tbody th {
   color: var(--ink);
-  font-weight: 400;
+  font-weight: 500;
 }
+.appShell .fleetTable tr.retired td,
 .appShell .fleetTable tr.retired th {
   color: var(--muted);
 }

@@ -17,3 +17,7 @@ A **Fleet** page (`/fleet`, in the sidebar for dispatchers and carrier managers;
 Vehicles are never deleted, only retired, so past loads keep their equipment. Not done: assigning a vehicle to a driver as their usual one, vehicle documents (registration, inspection), equipment type constraints on loads, and a separate way to add drivers from this page.
 
 Found while building: absolutely positioned screen-reader text inside a scrolling table widened the whole page on phones; scrolling tables are now positioned so it is clipped with them.
+
+## Page redesign
+
+The page was rebuilt without changing the API, schema or permissions: a toolbar (carrier, Add vehicle), four summary tiles that share one row (vehicles in service, on active loads, drivers active, invites pending), a vehicles panel and a drivers panel, each with a count. Vehicles come first because they are what the page edits. The per-row "Manage" buttons became one "Invite or remove drivers" button, since drivers are still managed in carrier setup. On phones each table row becomes a card with its labels. Accessible names (tables "Vehicles" and "Drivers", the "Show retired" checkbox, row buttons) are unchanged.

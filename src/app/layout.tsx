@@ -11,6 +11,7 @@ import "./login.css";
 import "./marketing.css";
 import "./workspace-look.css";
 import "./assistant.css";
+import "./fleet.css";
 import "./controls.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
