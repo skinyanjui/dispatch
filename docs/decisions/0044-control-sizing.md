@@ -37,7 +37,3 @@ Presentation only. The four filter tiles share a row and grow to fill it, left-a
 ## Unused CSS removed
 
 191 selectors that matched nothing were removed (about 710 lines across ten stylesheets): the old load-card layout, the old contact rows, the original top bar and filter panel, the driver card styles, the marketing step list that list items replaced, and similar. A selector was removed only if it names a class that appears nowhere in the app, tests or the static demo, and classes built from a prefix at runtime (`level-`, `sev-`) were kept. Rules that also named a class still in use lost only the dead selector. Method for next time: list every class in the stylesheets, drop those found in `src`, `tests` and `public`, and compare computed styles of every element on every main page at desktop and phone widths before and after. For this change 19,206 elements on 21 pages at two widths differed only by sub-pixel text widths (clock text, audit timestamps).
-
-## Addendum: account tabs
-
-The account page is split into Profile (name, phone, email) and Security (password, two-step verification) tabs, using the same tab pattern as Organization.

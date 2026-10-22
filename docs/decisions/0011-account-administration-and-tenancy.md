@@ -47,4 +47,6 @@ Presentation only; no API, schema or permission change. The Account page is two 
 
 ## Organization tabs and link pages
 
+The account page uses the same tab pattern: Profile (name, phone, email) and Security (password, two-step verification), with arrow, Home and End keys. No API or permission change.
+
 Presentation only; no API, schema or permission change. In the Organization People list the person's name, email and role line now share one type scale (the role line was larger than the name). The AI tab's monthly limit is a short field instead of a full-width one. The reset-password, verify-email and invitation-result pages get a heading that fits the card (26px) with room around the small label, the fields and the button; these styles are scoped to a `linkPage` class used only by the reset and verify pages, because the request-access and invitation pages share `joinPage` and have their own form styling (an unscoped rule once made the request-access terms text bold and failed the accessibility scan).

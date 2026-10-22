@@ -130,3 +130,27 @@ test("link pages: the heading fits the card and the form has room", async ({
     expect(await noOverflow(page)).toBe(true);
   }
 });
+
+test("the footer sits at the bottom of the window on short pages", async ({
+  page,
+}) => {
+  await login(page);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of ["/account", "/organization", "/inbox", "/assistant"]) {
+      await page.goto(path);
+      const footer = page.locator(".appShell .workspace > footer");
+      await expect(footer).toBeVisible();
+      const gap = await page.evaluate(() => {
+        const f = document.querySelector(".appShell .workspace > footer")!;
+        const main = f.parentElement!.getBoundingClientRect();
+        return {
+          below: main.bottom - f.getBoundingClientRect().bottom,
+          fills: main.bottom >= innerHeight - 12, // the grey frame is 9px
+        };
+      });
+      expect(gap.fills, path).toBe(true);
+      expect(gap.below, path).toBeLessThanOrEqual(24);
+    }
+  }
+});

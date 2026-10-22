@@ -94,6 +94,12 @@
 .appShell footer {
   font-size: 9px;
 }
+/* The footer sits at the bottom of the window on short pages and after the
+   content on long ones. */
+.appShell .workspace > footer {
+  margin-top: auto;
+  padding-top: 18px;
+}
 .appShell footer a {
   margin-left: 10px;
 }
