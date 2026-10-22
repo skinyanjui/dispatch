@@ -35,3 +35,7 @@ Revert the application while keeping migration 007 (additive). Never delete rece
 ## Billing page polish
 
 Styling only; no API, schema or permission change. The intro keeps one sentence ("Nothing here sends an invoice or moves money"), since each tab already describes its own table. The four summary tiles fill the row, the due date and its aging note read as two clean lines, and on phones each invoice or freight bill is a compact card: number first, then Status, Due, Total, Paid and Balance in two columns. Status filters wrap when a row is full and grow to fill it. An earlier phone rule for the Loads "needs attention" chips had leaked onto every chip row; it is now scoped to that strip.
+
+## Addendum: no zero-fee invoices
+
+A dispatch invoice needs a fee of at least 0.01% (1 bp) and a total above $0.00. A fee that rounds to nothing is refused with `FEE_TOO_SMALL`, because a zero total would read as paid the moment it is issued.

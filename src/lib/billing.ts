@@ -212,7 +212,7 @@ export const invoiceSchema = z
   .object({
     carrier_id: z.uuid(),
     load_ids: z.array(z.uuid()).min(1).max(100),
-    fee_bps: z.number().int().min(0).max(10000),
+    fee_bps: z.number().int().min(1).max(10000),
     due_on: z.iso.date(),
     idempotency_key: key,
   })
@@ -259,6 +259,8 @@ export async function createInvoice(user: string, input: unknown) {
       fee_minor: feeMinor(l.amount_minor, data.fee_bps),
     }));
     const total = sum(lines.map((l) => l.fee_minor));
+    // A fee that rounds to nothing would read as already paid once issued.
+    if (total === 0n) throw new HttpError(422, "FEE_TOO_SMALL");
     const id = randomUUID();
     await c.query(
       "INSERT INTO dispatch_invoices(id,carrier_id,fee_bps,total_minor,due_on,created_by,idempotency_key,request_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",

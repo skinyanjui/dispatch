@@ -39,6 +39,7 @@ export function percentToBps(value: string): number {
   const match = /^(\d{1,3})(?:\.(\d{1,2}))?$/.exec(value.trim());
   if (!match) throw new Error("Enter a percentage with at most two decimals.");
   const bps = Number(match[1]) * 100 + Number((match[2] || "").padEnd(2, "0"));
+  if (bps < 1) throw new Error("Enter a fee above 0%.");
   if (bps > 10000) throw new Error("The fee cannot exceed 100%.");
   return bps;
 }

@@ -88,6 +88,8 @@ const messages: Record<string, string> = {
   DISPATCHER_REQUIRED: "Only dispatchers can manage Relay invoices.",
   LOAD_ALREADY_INVOICED:
     "One of those loads is already on an active dispatch invoice.",
+  FEE_TOO_SMALL:
+    "That fee comes to $0.00 on the selected loads. Use a higher percentage.",
   INVOICE_VOID: "This invoice has been voided.",
   INVOICE_HAS_PAYMENTS:
     "This invoice already has payments recorded, so it can't be voided.",

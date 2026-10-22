@@ -65,6 +65,8 @@ test("fee math uses integer basis points with half-up rounding", () => {
   assert.equal(percentToBps("12.25"), 1225);
   assert.throws(() => percentToBps("8.125"));
   assert.throws(() => percentToBps("100.01"));
+  assert.throws(() => percentToBps("0"), /above 0%/);
+  assert.throws(() => percentToBps("0.00"), /above 0%/);
   assert.equal(formatBps(850), "8.5%");
   assert.equal(formatBps(1225), "12.25%");
   assert.equal(feeMinor(250000, 800), "20000");
@@ -314,4 +316,29 @@ test("billing is carrier-isolated and hidden from drivers, including over HTTP",
     }),
   );
   assert.equal(floaty.status, 400);
+});
+
+test("a zero fee, or one that rounds to $0.00, cannot become an invoice", async () => {
+  const load = await delivered();
+  const input = (fee_bps: number) => ({
+    carrier_id: t.carrier,
+    load_ids: [load.id],
+    fee_bps,
+    due_on: "2026-11-30",
+    idempotency_key: randomUUID(),
+  });
+  await assert.rejects(createInvoice(t.dispatcher, input(0)));
+  await pool.query("UPDATE loads SET amount_minor=49 WHERE id=$1", [load.id]);
+  await assert.rejects(createInvoice(t.dispatcher, input(1)), {
+    code: "FEE_TOO_SMALL",
+  }); // 49 cents × 0.01% rounds to 0
+  const none = await pool.query(
+    "SELECT 1 FROM dispatch_invoice_lines WHERE load_id=$1",
+    [load.id],
+  );
+  assert.equal(none.rowCount, 0);
+  await pool.query("UPDATE loads SET amount_minor=250000 WHERE id=$1", [
+    load.id,
+  ]);
+  await createInvoice(t.dispatcher, input(1)); // $2,500 × 0.01% = $0.25
 });
