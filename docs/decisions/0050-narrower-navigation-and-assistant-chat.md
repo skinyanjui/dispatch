@@ -11,3 +11,9 @@ Status: accepted
 ## Consequences
 
 CSS and one component. Rollback is reverting the commit. Browser tests that clicked an example prompt by name now scope to the conversation log, because a past conversation in the history list can carry the same title.
+
+## Addendum: page views nested in the sidebar
+
+A page's own views now sit under it in the main sidebar while that page is open, in the way Vercel nests a page's sections: the Inbox folders (All, Unread, Relay, Email, Texts, Calls, Archived, Trash, with their counts) and, on Loads, the carrier list. Each group has a "Folder list" or "Carrier list" toggle that announces whether it is expanded. The workspace owns the open Inbox folder, so the sidebar and the page always agree.
+
+On a desktop with the sidebar expanded the Inbox rail is not shown, which gives the conversation list and thread about 124px back; "New message" moved to the top of the list. Where the sidebar cannot show the folders (collapsed to icons, or below 1001px where it becomes a sheet) the rail, or the chip row on phones, is still on the page. Status pills on Loads and the tabs on Billing, Documents, Organization and Account stay on their pages: they are filters or two-to-four views, and settings stay behind the account menu. Presentation only; no API or permission change.

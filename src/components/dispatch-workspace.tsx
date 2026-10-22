@@ -70,7 +70,7 @@ import {
   type FilledDraft,
 } from "@/components/rate-confirmation-fill";
 import { uploadDocumentFile } from "@/lib/upload-client";
-import { Inbox, type Compose } from "@/components/inbox";
+import { Inbox, type Compose, type InboxCounts } from "@/components/inbox";
 import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
 import { OrganizationSettings } from "@/components/organization-settings";
@@ -167,6 +167,8 @@ export default function Workspace({
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
     [exceptionRevision, setExceptionRevision] = useState(0),
     [unread, setUnread] = useState(0),
+    [inboxFolder, setInboxFolder] = useState("all"),
+    [inboxCounts, setInboxCounts] = useState<InboxCounts | null>(null),
     [showPassword, setShowPassword] = useState(false),
     [compose, setCompose] = useState<Compose | null>(null),
     [mfaChallenge, setMfaChallenge] = useState<string | null>(() => {
@@ -1068,6 +1070,14 @@ export default function Workspace({
         filterChange({ q: text, carrier: "", status: "" });
       }}
       onLogout={logout}
+      inbox={{
+        folder: inboxFolder,
+        counts: inboxCounts,
+        onFolder: (f) => {
+          setInboxFolder(f);
+          setSection("inbox");
+        },
+      }}
     >
       <header className="topbar compact">
         {section === "loads" ? (
@@ -1389,6 +1399,9 @@ export default function Workspace({
             onComposeDone={() => setCompose(null)}
             onAuthError={handleError}
             onUnreadChanged={refreshUnread}
+            folder={inboxFolder}
+            onFolder={setInboxFolder}
+            onCounts={setInboxCounts}
           />
         ) : section === "account" ? (
           <AccountSettings onAuthError={handleError} />

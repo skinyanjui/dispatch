@@ -58,3 +58,43 @@
     mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
   }
 }
+
+/* The list opens with the folder's name and New message. Where the expanded
+   sidebar lists the folders (desktop), the rail is not repeated. */
+.appShell .inboxListHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+}
+/* Named only where no rail or chip row already shows the open folder. */
+.appShell .inboxListHead .inboxFolderName {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.appShell .inboxListHead .primary {
+  margin-left: auto;
+}
+@media (min-width: 1001px) {
+  .appShell:not(.sidebarCollapsed) .inboxRail {
+    display: none;
+  }
+  .appShell:not(.sidebarCollapsed) .inboxListHead .inboxFolderName {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .appShell:not(.sidebarCollapsed) .inboxLayout.hasRail {
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  }
+}

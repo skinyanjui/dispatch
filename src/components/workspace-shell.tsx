@@ -32,8 +32,10 @@ import {
   ChartBarIcon,
   ClipboardTextIcon,
   SteeringWheelIcon,
+  CaretDownIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
+import { folderCount, inboxFolders, type InboxCounts } from "./inbox";
 import { stageLabels, type Context } from "@/lib/contracts";
 import { sectionAllowed, type WorkspaceSection } from "@/lib/routes";
 export type { WorkspaceSection };
@@ -149,6 +151,7 @@ export function WorkspaceShell({
   onCreate,
   onLogout,
   onSearchLoads,
+  inbox,
 }: {
   children: React.ReactNode;
   context: Context;
@@ -173,11 +176,18 @@ export function WorkspaceShell({
   onLogout: () => void;
   /** Jump to Loads with this search text. */
   onSearchLoads?: (text: string) => void;
+  /** The Inbox's folders, listed under Inbox while it is open. */
+  inbox?: {
+    folder: string;
+    counts: InboxCounts | null;
+    onFolder: (folder: string) => void;
+  };
 }) {
   const [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
     [menuOpen, setMenuOpen] = useState(false),
     [allCarriers, setAllCarriers] = useState(false),
+    [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({}),
     [palette, setPalette] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -332,6 +342,89 @@ export function WorkspaceShell({
     setMenuOpen(false);
   };
 
+  /** A page's own views, nested under it in the sidebar while it is open. */
+  const subItems = (
+    key: WorkspaceSection,
+  ): { name: string; node: ReactNode } | null => {
+    if (key === "loads" && !driverOnly && context.carriers.length > 1)
+      return {
+        name: "Carrier list",
+        node: (
+          <nav aria-label="Carrier scope">
+            <button
+              className={"sidebarSub" + (!carrier ? " active" : "")}
+              aria-pressed={!carrier}
+              disabled={busy}
+              onClick={() => go(() => onCarrier(""))}
+            >
+              All authorized carriers
+            </button>
+            {(allCarriers
+              ? context.carriers
+              : context.carriers.slice(0, 6)
+            ).map((c) => (
+              <button
+                className={"sidebarSub" + (carrier === c.id ? " active" : "")}
+                key={c.id}
+                aria-pressed={carrier === c.id}
+                disabled={busy}
+                title={c.name}
+                onClick={() => go(() => onCarrier(c.id))}
+              >
+                {c.name}
+              </button>
+            ))}
+            {context.carriers.length > 6 && (
+              <button
+                className="sidebarSub sidebarMore"
+                aria-expanded={allCarriers}
+                onClick={() => setAllCarriers(!allCarriers)}
+              >
+                {allCarriers
+                  ? "Show fewer"
+                  : `Show all ${context.carriers.length}`}
+              </button>
+            )}
+          </nav>
+        ),
+      };
+    if (key === "inbox" && inbox)
+      return {
+        name: "Folder list",
+        node: (
+          <div role="group" aria-label="Inbox folders">
+            {Object.keys(inboxFolders).map((f) => {
+              const count = folderCount(f, inbox.counts);
+              const isBox = f === "archived" || f === "trash";
+              return (
+                <button
+                  key={f}
+                  className={
+                    "sidebarSub" +
+                    (inbox.folder === f ? " active" : "") +
+                    (f === "archived" ? " firstBox" : "")
+                  }
+                  aria-pressed={inbox.folder === f}
+                  disabled={busy}
+                  onClick={() => go(() => inbox.onFolder(f))}
+                >
+                  <span>{inboxFolders[f]}</span>
+                  {count > 0 && (
+                    <span
+                      className={"subCount" + (isBox ? " quiet" : "")}
+                      aria-label={`${count} ${isBox ? "conversations" : "unread"}`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ),
+      };
+    return null;
+  };
   const sidebar = (sheet: boolean) => {
     const compact = collapsed && !sheet;
     return (
@@ -403,73 +496,66 @@ export function WorkspaceShell({
         <nav className="sidebarPages" aria-label="Workspace navigation">
           {pages
             .filter((p) => p.show)
-            .map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                className={"sidebarItem" + (section === key ? " active" : "")}
-                disabled={busy}
-                title={label}
-                aria-current={section === key ? "page" : undefined}
-                onClick={() =>
-                  go(() => (key === "loads" ? onQueue(status) : onSection(key)))
-                }
-              >
-                <Icon {...icon} weight={section === key ? "fill" : "regular"} />
-                <span className="navLabel">{label}</span>
-                {key === "inbox" && unread > 0 && (
-                  <span className="navBadge">
-                    {unread > 99 ? "99+" : unread}
-                    <span className="srOnly"> unread</span>
-                  </span>
-                )}
-              </button>
-            ))}
+            .map(({ key, label, Icon }) => {
+              const children =
+                compact || section !== key ? null : subItems(key);
+              const open = Boolean(children) && !closedGroups[key];
+              return (
+                <div key={key} className="sidebarGroup">
+                  <div className="sidebarRow">
+                    <button
+                      className={
+                        "sidebarItem" + (section === key ? " active" : "")
+                      }
+                      disabled={busy}
+                      title={label}
+                      aria-current={section === key ? "page" : undefined}
+                      onClick={() =>
+                        go(() =>
+                          key === "loads" ? onQueue(status) : onSection(key),
+                        )
+                      }
+                    >
+                      <Icon
+                        {...icon}
+                        weight={section === key ? "fill" : "regular"}
+                      />
+                      <span className="navLabel">{label}</span>
+                      {key === "inbox" && unread > 0 && (
+                        <span className="navBadge">
+                          {unread > 99 ? "99+" : unread}
+                          <span className="srOnly"> unread</span>
+                        </span>
+                      )}
+                    </button>
+                    {children && (
+                      <button
+                        type="button"
+                        className={"sidebarToggle" + (open ? " open" : "")}
+                        aria-expanded={open}
+                        aria-controls={"sidebar-sub-" + key}
+                        aria-label={children.name}
+                        title={
+                          (open ? "Hide " : "Show ") +
+                          children.name.toLowerCase()
+                        }
+                        onClick={() =>
+                          setClosedGroups((g) => ({ ...g, [key]: open }))
+                        }
+                      >
+                        <CaretDownIcon size={12} aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                  {open && (
+                    <div id={"sidebar-sub-" + key} className="sidebarChildren">
+                      {children!.node}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </nav>
-        {!compact && section === "loads" && (
-          <div className="sidebarContext">
-            {!driverOnly && context.carriers.length > 1 && (
-              <nav aria-label="Carrier scope">
-                <p className="sidebarLabel">Carriers</p>
-                <button
-                  className={"sidebarSub" + (!carrier ? " active" : "")}
-                  aria-pressed={!carrier}
-                  disabled={busy}
-                  onClick={() => go(() => onCarrier(""))}
-                >
-                  All authorized carriers
-                </button>
-                {(allCarriers
-                  ? context.carriers
-                  : context.carriers.slice(0, 6)
-                ).map((c) => (
-                  <button
-                    className={
-                      "sidebarSub" + (carrier === c.id ? " active" : "")
-                    }
-                    key={c.id}
-                    aria-pressed={carrier === c.id}
-                    disabled={busy}
-                    title={c.name}
-                    onClick={() => go(() => onCarrier(c.id))}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-                {context.carriers.length > 6 && (
-                  <button
-                    className="sidebarSub sidebarMore"
-                    aria-expanded={allCarriers}
-                    onClick={() => setAllCarriers(!allCarriers)}
-                  >
-                    {allCarriers
-                      ? "Show fewer"
-                      : `Show all ${context.carriers.length}`}
-                  </button>
-                )}
-              </nav>
-            )}
-          </div>
-        )}
         <div className="sidebarSpacer" />
         <div className="accountArea" ref={sheet ? undefined : menuRef}>
           {menuOpen && !sheet && (

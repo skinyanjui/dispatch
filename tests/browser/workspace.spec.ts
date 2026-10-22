@@ -346,7 +346,7 @@ test("inbox: tabs filter like an email client and phones get a back button", asy
     .click();
   await expect(page.locator(".threadItem").first()).toBeVisible();
   await page.locator(".threadItem").first().click();
-  const tabs = page.getByRole("group", { name: "Filter conversations" });
+  const tabs = page.getByRole("group", { name: "Inbox folders" });
   await expect(
     tabs.getByRole("button", { name: "All", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -635,22 +635,16 @@ test("organization: tabs, a filterable people list and search", async ({
   ).toBeVisible();
 });
 
-test("inbox: filters are stacked in a side rail, and the newest click wins", async ({
+test("inbox: folders sit under Inbox in the sidebar; collapsed, they return as a rail", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: /^Inbox/ }).click();
-  const list = page.locator(".inboxRail");
-  const tabs = list.getByRole("group", { name: "Filter conversations" });
-  await expect(tabs).toBeVisible();
-  // New message heads the rail, with the filters stacked under it.
-  const create = list.getByRole("button", { name: "New message" });
-  const first = await create.boundingBox();
-  const stacked = await tabs
-    .getByRole("button", { name: "All", exact: true })
-    .boundingBox();
-  expect(stacked!.y).toBeGreaterThan(first!.y + first!.height - 1);
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  const folders = nav.getByRole("group", { name: "Inbox folders" });
+  await expect(folders).toBeVisible();
   for (const name of [
     "All",
     "Unread",
@@ -661,10 +655,41 @@ test("inbox: filters are stacked in a side rail, and the newest click wins", asy
     "Archived",
     "Trash",
   ])
-    await expect(tabs.getByRole("button", { name, exact: true })).toBeVisible();
-  const [t, l] = await Promise.all([tabs.boundingBox(), list.boundingBox()]);
-  expect(t!.x).toBeGreaterThanOrEqual(l!.x - 1);
-  expect(t!.x + t!.width).toBeLessThanOrEqual(l!.x + l!.width + 1);
+    await expect(
+      folders.getByRole("button", { name, exact: true }),
+    ).toBeVisible();
+  // Not repeated on the page while the sidebar lists them.
+  await expect(page.locator(".inboxRail")).toBeHidden();
+  const toggle = nav.getByRole("button", { name: "Folder list" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await folders.getByRole("button", { name: "Texts", exact: true }).click();
+  await expect(
+    folders.getByRole("button", { name: "Texts", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("heading", { name: "Texts", exact: true }),
+  ).toBeVisible();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(folders).toHaveCount(0);
+  await toggle.click();
+  // Other pages show no folders.
+  await page.getByRole("button", { name: "Contacts", exact: true }).click();
+  await expect(nav.getByRole("group", { name: "Inbox folders" })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: /^Inbox/ }).click();
+  // Collapsed to icons, the folders come back as a rail on the page and the
+  // chosen folder is kept.
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  const rail = page.getByRole("group", { name: "Filter conversations" });
+  await expect(rail).toBeVisible();
+  await expect(
+    rail.getByRole("button", { name: "Texts", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await rail.getByRole("button", { name: "All", exact: true }).click();
+  await page.getByRole("button", { name: "Expand sidebar" }).click();
+  await expect(page.locator(".inboxRail")).toBeHidden();
   // The back button is for phones only.
   await expect(
     page.getByRole("button", { name: "All conversations" }),
@@ -733,7 +758,7 @@ test("inbox: mark unread, archive, trash and restore, with counts and undo", asy
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: /^Inbox/ }).click();
-  const rail = page.getByRole("group", { name: "Filter conversations" });
+  const rail = page.getByRole("group", { name: "Inbox folders" });
   const rows = page.locator(".threadItem");
   await expect(rows.first()).toBeVisible();
   const subject = (
@@ -1225,4 +1250,32 @@ test("loads toolbar: Filter, Sort and Options sit on one row and work", async ({
 
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.locator(".viewMenu summary .orgCount")).toHaveCount(0);
+});
+
+test("loads: the carrier list sits under Loads and folds away", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  const scope = nav.getByRole("navigation", { name: "Carrier scope" });
+  await expect(scope).toBeVisible();
+  // Directly under Loads, before the next page.
+  const [loads, first, next] = await Promise.all([
+    nav.getByRole("button", { name: "Loads", exact: true }).boundingBox(),
+    scope.getByRole("button").first().boundingBox(),
+    nav.getByRole("button", { name: "Exceptions", exact: true }).boundingBox(),
+  ]);
+  expect(first!.y).toBeGreaterThan(loads!.y);
+  expect(first!.x).toBeGreaterThan(loads!.x);
+  expect(next!.y).toBeGreaterThan(first!.y);
+  const toggle = nav.getByRole("button", { name: "Carrier list" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(scope).toHaveCount(0);
+  await toggle.press("Enter");
+  await expect(scope).toBeVisible();
+  await page.getByRole("button", { name: "Billing", exact: true }).click();
+  await expect(scope).toHaveCount(0);
 });

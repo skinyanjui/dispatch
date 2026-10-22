@@ -96,19 +96,6 @@
   border: 0;
   padding: 0;
 }
-.sidebarContext {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  overflow: auto;
-  min-height: 0;
-}
-.sidebarContext nav {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
 .sidebarLabel {
   font-size: 11px;
   font-weight: 500;
@@ -357,4 +344,110 @@
 }
 .sidebarSearchIcon {
   margin: 0 auto 8px;
+}
+
+/* A page's own views sit under it while it is open (Inbox folders, the
+   carriers on Loads), Vercel-style, with a toggle to fold them away. The
+   page list scrolls when a long group is open. */
+.sidebarPages {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.sidebarRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.sidebarRow > .sidebarItem {
+  flex: 1;
+  min-width: 0;
+}
+.sidebarToggle {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--subtle);
+}
+.sidebarToggle:hover {
+  background: var(--sidebar-hover);
+  color: var(--ink);
+}
+.sidebarToggle svg {
+  transform: rotate(-90deg);
+  transition: transform 0.12s ease;
+}
+.sidebarToggle.open svg {
+  transform: none;
+}
+.sidebarChildren {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 6px 16px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+.sidebarChildren > nav,
+.sidebarChildren > [role="group"] {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sidebarChildren [role="group"] .sidebarSub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sidebarSub.firstBox {
+  margin-top: 7px;
+  position: relative;
+  overflow: visible;
+}
+.sidebarSub.firstBox::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: var(--border);
+}
+.subCount {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+.subCount.quiet {
+  background: none;
+  color: var(--subtle);
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebarToggle svg {
+    transition: none;
+  }
+}
+/* The open page's row is one highlight, toggle included. */
+.appShell .sidebarRow:has(> .sidebarItem.active) {
+  border-radius: 7px;
+  background: var(--sidebar-active);
+}
+.appShell .sidebarRow > .sidebarItem.active {
+  background: none;
+}
+.sidebarRow:has(> .sidebarItem.active) .sidebarToggle:hover {
+  background: #0000000d;
 }

@@ -83,7 +83,7 @@ type SavedReply = {
   mine: boolean;
   owner_name: string;
 };
-type Counts = {
+export type InboxCounts = {
   unread: number;
   by_channel: Record<Channel, number>;
   archived: number;
@@ -165,7 +165,9 @@ const initials = (name: string) =>
     .slice(0, 2)
     .map((w) => w[0]!.toUpperCase())
     .join("") || "•";
-const tabLabels: Record<string, string> = {
+/** The Inbox's folders, shown nested under Inbox in the sidebar and as a
+ *  rail where the sidebar is collapsed or a sheet. */
+export const inboxFolders: Record<string, string> = {
   all: "All",
   unread: "Unread",
   in_app: "Relay",
@@ -175,6 +177,15 @@ const tabLabels: Record<string, string> = {
   archived: "Archived",
   trash: "Trash",
 };
+export type InboxFolder = keyof typeof inboxFolders;
+/** The number beside a folder: unread for channels, a total for Archived and Trash. */
+export function folderCount(folder: string, counts: InboxCounts | null) {
+  if (!counts || folder === "all") return 0;
+  if (folder === "unread") return counts.unread;
+  if (folder === "archived") return counts.archived;
+  if (folder === "trash") return counts.trash;
+  return counts.by_channel[folder as Channel] ?? 0;
+}
 const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
     month: "short",
@@ -677,6 +688,9 @@ export function Inbox({
   onAuthError,
   onUnreadChanged,
   query,
+  folder,
+  onFolder,
+  onCounts,
 }: {
   /** Search text from the page header; without it the page has its own box. */
   query?: string;
@@ -688,13 +702,14 @@ export function Inbox({
   onComposeDone: () => void;
   onAuthError: (e: unknown) => void;
   onUnreadChanged: () => void;
+  /** The open folder; the workspace owns it so the sidebar can switch it. */
+  folder: string;
+  onFolder: (folder: string) => void;
+  onCounts: (counts: InboxCounts) => void;
 }) {
   const api = useApi();
   const [ownQ, setQ] = useState(""),
-    [unreadOnly, setUnreadOnly] = useState(false),
-    [channel, setChannel] = useState(""),
-    [box, setBox] = useState<"inbox" | "archived" | "trash">("inbox"),
-    [counts, setCounts] = useState<Counts | null>(null),
+    [counts, setCounts] = useState<InboxCounts | null>(null),
     [undo, setUndo] = useState<{
       id: string;
       undo: ThreadAction;
@@ -718,6 +733,12 @@ export function Inbox({
     [status, setStatus] = useState(""),
     [resending, setResending] = useState<string | null>(null);
   const q = query ?? ownQ;
+  const box: "inbox" | "archived" | "trash" =
+    folder === "archived" || folder === "trash" ? folder : "inbox";
+  const unreadOnly = folder === "unread";
+  const channel = ["in_app", "email", "sms", "call"].includes(folder)
+    ? folder
+    : "";
   const request = useRef(0);
   const messages = useRef<HTMLOListElement>(null);
   // Open a conversation at its latest message.
@@ -775,11 +796,13 @@ export function Inbox({
   }, [loadReplies]);
   const loadCounts = useCallback(async () => {
     try {
-      setCounts(await api<Counts>("threads/counts"));
+      const next = await api<InboxCounts>("threads/counts");
+      setCounts(next);
+      onCounts(next);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
     }
-  }, [api, onAuthError]);
+  }, [api, onAuthError, onCounts]);
   useEffect(() => {
     // Fetch once on mount; state is set after the response.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -941,6 +964,14 @@ export function Inbox({
     void loadCounts();
   }
   const hasDetail = Boolean(newMessage || view || viewError);
+  // A different folder starts from its list, not the open conversation.
+  const [shownFolder, setShownFolder] = useState(folder);
+  if (shownFolder !== folder) {
+    setShownFolder(folder);
+    setNewMessage(null);
+    setSelected(null);
+    setView(null);
+  }
   const back = () => {
     setNewMessage(null);
     setSelected(null);
@@ -984,41 +1015,15 @@ export function Inbox({
       )}
       <div className={"inboxLayout hasRail" + (hasDetail ? " hasDetail" : "")}>
         <aside className="inboxRail">
-          <button
-            className="primary"
-            disabled={offline}
-            onClick={() => {
-              setNewMessage({ to: [] });
-              setSelected(null);
-              setView(null);
-            }}
-          >
-            <NotePencilIcon {...icon} /> New message
-          </button>
           <div
             className="inboxTabs"
             role="group"
             aria-label="Filter conversations"
           >
-            {Object.keys(tabLabels).map((tab) => {
-              const active =
-                box !== "inbox"
-                  ? box
-                  : unreadOnly
-                    ? "unread"
-                    : channel || "all";
+            {Object.keys(inboxFolders).map((tab) => {
+              const active = folder;
               const isBox = tab === "archived" || tab === "trash";
-              const count = !counts
-                ? 0
-                : tab === "unread"
-                  ? counts.unread
-                  : tab === "archived"
-                    ? counts.archived
-                    : tab === "trash"
-                      ? counts.trash
-                      : tab === "all"
-                        ? 0
-                        : counts.by_channel[tab as Channel];
+              const count = folderCount(tab, counts);
               return (
                 <button
                   key={tab}
@@ -1029,16 +1034,9 @@ export function Inbox({
                     (tab === "archived" ? " firstBox" : "")
                   }
                   aria-pressed={active === tab}
-                  onClick={() => {
-                    setBox(isBox ? (tab as "archived" | "trash") : "inbox");
-                    setUnreadOnly(tab === "unread");
-                    setChannel(
-                      isBox || tab === "all" || tab === "unread" ? "" : tab,
-                    );
-                    back();
-                  }}
+                  onClick={() => onFolder(tab)}
                 >
-                  <span>{tabLabels[tab]}</span>
+                  <span>{inboxFolders[tab]}</span>
                   {count > 0 && (
                     <span
                       className={"tabCount" + (isBox ? " quiet" : "")}
@@ -1053,6 +1051,20 @@ export function Inbox({
           </div>
         </aside>
         <div className="inboxList">
+          <div className="inboxListHead">
+            <h3 className="inboxFolderName">{inboxFolders[folder]}</h3>
+            <button
+              className="primary"
+              disabled={offline}
+              onClick={() => {
+                setNewMessage({ to: [] });
+                setSelected(null);
+                setView(null);
+              }}
+            >
+              <NotePencilIcon {...icon} /> New message
+            </button>
+          </div>
           <label className="directorySearch" hidden={query !== undefined}>
             <MagnifyingGlassIcon size={16} aria-hidden="true" />
             <span className="srOnly">Search conversations</span>
