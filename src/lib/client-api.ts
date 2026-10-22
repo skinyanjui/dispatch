@@ -44,6 +44,10 @@ const messages: Record<string, string> = {
     "For your security you were signed out. Sign in again and you'll pick up right where you left off.",
   INVALID_CURSOR:
     "This list changed while you were looking. Refresh and you'll be right back on track.",
+  DUPLICATE_VEHICLE:
+    "This carrier already has a vehicle with that name. Choose another unit name.",
+  VEHICLE_CARRIER_MISMATCH:
+    "Please choose a vehicle that is in service for this carrier.",
   DRIVER_CARRIER_MISMATCH:
     "Please choose a driver who works with this carrier.",
   CHECK_IN_TIME_OUT_OF_RANGE:

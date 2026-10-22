@@ -37,6 +37,12 @@ import {
 import { cancelLoad, editLoad } from "@/lib/load-changes";
 import { auditFilters, auditLog } from "@/lib/audit";
 import {
+  createVehicle,
+  fleetOverview,
+  setVehicleStatus,
+  updateVehicle,
+} from "@/lib/fleet";
+import {
   canSeeJobStatus,
   jobStatus,
   parseScope,
@@ -452,6 +458,31 @@ async function handle(req: NextRequest) {
     }
     const user = await session(req);
     actor = user.id;
+    if (path[0] === "fleet") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await fleetOverview(
+            user.id,
+            z.uuid().parse(req.nextUrl.searchParams.get("carrier_id")),
+          ),
+        );
+      if (path[1] === "vehicles" && req.method === "POST") {
+        if (path.length === 2)
+          return NextResponse.json(
+            await createVehicle(user.id, await readJson(req)),
+            { status: 201 },
+          );
+        const vehicleId = z.uuid().parse(path[2]);
+        if (path.length === 3)
+          return NextResponse.json(
+            await updateVehicle(user.id, vehicleId, await readJson(req)),
+          );
+        if (path.length === 4 && path[3] === "status")
+          return NextResponse.json(
+            await setVehicleStatus(user.id, vehicleId, await readJson(req)),
+          );
+      }
+    }
     if (path[0] === "audit" && req.method === "GET") {
       if (path.length === 1)
         return NextResponse.json(

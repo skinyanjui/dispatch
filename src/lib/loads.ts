@@ -307,7 +307,7 @@ export async function detail(user: string, id: string) {
     const stops = { rows: await stopsWithEvents(c, id) };
     const events = await eventPage(c, id, null, 100);
     const assignment = await c.query(
-      "SELECT a.*,d.name FROM load_assignments a JOIN drivers d ON d.id=a.driver_id WHERE load_id=$1",
+      "SELECT a.*,d.name,v.label vehicle_label FROM load_assignments a JOIN drivers d ON d.id=a.driver_id LEFT JOIN vehicles v ON v.id=a.vehicle_id WHERE load_id=$1",
       [id],
     );
     const checkIns = await checkInPage(c, id, null, 50);
@@ -793,6 +793,8 @@ export async function mutate(
     .object({
       version: z.number().int().positive(),
       driverId: z.uuid().optional(),
+      /** undefined keeps the current vehicle; null clears it. */
+      vehicleId: z.uuid().nullable().optional(),
       stage: z.enum(["dispatched", "picked-up", "delivered"]).optional(),
     })
     .parse(input);
@@ -810,9 +812,27 @@ export async function mutate(
       if (!driver.rowCount) throw new HttpError(422, "DRIVER_CARRIER_MISMATCH");
       if (load.stage === "delivered")
         throw new HttpError(422, "LOAD_DELIVERED");
+      if (data.vehicleId) {
+        // The vehicle must be this carrier's and in service; a retired one
+        // cannot be chosen again, though loads already on it keep it.
+        const vehicle = await c.query(
+          "SELECT 1 FROM vehicles WHERE id=$1 AND carrier_id=$2 AND status='active'",
+          [data.vehicleId, load.carrier_id],
+        );
+        if (!vehicle.rowCount)
+          throw new HttpError(422, "VEHICLE_CARRIER_MISMATCH");
+      }
       await c.query(
-        "INSERT INTO load_assignments(load_id,carrier_id,driver_id) VALUES($1,$2,$3) ON CONFLICT(load_id) DO UPDATE SET driver_id=$3",
-        [id, load.carrier_id, data.driverId],
+        `INSERT INTO load_assignments(load_id,carrier_id,driver_id,vehicle_id) VALUES($1,$2,$3,$4)
+         ON CONFLICT(load_id) DO UPDATE SET driver_id=$3,
+           vehicle_id=CASE WHEN $5::boolean THEN $4 ELSE load_assignments.vehicle_id END`,
+        [
+          id,
+          load.carrier_id,
+          data.driverId,
+          data.vehicleId ?? null,
+          data.vehicleId !== undefined,
+        ],
       );
       const recipients = await c.query(
         `SELECT m.user_id,c.organization_id,

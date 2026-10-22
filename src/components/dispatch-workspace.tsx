@@ -75,6 +75,7 @@ import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
 import { OrganizationSettings } from "@/components/organization-settings";
 import { AuditLog } from "@/components/audit-log";
+import { AssignVehicleSelect, FleetPage } from "@/components/fleet";
 import { driverUploadTypes } from "@/lib/compliance";
 import { LoadCard } from "@/components/load-card";
 import {
@@ -1006,6 +1007,7 @@ export default function Workspace({
     reports: ["Search carriers", "Search carriers…"],
     organization: ["Search people", "Search people…"],
     audit: ["Search the audit log", "Search the log…"],
+    fleet: ["Search the fleet", "Search fleet…"],
     documents: ["Search drafts", "Search drafts…"],
   };
   // Every page has a search. Pages with nothing of their own to filter
@@ -1397,6 +1399,16 @@ export default function Workspace({
             onAuthError={handleError}
             onChanged={async () => setContext(await api<Context>("me"))}
           />
+        ) : section === "fleet" ? (
+          <FleetPage
+            context={context}
+            query={pageQ.fleet ?? ""}
+            onClearQuery={() => setPageQ((old) => ({ ...old, fleet: "" }))}
+            initialCarrier={carrier}
+            onManageDrivers={setSetupCarrier}
+            onAuthError={handleError}
+            offline={offline}
+          />
         ) : section === "audit" ? (
           <AuditLog
             query={pageQ.audit ?? ""}
@@ -1584,6 +1596,9 @@ export default function Workspace({
                   <TruckIcon size={18} aria-hidden="true" />
                   <span>
                     {selected.assignment?.name || "No driver assigned"}
+                    {selected.assignment?.vehicle_label
+                      ? ` · ${selected.assignment.vehicle_label}`
+                      : ""}
                   </span>
                 </div>
                 {selectedRole !== "driver" &&
@@ -1599,6 +1614,11 @@ export default function Workspace({
                             await api("loads/" + selected.id + "/assign", {
                               version: selected.version,
                               driverId: f.get("driver"),
+                              // Only sent when the form offers vehicles; an empty
+                              // choice clears it, an absent one keeps it.
+                              vehicleId: f.has("vehicle")
+                                ? f.get("vehicle") || null
+                                : undefined,
                             });
                             setNotice("Driver assignment saved.");
                             setSelected(
@@ -1627,6 +1647,14 @@ export default function Workspace({
                               ))}
                           </select>
                         </label>
+                        <AssignVehicleSelect
+                          key={selected.id + ":" + selected.version}
+                          carrierId={selected.carrier_id}
+                          current={selected.assignment?.vehicle_id || ""}
+                          currentLabel={
+                            selected.assignment?.vehicle_label || ""
+                          }
+                        />
                         <button
                           className="secondary"
                           disabled={busy || offline}

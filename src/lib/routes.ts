@@ -8,6 +8,7 @@
  *   /carriers                 Carriers
  *   /carriers/:id             that carrier's setup
  *   /carriers/:id/documents   that carrier's documents
+ *   /fleet                    drivers and vehicles
  *   /billing                  Billing
  *   /billing/invoices/:id     one dispatch invoice
  *   /audit                    the audit log (owners and admins)
@@ -16,6 +17,7 @@
 export const workspaceSections = [
   "loads",
   "carriers",
+  "fleet",
   "exceptions",
   "billing",
   "notifications",
@@ -102,6 +104,7 @@ export function sectionAllowed(section: WorkspaceSection, who: Who): boolean {
   const orgStaff = isAdmin || who.carriers.some((c) => c.role === "dispatcher");
   switch (section) {
     case "carriers":
+    case "fleet":
     case "billing":
     case "reports":
       return !driverOnly;

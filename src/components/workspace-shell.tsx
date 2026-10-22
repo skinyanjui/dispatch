@@ -31,6 +31,7 @@ import {
   TrayIcon,
   ChartBarIcon,
   ClipboardTextIcon,
+  SteeringWheelIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
@@ -41,6 +42,7 @@ export const sectionTitles: Record<
   string
 > = {
   carriers: "Carriers",
+  fleet: "Fleet",
   exceptions: "Exceptions",
   billing: "Billing",
   notifications: "Notifications",
@@ -251,6 +253,7 @@ export function WorkspaceShell({
       ["inbox", "Inbox", TrayIcon],
       ["contacts", "Contacts", AddressBookIcon],
       ["carriers", "Carriers", BuildingsIcon],
+      ["fleet", "Fleet", SteeringWheelIcon],
       // Prospects are the dispatch company's own sales records (ADR 0030).
       ["prospects", "Prospects", HandshakeIcon],
       ["assistant", "Assistant", SparkleIcon],

@@ -77,7 +77,12 @@ export type Load = {
   events_truncated?: boolean;
   events_cursor?: string | null;
   check_ins_cursor?: string | null;
-  assignment?: { name: string; driver_id: string } | null;
+  assignment?: {
+    name: string;
+    driver_id: string;
+    vehicle_id?: string | null;
+    vehicle_label?: string | null;
+  } | null;
   check_ins?: CheckIn[];
   documents?: DocumentSlot[];
   exceptions?: LoadException[];
