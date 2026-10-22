@@ -7,6 +7,7 @@ import {
   type ViewConfig,
   type ViewField,
 } from "@/components/loads-views";
+import { queues } from "@/components/workspace-shell";
 
 type Filters = { status: string; carrier_id: string | null };
 type Saved = {
@@ -31,12 +32,17 @@ export function LoadsViewBar({
   config,
   onConfig,
   filters,
+  carriers,
+  onFilters,
   onApply,
   onAuthError,
 }: {
   config: ViewConfig;
   onConfig: (patch: Partial<ViewConfig>) => void;
   filters: Filters;
+  carriers: { id: string; name: string }[];
+  /** Change only the status/carrier filters (the list reloads). */
+  onFilters: (filters: Filters) => void;
   /** Apply a whole saved view (or the default). */
   onApply: (config: ViewConfig, filters: Filters) => void;
   onAuthError: (e: unknown) => void;
@@ -143,180 +149,283 @@ export function LoadsViewBar({
           )}
         </select>
       </label>
-      <details className="viewOptions">
-        <summary>Options</summary>
-        <div className="viewOptionsBody">
-          {config.layout === "board" && (
-            <label className="setupCheckbox">
-              <input
-                type="checkbox"
-                checked={config.compact}
-                onChange={(e) => onConfig({ compact: e.target.checked })}
-              />
-              <span>Compact cards</span>
+      <div className="viewTools">
+        <details className="viewMenu">
+          <summary>
+            Filter
+            {(filters.status ? 1 : 0) + (filters.carrier_id ? 1 : 0) > 0 && (
+              <span className="orgCount">
+                {(filters.status ? 1 : 0) + (filters.carrier_id ? 1 : 0)}
+              </span>
+            )}
+          </summary>
+          <div className="viewOptionsBody">
+            <label>
+              Status
+              <select
+                value={filters.status}
+                onChange={(e) =>
+                  onFilters({ ...filters, status: e.target.value })
+                }
+              >
+                {queues.map((q) => (
+                  <option key={q.value} value={q.value}>
+                    {q.label}
+                  </option>
+                ))}
+              </select>
             </label>
-          )}
-          {config.layout === "table" && (
-            <>
+            {carriers.length > 1 && (
               <label>
-                Group by
+                Carrier
                 <select
-                  value={config.group_by}
+                  value={filters.carrier_id ?? ""}
                   onChange={(e) =>
-                    onConfig({
-                      group_by: e.target.value as ViewConfig["group_by"],
+                    onFilters({
+                      ...filters,
+                      carrier_id: e.target.value || null,
                     })
                   }
                 >
-                  <option value="none">No grouping</option>
-                  <option value="stage">Stage</option>
-                  <option value="carrier">Carrier</option>
+                  <option value="">All carriers</option>
+                  {carriers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
-              <fieldset className="opsChecklist">
-                <legend>Fields</legend>
-                {(Object.keys(fieldLabels) as ViewField[]).map((f) => (
-                  <label key={f} className="setupCheckbox">
-                    <input
-                      type="checkbox"
-                      checked={!config.hidden_fields.includes(f)}
-                      onChange={(e) => hide(f, e.target.checked)}
-                    />
-                    <span>{fieldLabels[f]}</span>
-                  </label>
-                ))}
-              </fieldset>
-            </>
-          )}
-          {config.layout === "calendar" && (
-            <label>
-              Date field
-              <select
-                value={config.calendar_field}
-                onChange={(e) =>
-                  onConfig({
-                    calendar_field: e.target
-                      .value as ViewConfig["calendar_field"],
-                  })
-                }
-              >
-                <option value="next">Next appointment</option>
-                <option value="created">Created</option>
-              </select>
-            </label>
-          )}
-          <div className="viewActions">
-            {active?.mine && (
-              <>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() =>
-                    void run(
-                      () => api(`views/${active.id}`, { config: payload() }),
-                      "View updated.",
-                    )
-                  }
-                >
-                  Update “{active.name}”
-                </button>
-                <label className="setupCheckbox">
-                  <input
-                    type="checkbox"
-                    checked={active.shared}
-                    onChange={(e) =>
-                      void run(
-                        () =>
-                          api(`views/${active.id}`, {
-                            shared: e.target.checked,
-                          }),
-                        e.target.checked
-                          ? "Shared with your organization."
-                          : "Now private.",
-                      )
-                    }
-                  />
-                  <span>Share with my organization</span>
-                </label>
-                <button
-                  type="button"
-                  className="textButton"
-                  onClick={() => {
-                    if (!window.confirm(`Delete the view “${active.name}”?`))
-                      return;
-                    void run(
-                      () => api(`views/${active.id}/delete`, {}),
-                      "View deleted.",
-                    ).then((ok) => {
-                      if (ok) {
-                        setCurrent("");
-                        onApply(defaultView, { status: "", carrier_id: null });
-                      }
-                    });
-                  }}
-                >
-                  Delete view
-                </button>
-              </>
             )}
             <button
               type="button"
-              className="secondary"
-              onClick={() => setSaving(true)}
+              className="textButton"
+              disabled={!filters.status && !filters.carrier_id}
+              onClick={() => onFilters({ status: "", carrier_id: null })}
             >
-              Save as new view…
+              Clear filters
             </button>
           </div>
-          {saving && (
-            <form
-              className="viewSave"
-              aria-label="Save view"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void run(async () => {
-                  const made = await api<{ id: string }>("views", {
-                    name,
-                    shared,
-                    config: payload(),
-                  });
-                  setCurrent(made.id);
-                  setSaving(false);
-                  setName("");
-                }, "View saved.");
-              }}
-            >
+        </details>
+        {config.layout === "table" && (
+          <details className="viewMenu">
+            <summary>Sort</summary>
+            <div className="viewOptionsBody">
               <label>
-                Name
-                <input
-                  value={name}
-                  maxLength={60}
-                  required
-                  autoFocus
-                  onChange={(e) => setName(e.target.value)}
-                />
+                Sort by
+                <select
+                  value={config.sort.key}
+                  onChange={(e) =>
+                    onConfig({
+                      sort: {
+                        ...config.sort,
+                        key: e.target.value as ViewConfig["sort"]["key"],
+                      },
+                    })
+                  }
+                >
+                  <option value="reference">Load</option>
+                  {(Object.keys(fieldLabels) as ViewField[]).map((f) => (
+                    <option key={f} value={f}>
+                      {fieldLabels[f]}
+                    </option>
+                  ))}
+                </select>
               </label>
+              <label>
+                Direction
+                <select
+                  value={config.sort.desc ? "desc" : "asc"}
+                  onChange={(e) =>
+                    onConfig({
+                      sort: { ...config.sort, desc: e.target.value === "desc" },
+                    })
+                  }
+                >
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </label>
+            </div>
+          </details>
+        )}
+        <details className="viewOptions">
+          <summary>Options</summary>
+          <div className="viewOptionsBody">
+            {config.layout === "board" && (
               <label className="setupCheckbox">
                 <input
                   type="checkbox"
-                  checked={shared}
-                  onChange={(e) => setShared(e.target.checked)}
+                  checked={config.compact}
+                  onChange={(e) => onConfig({ compact: e.target.checked })}
                 />
-                <span>Share with my organization</span>
+                <span>Compact cards</span>
               </label>
-              <div className="viewActions">
-                <button className="primary">Save view</button>
-                <button
-                  type="button"
-                  className="textButton"
-                  onClick={() => setSaving(false)}
+            )}
+            {config.layout === "table" && (
+              <>
+                <label>
+                  Group by
+                  <select
+                    value={config.group_by}
+                    onChange={(e) =>
+                      onConfig({
+                        group_by: e.target.value as ViewConfig["group_by"],
+                      })
+                    }
+                  >
+                    <option value="none">No grouping</option>
+                    <option value="stage">Stage</option>
+                    <option value="carrier">Carrier</option>
+                  </select>
+                </label>
+                <fieldset className="opsChecklist">
+                  <legend>Fields</legend>
+                  {(Object.keys(fieldLabels) as ViewField[]).map((f) => (
+                    <label key={f} className="setupCheckbox">
+                      <input
+                        type="checkbox"
+                        checked={!config.hidden_fields.includes(f)}
+                        onChange={(e) => hide(f, e.target.checked)}
+                      />
+                      <span>{fieldLabels[f]}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              </>
+            )}
+            {config.layout === "calendar" && (
+              <label>
+                Date field
+                <select
+                  value={config.calendar_field}
+                  onChange={(e) =>
+                    onConfig({
+                      calendar_field: e.target
+                        .value as ViewConfig["calendar_field"],
+                    })
+                  }
                 >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </details>
+                  <option value="next">Next appointment</option>
+                  <option value="created">Created</option>
+                </select>
+              </label>
+            )}
+            <div className="viewActions">
+              {active?.mine && (
+                <>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      void run(
+                        () => api(`views/${active.id}`, { config: payload() }),
+                        "View updated.",
+                      )
+                    }
+                  >
+                    Update “{active.name}”
+                  </button>
+                  <label className="setupCheckbox">
+                    <input
+                      type="checkbox"
+                      checked={active.shared}
+                      onChange={(e) =>
+                        void run(
+                          () =>
+                            api(`views/${active.id}`, {
+                              shared: e.target.checked,
+                            }),
+                          e.target.checked
+                            ? "Shared with your organization."
+                            : "Now private.",
+                        )
+                      }
+                    />
+                    <span>Share with my organization</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="textButton"
+                    onClick={() => {
+                      if (!window.confirm(`Delete the view “${active.name}”?`))
+                        return;
+                      void run(
+                        () => api(`views/${active.id}/delete`, {}),
+                        "View deleted.",
+                      ).then((ok) => {
+                        if (ok) {
+                          setCurrent("");
+                          onApply(defaultView, {
+                            status: "",
+                            carrier_id: null,
+                          });
+                        }
+                      });
+                    }}
+                  >
+                    Delete view
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setSaving(true)}
+              >
+                Save as new view…
+              </button>
+            </div>
+            {saving && (
+              <form
+                className="viewSave"
+                aria-label="Save view"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void run(async () => {
+                    const made = await api<{ id: string }>("views", {
+                      name,
+                      shared,
+                      config: payload(),
+                    });
+                    setCurrent(made.id);
+                    setSaving(false);
+                    setName("");
+                  }, "View saved.");
+                }}
+              >
+                <label>
+                  Name
+                  <input
+                    value={name}
+                    maxLength={60}
+                    required
+                    autoFocus
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <label className="setupCheckbox">
+                  <input
+                    type="checkbox"
+                    checked={shared}
+                    onChange={(e) => setShared(e.target.checked)}
+                  />
+                  <span>Share with my organization</span>
+                </label>
+                <div className="viewActions">
+                  <button className="primary">Save view</button>
+                  <button
+                    type="button"
+                    className="textButton"
+                    onClick={() => setSaving(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </details>
+      </div>
       <p className="srOnly" role="status">
         {status}
       </p>

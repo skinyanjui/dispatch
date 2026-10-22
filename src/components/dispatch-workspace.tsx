@@ -960,6 +960,15 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                 config={view}
                 onConfig={(patch) => setView((old) => ({ ...old, ...patch }))}
                 filters={{ status, carrier_id: carrier || null }}
+                carriers={context.carriers
+                  .filter((c) => c.role !== "driver")
+                  .map((c) => ({ id: c.id, name: c.name }))}
+                onFilters={(f) =>
+                  filterChange({
+                    status: f.status,
+                    carrier: f.carrier_id ?? "",
+                  })
+                }
                 onApply={(config, filters) => {
                   setView(config);
                   filterChange({

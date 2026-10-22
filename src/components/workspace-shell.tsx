@@ -72,7 +72,7 @@ export function Brand() {
     </span>
   );
 }
-const queues = [
+export const queues = [
   { value: "", label: "All loads" },
   { value: "booked", label: "Ready to dispatch" },
   { value: "dispatched", label: "Dispatched" },

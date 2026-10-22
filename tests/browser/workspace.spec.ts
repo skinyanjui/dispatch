@@ -1173,3 +1173,35 @@ test("loads table: Add new opens the form and Calculate summarizes freight", asy
   await table.getByRole("button", { name: "Add new" }).click();
   await expect(page.getByRole("dialog", { name: "Create load" })).toBeVisible();
 });
+
+test("loads toolbar: Filter, Sort and Options sit on one row and work", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  await page
+    .getByRole("group", { name: "Layout" })
+    .getByRole("button", { name: "Table" })
+    .click();
+  const summaries = page.locator(".viewTools summary");
+  await expect(summaries).toHaveText([/^Filter/, "Sort", "Options"]);
+  const tops = await summaries.evaluateAll((els) =>
+    els.map((el) => Math.round(el.getBoundingClientRect().top)),
+  );
+  expect(new Set(tops).size).toBe(1);
+  // Sort
+  await page.locator(".viewTools summary", { hasText: "Sort" }).click();
+  await page.getByLabel("Sort by").selectOption("freight");
+  await page.getByLabel("Direction").selectOption("asc");
+  await expect(
+    page.getByRole("columnheader", { name: "Freight" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  // Filter
+  await page.locator(".viewTools summary", { hasText: "Filter" }).click();
+  await page.getByLabel("Status").selectOption("delivered");
+  await expect(page.locator(".viewMenu summary .orgCount")).toHaveText("1");
+
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.locator(".viewMenu summary .orgCount")).toHaveCount(0);
+});

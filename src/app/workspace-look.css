@@ -96,13 +96,15 @@
   background: var(--soft);
   border-radius: 4px;
 }
-.appShell .viewOptions summary {
+.appShell .viewOptions summary,
+.appShell .viewMenu summary {
   border: 0;
   background: transparent;
   color: var(--muted);
   font-weight: 400;
 }
-.appShell .viewOptions summary:hover {
+.appShell .viewOptions summary:hover,
+.appShell .viewMenu summary:hover {
   color: var(--ink);
   background: var(--soft);
 }

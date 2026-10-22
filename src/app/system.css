@@ -2020,7 +2020,7 @@ select {
 
 /* Inbox rail: New message on top, filters stacked like tabs beneath it. */
 .appShell .inboxLayout.hasRail {
-  grid-template-columns: 180px minmax(240px, 330px) minmax(0, 1fr);
+  grid-template-columns: 140px minmax(240px, 330px) minmax(0, 1fr);
 }
 .appShell .inboxRail {
   display: flex;
@@ -2047,8 +2047,8 @@ select {
   justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
-  min-height: 36px;
-  padding: 0 var(--space-3);
+  min-height: 32px;
+  padding: 0 var(--space-2);
   border: 0;
   border-radius: 8px;
   text-align: left;
@@ -2120,7 +2120,7 @@ select {
 }
 @media (max-width: 1100px) and (min-width: 801px) {
   .appShell .inboxLayout.hasRail {
-    grid-template-columns: 150px minmax(220px, 300px) minmax(0, 1fr);
+    grid-template-columns: 120px minmax(220px, 300px) minmax(0, 1fr);
   }
 }
 @media (max-width: 800px) {
@@ -2262,17 +2262,19 @@ select {
 .appShell .viewBar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2) var(--space-3);
   margin: 0 0 var(--space-3);
 }
 .appShell .viewPicker {
   width: auto;
 }
-.appShell .viewOptions {
+.appShell .viewOptions,
+.appShell .viewMenu {
   position: relative;
 }
-.appShell .viewOptions summary {
+.appShell .viewOptions summary,
+.appShell .viewMenu summary {
   display: inline-flex;
   align-items: center;
   min-height: var(--control-h);
@@ -2660,4 +2662,19 @@ select {
   margin-left: var(--space-2);
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Filter, Sort and Options share one right-aligned row. */
+.appShell .viewTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.appShell .viewMenu summary .orgCount {
+  margin-left: var(--space-2);
+}
+.appShell .viewTools .viewOptionsBody {
+  right: 0;
 }
