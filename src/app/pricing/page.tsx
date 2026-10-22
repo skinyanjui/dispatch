@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Cta, MarketingShell } from "@/components/marketing";
+import { ListItem, ListItems } from "@/components/ui/list-item";
 
 export const metadata: Metadata = {
   title: "Pricing · Relay",
@@ -33,7 +34,10 @@ const faq = [
 
 export default function Pricing() {
   return (
-    <MarketingShell current="/pricing">
+    <MarketingShell
+      current="/pricing"
+      crumbs={[{ label: "Product", href: "/welcome" }, { label: "Pricing" }]}
+    >
       <section className="mkHero mkCenter">
         <p className="mkEyebrow">Pricing</p>
         <h1>Free while Relay is in early access</h1>
@@ -49,11 +53,11 @@ export default function Pricing() {
         <Link className="mkButton" href="/request-access">
           Request access
         </Link>
-        <ul className="mkChecks">
+        <ListItems label="Included">
           {included.map((i) => (
-            <li key={i}>{i}</li>
+            <ListItem key={i}>{i}</ListItem>
           ))}
-        </ul>
+        </ListItems>
       </section>
       <section className="mkSection" aria-labelledby="faq">
         <h2 id="faq">Questions</h2>

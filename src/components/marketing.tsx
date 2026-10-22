@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { Brand } from "@/components/workspace-shell";
+import { Breadcrumb, type Crumb } from "@/components/ui/breadcrumb";
 
 const nav = [
   { href: "/welcome", label: "Product" },
@@ -13,9 +14,12 @@ const nav = [
 /** Shared frame for the public pages: header, content, footer. */
 export function MarketingShell({
   current,
+  crumbs,
   children,
 }: {
   current: string;
+  /** Ancestors then the current page; omitted on the product home page. */
+  crumbs?: Crumb[];
   children: ReactNode;
 }) {
   return (
@@ -47,7 +51,14 @@ export function MarketingShell({
           </div>
         </header>
       </div>
-      <main id="content">{children}</main>
+      <main id="content">
+        {crumbs && (
+          <div className="mkCrumbs">
+            <Breadcrumb crumbs={crumbs} />
+          </div>
+        )}
+        {children}
+      </main>
       <footer className="mkFooter">
         <div>
           <Brand />

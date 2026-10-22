@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cta, MarketingShell } from "@/components/marketing";
+import { ListItem, ListItems } from "@/components/ui/list-item";
 
 export const metadata: Metadata = {
   title: "How Relay works · Relay",
@@ -36,7 +37,13 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <MarketingShell current="/how-it-works">
+    <MarketingShell
+      current="/how-it-works"
+      crumbs={[
+        { label: "Product", href: "/welcome" },
+        { label: "How it works" },
+      ]}
+    >
       <section className="mkHero compact">
         <p className="mkEyebrow">How it works</p>
         <h1>From rate confirmation to dispatch invoice</h1>
@@ -44,19 +51,19 @@ export default function HowItWorks() {
           Six steps, each with one place to do it and a record of who did.
         </p>
       </section>
-      <ol className="mkSteps">
-        {steps.map((s, i) => (
-          <li key={s.title}>
-            <span className="mkNum" aria-hidden="true">
-              {i + 1}
-            </span>
-            <div>
-              <h2>{s.title}</h2>
-              <p>{s.text}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <section className="mkSection">
+        <ListItems label="Steps" ordered>
+          {steps.map((s, i) => (
+            <ListItem
+              key={s.title}
+              start={<span className="mkNum">{i + 1}</span>}
+              description={s.text}
+            >
+              {s.title}
+            </ListItem>
+          ))}
+        </ListItems>
+      </section>
       <section className="mkBand">
         <h2>What it does not do</h2>
         <p>

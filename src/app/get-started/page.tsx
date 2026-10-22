@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Cta, MarketingShell } from "@/components/marketing";
+import { ListItem, ListItems } from "@/components/ui/list-item";
 
 export const metadata: Metadata = {
   title: "Get started · Relay",
@@ -63,7 +64,13 @@ const faq = [
 
 export default function GetStarted() {
   return (
-    <MarketingShell current="/get-started">
+    <MarketingShell
+      current="/get-started"
+      crumbs={[
+        { label: "Product", href: "/welcome" },
+        { label: "Get started" },
+      ]}
+    >
       <section className="mkHero compact">
         <p className="mkEyebrow">Get started</p>
         <h1>From request to first load</h1>
@@ -72,30 +79,39 @@ export default function GetStarted() {
           are approved.
         </p>
       </section>
-      <ol className="mkSteps">
-        {steps.map((s, i) => (
-          <li key={s.title}>
-            <span className="mkNum" aria-hidden="true">
-              {i + 1}
-            </span>
-            <div>
-              <h2>{s.title}</h2>
-              <p>{s.text}</p>
-              {s.link && <Link href={s.link.href}>{s.link.label}</Link>}
-            </div>
-          </li>
-        ))}
-      </ol>
+      <section className="mkSection">
+        <ListItems label="Steps" ordered>
+          {steps.map((s, i) => (
+            <ListItem
+              key={s.title}
+              start={<span className="mkNum">{i + 1}</span>}
+              description={
+                <>
+                  {s.text}
+                  {s.link && (
+                    <>
+                      {" "}
+                      <Link href={s.link.href}>{s.link.label}</Link>
+                    </>
+                  )}
+                </>
+              }
+            >
+              {s.title}
+            </ListItem>
+          ))}
+        </ListItems>
+      </section>
       <section className="mkSection mkSplit" aria-labelledby="ready">
         <div>
           <h2 id="ready">Have these ready</h2>
           <p>You can start without them, but setup is quicker with them.</p>
         </div>
-        <ul className="mkChecks">
+        <ListItems label="Have ready">
           {ready.map((r) => (
-            <li key={r}>{r}</li>
+            <ListItem key={r}>{r}</ListItem>
           ))}
-        </ul>
+        </ListItems>
       </section>
       <section className="mkSection" aria-labelledby="faq">
         <h2 id="faq">Common questions</h2>

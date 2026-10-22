@@ -69,10 +69,15 @@ test("public pages render, are accessible, fit phones and link to real destinati
   await expect(
     page.getByRole("link", { name: "Sign in", exact: true }),
   ).toHaveAttribute("href", "/");
-  // No invented customers, prices or live claims.
-  await expect(page.locator("body")).not.toContainText(
-    /\$\d|testimonial|trusted by/i,
-  );
+  // No invented customers, prices or live claims. The labelled drawing of the
+  // workspace (made-up sample values) is excluded from this check.
+  const copy = await page.evaluate(() => {
+    const clone = document.body.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".preview, script, style").forEach((e) => e.remove());
+    return clone.innerText ?? clone.textContent ?? "";
+  });
+  expect(copy).not.toMatch(/\$\d|testimonial|trusted by/i);
+  await expect(page.locator(".previewNote")).toContainText("not live data");
   await expect(page.getByRole("main")).toContainText("fictional sample data");
   // The top bar stays put while the page scrolls.
   await page.mouse.wheel(0, 1500);
