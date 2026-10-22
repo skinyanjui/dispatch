@@ -24,8 +24,7 @@
 }
 .mkHeader,
 .mkFooter,
-.mk main > section,
-.mkSteps {
+.mk main > section {
   width: min(1080px, calc(100% - 40px));
   margin-inline: auto;
 }
@@ -188,32 +187,7 @@
   margin: 0;
   color: var(--muted);
 }
-.mkChecks {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.mkChecks li {
-  position: relative;
-  padding: 12px 14px 12px 40px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 15px;
-}
-.mkChecks li::before {
-  content: "";
-  position: absolute;
-  left: 15px;
-  top: 17px;
-  width: 12px;
-  height: 7px;
-  border-left: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
-  transform: rotate(-45deg);
-}
+
 .mkBand {
   padding: 28px clamp(20px, 4vw, 40px);
   margin-block: 12px;
@@ -224,21 +198,7 @@
   max-width: 70ch;
   margin: 0;
 }
-.mkSteps {
-  display: grid;
-  gap: 14px;
-  margin-block: 24px;
-  padding: 0;
-  list-style: none;
-}
-.mkSteps li {
-  display: flex;
-  gap: 16px;
-  padding: 18px 20px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
+
 .mkNum {
   flex: none;
   display: grid;
@@ -251,14 +211,7 @@
   font-weight: 600;
   font-size: 14px;
 }
-.mkSteps h2 {
-  margin: 0 0 2px;
-  font-size: 18px;
-}
-.mkSteps p {
-  margin: 0 0 4px;
-  color: var(--muted);
-}
+
 .mkFaq {
   display: grid;
   gap: 8px;
@@ -339,9 +292,6 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.mkSteps li a {
-  font-weight: 600;
-}
 
 /* Sticky navigation: a plain bar that stays at the top while scrolling. */
 .mkBar {
@@ -392,11 +342,7 @@
   font-weight: 600;
   letter-spacing: -0.03em;
 }
-.mkPlan .mkChecks {
-  width: 100%;
-  margin-top: 16px;
-  text-align: left;
-}
+
 .mkPlan .mkNote {
   margin: 0 0 12px;
 }
@@ -446,7 +392,6 @@
   color: var(--mk-muted);
 }
 .mkCard,
-.mkChecks li,
 .mkFaq details,
 .mkPlan {
   background: #fff;

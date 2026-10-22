@@ -80,7 +80,6 @@
 .appShell .dirActions .secondary {
   margin-left: var(--space-1);
 }
-.appShell .dirSectionLabel,
 .appShell .sidebarLabel {
   max-width: 1000px;
 }

@@ -58,8 +58,7 @@
   background: var(--sidebar-active);
   font-weight: 500;
 }
-.appShell .sidebarLabel,
-.appShell .sidebarSectionLabel {
+.appShell .sidebarLabel {
   color: var(--subtle);
   font-size: 12px;
   font-weight: 500;

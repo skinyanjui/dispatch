@@ -33,3 +33,7 @@ Not done: the public marketing and sign-in pages keep their own larger sizes (40
 ## Carriers page
 
 Presentation only. The four filter tiles share a row and grow to fill it, left-aligned (they were centred and uneven), the sort select sits on its own right-aligned line above the list, and on phones the row actions fill the card. A carrier's role is shown only when the signed-in person has different roles on different carriers; a dispatcher who is a dispatcher everywhere no longer sees "Dispatcher" repeated on every row. Also: a Loads-page test now expands "Show all" in the carrier list, since accumulated QA data can push Blue Ridge below the six shown.
+
+## Unused CSS removed
+
+191 selectors that matched nothing were removed (about 710 lines across ten stylesheets): the old load-card layout, the old contact rows, the original top bar and filter panel, the driver card styles, the marketing step list that list items replaced, and similar. A selector was removed only if it names a class that appears nowhere in the app, tests or the static demo, and classes built from a prefix at runtime (`level-`, `sev-`) were kept. Rules that also named a class still in use lost only the dead selector. Method for next time: list every class in the stylesheets, drop those found in `src`, `tests` and `public`, and compare computed styles of every element on every main page at desktop and phone widths before and after. For this change 19,206 elements on 21 pages at two widths differed only by sub-pixel text widths (clock text, audit timestamps).

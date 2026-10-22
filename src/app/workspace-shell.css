@@ -12,62 +12,13 @@
   border-bottom: 0;
   gap: 12px;
 }
-.headingGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-.workspaceBreadcrumb {
-  font-size: 9px;
-  color: #8a91a6;
-  letter-spacing: 0.2px;
-}
+
 .appShell .topbar h1 {
   font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.4px;
 }
-.appShell .topbarLeft {
-  gap: 15px;
-}
-.appShell .viewToggle {
-  margin-left: 8px;
-  border: 0;
-  background: #f5f6f8;
-  border-radius: 7px;
-  padding: 3px;
-}
-.appShell .viewToggle button {
-  font-size: 11px;
-  padding: 6px 10px;
-}
-.appShell .viewToggle button[aria-pressed="true"] {
-  border-color: #e2e4eb;
-  box-shadow: none;
-}
-.appShell .createButton {
-  font-weight: 500;
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-radius: 18px;
-  padding: 8px 12px;
-  font-size: 11px;
-}
-.appShell .createButton:hover {
-  background: var(--accent-soft-hover);
-}
-.workspaceEnvironment {
-  font-size: 9px;
-  color: #8990a6;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-}
-.workspaceEnvironment > svg {
-  color: #788ac0;
-}
+
 .appShell .workspace {
   padding: 20px 26px 15px;
 }
@@ -139,25 +90,7 @@
   border-color: #aab2cb;
   box-shadow: 0 2px 9px #303a5707;
 }
-.appShell .cardTitle strong {
-  font-size: 12px;
-}
-.appShell .cardRoute {
-  margin-top: 15px;
-  padding-top: 12px;
-}
-.appShell .cardBottom {
-  margin-top: 15px;
-}
-.appShell .cardCarrier {
-  font-size: 10px;
-}
-.appShell .cardTitle > svg {
-  color: #848ca3;
-}
-.appShell .cardBottom strong {
-  color: #596177;
-}
+
 .appShell footer {
   font-size: 9px;
 }
@@ -215,18 +148,13 @@
 .directorySearch input:focus-visible {
   outline: 0;
 }
-.directoryTableHeading,
 .directoryRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 170px 114px;
   align-items: center;
   gap: 20px;
 }
-.directoryTableHeading {
-  color: #979eb1;
-  font-size: 10px;
-  padding: 0 18px 15px;
-}
+
 .directoryRow {
   border-top: 1px solid var(--border);
   padding: 22px 18px;
@@ -312,15 +240,7 @@
   .appShell .search input {
     font-size: 13px;
   }
-  .appShell .cardTitle strong {
-    font-size: 14px;
-  }
-  .appShell .cardCarrier {
-    font-size: 12px;
-  }
-  .appShell .cardRoute {
-    font-size: 13px;
-  }
+
   .appShell .laneHeading h2 {
     font-size: 13px;
   }
@@ -338,20 +258,11 @@
   .appShell .lane {
     padding: 6px;
   }
-  .appShell .cardTitle strong {
-    font-size: 11px;
-  }
-  .appShell .cardCarrier {
-    font-size: 9px;
-  }
+
   .appShell .search {
     width: 300px;
   }
-  .workspaceEnvironment {
-    display: none;
-  }
 
-  .directoryTableHeading,
   .directoryRow {
     grid-template-columns: minmax(0, 1fr) 120px 105px;
     gap: 10px;
@@ -364,13 +275,10 @@
   .appShell .workspace {
     padding-inline: 20px;
   }
-  .appShell .workspaceEnvironment {
-    display: none;
-  }
+
   .appShell .search {
     width: min(430px, 100%);
   }
-  .directoryTableHeading,
   .directoryRow {
     grid-template-columns: minmax(0, 1fr) 130px 110px;
     gap: 10px;
@@ -384,27 +292,11 @@
     gap: 14px;
     align-items: center;
   }
-  .appShell .topbarLeft {
-    width: 100%;
-    gap: 8px;
-    align-items: center;
-  }
+
   .appShell .topbar h1 {
     font-size: 16px;
   }
-  .workspaceBreadcrumb {
-    font-size: 9px;
-  }
-  .appShell .viewToggle {
-    margin-left: auto;
-  }
-  .appShell .topbarRight {
-    width: 100%;
-    justify-content: flex-start;
-  }
-  .appShell .topbarRight .createButton {
-    font-size: 10px;
-  }
+
   .appShell .workspace {
     padding: 14px 10px;
   }
@@ -444,15 +336,7 @@
     min-height: calc(100dvh - 320px);
     padding: 9px;
   }
-  .appShell .cardTitle strong {
-    font-size: 12px;
-  }
-  .appShell .cardCarrier {
-    font-size: 11px;
-  }
-  .appShell .cardRoute {
-    font-size: 12px;
-  }
+
   .appShell .workspace > footer {
     line-height: 1.8;
     font-size: 8px;
@@ -475,9 +359,7 @@
   .directorySearch {
     width: 100%;
   }
-  .directoryTableHeading {
-    display: none;
-  }
+
   .directoryRow {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 14px;
@@ -548,8 +430,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.workspaceBreadcrumb,
-.workspaceEnvironment,
 .appShell .toolbarMeta {
   color: var(--muted);
 }

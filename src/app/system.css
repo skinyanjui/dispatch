@@ -119,8 +119,7 @@
 }
 
 /* Section headings inside a page: space above, tight to what they introduce. */
-.appShell .reports h3,
-.appShell .carrierDirectory h3.sectionTitle {
+.appShell .reports h3 {
   margin: var(--space-6) 0 var(--space-2);
   font-size: 14px;
   font-weight: 600;
@@ -164,7 +163,6 @@
   gap: var(--space-2);
 }
 @media (min-width: 1001px) {
-  .appShell .directoryTableHeading,
   .appShell .directoryRow {
     grid-template-columns: minmax(0, 1fr) 120px 330px;
   }
@@ -175,22 +173,7 @@
   display: grid;
   gap: var(--space-3);
 }
-.appShell .inboxBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-.appShell .inboxBar > label {
-  margin: 0;
-}
-.appShell .inboxBar .directorySearch {
-  flex: 1 1 260px;
-  width: auto;
-}
-.appShell .inboxBar .primary {
-  margin-left: auto;
-}
+
 .appShell .inboxLayout {
   align-items: stretch;
   gap: var(--space-4);
@@ -231,10 +214,6 @@
   .appShell .inboxList,
   .appShell .inboxDetail {
     max-height: none;
-  }
-  .appShell .inboxBar .primary {
-    margin-left: 0;
-    flex: 1 1 100%;
   }
 }
 
@@ -632,11 +611,7 @@
     min-height: 40px;
     border-radius: var(--control-radius);
   }
-  .appShell .contactActions {
-    width: 100%;
-    justify-content: space-between;
-    align-items: center;
-  }
+
   .appShell .workspace .sidebarLabel {
     padding-left: 0;
   }
@@ -697,30 +672,23 @@ select {
 }
 .appShell .contactFilters > label:not(.directorySearch),
 .appShell .opsFilters > label,
-.appShell .filterPanel label,
 .appShell .composerRow > label,
 .appShell .assignForm label {
   flex: 0 0 auto;
   min-width: 0;
   width: auto;
 }
-.appShell .filterPanel {
-  gap: var(--space-2) var(--space-3);
-}
+
 .appShell .assignForm {
   align-items: flex-end;
   gap: var(--space-2);
 }
 
 @media (max-width: 760px) {
-  .appShell .contactFilters .directorySearch,
-  .appShell .inboxBar .directorySearch {
+  .appShell .contactFilters .directorySearch {
     flex: 1 1 100%;
   }
-  .appShell .contactActions {
-    flex-wrap: nowrap;
-    gap: 2px;
-  }
+
   .appShell .iconAction {
     min-width: 36px;
     min-height: 40px;
@@ -728,18 +696,6 @@ select {
 }
 
 /* Contact rows keep their actions on the right however long the details are. */
-@media (min-width: 761px) {
-  .appShell .contactRow {
-    flex-wrap: nowrap;
-  }
-  .appShell .contactMain {
-    flex: 1 1 0;
-  }
-  .appShell .contactActions {
-    flex: none;
-    margin-left: auto;
-  }
-}
 
 /* Controls sharing a form row have one height, so their labels line up. */
 .appShell .formGrid select,
@@ -925,13 +881,6 @@ select {
 }
 
 /* Report filters: the quick ranges sit on the same line as the fields. */
-.appShell .reportFilters {
-  align-items: flex-end;
-}
-.appShell .reportFilters .textButton {
-  min-height: var(--control-h);
-  padding-block: 0;
-}
 
 /* Board answers (ADR 0029): the attention strip and the richer load card. */
 .appShell .attention {
@@ -1251,55 +1200,15 @@ select {
 }
 
 /* Hierarchy: the name first, then what it is, then how to reach it. */
-.appShell .contactMain strong {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.appShell .contactMain > small:first-of-type {
-  color: var(--muted);
-  font-weight: 400;
-}
-.appShell .contactLines {
-  color: var(--ink);
-  font-weight: 450;
-  font-variant-numeric: tabular-nums;
-}
 
 /* Small cards sit two to a row once there is room. Contacts become separate
    cards with their actions underneath, left-aligned. */
 @media (min-width: 1100px) {
-  .appShell .contactList {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
-    border: 0;
-    background: transparent;
-  }
-  .appShell .contactRow,
-  .appShell .contactRow + .contactRow {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--panel);
-  }
-  .appShell .contactActions {
-    margin-left: 0;
-    justify-content: flex-start;
-  }
   .appShell .opsList {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: var(--space-3);
-  }
-}
-@media (min-width: 761px) and (max-width: 1099px) {
-  .appShell .contactActions {
-    flex: none;
   }
 }
 
@@ -2248,9 +2157,7 @@ select {
   cursor: grab;
 }
 .appShell .kanban.compact .cardFacts,
-.appShell .kanban.compact .cardStep,
-.appShell .kanban.compact .cardRoute,
-.appShell .kanban.compact .cardCarrier {
+.appShell .kanban.compact .cardStep {
   display: none;
 }
 .appShell .loadTable .groupRow th {

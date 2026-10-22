@@ -140,8 +140,6 @@ a svg {
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
-.topbarLeft,
-.topbarRight,
 .toolbarLeft,
 .toolbarRight {
   display: flex;
@@ -160,48 +158,14 @@ a svg {
   margin-left: -6px;
   color: var(--accent);
 }
-.separator {
-  color: var(--border-strong);
-  font-size: 23px;
-  font-weight: 300;
-  margin: 0 7px;
-}
+
 .topbar h1 {
   font-size: 15px;
   letter-spacing: -0.2px;
   font-weight: 600;
   white-space: nowrap;
 }
-.viewToggle {
-  display: flex;
-  gap: 2px;
-  background: var(--soft);
-  border: 1px solid var(--border);
-  padding: 3px;
-  border-radius: 8px;
-  margin-left: 12px;
-}
-.viewToggle button {
-  padding: 6px 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.viewToggle button[aria-pressed="true"] {
-  background: var(--panel);
-  box-shadow: 0 1px 3px #0000000d;
-  color: var(--ink);
-  border-color: var(--border);
-}
-.createButton {
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-  border-radius: 20px;
-  padding: 8px 12px;
-}
-.createButton:hover {
-  background: var(--accent-soft-hover);
-}
+
 .iconButton {
   padding: 7px;
   color: var(--muted);
@@ -233,10 +197,7 @@ a svg {
   font-size: 12px;
   padding: 7px 10px;
 }
-.secondary.isSelected {
-  background: var(--soft);
-  border-color: var(--border-strong);
-}
+
 .count {
   font-size: 10px;
   background: var(--accent-soft);
@@ -281,24 +242,7 @@ kbd {
   padding: 3px 5px;
   white-space: nowrap;
 }
-.filterPanel {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  padding: 16px;
-  margin: 0 0 20px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.filterPanel label {
-  margin: 0;
-  min-width: 200px;
-  font-size: 11px;
-}
-.filterPanel button {
-  margin-bottom: 2px;
-}
+
 .textButton {
   padding: 5px 7px;
   font-size: 12px;
@@ -376,74 +320,7 @@ kbd {
   border-color: var(--border-strong);
   box-shadow: 0 3px 12px #141f3f07;
 }
-.cardTitle {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.cardTitle > svg {
-  color: var(--subtle);
-}
-.cardTitle strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.1px;
-}
-.cardArrow {
-  margin-left: auto;
-  opacity: 0;
-}
-.loadCard:hover .cardArrow,
-.loadCard:focus-visible .cardArrow {
-  opacity: 1;
-}
-.cardCarrier {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--muted);
-  font-size: 10px;
-  margin-top: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cardRoute {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 5px;
-  font-size: 12px;
-  margin-top: 18px;
-  padding-top: 13px;
-  border-top: 1px solid var(--border);
-}
-.cardRoute > svg {
-  color: var(--subtle);
-  margin-left: 2px;
-}
-.cardRoute span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cardBottom {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-  margin-top: 18px;
-  font-size: 10px;
-  color: var(--muted);
-}
-.cardBottom strong {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
+
 .laneEmpty {
   border: 1px dashed var(--border);
   border-radius: 6px;
@@ -452,12 +329,7 @@ kbd {
   font-size: 11px;
   color: var(--muted);
 }
-.tableWrap {
-  border: 1px solid var(--border);
-  background: var(--panel);
-  border-radius: 8px;
-  overflow: auto;
-}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -482,16 +354,7 @@ td small {
   margin-top: 7px;
   font-size: 10px;
 }
-.loadLink {
-  padding: 0;
-  max-width: 300px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: left;
-}
+
 .money {
   font-variant-numeric: tabular-nums;
 }
@@ -649,27 +512,7 @@ footer a {
   font-size: 12px;
   margin: 10px 0 17px;
 }
-.detailFacts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 20px 0;
-  margin-top: 16px;
-  border-block: 1px solid var(--border);
-}
-.detailFacts > div {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.detailFacts strong {
-  font-size: 16px;
-  font-weight: 500;
-}
-.detailFacts span {
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
+
 .inspector h3 {
   font-size: 12px;
   font-weight: 600;
@@ -905,9 +748,7 @@ fieldset label:last-child {
   .loadCard {
     padding: 18px;
   }
-  .cardTitle strong {
-    font-size: 14px;
-  }
+
   .lane {
     padding: 12px;
   }
@@ -919,19 +760,14 @@ fieldset label:last-child {
   .topbar {
     padding: 0 18px;
   }
-  .topbarLeft,
-  .topbarRight {
-    gap: 10px;
-  }
+
   .brand {
     font-size: 20px;
   }
   .userName {
     display: none;
   }
-  .viewToggle {
-    margin-left: 5px;
-  }
+
   .workspace {
     padding: 18px;
   }
@@ -944,12 +780,7 @@ fieldset label:last-child {
   .loadCard {
     padding: 12px 10px;
   }
-  .cardCarrier {
-    font-size: 9px;
-  }
-  .cardRoute {
-    font-size: 11px;
-  }
+
   footer {
     flex-wrap: wrap;
   }
@@ -965,44 +796,18 @@ fieldset label:last-child {
     flex-wrap: wrap;
     gap: 12px;
   }
-  .topbarLeft {
-    width: 100%;
-    gap: 10px;
-  }
+
   .topbar h1 {
     font-size: 14px;
   }
-  .viewToggle {
-    margin-left: auto;
-  }
-  .viewToggle button {
-    font-size: 11px;
-    padding: 6px;
-  }
-  .viewToggle svg {
-    display: none;
-  }
+
   .brand {
     font-size: 19px;
   }
   .brand > svg {
     width: 17px;
   }
-  .separator {
-    font-size: 18px;
-    margin: 0;
-  }
-  .topbarRight {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .createButton {
-    font-size: 11px;
-    padding: 7px 10px;
-  }
-  .topbarRight > .iconButton {
-    padding: 4px;
-  }
+
   .toolbar {
     align-items: flex-start;
     gap: 12px;
@@ -1044,37 +849,7 @@ fieldset label:last-child {
   .loadCard {
     padding: 16px;
   }
-  .cardTitle strong {
-    font-size: 13px;
-  }
-  .cardCarrier {
-    font-size: 11px;
-  }
-  .cardRoute {
-    font-size: 12px;
-  }
-  .filterPanel {
-    flex-wrap: wrap;
-    padding: 12px;
-    gap: 10px;
-  }
-  .filterPanel label {
-    min-width: 0;
-    flex: 1;
-    flex-basis: 40%;
-  }
-  .filterPanel select {
-    font-size: 11px;
-    padding: 9px 7px;
-  }
-  .filterPanel button {
-    flex-basis: 100%;
-    text-align: left;
-    justify-content: flex-start;
-  }
-  .tableWrap table {
-    min-width: 650px;
-  }
+
   .inspector {
     padding: 20px 22px;
   }
@@ -1112,8 +887,6 @@ fieldset label:last-child {
 }
 
 /* Secondary operational information remains readable on the light surface. */
-.cardCarrier,
-.cardBottom,
 .helpText,
 .stopZone,
 .eyebrow,
@@ -1122,10 +895,7 @@ fieldset label:last-child {
 .detailFoot {
   color: var(--muted);
 }
-.cardCarrier,
-.cardBottom {
-  font-size: 11px;
-}
+
 .helpText {
   font-size: 11px;
 }

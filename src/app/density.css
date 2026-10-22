@@ -55,10 +55,7 @@ small {
   font-weight: 600;
   letter-spacing: -0.2px;
 }
-.appShell .viewToggle button {
-  font-size: 12px;
-  padding: 4px 9px;
-}
+
 .appShell .workspace {
   padding: 12px 20px 14px;
 }
@@ -99,33 +96,6 @@ small {
 .appShell .loadCard {
   padding: 10px 11px;
 }
-.cardTitle strong,
-.appShell .cardTitle strong {
-  font-size: 13px;
-  font-weight: 500;
-}
-.cardCarrier,
-.appShell .cardCarrier {
-  font-size: 11.5px;
-  margin-top: 3px;
-}
-.cardRoute,
-.appShell .cardRoute {
-  grid-template-columns: minmax(0, auto) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding-top: 8px;
-}
-.cardRoute > svg {
-  transform: rotate(-90deg);
-  margin: 0;
-}
-.cardBottom,
-.appShell .cardBottom {
-  margin-top: 8px;
-  font-size: 11.5px;
-}
 
 /* Section pages: the top bar carries the title; intros stay short. */
 .directoryIntro {
@@ -165,14 +135,7 @@ small {
 .detailCarrier {
   margin: 4px 0 10px;
 }
-.detailFacts {
-  padding: 12px 0;
-  margin-top: 12px;
-  gap: 12px;
-}
-.detailFacts strong {
-  font-size: 15px;
-}
+
 .inspector h3 {
   font-size: 13px;
   margin: 20px 0 8px;

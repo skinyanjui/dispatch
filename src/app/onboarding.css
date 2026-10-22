@@ -266,7 +266,6 @@
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-.directoryTableHeading,
 .directoryRow {
   grid-template-columns: minmax(0, 1fr) 145px 215px;
 }
@@ -343,63 +342,11 @@
   font-size: 12px;
   color: var(--accent);
 }
-.tableWrap {
-  position: relative;
-}
-.appShell .toolbarLeft > .secondary,
-.appShell .cardBottom strong,
-.directoryTableHeading {
+
+.appShell .toolbarLeft > .secondary {
   color: var(--muted);
 }
-.driverLoadCards {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 760px;
-}
-.driverLoadCard {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 18px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  text-align: left;
-}
-.driverLoadCard:hover {
-  border-color: var(--border-strong);
-  background: var(--soft);
-}
-.driverCardHeading,
-.driverCardRoute,
-.driverCardFoot,
-.driverCardFoot > span {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.driverCardHeading {
-  justify-content: space-between;
-}
-.driverCardHeading strong {
-  font-size: 15px;
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.driverCardRoute {
-  font-size: 13px;
-  line-height: 1.7;
-}
-.driverCardFoot {
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
+
 @media (max-width: 760px) {
   .demoBanner {
     padding: 14px;

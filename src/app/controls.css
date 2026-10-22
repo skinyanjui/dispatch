@@ -103,7 +103,6 @@
 .appShell .reportTable td .secondary,
 .appShell .reportTable th .secondary,
 .appShell .directoryRowActions .secondary,
-.appShell .contactActions .secondary,
 .appShell .calcPicker select,
 .appShell .reportTable td select,
 .appShell .reportTable td input:not([type="checkbox"], [type="radio"]) {
@@ -111,8 +110,7 @@
 }
 .appShell .reportTable td .primary,
 .appShell .reportTable td .secondary,
-.appShell .directoryRowActions .secondary,
-.appShell .contactActions .secondary {
+.appShell .directoryRowActions .secondary {
   padding-left: var(--control-pad);
   padding-right: var(--control-pad);
 }
@@ -139,15 +137,6 @@
   align-items: center;
   justify-content: center;
   min-width: var(--control-h-sm);
-  min-height: var(--control-h-sm);
-}
-.appShell .contactActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-.appShell .contactActions .textButton {
   min-height: var(--control-h-sm);
 }
 
@@ -278,9 +267,6 @@
 .appShell .carrierStats .carrierSort {
   align-self: center;
 }
-.appShell .contactActions {
-  gap: var(--space-2);
-}
 
 /* ---- Phones: menus stay inside the screen ---- */
 @media (max-width: 560px) {
@@ -378,16 +364,14 @@
 /* A status pill in a table cell keeps its own height; it is not stretched to
    the cell. */
 .appShell td > .opsPill,
-.appShell td > .badge,
-.appShell td > .statusPill {
+.appShell td > .badge {
   align-self: center;
   justify-self: end;
   height: auto;
 }
 @media (min-width: 761px) {
   .appShell td > .opsPill,
-  .appShell td > .badge,
-  .appShell td > .statusPill {
+  .appShell td > .badge {
     justify-self: start;
   }
 }
