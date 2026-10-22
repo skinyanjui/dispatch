@@ -1,0 +1,41 @@
+name: Scheduler
+
+# Runs Relay's 15-minute job: appointment reminders (including the two-hour
+# tier) and delivery of queued messages. Vercel's own cron on the Hobby plan
+# can only run daily, so this calls the same endpoint more often.
+#
+# It does nothing until you opt in (ADR 0046):
+#   Settings -> Secrets and variables -> Actions
+#     Variable  RELAY_JOBS_URL  https://your-domain.example   (no trailing slash)
+#     Secret    CRON_SECRET     the same value the app has
+# A failed call fails the run, which GitHub reports to repository watchers.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: relay-scheduler
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    if: ${{ vars.RELAY_JOBS_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run the 15-minute tick
+        env:
+          RELAY_JOBS_URL: ${{ vars.RELAY_JOBS_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -eu
+          code=$(curl -sS --max-time 90 -o response.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${RELAY_JOBS_URL}/api/jobs/notifications?scope=tick")
+          cat response.json
+          echo
+          # 200 also covers {"skipped":"running"}: another run still holds the lock.
+          test "$code" = "200"

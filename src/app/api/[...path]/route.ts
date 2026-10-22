@@ -36,6 +36,12 @@ import {
 } from "@/lib/loads";
 import { cancelLoad, editLoad } from "@/lib/load-changes";
 import {
+  canSeeJobStatus,
+  jobStatus,
+  parseScope,
+  runNotificationJob,
+} from "@/lib/jobs";
+import {
   aiStatus,
   checkExtraction,
   dismissExtraction,
@@ -437,16 +443,25 @@ async function handle(req: NextRequest) {
       req.method === "GET"
     ) {
       cronAuthorized(req);
-      const reminders = await scheduleReminders();
-      const cleanup = await cleanupAbandoned();
-      return NextResponse.json({
-        reminders,
-        delivery: await deliverDue(50),
-        cleanup,
-      });
+      return NextResponse.json(
+        await runNotificationJob(
+          parseScope(req.nextUrl.searchParams.get("scope")),
+        ),
+      );
     }
     const user = await session(req);
     actor = user.id;
+    if (
+      path.length === 2 &&
+      path[0] === "jobs" &&
+      path[1] === "status" &&
+      req.method === "GET"
+    ) {
+      // Not found for everyone but organization owners and admins.
+      if (!(await canSeeJobStatus(user.id)))
+        throw new HttpError(404, "NOT_FOUND");
+      return NextResponse.json({ jobs: await jobStatus() });
+    }
     if (path.length === 1 && path[0] === "logout" && req.method === "POST") {
       const t = req.cookies.get("relay_session")?.value;
       if (t)

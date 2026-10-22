@@ -251,8 +251,10 @@ const reminderLeadHours = () => {
 };
 const day = () => new Date().toISOString().slice(0, 10);
 
-/** Idempotent per day (or week for insurance) through dedupe keys. */
-export async function scheduleReminders() {
+/** Idempotent per day (or week for insurance) through dedupe keys. This is
+ *  the daily sweep: missing proof of delivery, expiring insurance, overdue
+ *  exceptions and retention of failed message bodies. */
+export async function scheduleDailyReminders() {
   return transaction(async (c) => {
     const today = day();
     let queued = 0;
@@ -312,9 +314,21 @@ export async function scheduleReminders() {
       });
       queued++;
     }
-    // Appointment reminders: the assigned driver hears about each upcoming
-    // stop once a day ahead and once within two hours. Keys include the
-    // window start, so a rescheduled stop is announced again.
+    // Retention: failed messages keep their sealed body for 7 days for retry.
+    await c.query(
+      "UPDATE notifications SET body_ciphertext=NULL WHERE status='failed' AND body_ciphertext IS NOT NULL AND created_at<now()-interval '7 days'",
+    );
+    return { candidates: queued };
+  });
+}
+
+/** Appointment reminders: the assigned driver hears about each upcoming stop
+ *  once a day ahead and once within two hours. Keys include the window start,
+ *  so a rescheduled stop is announced again. Safe to run every few minutes;
+ *  the two-hour tier is why it should be. */
+export async function scheduleAppointmentReminders() {
+  return transaction(async (c) => {
+    let queued = 0;
     const upcoming = await c.query(
       `SELECT s.id,s.sequence,s.kind,s.address,s.timezone,s.window_start,s.window_end,
         l.reference,car.organization_id,m.user_id,
@@ -347,12 +361,15 @@ export async function scheduleReminders() {
       });
       queued++;
     }
-    // Retention: failed messages keep their sealed body for 7 days for retry.
-    await c.query(
-      "UPDATE notifications SET body_ciphertext=NULL WHERE status='failed' AND body_ciphertext IS NOT NULL AND created_at<now()-interval '7 days'",
-    );
     return { candidates: queued };
   });
+}
+
+/** Both sweeps, as the scheduled job ran before they were split. */
+export async function scheduleReminders() {
+  const daily = await scheduleDailyReminders();
+  const appointments = await scheduleAppointmentReminders();
+  return { candidates: daily.candidates + appointments.candidates };
 }
 
 // ---------- Log, retry and preferences ----------
