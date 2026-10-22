@@ -89,6 +89,8 @@ The build then initializes the three QA logins and fictional carrier/load fixtur
 
 **Inbox.** Each person can mark a conversation unread, archive it or move it to trash; this is personal, nothing is deleted, and a new message brings it back ([ADR 0035](docs/decisions/0035-inbox-thread-states.md)). The Carriers page shows each carrier's dispatch authorization, active loads, open exceptions and drivers.
 
+**Command menu.** Press Ctrl or ⌘ + Shift + K to go to any page, start a load, open a queue or jump to a carrier. Ctrl+K still focuses the page search. Ideas were taken from the Twenty CRM, but no code (it is AGPL); see [ADR 0036](docs/decisions/0036-twenty-crm-review.md).
+
 **Public pages.** `/welcome` (product overview), `/how-it-works` and `/get-started` (what happens after requesting access) are static pages that describe only what exists today: no customers, pricing or live-data claims. The app and sign-in stay at `/`; the legacy demo is at `/demo`.
 
 **Sign-in.** _Keep me signed in for 30 days_ keeps a session for 30 days on that device; without it the session cookie ends with the browser (12-hour limit either way). **Google and Apple** buttons appear only after the operator sets the credentials listed in `.env.example`; signing in with them never creates an account, it links an existing one by verified email or records an access request. [Terms](/terms) and [Privacy](/privacy) pages describe how Relay works today and are drafts that need legal review ([ADR 0034](docs/decisions/0034-account-access-and-social-login.md)).

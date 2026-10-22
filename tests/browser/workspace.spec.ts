@@ -872,3 +872,40 @@ test("billing: summary cards filter the invoices, columns sort, long lists page"
   await table.locator("tbody tr").first().locator("td").first().click();
   await expect(page.getByRole("dialog", { name: "Invoice" })).toBeVisible();
 });
+
+test("command menu: open with Ctrl+Shift+K, filter, go anywhere, search loads", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await expect(page.locator(".kanban")).toBeVisible();
+  await page.keyboard.press("Control+Shift+K");
+  const menu = page.getByRole("dialog", { name: "Command menu" });
+  await expect(menu).toBeVisible();
+  const box = menu.getByRole("combobox", { name: "Type a command or search" });
+  await expect(box).toBeFocused();
+  await box.fill("billing");
+  await expect(menu.getByRole("option", { selected: true })).toContainText(
+    "Billing",
+  );
+  await page.keyboard.press("Enter");
+  await expect(menu).toBeHidden();
+  await expect(
+    page.getByRole("region", { name: "Billing and payments" }),
+  ).toBeVisible();
+  // A carrier is a command too, and typing offers to search loads.
+  await page.keyboard.press("Control+Shift+K");
+  await menu.getByRole("combobox").fill("blue ridge");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await page.keyboard.press("Control+Shift+K");
+  await menu.getByRole("combobox").fill("EASY-");
+  await menu.getByRole("option", { name: /Search loads for/ }).click();
+  await expect(page.locator(".loadSurface")).toBeVisible();
+  // Plain Ctrl+K still focuses the page search.
+  await page.keyboard.press("Control+k");
+  await expect(
+    page.getByRole("searchbox", { name: "Search loads" }),
+  ).toBeFocused();
+});

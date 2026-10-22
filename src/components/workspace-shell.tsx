@@ -1,4 +1,5 @@
 "use client";
+import { CommandPalette, type Command } from "@/components/command-palette";
 import {
   useEffect,
   useRef,
@@ -152,6 +153,7 @@ export function WorkspaceShell({
   search,
   onCreate,
   onLogout,
+  onSearchLoads,
 }: {
   children: React.ReactNode;
   context: Context;
@@ -174,11 +176,14 @@ export function WorkspaceShell({
   } | null;
   onCreate: () => void;
   onLogout: () => void;
+  /** Jump to Loads with this search text. */
+  onSearchLoads?: (text: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false),
     [mobileOpen, setMobileOpen] = useState(false),
     [menuOpen, setMenuOpen] = useState(false),
-    [allCarriers, setAllCarriers] = useState(false);
+    [allCarriers, setAllCarriers] = useState(false),
+    [palette, setPalette] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // Remembered per browser; storage may be unavailable.
@@ -188,6 +193,21 @@ export function WorkspaceShell({
     } catch {
       /* default expanded */
     }
+  }, []);
+  useEffect(() => {
+    // Ctrl or ⌘ + Shift + K opens the command menu (Ctrl+K stays search).
+    const open = (e: KeyboardEvent) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "k"
+      ) {
+        e.preventDefault();
+        setPalette((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", open);
+    return () => window.removeEventListener("keydown", open);
   }, []);
   useEffect(() => {
     if (!menuOpen) return;
@@ -256,6 +276,64 @@ export function WorkspaceShell({
     },
     { key: "billing", label: "Billing", Icon: ReceiptIcon, show: !driverOnly },
     { key: "reports", label: "Reports", Icon: ChartBarIcon, show: !driverOnly },
+  ];
+  const commands: Command[] = [
+    ...pages
+      .filter((p) => p.show)
+      .map((p) => ({
+        id: "go-" + p.key,
+        group: "Go to",
+        label: p.label,
+        run: () => onSection(p.key),
+      })),
+    ...(
+      [
+        ["account", "Account", true],
+        ["organization", "Organization", isAdmin],
+        ["notifications", "Notifications", true],
+      ] as const
+    )
+      .filter(([, , show]) => show)
+      .map(([key, label]) => ({
+        id: "go-" + key,
+        group: "Go to",
+        label,
+        run: () => onSection(key),
+      })),
+    ...(driverOnly
+      ? []
+      : [
+          {
+            id: "new-load",
+            group: "Create",
+            label: "New load",
+            run: onCreate,
+          },
+        ]),
+    ...queues
+      .filter(
+        (q) =>
+          !driverOnly ||
+          ["", "picked-up", "delivered", "cancelled"].includes(q.value),
+      )
+      .map((q) => ({
+        id: "queue-" + (q.value || "all"),
+        group: "Loads",
+        label: q.label,
+        hint: "Open this queue",
+        run: () => onQueue(q.value),
+      })),
+    ...(driverOnly
+      ? []
+      : context.carriers
+          .filter((c) => c.role !== "driver")
+          .map((c) => ({
+            id: "carrier-" + c.id,
+            group: "Carriers",
+            label: c.name,
+            hint: "View loads",
+            run: () => onCarrier(c.id),
+          }))),
   ];
   const go = (fn: () => void) => {
     fn();
@@ -508,6 +586,13 @@ export function WorkspaceShell({
 
   return (
     <div className={"shell appShell" + (collapsed ? " sidebarCollapsed" : "")}>
+      {palette && (
+        <CommandPalette
+          commands={commands}
+          searchLoads={(text) => onSearchLoads?.(text)}
+          onClose={() => setPalette(false)}
+        />
+      )}
       <a className="skipLink" href="#main">
         Skip to workspace
       </a>

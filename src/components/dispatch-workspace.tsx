@@ -257,7 +257,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       .finally(() => setReady(true));
     const connection = () => setOffline(!navigator.onLine);
     const keyboard = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        e.key.toLowerCase() === "k"
+      ) {
         if (document.querySelector("dialog[open]")) return;
         e.preventDefault();
         if (search.current) search.current.focus();
@@ -842,6 +846,10 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       onCarrier={showCarrier}
       search={pageSearch}
       onCreate={createLoad}
+      onSearchLoads={(text) => {
+        setSection("loads");
+        filterChange({ q: text, carrier: "", status: "" });
+      }}
       onLogout={logout}
     >
       <header className="topbar compact">
