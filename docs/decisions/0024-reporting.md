@@ -25,3 +25,7 @@ Charts beyond the weekly bars, saved reports, scheduled email reports, driver or
 ## Rollback
 
 No schema change. Remove the page and routes.
+
+## Layout pass
+
+Presentation only; no API, schema or permission change. Every tile group (headline figures, pipeline, billing) fills its row and the pipeline is left-aligned like the other tiles. On phones the date range is a two-by-two grid, so "Custom" is no longer hidden off the edge; the carrier choice and CSV export share the toolbar and fill its rows; and tiles sit two across, which shortens the page by about a quarter. The by-carrier table still scrolls sideways on phones.

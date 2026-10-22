@@ -1,0 +1,54 @@
+/* Reports: tiles of every group fill their row, the pipeline is left-aligned
+   like the other tiles, and on phones the range switch wraps instead of
+   hiding "Custom", tiles sit two across, and the toolbar fills its rows. */
+.appShell .reports .reportTiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.appShell .reports .reportTile {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+.appShell .reports .pipelineStep {
+  justify-content: stretch;
+  justify-items: start;
+  text-align: left;
+}
+.appShell .reports .pipelineStep strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .reports > div > .helpText:last-child,
+.appShell .reports .helpText:last-child {
+  margin-top: var(--space-3);
+}
+@media (max-width: 640px) {
+  .appShell .reports .segmented {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    overflow: visible;
+  }
+  .appShell .reports .segment {
+    text-align: center;
+  }
+  .appShell .reports .reportBar > label,
+  .appShell .reports .reportExport {
+    flex: 1 1 150px;
+    margin: 0;
+  }
+  .appShell .reports .reportBar select {
+    width: 100%;
+  }
+  .appShell .reports .reportExport {
+    justify-content: center;
+  }
+  .appShell .reports .reportTile {
+    flex: 1 1 calc(50% - var(--space-2));
+    padding: var(--space-3);
+  }
+  .appShell .reports .reportTile strong {
+    font-size: 20px;
+  }
+}
