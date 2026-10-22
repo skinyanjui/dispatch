@@ -35,6 +35,7 @@ import {
   olderEvents,
 } from "@/lib/loads";
 import { cancelLoad, editLoad } from "@/lib/load-changes";
+import { auditFilters, auditLog } from "@/lib/audit";
 import {
   canSeeJobStatus,
   jobStatus,
@@ -451,6 +452,14 @@ async function handle(req: NextRequest) {
     }
     const user = await session(req);
     actor = user.id;
+    if (path[0] === "audit" && req.method === "GET") {
+      if (path.length === 1)
+        return NextResponse.json(
+          await auditLog(user.id, req.nextUrl.searchParams),
+        );
+      if (path.length === 2 && path[1] === "filters")
+        return NextResponse.json(await auditFilters(user.id));
+    }
     if (
       path.length === 2 &&
       path[0] === "jobs" &&

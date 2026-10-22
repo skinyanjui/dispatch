@@ -30,6 +30,7 @@ import {
   SparkleIcon,
   TrayIcon,
   ChartBarIcon,
+  ClipboardTextIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
@@ -45,6 +46,7 @@ export const sectionTitles: Record<
   notifications: "Notifications",
   account: "Account",
   organization: "Organization",
+  audit: "Audit log",
   documents: "Documents",
   contacts: "Contacts",
   prospects: "Prospects",
@@ -275,6 +277,7 @@ export function WorkspaceShell({
       [
         ["account", "Account", true],
         ["organization", "Organization", isAdmin],
+        ["audit", "Audit log", isAdmin],
         ["notifications", "Notifications", true],
       ] as const
     )
@@ -481,6 +484,12 @@ export function WorkspaceShell({
                   Organization
                 </button>
               )}
+              {isAdmin && (
+                <button onClick={() => go(() => onSection("audit"))}>
+                  <ClipboardTextIcon {...icon} />
+                  Audit log
+                </button>
+              )}
               <button onClick={() => go(() => onSection("notifications"))}>
                 <BellIcon {...icon} />
                 Notifications
@@ -509,6 +518,12 @@ export function WorkspaceShell({
                   key: "organization",
                   label: "Organization",
                   Icon: GearSixIcon,
+                  show: isAdmin,
+                },
+                {
+                  key: "audit",
+                  label: "Audit log",
+                  Icon: ClipboardTextIcon,
                   show: isAdmin,
                 },
                 {

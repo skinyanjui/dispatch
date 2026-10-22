@@ -74,6 +74,7 @@ import { Inbox, type Compose } from "@/components/inbox";
 import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
 import { OrganizationSettings } from "@/components/organization-settings";
+import { AuditLog } from "@/components/audit-log";
 import { driverUploadTypes } from "@/lib/compliance";
 import { LoadCard } from "@/components/load-card";
 import {
@@ -1004,6 +1005,7 @@ export default function Workspace({
     billing: ["Search invoices and loads", "Search invoices…"],
     reports: ["Search carriers", "Search carriers…"],
     organization: ["Search people", "Search people…"],
+    audit: ["Search the audit log", "Search the log…"],
     documents: ["Search drafts", "Search drafts…"],
   };
   // Every page has a search. Pages with nothing of their own to filter
@@ -1394,6 +1396,12 @@ export default function Workspace({
             context={context}
             onAuthError={handleError}
             onChanged={async () => setContext(await api<Context>("me"))}
+          />
+        ) : section === "audit" ? (
+          <AuditLog
+            query={pageQ.audit ?? ""}
+            onClearQuery={() => setPageQ((old) => ({ ...old, audit: "" }))}
+            onAuthError={handleError}
           />
         ) : section === "notifications" ? (
           <NotificationCenter

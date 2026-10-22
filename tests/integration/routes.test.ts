@@ -89,4 +89,7 @@ test("pages are offered by role, the same rule the sidebar uses", () => {
   assert.ok(open(dispatcher).includes("prospects"));
   assert.ok(!open(dispatcher).includes("organization"));
   assert.ok(open(admin).includes("organization"));
+  assert.ok(open(admin).includes("audit"));
+  assert.ok(!open(dispatcher).includes("audit"));
+  assert.ok(!open(manager).includes("audit"));
 });

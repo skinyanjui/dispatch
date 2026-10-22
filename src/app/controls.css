@@ -421,3 +421,53 @@
   padding: 0 16px;
   text-decoration: none;
 }
+
+/* ---- Audit log ---- */
+.appShell .auditScheduler {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.appShell .auditScheduler .opsCard {
+  padding: var(--space-3);
+}
+.appShell .auditScheduler .helpText {
+  margin: var(--space-1) 0 0;
+}
+.appShell .auditDate {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 0;
+}
+.appShell .auditDate input {
+  width: auto;
+}
+.appShell .auditTable td,
+.appShell .auditTable th {
+  white-space: nowrap;
+}
+.appShell .auditTable td[data-label="What"] {
+  white-space: normal;
+  min-width: 220px;
+}
+.appShell .auditRecord {
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  font-size: 12px;
+  color: var(--muted);
+}
+.appShell .directoryMore {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-4) 0;
+}
+.appShell .auditTable tbody th {
+  color: var(--ink);
+  font-weight: 400;
+}

@@ -10,6 +10,7 @@
  *   /carriers/:id/documents   that carrier's documents
  *   /billing                  Billing
  *   /billing/invoices/:id     one dispatch invoice
+ *   /audit                    the audit log (owners and admins)
  *   /<section>                any other page
  */
 export const workspaceSections = [
@@ -20,6 +21,7 @@ export const workspaceSections = [
   "notifications",
   "account",
   "organization",
+  "audit",
   "contacts",
   "prospects",
   "assistant",
@@ -108,6 +110,7 @@ export function sectionAllowed(section: WorkspaceSection, who: Who): boolean {
     case "documents":
       return !driverOnly && orgStaff;
     case "organization":
+    case "audit":
       return isAdmin;
     default:
       return true;
