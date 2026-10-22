@@ -468,6 +468,7 @@ test("account: enroll two-step verification and sign in with a code", async ({
     await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("button", { name: "Account", exact: true }).click();
     await expect(page.getByText("Email address")).toBeVisible();
+    await page.getByRole("tab", { name: "Security" }).click();
     await page
       .getByRole("button", { name: "Set up two-step verification" })
       .click();

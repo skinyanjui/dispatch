@@ -114,3 +114,11 @@
 .linkPage .loginPanel .setupIntro {
   margin: 0 0 20px;
 }
+
+.appShell .accountPage .orgTabs {
+  max-width: 960px;
+  margin-bottom: var(--space-4);
+}
+.appShell .accountPage .directoryIntro {
+  text-align: left;
+}

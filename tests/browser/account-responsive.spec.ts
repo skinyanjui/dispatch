@@ -13,7 +13,7 @@ async function login(page: Page) {
 const noOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
-test("account: two aligned columns on a desktop, one on a phone", async ({
+test("account: Profile and Security tabs, two aligned columns on a desktop, one on a phone", async ({
   page,
 }) => {
   await login(page);
@@ -24,14 +24,35 @@ test("account: two aligned columns on a desktop, one on a phone", async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/account");
     const region = page.getByRole("region", { name: "Account settings" });
-    await expect(region.getByRole("heading", { name: "Profile" })).toBeVisible();
-    const lefts = await region
-      .locator(".opsCard")
-      .evaluateAll((els) => [
-        ...new Set(els.map((e) => Math.round(e.getBoundingClientRect().left))),
-      ]);
-    expect(lefts.length).toBe(columns);
-    expect(await noOverflow(page)).toBe(true);
+    const tabs = region.getByRole("tablist", { name: "Account" });
+    await expect(tabs.getByRole("tab")).toHaveText(["Profile", "Security"]);
+    await expect(tabs.getByRole("tab", { name: "Profile" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(
+      region.getByRole("heading", { name: "Profile" }),
+    ).toBeVisible();
+    await expect(
+      region.getByRole("heading", { name: "Change password" }),
+    ).toHaveCount(0);
+    for (const tab of ["Profile", "Security"]) {
+      await tabs.getByRole("tab", { name: tab }).click();
+      const lefts = await region
+        .locator(".opsCard")
+        .evaluateAll((els) => [
+          ...new Set(
+            els.map((e) => Math.round(e.getBoundingClientRect().left)),
+          ),
+        ]);
+      expect(lefts.length).toBe(columns);
+      expect(await noOverflow(page)).toBe(true);
+    }
+    await expect(
+      region.getByRole("heading", { name: "Two-step verification" }),
+    ).toBeVisible();
+    await tabs.getByRole("tab", { name: "Security" }).press("Home");
+    await expect(tabs.getByRole("tab", { name: "Profile" })).toBeFocused();
   }
 });
 
@@ -40,7 +61,9 @@ test("notifications: the delivery log shows 20 at a time", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notifications");
   const region = page.getByRole("region", { name: "Notifications" });
-  await expect(region.getByRole("group", { name: "Email me about" })).toBeVisible();
+  await expect(
+    region.getByRole("group", { name: "Email me about" }),
+  ).toBeVisible();
   const rows = region.getByRole("article");
   await expect
     .poll(async () => await rows.count(), { timeout: 10000 })
@@ -89,14 +112,19 @@ test("link pages: the heading fits the card and the form has room", async ({
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/reset-password#" + "a".repeat(64));
-    const heading = page.getByRole("heading", { name: "Choose a new password." });
+    const heading = page.getByRole("heading", {
+      name: "Choose a new password.",
+    });
     await expect(heading).toBeVisible();
     const size = await heading.evaluate((el) =>
       parseFloat(getComputedStyle(el).fontSize),
     );
     expect(size).toBeLessThanOrEqual(28);
     const h = (await heading.boundingBox())!;
-    const field = (await page.getByLabel(/^New password/).first().boundingBox())!;
+    const field = (await page
+      .getByLabel(/^New password/)
+      .first()
+      .boundingBox())!;
     // The first field sits clear of the heading, not jammed under it.
     expect(field.y - (h.y + h.height)).toBeGreaterThan(12);
     expect(await noOverflow(page)).toBe(true);
