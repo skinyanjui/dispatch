@@ -9,6 +9,7 @@ import "./density.css";
 import "./system.css";
 import "./login.css";
 import "./marketing.css";
+import "./workspace-look.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
   description: "Carrier-scoped freight dispatch operations",

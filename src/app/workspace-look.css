@@ -1,0 +1,206 @@
+/* The signed-in workspace look (ADR 0039): a quiet grey frame, a white
+   rounded content panel, compact 13px type, hairline borders, muted labels and
+   text-style toolbar actions. Scoped to .appShell so sign-in, onboarding and
+   the public pages keep their own style. Colors and sizes are chosen from the
+   reference screenshots; no third-party CSS is used. */
+.appShell {
+  --canvas: #f3f3f3;
+  --panel: #fff;
+  --ink: #333;
+  --muted: #666;
+  --subtle: #6b6b6b;
+  --border: #ebebeb;
+  --border-strong: #d6d6d6;
+  --soft: #f5f5f5;
+  --panel-soft: #f5f5f5;
+  --sidebar-bg: transparent;
+  --sidebar-hover: #ebebeb;
+  --sidebar-active: #e6e6e6;
+  --radius: 8px;
+  --control-radius: 4px;
+  --field-radius: 6px;
+  --control-h: 30px;
+  --accent-soft: #eef1ff;
+  font-size: 13px;
+  color: var(--ink);
+}
+/* Frame: sidebar on the grey canvas, content in a white panel. */
+.appShell .sidebarDock {
+  border-right: 0;
+  background: transparent;
+}
+.appShell .mainPane {
+  margin: 8px 8px 8px 0;
+  min-height: calc(100dvh - 16px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+@media (max-width: 800px) {
+  .appShell .mainPane {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+}
+/* Sidebar rows: small icons, quiet hover, grey section labels. */
+.appShell .sidebarItem {
+  min-height: 30px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 13px;
+}
+.appShell .sidebarItem:hover {
+  background: var(--sidebar-hover);
+}
+.appShell .sidebarItem.active {
+  background: var(--sidebar-active);
+  font-weight: 500;
+}
+.appShell .sidebarLabel,
+.appShell .sidebarSectionLabel {
+  color: var(--subtle);
+  font-size: 12px;
+  font-weight: 500;
+}
+/* Buttons: outlined and compact; blue stays for the main action. */
+.appShell .secondary,
+.appShell a.secondary {
+  min-height: 28px;
+  padding: 0 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 400;
+  box-shadow: none;
+}
+.appShell .secondary:hover {
+  background: var(--soft);
+}
+.appShell .primary {
+  min-height: 28px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+/* Text-style toolbar actions (Filter, Sort, Options). */
+.appShell .textButton {
+  color: var(--muted);
+  font-weight: 400;
+}
+.appShell .textButton:hover {
+  color: var(--ink);
+  background: var(--soft);
+  border-radius: 4px;
+}
+.appShell .viewOptions summary {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 400;
+}
+.appShell .viewOptions summary:hover {
+  color: var(--ink);
+  background: var(--soft);
+}
+.appShell .segmented {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  gap: 2px;
+}
+.appShell .segment {
+  border-radius: 4px;
+  color: var(--muted);
+}
+.appShell .segment.active {
+  background: var(--sidebar-active);
+  color: var(--ink);
+  box-shadow: none;
+}
+/* Pills and chips are flat. */
+.appShell .queueTab,
+.appShell .attentionChip {
+  border-color: var(--border);
+  box-shadow: none;
+}
+/* Tables: hairline grid, muted headers, comfortable 32px rows. */
+.appShell .reportTable {
+  font-size: 13px;
+}
+.appShell .reportTable th,
+.appShell .reportTable td {
+  padding: 0 10px;
+  height: 32px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.appShell .reportTable th:last-child,
+.appShell .reportTable td:last-child {
+  border-right: 0;
+}
+.appShell .reportTable thead th {
+  color: var(--muted);
+  font-weight: 400;
+  background: transparent;
+}
+.appShell .reportTable tbody tr:hover {
+  background: var(--soft);
+}
+.appShell .reportTable tbody th {
+  font-weight: 400;
+}
+.appShell .sortButton {
+  color: inherit;
+  font-weight: 400;
+}
+/* Cards and panels: flat with a hairline. */
+.appShell .opsCard,
+.appShell .reportTile,
+.appShell .carrierStat,
+.appShell .pipelineStep,
+.appShell .loadCard,
+.appShell .lane {
+  box-shadow: none;
+  border-color: var(--border);
+}
+.appShell .reportTile strong,
+.appShell .carrierStat strong {
+  font-weight: 500;
+}
+/* Inputs: light borders, 4px radius. */
+.appShell
+  input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]),
+.appShell select,
+.appShell textarea {
+  border-color: var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+}
+.appShell .footerDivider,
+.appShell footer {
+  color: var(--subtle);
+}
+/* Headings stay modest. */
+.appShell h1,
+.appShell h2,
+.appShell h3 {
+  font-weight: 500;
+}
+.appShell .loadTable tbody th .textButton,
+.appShell .billingTable tbody th .textButton,
+.appShell .reportTable tbody th .textButton {
+  color: var(--ink);
+  font-weight: 500;
+}
+.appShell .viewPicker select {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.appShell .viewPicker select:hover {
+  background: var(--soft);
+}
