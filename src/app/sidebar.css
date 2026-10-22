@@ -3,7 +3,7 @@
    Collapsed, the same sidebar shrinks to icons; nothing is duplicated. */
 .appShell {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 216px minmax(0, 1fr);
   background: var(--canvas);
   align-items: start;
   min-height: 100dvh;
@@ -313,14 +313,14 @@
    search box at the top. */
 @media (min-width: 1001px) {
   .appShell {
-    grid-template-columns: fit-content(260px) minmax(0, 1fr);
+    grid-template-columns: fit-content(216px) minmax(0, 1fr);
   }
   .appShell.sidebarCollapsed {
     grid-template-columns: 52px minmax(0, 1fr);
   }
 }
 .sidebarDock {
-  min-width: 168px;
+  min-width: 148px;
 }
 .appShell.sidebarCollapsed .sidebarDock {
   min-width: 0;

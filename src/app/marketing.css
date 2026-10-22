@@ -880,3 +880,64 @@
     gap: 4px 12px;
   }
 }
+
+/* Top bar in the app's design language (ADR 0044): one 32px control height,
+   the app's control radius and type, brand | nav | actions on one centre line. */
+.mkBar .mkHeader {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+}
+.mkHeader nav {
+  flex: none;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 2px;
+}
+.mkHeader nav a,
+.mkActions > a:not(.mkButton),
+.mkHeader .mkButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h, 32px);
+  padding: 0 var(--control-pad, 10px);
+  border-radius: var(--control-radius, 7px);
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.mk .mkHeader a.mkButton {
+  min-height: var(--control-h, 32px);
+  padding: 0 14px;
+  border-radius: var(--control-radius, 7px);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.mkActions {
+  justify-self: end;
+  gap: 4px;
+}
+@media (max-width: 720px) {
+  .mkBar .mkHeader {
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+  }
+  .mkHeader nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    order: 0;
+    justify-content: flex-start;
+  }
+  .mkActions {
+    grid-column: 2;
+    grid-row: 1;
+    margin-left: 0;
+  }
+}
+@media (max-width: 480px) {
+  .mkHeader nav a {
+    padding: 0 8px;
+  }
+}
