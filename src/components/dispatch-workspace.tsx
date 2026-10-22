@@ -93,6 +93,7 @@ import {
 import { dollarsToMinor, appointmentToInstant, formatMoney } from "@/lib/entry";
 
 import { useApi, ApiError, describe } from "@/lib/client-api";
+import { pathFor, parsePath, sectionAllowed, type Route } from "@/lib/routes";
 const eventLabels: Record<string, string> = {
   "load.created": "Load created",
   "load.assign": "Driver assigned",
@@ -116,7 +117,14 @@ const eventLabels: Record<string, string> = {
   "billing.carrier_receipt_recorded": "Carrier receipt recorded",
 };
 
-export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
+export default function Workspace({
+  demo = false,
+  initialRoute,
+}: {
+  demo?: boolean;
+  /** The address the page was opened at (ADR 0045); ignored in the demo. */
+  initialRoute?: Route;
+} = {}) {
   const api = useApi();
   const router = useRouter();
   const [context, setContext] = useState<Context | null>(null),
@@ -146,7 +154,12 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [cursor, setCursor] = useState<string | null>(null),
     [offline, setOffline] = useState(false),
     [updated, setUpdated] = useState<Date | null>(null),
-    [section, setSection] = useState<WorkspaceSection>("loads"),
+    [section, setSection] = useState<WorkspaceSection>(
+      demo ? "loads" : (initialRoute?.section ?? "loads"),
+    ),
+    [invoiceTarget, setInvoiceTarget] = useState<string | null>(null),
+    [urlReady, setUrlReady] = useState(false),
+    [navTick, setNavTick] = useState(0),
     [pageQ, setPageQ] = useState<Partial<Record<WorkspaceSection, string>>>({}),
     [setupCarrier, setSetupCarrier] = useState<string | null>(null),
     [docsCarrier, setDocsCarrier] = useState<string | null>(null),
@@ -189,7 +202,11 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     [createCarrier, setCreateCarrier] = useState(""),
     revision = useRef(0),
     active = useRef(false),
-    queueRequest = useRef(0);
+    queueRequest = useRef(0),
+    contextRef = useRef<Context | null>(null),
+    deepLink = useRef<Route | undefined>(demo ? undefined : initialRoute),
+    navigating = useRef(false),
+    replaceNext = useRef(false);
   const refreshUnread = useCallback(() => {
     api<{ unread: number }>("inbox/unread")
       .then((r) => setUnread(r.unread))
@@ -265,13 +282,17 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
     api<Context>("me")
       .then((c) => {
         active.current = true;
-        setContext(c);
+        // Older links say /?view=carriers; they mean the Carriers page.
         if (
           new URLSearchParams(window.location.search).get("view") ===
             "carriers" &&
-          c.carriers.some((v) => v.role !== "driver")
-        )
-          setSection("carriers");
+          c.carriers.some((v) => v.role !== "driver") &&
+          !deepLink.current?.loadId
+        ) {
+          if (demo) setSection("carriers");
+          else deepLink.current = { section: "carriers" };
+        }
+        setContext(c);
       })
       .catch((e) => {
         if (e.message !== "AUTH_REQUIRED" && e.message !== "SESSION_EXPIRED")
@@ -305,7 +326,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       window.removeEventListener("offline", connection);
       window.removeEventListener("keydown", keyboard);
     };
-  }, [handleError, api]);
+  }, [handleError, api, demo]);
   useEffect(() => {
     if (!context) return;
     const controller = new AbortController();
@@ -375,6 +396,128 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
       setBusy(false);
     }
   }
+  /** Opens a load from an address. A load that is missing and one that is
+   *  not yours read the same. */
+  const loadFromLink = useCallback(
+    async (id: string) => {
+      try {
+        const load = await api<Load>("loads/" + id);
+        setRecordTab("timeline");
+        setSelected(load);
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) handleError(e);
+        else {
+          setSelected(null);
+          setError("NOT_FOUND");
+        }
+      }
+    },
+    [api, handleError],
+  );
+  /** Puts the workspace where an address says (first load, Back, Forward).
+   *  Anything the person may not open falls back to Loads. */
+  const applyRoute = useCallback(
+    async (r: Route) => {
+      const who = contextRef.current;
+      if (!who) return;
+      navigating.current = true;
+      // The browser is already at the address; a correction replaces it.
+      replaceNext.current = true;
+      try {
+        const allowed = sectionAllowed(r.section, who);
+        const next = allowed ? r.section : "loads";
+        if (!allowed) setError("NOT_FOUND");
+        setSection(next);
+        setInvoiceTarget(next === "billing" ? (r.invoiceId ?? null) : null);
+        const carrierOk =
+          next === "carriers" &&
+          !!r.carrierId &&
+          who.carriers.some((c) => c.id === r.carrierId && c.role !== "driver");
+        if (r.carrierId && next === "carriers" && !carrierOk)
+          setError("NOT_FOUND");
+        setSetupCarrier(
+          carrierOk && r.carrierPanel === "setup" ? r.carrierId! : null,
+        );
+        setDocsCarrier(
+          carrierOk && r.carrierPanel === "documents" ? r.carrierId! : null,
+        );
+        if (allowed && r.loadId) await loadFromLink(r.loadId);
+        else setSelected(null);
+      } finally {
+        navigating.current = false;
+        setNavTick((t) => t + 1);
+      }
+    },
+    [loadFromLink],
+  );
+  useEffect(() => {
+    contextRef.current = context;
+  }, [context]);
+  useEffect(() => {
+    // The address the page opened at is applied once, after sign-in.
+    if (demo || !context) return;
+    const route = deepLink.current;
+    deepLink.current = undefined;
+    if (!route) {
+      setUrlReady(true);
+      return;
+    }
+    void applyRoute(route).finally(() => setUrlReady(true));
+  }, [demo, context, applyRoute]);
+  useEffect(() => {
+    // Back and Forward.
+    if (demo || !urlReady) return;
+    const onPop = () => {
+      const route = parsePath(
+        window.location.pathname.split("/").filter(Boolean),
+      );
+      void applyRoute(route ?? { section: "loads" });
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [demo, urlReady, applyRoute]);
+  useEffect(() => {
+    // The address follows what is open, one history entry per change.
+    if (demo || !context || !urlReady || navigating.current) return;
+    const route: Route = selected
+      ? { section: "loads", loadId: selected.id }
+      : section === "billing" && invoiceTarget
+        ? { section: "billing", invoiceId: invoiceTarget }
+        : section === "carriers" && setupCarrier && setupCarrier !== "new"
+          ? {
+              section: "carriers",
+              carrierId: setupCarrier,
+              carrierPanel: "setup",
+            }
+          : section === "carriers" && docsCarrier
+            ? {
+                section: "carriers",
+                carrierId: docsCarrier,
+                carrierPanel: "documents",
+              }
+            : { section };
+    const path = pathFor(route);
+    if (window.location.pathname !== path)
+      window.history[replaceNext.current ? "replaceState" : "pushState"](
+        null,
+        "",
+        path,
+      );
+    replaceNext.current = false;
+    document.title = selected
+      ? `Load ${selected.reference} · Relay`
+      : `${section === "loads" ? "Loads" : sectionTitles[section]} · Relay`;
+  }, [
+    demo,
+    context,
+    urlReady,
+    navTick,
+    selected,
+    invoiceTarget,
+    section,
+    setupCarrier,
+    docsCarrier,
+  ]);
   function filterChange(
     patch: Partial<{ q: string; carrier: string; status: string }>,
   ) {
@@ -1265,6 +1408,8 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
             context={context}
             offline={offline}
             onAuthError={handleError}
+            invoiceId={invoiceTarget}
+            onInvoiceChange={setInvoiceTarget}
           />
         ) : section === "exceptions" ? (
           <ExceptionQueue

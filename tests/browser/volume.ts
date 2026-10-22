@@ -75,3 +75,31 @@ export async function ensureVolume(target = 30) {
     await db.end();
   }
 }
+
+/** An issued dispatch invoice for the named carrier (created once, reused). */
+export async function invoiceFor(carrierName: string) {
+  const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    const found = await db.query(
+      `SELECT i.id FROM dispatch_invoices i JOIN carriers c ON c.id=i.carrier_id
+       WHERE c.name=$1 AND i.request_hash='link-qa' LIMIT 1`,
+      [carrierName],
+    );
+    if (found.rows[0]) return found.rows[0].id as string;
+    const owner = (
+      await db.query("SELECT id FROM users WHERE email='dispatcher@relay.test'")
+    ).rows[0].id;
+    const carrier = (
+      await db.query("SELECT id FROM carriers WHERE name=$1", [carrierName])
+    ).rows[0].id;
+    const id = randomUUID();
+    await db.query(
+      `INSERT INTO dispatch_invoices(id,carrier_id,number,status,fee_bps,total_minor,due_on,issued_at,issued_by,created_by,idempotency_key,request_hash)
+       VALUES($1,$2,'LINK-'||$3::text,'issued',800,12345,current_date+30,now(),$4,$4,$5,'link-qa')`,
+      [id, carrier, Date.now(), owner, randomUUID()],
+    );
+    return id;
+  } finally {
+    await db.end();
+  }
+}

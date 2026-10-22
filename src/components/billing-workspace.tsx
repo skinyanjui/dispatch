@@ -615,6 +615,8 @@ export function BillingWorkspace({
   onAuthError,
   query = "",
   onClearQuery,
+  invoiceId = null,
+  onInvoiceChange,
 }: {
   context: Context;
   offline: boolean;
@@ -622,6 +624,10 @@ export function BillingWorkspace({
   /** Search text from the page header. */
   query?: string;
   onClearQuery?: () => void;
+  /** The invoice the address names; opened once its carrier's list loads. */
+  invoiceId?: string | null;
+  /** Told when a person opens or closes an invoice, so the address follows. */
+  onInvoiceChange?: (id: string | null) => void;
 }) {
   const api = useApi();
   const carriers = context.carriers.filter((c) => c.role !== "driver");
@@ -642,21 +648,54 @@ export function BillingWorkspace({
     }),
     [shownInvoices, setShownInvoices] = useState(pageSize),
     [shownFreight, setShownFreight] = useState(pageSize),
-    [open, setOpen] = useState<
+    [open, setOpenState] = useState<
       { kind: "invoice" | "packet"; id: string } | "new" | null
-    >(null);
+    >(null),
+    [linkNote, setLinkNote] = useState("");
+  const setOpen = useCallback(
+    (next: typeof open) => {
+      setOpenState(next);
+      onInvoiceChange?.(
+        next && next !== "new" && next.kind === "invoice" ? next.id : null,
+      );
+    },
+    [onInvoiceChange],
+  );
   const retry = useRetryKey();
+  // The invoice a link asked for. It is looked up (which carrier owns it),
+  // that carrier is selected, its list is fetched with the invoice included,
+  // and only then is the invoice opened or found missing. A list fetched
+  // earlier, for another reason, says nothing about the link.
+  const wanted = useRef<{
+    id: string;
+    carrier: string | null;
+    ready: boolean;
+  } | null>(null);
+  // Only the newest request may fill the page: switching carriers quickly must
+  // not let a slow earlier answer overwrite a later one.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
     if (!carrierId) return;
+    const mine = ++loadSeq.current;
+    const link = wanted.current;
+    const withInvoice = !!link && link.carrier === carrierId;
     setBusy(true);
     setError("");
     try {
-      setData(await api<BillingOverview>("billing?carrier_id=" + carrierId));
+      const next = await api<BillingOverview>(
+        "billing?carrier_id=" +
+          carrierId +
+          (withInvoice ? "&invoice_id=" + link.id : ""),
+      );
+      if (mine !== loadSeq.current) return;
+      setData(next);
+      if (withInvoice && wanted.current === link) link.ready = true;
     } catch (e) {
+      if (mine !== loadSeq.current) return;
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
       setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
     } finally {
-      setBusy(false);
+      if (mine === loadSeq.current) setBusy(false);
     }
   }, [api, carrierId, onAuthError]);
   useEffect(() => {
@@ -664,6 +703,56 @@ export function BillingWorkspace({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+  const ownCarriers = carriers.map((c) => c.id).join(",");
+  useEffect(() => {
+    if (!invoiceId || (open && open !== "new" && open.id === invoiceId)) return;
+    let stale = false;
+    const link = {
+      id: invoiceId,
+      carrier: null as string | null,
+      ready: false,
+    };
+    wanted.current = link;
+    api<{ carrier_id: string }>("dispatch-invoices/" + invoiceId)
+      .then((r) => {
+        if (stale) return;
+        if (!ownCarriers.split(",").includes(r.carrier_id)) throw new Error();
+        link.carrier = r.carrier_id;
+        if (r.carrier_id === carrierId) void load();
+        else setCarrierId(r.carrier_id);
+      })
+      .catch((e) => {
+        if (stale) return;
+        wanted.current = null;
+        if (e instanceof ApiError && e.status === 401) onAuthError(e);
+        // Not found and not yours read the same.
+        setLinkNote("That invoice isn’t available to your account.");
+        onInvoiceChange?.(null);
+      });
+    return () => {
+      stale = true;
+    };
+    // Runs when the link changes, not when the list refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceId]);
+  useEffect(() => {
+    const link = wanted.current;
+    if (!link?.ready || !data || data.carrier_id !== link.carrier) return;
+    wanted.current = null;
+    if (data.invoices.some((i) => i.id === link.id)) {
+      setLinkNote("");
+      setOpenState({ kind: "invoice", id: link.id });
+    } else {
+      setLinkNote("That invoice isn’t available to your account.");
+      onInvoiceChange?.(null);
+    }
+  }, [data, onInvoiceChange]);
+  useEffect(() => {
+    // Back or Forward closed the invoice the address named.
+    if (!invoiceId && open && open !== "new" && open.kind === "invoice")
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpenState(null);
+  }, [invoiceId, open]);
   async function run(fn: () => Promise<string>) {
     setBusy(true);
     setError("");
@@ -855,8 +944,11 @@ export function BillingWorkspace({
           </button>
         </div>
       )}
-      <p className={notice ? "inlineNotice" : "srOnly"} role="status">
-        {notice || (busy ? "Loading billing" : "")}
+      <p
+        className={notice || linkNote ? "inlineNotice" : "srOnly"}
+        role="status"
+      >
+        {notice || linkNote || (busy ? "Loading billing" : "")}
       </p>
       {data && (
         <>

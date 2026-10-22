@@ -445,8 +445,24 @@ export function paymentState(totalMinor: string, paidMinor: string) {
   return paid >= total ? "paid" : paid === 0n ? "unpaid" : "partial";
 }
 
+/** Which carrier an invoice belongs to, for a link to it. The answer is the
+ *  same NOT_FOUND whether the invoice does not exist or is not yours. */
+export async function invoiceCarrier(user: string, invoiceId: string) {
+  return transaction(async (c) => {
+    const row = await c.query(
+      "SELECT carrier_id FROM dispatch_invoices WHERE id=$1",
+      [invoiceId],
+    );
+    if (!row.rows[0]) throw new HttpError(404, "NOT_FOUND");
+    await billingMember(c, user, row.rows[0].carrier_id);
+    return { carrier_id: row.rows[0].carrier_id as string };
+  });
+}
+
 export async function billingOverview(user: string, params: URLSearchParams) {
   const carrierId = z.uuid().parse(params.get("carrier_id"));
+  // A linked invoice is always included, even beyond the newest hundred.
+  const linked = z.uuid().nullable().parse(params.get("invoice_id"));
   return transaction(async (c) => {
     const membership = await billingMember(c, user, carrierId);
     const loads = await c.query(
@@ -478,8 +494,10 @@ export async function billingOverview(user: string, params: URLSearchParams) {
           FROM dispatch_invoice_lines dl JOIN loads l ON l.id=dl.load_id WHERE dl.invoice_id=i.id) lines,
         (SELECT COALESCE(json_agg(json_build_object('id',p.id,'amount_minor',p.amount_minor::text,'received_on',p.received_on,'method',p.method,'reference',p.reference) ORDER BY p.received_on),'[]')
           FROM dispatch_invoice_payments p WHERE p.invoice_id=i.id) payments
-      FROM dispatch_invoices i WHERE i.carrier_id=$1 ORDER BY i.created_at DESC,i.id LIMIT 100`,
-      [carrierId],
+      FROM dispatch_invoices i WHERE i.carrier_id=$1
+        AND (i.id=$2 OR i.id IN (SELECT id FROM dispatch_invoices WHERE carrier_id=$1 ORDER BY created_at DESC,id LIMIT 100))
+      ORDER BY i.created_at DESC,i.id`,
+      [carrierId, linked],
     );
     return {
       carrier_id: carrierId,

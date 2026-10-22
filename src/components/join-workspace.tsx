@@ -57,8 +57,13 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
             <a
               className="primary full setupLink"
               href={
-                (demo ? "/demo" : "/") +
-                (invitation?.role === "carrier-manager" ? "?view=carriers" : "")
+                invitation?.role === "carrier-manager"
+                  ? demo
+                    ? "/demo?view=carriers"
+                    : "/carriers"
+                  : demo
+                    ? "/demo"
+                    : "/"
               }
             >
               {invitation?.role === "driver"

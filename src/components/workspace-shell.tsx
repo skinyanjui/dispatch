@@ -33,20 +33,8 @@ import {
 } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { stageLabels, type Context } from "@/lib/contracts";
-export type WorkspaceSection =
-  | "loads"
-  | "carriers"
-  | "exceptions"
-  | "billing"
-  | "notifications"
-  | "account"
-  | "organization"
-  | "contacts"
-  | "prospects"
-  | "assistant"
-  | "inbox"
-  | "reports"
-  | "documents";
+import { sectionAllowed, type WorkspaceSection } from "@/lib/routes";
+export type { WorkspaceSection };
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
   string
@@ -254,38 +242,26 @@ export function WorkspaceShell({
     label: string;
     Icon: typeof TruckIcon;
     show: boolean;
-  }[] = [
-    { key: "loads", label: "Loads", Icon: TruckIcon, show: true },
-    { key: "exceptions", label: "Exceptions", Icon: WarningIcon, show: true },
-    { key: "inbox", label: "Inbox", Icon: TrayIcon, show: true },
-    { key: "contacts", label: "Contacts", Icon: AddressBookIcon, show: true },
-    {
-      key: "carriers",
-      label: "Carriers",
-      Icon: BuildingsIcon,
-      show: !driverOnly,
-    },
-    {
-      key: "prospects",
-      label: "Prospects",
-      Icon: HandshakeIcon,
-      show: !driverOnly && orgStaff,
-    },
-    {
-      key: "assistant",
-      label: "Assistant",
-      Icon: SparkleIcon,
-      show: !driverOnly && orgStaff,
-    },
-    {
-      key: "documents",
-      label: "Documents",
-      Icon: FileTextIcon,
-      show: !driverOnly && orgStaff,
-    },
-    { key: "billing", label: "Billing", Icon: ReceiptIcon, show: !driverOnly },
-    { key: "reports", label: "Reports", Icon: ChartBarIcon, show: !driverOnly },
-  ];
+  }[] = (
+    [
+      ["loads", "Loads", TruckIcon],
+      ["exceptions", "Exceptions", WarningIcon],
+      ["inbox", "Inbox", TrayIcon],
+      ["contacts", "Contacts", AddressBookIcon],
+      ["carriers", "Carriers", BuildingsIcon],
+      // Prospects are the dispatch company's own sales records (ADR 0030).
+      ["prospects", "Prospects", HandshakeIcon],
+      ["assistant", "Assistant", SparkleIcon],
+      ["documents", "Documents", FileTextIcon],
+      ["billing", "Billing", ReceiptIcon],
+      ["reports", "Reports", ChartBarIcon],
+    ] as const
+  ).map(([key, label, Icon]) => ({
+    key,
+    label,
+    Icon,
+    show: sectionAllowed(key, context),
+  }));
   const commands: Command[] = [
     ...pages
       .filter((p) => p.show)

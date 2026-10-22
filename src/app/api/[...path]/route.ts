@@ -146,6 +146,7 @@ import {
 } from "@/lib/notifications";
 import {
   billingOverview,
+  invoiceCarrier,
   changeInvoice,
   createInvoice,
   recordCarrierReceipt,
@@ -631,6 +632,14 @@ async function handle(req: NextRequest) {
     if (path.length === 1 && path[0] === "billing" && req.method === "GET")
       return NextResponse.json(
         await billingOverview(user.id, req.nextUrl.searchParams),
+      );
+    if (
+      path[0] === "dispatch-invoices" &&
+      path.length === 2 &&
+      req.method === "GET"
+    )
+      return NextResponse.json(
+        await invoiceCarrier(user.id, z.uuid().parse(path[1])),
       );
     if (path[0] === "dispatch-invoices" && req.method === "POST") {
       if (path.length === 1)
