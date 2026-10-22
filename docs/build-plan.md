@@ -1,6 +1,6 @@
 # Relay Dispatch TMS — Build plan
 
-**Current stage:** Authenticated, carrier-scoped foundation with persistent load creation, assignment, milestones, manual check-ins, guided carrier/driver onboarding, versioned documents and compliance files, exception management, separate carrier-billing and dispatch-invoice lifecycles, an encrypted email notification outbox, and account security (password reset, email verification, MFA, team removal, organization profiles). The public demo shares application screens with a browser-only fictional adapter. Documents support S3-compatible storage and ClamAV scanning when configured; loads support up to ten stops; check-ins can be corrected or retracted and history pages backwards. Pending: per-stop arrival events, accounting/telematics/rate-confirmation integrations, SMS, dispatcher invitations and production hardening listed in the audits. The prototype workflows below remain a historical reference. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
+**Current stage:** Authenticated, carrier-scoped application with loads, multi-stop and check-ins, onboarding, versioned documents with scanning, exceptions, separate carrier-billing and dispatch-invoice lifecycles, messaging and inbound replies, reports, prospects, a human-reviewed AI assistant, fleet, an audit log, a 15-minute scheduler scope and account security. The public demo shares application screens with a browser-only fictional adapter. **Not built:** telematics or tracking observations, accounting export, invoice PDF or email, a consumer for `outbox_events` (ADR 0049), retention policy, metrics and alerting, and live-provider verification. See the completeness audit for the full list. All sample data is fictional. Nothing is submitted to a carrier, broker, driver, telematics service, or payment processor.
 
 ## What works in the prototype
 
@@ -79,4 +79,4 @@ For each release: schema migration → backfill → compatibility deployment →
 
 ## Handoff
 
-`freight-dispatch-tms-demo.html` is a standalone local prototype. Open in a modern browser. Nothing is deployed. Browser data is stored locally and may be cleared by reset/browser storage cleanup. The prototype is not an authenticated, secure, or multi-user production service.
+`public/legacy-demo.html` (served at `/legacy-demo.html`) is the original standalone prototype. Open in a modern browser. Nothing is deployed. Browser data is stored locally and may be cleared by reset/browser storage cleanup. The prototype is not an authenticated, secure, or multi-user production service.

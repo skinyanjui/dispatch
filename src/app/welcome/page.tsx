@@ -45,9 +45,8 @@ export default function Welcome() {
         <p className="mkEyebrow">For dispatch companies working for carriers</p>
         <h1>Everything in motion. All in one place.</h1>
         <p className="mkLead">
-          Relay helps dispatch teams book, track and bill freight for their
-          carriers without the busywork, and keeps each carrier&apos;s data
-          apart.
+          Book, track and bill freight for your carriers, with each
+          carrier&apos;s data kept separate.
         </p>
         <div className="mkRow mkRowCenter">
           <Link className="mkButton" href="/request-access">
@@ -58,10 +57,6 @@ export default function Welcome() {
             Try the interactive demo
           </Link>
         </div>
-        <p className="mkNote">
-          Access is by approval. The demo uses fictional data and makes no live
-          freight connections.
-        </p>
       </section>
 
       <section className="mkWide" aria-label="The workspace">
@@ -88,9 +83,8 @@ export default function Welcome() {
           <p className="mkEyebrow">Views</p>
           <h2 id="views">Look at your loads the way you work</h2>
           <p>
-            Switch between a board, a table and a calendar. Group and sort, hide
-            the columns you do not need, and save the result as a view for
-            yourself or for your whole organization.
+            Switch between board, table and calendar, then save the result as a
+            view for yourself or your whole organization.
           </p>
         </div>
         <ListItems label="Views">
@@ -120,9 +114,8 @@ export default function Welcome() {
           <p className="mkEyebrow">Documents and the assistant</p>
           <h2 id="assist">Drafts in seconds, reviewed by a person</h2>
           <p>
-            Write a template once with merge fields. Fill it from a load, a
-            carrier or a contact, or ask the assistant. Every draft waits for a
-            person; nothing is sent, booked or invoiced for you.
+            Write a template once, fill it from a load, carrier or contact, or
+            ask the assistant. Nothing is sent, booked or invoiced for you.
           </p>
         </div>
         <ListItems label="Assistant">
@@ -146,8 +139,8 @@ export default function Welcome() {
           <p className="mkEyebrow">Guardrails</p>
           <h2 id="rules">Boundaries enforced in the product</h2>
           <p>
-            Dispatching other people&apos;s freight needs clear limits. Relay
-            applies them for you rather than leaving them to habit.
+            Relay enforces the limits of dispatching other people&apos;s
+            freight.
           </p>
         </div>
         <ListItems label="Guardrails">
@@ -175,19 +168,13 @@ export default function Welcome() {
       <section className="mkBand" aria-labelledby="status">
         <h2 id="status">Where Relay is today</h2>
         <p>
-          Relay is early software. It runs with fictional sample data and has no
-          live connections to carriers, load boards, tracking providers or
-          payment systems, and it does not move money. Read{" "}
-          <Link href="/how-it-works">how it works</Link>,{" "}
-          <Link href="/get-started">what getting started involves</Link> or the{" "}
-          <Link href="/pricing">pricing</Link>.
+          Early software with fictional sample data and access by approval. No
+          live connections to carriers, load boards, tracking or payment
+          systems, and it does not move money.
         </p>
       </section>
 
-      <Cta
-        title="See it with your own workflow in mind"
-        text="Request access and a person will review it, or open the demo to click through a sample workspace."
-      />
+      <Cta title="Try it with sample data" />
     </MarketingShell>
   );
 }

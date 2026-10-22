@@ -779,3 +779,104 @@
 .mkFooter a:hover {
   color: var(--mk-ink);
 }
+
+/* Fit to the container: wrap only when a row is truly full, balance headings
+   so no single word is left alone on a line. */
+.mkHero h1,
+.mkFeature h2,
+.mkSection > h2,
+.mkSplit h2,
+.mkBand h2,
+.mkCta h2 {
+  text-wrap: balance;
+}
+.mkLead,
+.mkFeature p,
+.mkBand p,
+.listItemDesc {
+  text-wrap: pretty;
+}
+.mkHero h1 {
+  max-width: 20ch;
+}
+.mkHero.compact h1 {
+  max-width: 28ch;
+}
+.mkGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+.mkFeature {
+  align-items: start;
+  padding-block: clamp(20px, 4vh, 40px);
+}
+.mkSplit p {
+  color: var(--mk-muted);
+}
+/* The plan card is one column of content; its checklist fills the card. */
+.mkPlan {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.mkPlan .listItems {
+  width: 100%;
+  margin-top: 16px;
+  text-align: left;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  border: 0;
+}
+.mkPlan .listItem {
+  border: 0;
+}
+/* Preview tabs stay on one row; they shrink instead of dropping one alone. */
+.previewTabs {
+  flex-wrap: nowrap;
+}
+.previewTabs button {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .previewTabs {
+    gap: 4px;
+  }
+  .previewTabs button {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}
+/* The footer's brand and links share a row; the links wrap among themselves. */
+.mkFooter {
+  align-items: flex-start;
+}
+.mkFooter > div {
+  flex: 1 1 220px;
+}
+.mkFooter nav {
+  flex: 1 1 360px;
+  justify-content: flex-end;
+}
+.mkFooter nav a {
+  padding: 0;
+}
+@media (max-width: 720px) {
+  .mkFooter nav {
+    justify-content: flex-start;
+  }
+}
+.mkFooter > div {
+  flex: 0 1 260px;
+}
+.mkFooter nav {
+  flex: 1 1 auto;
+  gap: 4px 14px;
+}
+@media (max-width: 480px) {
+  .mkHeader nav a {
+    padding: 6px 8px;
+  }
+  .mkFooter nav {
+    gap: 4px 12px;
+  }
+}

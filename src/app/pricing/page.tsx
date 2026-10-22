@@ -19,16 +19,12 @@ const included = [
 
 const faq = [
   [
-    "Will I be charged?",
-    "No. Nothing is billed during early access, and Relay does not take payment details.",
-  ],
-  [
     "What will pricing look like?",
-    "It has not been decided. Plans and prices will be published on this page before any charge, and existing organizations will get notice first.",
+    "Not decided. Existing organizations get notice before any charge.",
   ],
   [
     "Does AI cost extra?",
-    "AI features are off until an owner or admin turns them on, and they have a monthly limit you set. Model usage is billed to the server operator's own account, not through Relay.",
+    "AI features are off until an owner or admin turns them on, and they have a monthly limit you set. Model usage is billed to the operator's own account, not through Relay.",
   ],
 ];
 
@@ -40,16 +36,15 @@ export default function Pricing() {
     >
       <section className="mkHero mkCenter">
         <p className="mkEyebrow">Pricing</p>
-        <h1>Free while Relay is in early access</h1>
+        <h1>Free during early access</h1>
         <p className="mkLead">
-          There are no plans or prices yet. When there are, they will be here
-          first.
+          Prices will be published here before any charge.
         </p>
       </section>
       <section className="mkPlan" aria-labelledby="plan">
         <h2 id="plan">Early access</h2>
-        <p className="mkPlanPrice">No charge</p>
-        <p className="mkNote">For dispatch companies approved for access.</p>
+        <p className="mkPlanPrice">Free</p>
+        <p className="mkNote">For approved dispatch companies. No payment details taken.</p>
         <Link className="mkButton" href="/request-access">
           Request access
         </Link>
@@ -70,10 +65,7 @@ export default function Pricing() {
           ))}
         </div>
       </section>
-      <Cta
-        title="Start with a request"
-        text="Approval is by a person. The demo needs no account."
-      />
+      <Cta title="Start with a request" />
     </MarketingShell>
   );
 }

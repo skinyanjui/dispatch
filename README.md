@@ -1,6 +1,6 @@
 # Relay — Dispatch TMS foundation
 
-Authenticated Next.js / TypeScript dispatch workspace with PostgreSQL persistence. Built from the supplied Relay prototype. **Not production-ready:** this foundation has no live freight integrations, document storage, messaging, or billing implementation. All QA data is fictional.
+Authenticated Next.js / TypeScript dispatch workspace with PostgreSQL persistence. Built from the supplied Relay prototype. **Not production-ready:** loads, documents, exceptions, messaging, billing records, fleet and an audit log are built and tested, but every provider (object storage, malware scanning, email, SMS, sign-in, AI) is verified only against in-process fakes, and there are no live freight, tracking or accounting integrations. All QA data is fictional. See `docs/audits/2026-10-22-completeness-audit.md` for what is open.
 
 ## Local development
 
@@ -50,6 +50,8 @@ Integration tests write fictional fixtures to the selected database. Use an isol
 - `POST /api/loads/:id/assign`: driverId + expected version; same carrier enforced in app and database.
 - `POST /api/loads/:id/milestones`: stage + expected version; booked → dispatched → picked-up → delivered. Assigned driver required. Drivers cannot assign or change milestones.
 - `POST /api/loads/:id/check-ins`: `{version, location, note?, observed_at, idempotency_key}`. Location is 1–160 characters, note up to 1,000, time is an ISO datetime with offset from the last 30 days through five minutes ahead, and key is a UUID. Authenticated dispatchers/managers may record within their carrier scope; drivers may record only on currently assigned loads. Source is always `manual`; actor and receipt time come from the server. Retries retain the original payload, version and key. Observations increment version and append event/outbox/audit records without changing the shipment milestone.
+
+`GET /api/health`: public liveness and database check, `{status}` only (200 or 503). Writes are rate limited per person, sign-in per address and email, and AI calls separately ([ADR 0049](docs/decisions/0049-request-limits-headers-and-outbox.md)).
 
 Operations, finance and account contracts added in migrations 005–009 (see the ADRs for rules):
 
