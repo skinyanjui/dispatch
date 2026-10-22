@@ -4,7 +4,8 @@ import { HttpError } from "./auth";
 
 // Read-only reporting (ADR 0024). Every figure is computed from the records
 // that already exist, for the carriers the caller manages or dispatches, over
-// loads whose first pickup window starts in the chosen UTC date range.
+// loads whose first pickup window starts in the chosen UTC date range. Every
+// boundary is spelled out in UTC so the database session timezone never shifts it.
 
 const date = z
   .string()
@@ -42,7 +43,8 @@ const scope = `
   JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 AND m.role<>'driver'
   JOIN LATERAL (SELECT window_start FROM load_stops WHERE load_id=l.id AND sequence=1) f ON true
   WHERE ($2::uuid IS NULL OR l.carrier_id=$2)
-    AND f.window_start>=$3::date AND f.window_start<$4::date+1`;
+    AND f.window_start>=($3::date::timestamp AT TIME ZONE 'UTC')
+    AND f.window_start<(($4::date+1)::timestamp AT TIME ZONE 'UTC')`;
 
 async function authorize(user: string, carrier: string | null) {
   const { rows } = await pool.query(
@@ -106,7 +108,7 @@ export async function reportOverview(user: string, params: URLSearchParams) {
         COALESCE(sum(s.amount_minor) FILTER (WHERE s.cancelled_at IS NULL),0)::text freight_minor,
         (SELECT count(*)::int FROM load_exceptions x WHERE x.carrier_id=c.id AND x.status<>'resolved') open_exceptions
         FROM s JOIN carriers c ON c.id=s.carrier_id GROUP BY c.id,c.name ORDER BY c.name`),
-    q(`WITH s AS (${scope}) SELECT to_char(date_trunc('week',pickup_at),'YYYY-MM-DD') week,
+    q(`WITH s AS (${scope}) SELECT to_char(date_trunc('week',pickup_at AT TIME ZONE 'UTC'),'YYYY-MM-DD') week,
         count(*)::int loads, COALESCE(sum(amount_minor),0)::text freight_minor
         FROM s WHERE cancelled_at IS NULL GROUP BY 1 ORDER BY 1`),
     // Relay's own fee invoices: dispatchers only, by issue date in range.
@@ -115,10 +117,11 @@ export async function reportOverview(user: string, params: URLSearchParams) {
           COALESCE(sum(i.total_minor),0)::text issued_minor,
           COALESCE(sum(p.paid),0)::text paid_minor,
           COALESCE(sum(i.total_minor-COALESCE(p.paid,0)),0)::text outstanding_minor,
-          count(*) FILTER (WHERE i.due_on<current_date AND i.total_minor>COALESCE(p.paid,0))::int overdue
+          count(*) FILTER (WHERE i.due_on<(now() AT TIME ZONE 'UTC')::date AND i.total_minor>COALESCE(p.paid,0))::int overdue
         FROM dispatch_invoices i
         LEFT JOIN LATERAL (SELECT sum(amount_minor) paid FROM dispatch_invoice_payments WHERE invoice_id=i.id) p ON true
-        WHERE i.status='issued' AND i.issued_at>=$3::date AND i.issued_at<$4::date+1
+        WHERE i.status='issued' AND i.issued_at>=($3::date::timestamp AT TIME ZONE 'UTC')
+          AND i.issued_at<(($4::date+1)::timestamp AT TIME ZONE 'UTC')
           AND ($2::uuid IS NULL OR i.carrier_id=$2)
           AND i.carrier_id IN (SELECT carrier_id FROM memberships WHERE user_id=$1 AND role='dispatcher')`,
       args,

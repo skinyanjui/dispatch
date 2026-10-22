@@ -113,4 +113,3 @@ export function auditLabel(action: string): string {
   const plain = action.replace(/[._-]+/g, " ").trim();
   return plain ? plain[0].toUpperCase() + plain.slice(1) : "Unknown action";
 }
-export const knownAuditActions = Object.keys(labels);

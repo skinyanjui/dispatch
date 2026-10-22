@@ -72,8 +72,8 @@ export async function auditLog(user: string, params: URLSearchParams) {
        AND ($2::text IS NULL OR a.action=$2)
        AND ($3::uuid IS NULL OR a.actor_id=$3)
        AND ($4::text IS NULL OR a.action ILIKE $4 OR u.name ILIKE $4 OR a.resource_id ILIKE $4)
-       AND ($5::date IS NULL OR a.created_at>=$5::date)
-       AND ($6::date IS NULL OR a.created_at<($6::date+1))
+       AND ($5::date IS NULL OR a.created_at>=($5::date::timestamp AT TIME ZONE 'UTC'))
+       AND ($6::date IS NULL OR a.created_at<(($6::date+1)::timestamp AT TIME ZONE 'UTC'))
        AND ($7::bigint IS NULL OR (
          -- exact integer microseconds decide; the bound lets the index narrow the scan
          a.created_at<=to_timestamp($7::bigint/1000000.0)+interval '1 microsecond'

@@ -108,7 +108,6 @@ async function fetchTwilioMedia(url: string): Promise<Buffer> {
 // itself started, so strangers cannot create records.
 
 const secret = () => process.env.RELAY_INBOUND_SECRET || null;
-export const inboundConfigured = () => Boolean(secret());
 export const inboundDomain = () =>
   process.env.RELAY_INBOUND_EMAIL_DOMAIN || null;
 

@@ -285,7 +285,7 @@ export async function scheduleDailyReminders() {
       JOIN LATERAL (SELECT * FROM document_versions WHERE document_id=d.id ORDER BY version DESC LIMIT 1) v ON true
       JOIN memberships m ON m.carrier_id=c.id AND m.role IN ('dispatcher','carrier-manager')
       WHERE d.load_id IS NULL AND d.type IN ('insurance_auto_liability','insurance_cargo')
-        AND v.expires_on <= current_date+30`,
+        AND v.expires_on <= (now() AT TIME ZONE 'UTC')::date+30`,
     );
     for (const r of insurance.rows) {
       const label = r.type === "insurance_cargo" ? "Cargo" : "Auto liability";
