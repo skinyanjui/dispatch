@@ -1,0 +1,406 @@
+/* Shared by the app and the public demo banner. */
+:root {
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+/* Control sizing and alignment for the signed-in app (ADR 0044). Loaded after
+   every other stylesheet so it settles the conflicts between them.
+
+   One size scale:
+     --control-h      32px  fields, selects, buttons, search, tabs
+     --control-h-sm   28px  toolbars, chips and controls inside table rows
+     --control-min    24px  the smallest allowed target (icon buttons)
+   Controls that share a row share a size and a centre line. Dropdowns keep
+   room between their text, arrow and the border. */
+.appShell {
+  --control-h: 32px;
+  --control-h-sm: 28px;
+  --control-min: 24px;
+  --control-pad: 10px;
+}
+
+/* ---- Fields ---- */
+.appShell
+  input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="file"],
+    [type="range"],
+    [type="color"]
+  ),
+.appShell select {
+  box-sizing: border-box;
+  min-height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: var(--control-pad);
+  padding-right: var(--control-pad);
+}
+.appShell textarea {
+  padding: 7px var(--control-pad);
+}
+/* Search fields draw their own box and padding; their input fills it. */
+.appShell .sidebarSearch input,
+.appShell .directorySearch input,
+.appShell .search input,
+.appShell .currencyInput input {
+  min-height: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.appShell .currencyInput input {
+  padding-left: 7px;
+  padding-right: var(--control-pad);
+}
+/* Selects: the same arrow everywhere, 10px from the border, with room so the
+   text never runs under it. */
+.appShell select:not([multiple], [size]),
+.demoBanner select:not([multiple], [size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.appShell select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+/* The currency field is sized like the fields beside it. */
+.appShell .currencyInput {
+  box-sizing: border-box;
+  min-height: var(--control-h);
+  align-items: center;
+}
+.appShell .currencyInput input {
+  min-height: 0;
+  height: calc(var(--control-h) - 2px);
+}
+
+/* ---- Buttons ---- */
+.appShell .primary,
+.appShell .secondary {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.appShell .textButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h-sm);
+}
+/* Inside a table row or a card's action strip, buttons use the small size so
+   they sit within the row height. */
+.appShell .reportTable td .primary,
+.appShell .reportTable td .secondary,
+.appShell .reportTable th .secondary,
+.appShell .directoryRowActions .secondary,
+.appShell .contactActions .secondary,
+.appShell .calcPicker select,
+.appShell .reportTable td select,
+.appShell .reportTable td input:not([type="checkbox"], [type="radio"]) {
+  min-height: var(--control-h-sm);
+}
+.appShell .reportTable td .primary,
+.appShell .reportTable td .secondary,
+.appShell .directoryRowActions .secondary,
+.appShell .contactActions .secondary {
+  padding-left: var(--control-pad);
+  padding-right: var(--control-pad);
+}
+/* Table text buttons line up with their column header. */
+.appShell .reportTable tbody th .textButton,
+.appShell .reportTable td .textButton {
+  padding-left: 0;
+  padding-right: 0;
+}
+.appShell .reportTable tbody th .textButton:hover,
+.appShell .reportTable td .textButton:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+.appShell .reportTable thead th .sortButton {
+  padding-left: 0;
+  padding-right: 0;
+  min-height: var(--control-h-sm);
+}
+
+/* Icon-only buttons: at least 24px square, centred. */
+.appShell .iconAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-h-sm);
+  min-height: var(--control-h-sm);
+}
+.appShell .contactActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .contactActions .textButton {
+  min-height: var(--control-h-sm);
+}
+
+/* ---- Toolbars: one size, one centre line ---- */
+.appShell .viewBar,
+.appShell .viewTools,
+.appShell .toolbar,
+.appShell .directoryIntro,
+.appShell .orgToolbar {
+  align-items: center;
+}
+/* A label wrapping a lone control in a toolbar has no bottom margin, or it
+   rides above the centre line of the buttons beside it. */
+.appShell .viewBar > label,
+.appShell .viewTools > label,
+.appShell .toolbar label,
+.appShell .directoryIntro label,
+.appShell .orgToolbar label,
+.appShell .carrierSort,
+.appShell .viewPicker {
+  margin-bottom: 0;
+}
+.appShell .segment,
+.appShell .viewOptions summary,
+.appShell .viewMenu summary,
+.appShell .viewPicker select {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h-sm);
+}
+.appShell .viewPicker select {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.appShell .viewOptions summary,
+.appShell .viewMenu summary {
+  padding: 0 var(--control-pad);
+}
+.appShell .queueTab,
+.appShell .attentionChip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.appShell .attentionChip {
+  min-height: var(--control-h-sm);
+}
+/* Menus float clear of the panel edge and the control that opened them. */
+.appShell .viewOptionsBody {
+  margin-top: var(--space-2);
+  box-sizing: border-box;
+  max-width: min(340px, calc(100vw - 2 * var(--space-4)));
+}
+.appShell .viewTools .viewOptionsBody {
+  right: 0;
+}
+
+/* ---- Forms ---- */
+/* Fields in one row share a top edge; a field's note sits below it, never
+   shifting its neighbour. */
+.appShell .formGrid {
+  align-items: start;
+}
+.appShell .formGrid:not(:last-child) {
+  margin-bottom: var(--space-3);
+}
+
+/* ---- Carrier directory: metrics line up in columns from row to row ---- */
+@media (min-width: 1101px) {
+  .appShell .carrierFacts {
+    display: grid;
+    grid-template-columns: 188px repeat(3, minmax(72px, auto));
+    justify-content: start;
+    column-gap: var(--space-4);
+  }
+}
+/* Narrower screens: the authorization pill takes its own line and the three
+   figures share the next one in equal columns. */
+@media (max-width: 1100px) {
+  .appShell .carrierFacts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+  }
+  .appShell .carrierFacts .carrierAuth {
+    grid-column: 1 / -1;
+  }
+}
+.appShell .directoryCarrier > div {
+  display: grid;
+  justify-items: start;
+  text-align: left;
+}
+.appShell .carrierAuth {
+  min-height: var(--control-h-sm);
+  justify-self: start;
+}
+.appShell .carrierSort {
+  min-width: 140px;
+}
+
+/* ---- Filter rows: label, selects and checkbox on one centre line ---- */
+.appShell .filterCheck {
+  min-height: var(--control-h);
+}
+
+/* ---- Rows that pair a captioned field with a button ----
+   The button lines up with the field's box, not with its caption: align to the
+   bottom edge and drop the label's own margin. */
+.appShell .opsFilters,
+.appShell .assistantComposer {
+  align-items: flex-end;
+}
+.appShell .reportBar {
+  align-items: center;
+}
+.appShell .opsFilters > label,
+.appShell .reportBar > label,
+.appShell .reportCarrier {
+  margin-bottom: 0;
+}
+.appShell .assistantComposer .primary {
+  align-self: flex-end;
+}
+.appShell .carrierStats {
+  align-items: stretch;
+}
+.appShell .carrierStats .carrierSort {
+  align-self: center;
+}
+.appShell .contactActions {
+  gap: var(--space-2);
+}
+
+/* ---- Phones: menus stay inside the screen ---- */
+@media (max-width: 560px) {
+  .appShell .viewTools .viewOptionsBody,
+  .appShell .viewMenu .viewOptionsBody {
+    position: fixed;
+    left: var(--space-4);
+    right: var(--space-4);
+    max-width: none;
+    min-width: 0;
+  }
+}
+
+/* ---- Public pages: footer links are at least 24px tall ---- */
+.mkFooter a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min, 24px);
+}
+
+/* ---- Navigation, tabs and icon buttons use the same scale ---- */
+.appShell .sidebarItem {
+  box-sizing: border-box;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.appShell .billingTab,
+.appShell .orgTab {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h);
+}
+.appShell .iconButton {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0;
+}
+.appShell .iconAction {
+  min-width: var(--control-h-sm);
+  min-height: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0 6px;
+}
+.appShell .sidebarIcon {
+  box-sizing: border-box;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  min-height: var(--control-h-sm);
+}
+
+/* ---- Phones: keep 40px touch targets (see system.css) ---- */
+@media (max-width: 760px) {
+  .appShell .iconButton {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+  .appShell .iconAction {
+    min-width: 36px;
+    min-height: 40px;
+    height: 40px;
+  }
+  .appShell .textButton,
+  .appShell a.secondary {
+    min-height: 40px;
+  }
+}
+
+/* ---- Filter chips inside a tab panel have air above and below ---- */
+.appShell [role="tabpanel"] .attentionChips {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* Calendar events are real buttons: at least 24px tall. */
+.appShell .calendarEvent {
+  box-sizing: border-box;
+  min-height: var(--control-min);
+}
+
+/* A chip row under a tab strip does not touch its underline. */
+.appShell .orgTabs ~ .attentionChips {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* A status pill in a table cell keeps its own height; it is not stretched to
+   the cell. */
+.appShell td > .opsPill,
+.appShell td > .badge,
+.appShell td > .statusPill {
+  align-self: center;
+  justify-self: end;
+  height: auto;
+}
+@media (min-width: 761px) {
+  .appShell td > .opsPill,
+  .appShell td > .badge,
+  .appShell td > .statusPill {
+    justify-self: start;
+  }
+}
+
+/* Card-style table cells on phones centre the label and the value together. */
+.appShell .reportTable td,
+.appShell .billingTable td {
+  align-items: center;
+}
+.appShell .directoryCarrier .roleLabel {
+  padding-left: 0;
+}
