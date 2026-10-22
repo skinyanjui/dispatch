@@ -404,3 +404,20 @@
 .appShell .directoryCarrier .roleLabel {
   padding-left: 0;
 }
+
+/* ---- Error and 404 pages ---- */
+.statusPage .statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.statusPage .statusActions .primary,
+.statusPage .statusActions .secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  text-decoration: none;
+}
