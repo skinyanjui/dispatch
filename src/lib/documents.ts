@@ -62,12 +62,13 @@ async function versions(
 ): Promise<
   (DocumentVersion & {
     document_id: string;
+    load_id: string | null;
     type: DocumentType;
     ai_enabled: boolean;
   })[]
 > {
   const { rows } = await c.query(
-    `SELECT v.id,v.document_id,d.type,v.version,v.filename,v.content_type,v.size_bytes,
+    `SELECT v.id,v.document_id,d.load_id,d.type,v.version,v.filename,v.content_type,v.size_bytes,
       to_char(v.expires_on,'YYYY-MM-DD') expires_on,v.uploaded_at,u.name uploader_name,
       (SELECT json_build_object('decision',r.decision,'note',r.note,'reviewer_name',ru.name,'created_at',r.created_at)
         FROM document_reviews r JOIN users ru ON ru.id=r.reviewer_id
@@ -96,8 +97,9 @@ function slots(
   return types.map((type) => {
     const history = rows
       .filter((r) => r.type === type)
-      .map(({ document_id, type, ai_enabled, ...v }) => {
+      .map(({ document_id, load_id, type, ai_enabled, ...v }) => {
         void document_id;
+        void load_id;
         void type;
         // Offered only where the organization opted in and a model is set up.
         return {
@@ -117,6 +119,21 @@ function slots(
 }
 export async function loadDocumentSlots(c: PoolClient, loadId: string) {
   return slots(loadDocumentTypes, await versions(c, "d.load_id=$1", [loadId]));
+}
+/** The same slots for many loads in one query, keyed by load id. */
+export async function loadDocumentSlotsFor(c: PoolClient, loadIds: string[]) {
+  const rows = loadIds.length
+    ? await versions(c, "d.load_id=ANY($1::uuid[])", [loadIds])
+    : [];
+  return new Map(
+    loadIds.map((id) => [
+      id,
+      slots(
+        loadDocumentTypes,
+        rows.filter((r) => r.load_id === id),
+      ),
+    ]),
+  );
 }
 export async function carrierDocumentSlots(c: PoolClient, carrierId: string) {
   return slots(

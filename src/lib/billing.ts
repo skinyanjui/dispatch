@@ -5,7 +5,7 @@ import { transaction } from "./db";
 import { digest, HttpError } from "./auth";
 import { event, member, scoped } from "./loads";
 import { emit } from "./onboarding";
-import { loadDocumentSlots } from "./documents";
+import { loadDocumentSlots, loadDocumentSlotsFor } from "./documents";
 import { feeMinor } from "./entry";
 
 const money = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
@@ -483,11 +483,15 @@ export async function billingOverview(user: string, params: URLSearchParams) {
       WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL ORDER BY l.created_at DESC,l.id LIMIT 100`,
       [carrierId],
     );
+    const slotsByLoad = await loadDocumentSlotsFor(
+      c,
+      loads.rows.map((l) => l.id),
+    );
     const ready: Record<string, boolean> = {};
     for (const l of loads.rows)
-      ready[l.id] = (await loadDocumentSlots(c, l.id)).every(
-        (s) => s.status === "accepted",
-      );
+      ready[l.id] = slotsByLoad
+        .get(l.id)!
+        .every((s) => s.status === "accepted");
     const invoices = await c.query(
       `SELECT i.id,i.number,i.status,i.fee_bps,i.total_minor::text,to_char(i.due_on,'YYYY-MM-DD') due_on,
         i.issued_at,i.voided_at,i.void_reason,i.created_at,i.version,
