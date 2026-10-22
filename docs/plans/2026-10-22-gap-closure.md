@@ -69,3 +69,21 @@ Date: 2026-10-22. Branch base: `main` at `4c6166c`. Fictional QA data only; noth
 ## Not in scope
 
 Tracking and ETA, accounting and invoice PDF, CSV import, driver settlements, resumable uploads, per-stop events, retention policy (see the completeness audit).
+
+## Result (2026-10-22)
+
+All five items are built, in one commit each on top of `4c6166c`:
+
+| Commit    | Item                                                    | ADR  | Migration |
+| --------- | ------------------------------------------------------- | ---- | --------- |
+| `8d115dd` | 404, error and global error pages                       | –    | –         |
+| `e10aad8` | Addresses for every page, load, invoice and carrier     | 0045 | –         |
+| `8f69dd8` | 15-minute scheduler scope, run records, status endpoint | 0046 | 035       |
+| `1b079d6` | Audit log page                                          | 0047 | 036       |
+| `0f8fb9a` | Fleet page and vehicle choice on assignment             | 0048 | 037       |
+
+Verification: lint and typecheck clean. **Build test** on the existing QA database: 276 integration and 133 browser tests pass. **Rebuild test** on a dropped and recreated database (all 37 migrations applied twice, seeded, `.next` removed, `npm run build:vercel`, restarted): 276 integration and 133 browser tests pass again.
+
+Defects found on the way and fixed in the same commits: the invoice sheet vanished when carriers were switched quickly in Billing (a slow earlier response overwrote a later one); a legacy `/?view=carriers` link was overridden by address handling; hidden screen-reader text inside a scrolling table widened the page on phones.
+
+Left alone: Next.js answers 500 to a malformed `%` escape on any path (framework behaviour); nothing is scheduled or deployed by the scheduler change until `RELAY_JOBS_URL` and `CRON_SECRET` are set.
