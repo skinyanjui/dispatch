@@ -26,3 +26,7 @@ A dispatcher's four daily questions are answered on the load board itself, witho
 ## Consequences
 
 Summaries are computed per request from live rows, so very large boards add a few batched queries per page. Thresholds (4 hours, expected documents per stage) are constants in one file and covered by `tests/integration/attention.test.ts` and a Chromium test.
+
+## Compact load card
+
+Presentation only; no API, schema or permission change. The board card now stacks: the reference with the amount on the same line, the carrier beneath, the route on one line (wrapping only when it is long), small fact chips (next appointment, driver, documents accepted; a missing driver or rejected document is tinted), then the next step. The truck and building icons and the bottom row of created date and amount were dropped; the created date is in the card's tooltip and in the table. A card is about 120–150px tall instead of about 200px, so more loads fit per screen. The "Needs attention" counts on phones wrap and fill their rows when there are four of them.

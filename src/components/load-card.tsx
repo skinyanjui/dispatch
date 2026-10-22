@@ -1,11 +1,8 @@
 "use client";
 import {
-  ArrowDownIcon,
-  ArrowUpRightIcon,
-  BuildingsIcon,
+  ArrowRightIcon,
   ClockIcon,
   FilesIcon,
-  TruckIcon,
   UserIcon,
 } from "@phosphor-icons/react";
 import { formatMoney } from "@/lib/entry";
@@ -45,38 +42,43 @@ export function LoadCard({
   ]
     .filter(Boolean)
     .join(". ");
+  const when = new Date(load.created_at).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
   return (
     <button
-      className={"loadCard level-" + level}
+      className={"loadCard lc level-" + level}
       onClick={() => onOpen(load.id)}
       aria-label={name}
+      title={`Created ${when}`}
       disabled={disabled}
     >
-      <span className="cardTitle">
-        <TruckIcon size={17} aria-hidden="true" />
-        <strong title={load.reference}>{load.reference}</strong>
-        <ArrowUpRightIcon size={14} className="cardArrow" aria-hidden="true" />
+      <span className="lcHead">
+        <strong className="lcRef" title={load.reference}>
+          {load.reference}
+        </strong>
+        <strong className="lcAmount">{formatMoney(load.amount_minor)}</strong>
       </span>
-      <span className="cardCarrier">
-        <BuildingsIcon size={13} aria-hidden="true" />
+      <span className="lcSub">
         {load.carrier_name}
         {load.cancelled_at && (
           <span className="badge cancelled">Cancelled</span>
         )}
       </span>
-      <span className="cardRoute">
+      <span className="lcRoute">
         <span>{load.pickup || "Pickup not recorded"}</span>
-        <ArrowDownIcon size={12} aria-hidden="true" />
+        <ArrowRightIcon size={12} aria-hidden="true" />
         <span>
           {load.delivery || "Delivery not recorded"}
           {(load.stop_count ?? 2) > 2 && ` · ${load.stop_count} stops`}
         </span>
       </span>
       {s && (
-        <span className="cardFacts">
+        <span className="lcFacts">
           {s.next && (
-            <span className="cardFact">
-              <ClockIcon size={13} aria-hidden="true" />
+            <span className="lcFact">
+              <ClockIcon size={12} aria-hidden="true" />
               {s.next.arrived
                 ? `At ${s.next.label.toLowerCase()}`
                 : `${s.next.label} ${appointment(s.next.window_start, s.next.timezone)}`}
@@ -84,34 +86,25 @@ export function LoadCard({
           )}
           {/* "Needs a driver" is already the next step; say it once. */}
           {(s.driver_name || s.attention.next_step !== "Needs a driver") && (
-            <span className={"cardFact" + (s.driver_name ? "" : " warn")}>
-              <UserIcon size={13} aria-hidden="true" />
+            <span className={"lcFact" + (s.driver_name ? "" : " warn")}>
+              <UserIcon size={12} aria-hidden="true" />
               {s.driver_name ?? "No driver"}
             </span>
           )}
           <span
-            className={"cardFact" + (s.docs.rejected ? " warn" : "")}
+            className={"lcFact" + (s.docs.rejected ? " warn" : "")}
             title="Rate confirmation, bill of lading and proof of delivery accepted"
           >
-            <FilesIcon size={13} aria-hidden="true" />
+            <FilesIcon size={12} aria-hidden="true" />
             Docs {s.docs.accepted}/{loadDocumentTypes.length}
           </span>
         </span>
       )}
       {s && !load.cancelled_at && (
-        <span className={"cardStep level-" + level}>
+        <span className={"cardStep lcStep level-" + level}>
           {s.attention.next_step}
         </span>
       )}
-      <span className="cardBottom">
-        <span>
-          {new Date(load.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })}
-        </span>
-        <strong>{formatMoney(load.amount_minor)}</strong>
-      </span>
     </button>
   );
 }

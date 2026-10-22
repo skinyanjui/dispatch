@@ -1,0 +1,93 @@
+/* Load card: reference and amount on one line, carrier under it, the route on
+   one line, small facts that wrap only when a row is full, then the next
+   step. About 120px tall instead of 200. */
+.appShell .loadCard.lc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  gap: 3px;
+  padding: 10px 12px;
+  align-content: start;
+}
+.appShell .lc .lcHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.appShell .lc .lcRef {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.appShell .lc .lcAmount {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .lc .lcSub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appShell .lc .lcRoute {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 5px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.appShell .lc .lcRoute svg {
+  flex: none;
+  color: var(--subtle);
+}
+.appShell .lc .lcFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.appShell .lc .lcFact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--soft, #f4f5f8);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.appShell .lc .lcFact svg {
+  flex: none;
+}
+.appShell .lc .lcFact.warn {
+  background: var(--error-bg, #fdecea);
+  color: var(--error);
+}
+.appShell .lc .lcStep {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.appShell .kanban.compact .lc .lcSub,
+.appShell .kanban.compact .lc .lcRoute,
+.appShell .kanban.compact .lc .lcFacts,
+.appShell .kanban.compact .lc .lcStep {
+  display: none;
+}
