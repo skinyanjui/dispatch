@@ -29,3 +29,7 @@ Rules that go with the scale:
 CSS only: no schema, API or permission change. Rollback is removing the `controls.css` import. `tests/browser/layout.spec.ts` checks the invariants (dropdown arrow room, the three control sizes, toolbar centre lines, placeholder fit, header/cell alignment, form row tops, phone menus and touch targets) and fails without the stylesheet.
 
 Not done: the public marketing and sign-in pages keep their own larger sizes (40–48px fields and buttons), and standalone text links inside sentences stay at their line height, which WCAG 2.2 exempts.
+
+## Carriers page
+
+Presentation only. The four filter tiles share a row and grow to fill it, left-aligned (they were centred and uneven), the sort select sits on its own right-aligned line above the list, and on phones the row actions fill the card. A carrier's role is shown only when the signed-in person has different roles on different carriers; a dispatcher who is a dispatcher everywhere no longer sees "Dispatcher" repeated on every row. Also: a Loads-page test now expands "Show all" in the carrier list, since accumulated QA data can push Blue Ridge below the six shown.

@@ -136,8 +136,11 @@ test("Board, filters, keyboard search and session recovery", async ({
   await expect(
     page.getByRole("button", { name: "Search loads", exact: true }),
   ).toHaveCount(0);
-  await page
-    .getByRole("navigation", { name: "Carrier scope" })
+  // Accumulated QA data can push Blue Ridge below the short list.
+  const scope = page.getByRole("navigation", { name: "Carrier scope" });
+  const showAll = scope.getByRole("button", { name: /^Show all/ });
+  if (await showAll.count()) await showAll.click();
+  await scope
     .getByRole("button", { name: "Blue Ridge Transport", exact: true })
     .click();
   await page.keyboard.press("Control+k");

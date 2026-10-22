@@ -110,6 +110,10 @@ export function CarrierDirectory({
     };
   }, [summary]);
 
+  // The role is only worth showing when it differs from row to row.
+
+  const mixedRoles = new Set(context.carriers.map((c) => c.role)).size > 1;
+
   const rows = useMemo(() => {
     const matches = (id: string) => {
       const s = summary?.get(id);
@@ -218,6 +222,8 @@ export function CarrierDirectory({
                 <small>{s.label}</small>
               </button>
             ))}
+          </div>
+          <div className="carrierToolbar">
             <label className="carrierSort">
               <span className="srOnly">Sort carriers</span>
               <select
@@ -245,9 +251,11 @@ export function CarrierDirectory({
                   </span>
                   <div>
                     <h3>{c.name}</h3>
-                    <small className="roleLabel">
-                      {roles[c.role] || "Member"}
-                    </small>
+                    {(mixedRoles || c.role !== "dispatcher") && (
+                      <small className="roleLabel">
+                        {roles[c.role] || "Member"}
+                      </small>
+                    )}
                   </div>
                 </div>
                 {c.role !== "driver" && (
