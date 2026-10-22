@@ -34,6 +34,9 @@ function fixture(reference: string) {
 }
 
 async function mockContext(page: Page) {
+  await page.route("**/api/loads/*/notes", (route) =>
+    route.fulfill({ json: { notes: [] } }),
+  );
   await page.route("**/api/me", (route) => route.fulfill({ json: context }));
 }
 

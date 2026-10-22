@@ -51,6 +51,7 @@ import {
   carrierDocuments,
 } from "@/lib/documents";
 import { maxDocumentBytes } from "@/lib/compliance";
+import { addNote, listNotes } from "@/lib/load-notes";
 import { carrierSummaries } from "@/lib/carrier-summary";
 import { loadsCsv, reportOverview } from "@/lib/reports";
 import { receiveEmail, receiveSms } from "@/lib/inbound";
@@ -1036,6 +1037,15 @@ async function handle(req: NextRequest) {
           ),
           { status: 201 },
         );
+      if (path[2] === "notes" && path.length === 3) {
+        if (req.method === "GET")
+          return NextResponse.json(await listNotes(user.id, id));
+        if (req.method === "POST")
+          return NextResponse.json(
+            await addNote(user.id, id, await readJson(req)),
+            { status: 201 },
+          );
+      }
       if (path[2] === "events" && path.length === 3 && req.method === "GET")
         return NextResponse.json(
           await olderEvents(user.id, id, req.nextUrl.searchParams),

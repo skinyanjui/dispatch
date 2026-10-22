@@ -2220,3 +2220,40 @@ select {
   padding: var(--space-2);
   color: var(--muted);
 }
+
+/* ---- Load notes ---- */
+.appShell .loadNotes {
+  display: grid;
+  gap: var(--space-2);
+}
+.appShell .loadNotes h3 {
+  margin: 0;
+}
+.appShell .loadNotes form {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+.appShell .loadNotes textarea {
+  width: 100%;
+}
+.appShell .noteList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.appShell .noteList li {
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel-soft, #f6f8fd);
+  border-radius: 10px;
+}
+.appShell .noteList p {
+  margin: 0 0 2px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.appShell .noteList small {
+  color: var(--muted);
+}

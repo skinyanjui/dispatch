@@ -34,6 +34,7 @@ import {
   sectionTitles,
 } from "@/components/workspace-shell";
 import { CarrierDirectory } from "@/components/carrier-directory";
+import { LoadNotes } from "@/components/load-notes";
 import { LoadCheckIns } from "@/components/load-check-ins";
 import { DocumentPanel } from "@/components/document-panel";
 import { StopList } from "@/components/stop-list";
@@ -1355,6 +1356,14 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
               >
                 Refresh load details
               </button>
+            )}
+            {selectedRole !== "driver" && selectedRole !== undefined && (
+              <LoadNotes
+                key={"notes-" + selected.id}
+                loadId={selected.id}
+                offline={offline}
+                onAuthError={handleError}
+              />
             )}
             <LoadCheckIns
               key={selected.id}

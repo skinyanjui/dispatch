@@ -909,3 +909,23 @@ test("command menu: open with Ctrl+Shift+K, filter, go anywhere, search loads", 
     page.getByRole("searchbox", { name: "Search loads" }),
   ).toBeFocused();
 });
+
+test("load notes: add a note from the load drawer; it shows at the top", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await page.locator(".loadCard").first().click();
+  const notes = page.getByRole("region", { name: "Internal notes" });
+  await expect(notes).toBeVisible();
+  await expect(notes).toContainText("Drivers do not");
+  const text = "Browser note " + Date.now();
+  await notes.getByRole("textbox", { name: "Note", exact: true }).fill(text);
+  await notes
+    .getByRole("textbox", { name: "Note", exact: true })
+    .press("Control+Enter");
+  await expect(notes.getByRole("list", { name: "Notes" })).toContainText(text);
+  await expect(
+    notes.getByRole("textbox", { name: "Note", exact: true }),
+  ).toHaveValue("");
+});
