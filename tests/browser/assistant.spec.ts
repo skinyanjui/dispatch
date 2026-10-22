@@ -98,14 +98,17 @@ test("assistant: an admin turns it on with a button, asks, and opens a source", 
   await page.keyboard.press("Enter");
   await expect(log).toContainText(`${reference} (`);
   // Sources are real records; one click opens the load.
+  // Earlier answers may cite the same load, so use the latest answer's sources.
   const chip = page
     .getByRole("group", { name: "Sources" })
+    .last()
     .getByRole("button", { name: reference });
   await chip.click();
   await expect(
     page.getByRole("dialog").getByText(reference).first(),
   ).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   // Typing a question works with the keyboard.
   await page
     .getByLabel("Your question")

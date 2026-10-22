@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { test, expect, type Locator, type Page } from "@playwright/test";
+import { ensureVolume } from "./volume";
 test("authenticated queue, details and mobile layout", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Email", { exact: true }).fill("dispatcher@relay.test");
@@ -586,6 +587,7 @@ test("search is on every page, and on settings pages it searches loads", async (
 test("organization: tabs, a filterable people list and search", async ({
   page,
 }) => {
+  await ensureVolume();
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Account menu" }).click();
@@ -788,6 +790,7 @@ test("inbox: mark unread, archive, trash and restore, with counts and undo", asy
 test("carriers: authorization, activity and one-click paths", async ({
   page,
 }) => {
+  await ensureVolume();
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Carriers", exact: true }).click();
@@ -817,9 +820,17 @@ test("carriers: authorization, activity and one-click paths", async ({
   await filters.getByRole("button", { name: /With open exceptions/ }).click();
   // Sorting by active loads puts the busiest carrier first.
   await directory.getByLabel("Sort carriers").selectOption("active");
-  await expect(
-    directory.getByRole("article").first().getByRole("heading"),
-  ).toHaveText("Blue Ridge Transport");
+  const active = async (n: number) =>
+    Number(
+      (
+        await directory
+          .getByRole("article")
+          .nth(n)
+          .getByRole("button", { name: /active loads for .* Open loads/ })
+          .getAttribute("aria-label")
+      )?.match(/\d+/)?.[0],
+    );
+  expect(await active(0)).toBeGreaterThanOrEqual(await active(1));
   // Active loads opens that carrier's loads in one click.
   await directory
     .getByRole("article")
@@ -832,6 +843,7 @@ test("carriers: authorization, activity and one-click paths", async ({
 test("billing: summary cards filter the invoices, columns sort, long lists page", async ({
   page,
 }) => {
+  await ensureVolume();
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Billing", exact: true }).click();
@@ -970,6 +982,8 @@ test("loads views: table sorts, groups and hides fields; calendar shows the mont
     "aria-expanded",
     "false",
   );
+  // Clicking the table closed the menu; open it again.
+  await openOptions(page);
   await options
     .getByRole("group", { name: "Fields" })
     .getByLabel("Driver")

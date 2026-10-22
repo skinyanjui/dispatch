@@ -75,6 +75,30 @@ export function LoadsViewBar({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+  useEffect(() => {
+    // The toolbar menus float over the list: a click elsewhere or Escape closes
+    // them, and Escape returns focus to the menu button.
+    const open = () =>
+      document.querySelectorAll<HTMLDetailsElement>(
+        "details.viewMenu[open], details.viewOptions[open]",
+      );
+    const onPointer = (e: PointerEvent) => {
+      for (const d of open()) if (!d.contains(e.target as Node)) d.open = false;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      for (const d of open()) {
+        d.open = false;
+        d.querySelector("summary")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
   const active = views.find((v) => v.id === current);
   const payload = () => ({ ...config, filters });
   async function run(fn: () => Promise<unknown>, done: string) {
