@@ -25,3 +25,7 @@ Relay has a **Prospects** page where a dispatch organization tracks carriers it 
 ## Not done
 
 Import/export of prospects, bulk edits, reminders by email or push, drag-and-drop between lanes (use the stage selector; keyboard accessible), duplicate detection against existing carriers, and per-owner permissions beyond organization staff. Archive hides a prospect; there is no restore screen yet.
+
+## Board layout
+
+Presentation only. The six stages now share the page width (each at least 176px wide) so the last stage, Lost, is no longer cut off at desktop widths; below that the board still scrolls sideways. On phones each stage is about 84% of the screen and snaps, with the next stage peeking in. Company names wrap to two lines instead of being truncated, the stage count lines up with its name, and the intro keeps only the sentence that matters: starting carrier setup creates the carrier record only.

@@ -607,9 +607,8 @@ export function Prospects({
       <div className="directoryIntro">
         <div>
           <h2 className="srOnly">Prospects</h2>
-          <p>
-            Carriers you are courting, from first contact to signed. Starting
-            carrier setup creates the carrier record only.
+          <p className="dirNote">
+            Starting carrier setup creates the carrier record only.
           </p>
         </div>
         <button
