@@ -1,0 +1,162 @@
+/* Exceptions page: filters, four summary tiles that share a row, and cards
+   with a severity stripe and a wrapping row of labelled facts. */
+.appShell .excPage {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  max-width: 1000px;
+}
+.appShell .excBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.appShell .excBar label {
+  margin: 0;
+}
+.appShell .excTiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.appShell .excTile {
+  display: grid;
+  flex: 1 1 130px;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.appShell .excTile strong {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .excTile span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.appShell .excList {
+  display: grid;
+  gap: var(--space-2);
+}
+.appShell .excCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "head action" "facts action";
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.appShell .excCard.sev-high {
+  border-left-color: var(--error);
+}
+.appShell .excCard.sev-medium {
+  border-left-color: #d89614;
+}
+.appShell .excCard > header {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.appShell .excCard > header h3 {
+  flex: 1 1 200px;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.appShell .excFacts {
+  grid-area: facts;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+}
+.appShell .excFacts div {
+  min-width: 0;
+}
+.appShell .excFacts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.appShell .excFacts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.appShell .excFacts .late dd {
+  color: var(--error);
+}
+.appShell .excCard > button {
+  grid-area: action;
+  align-self: center;
+  white-space: nowrap;
+}
+.appShell .excEmpty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6, 32px) var(--space-3);
+  text-align: center;
+  color: var(--muted);
+}
+.appShell .excEmpty h3 {
+  margin: 0;
+  color: var(--ink);
+}
+.appShell .excEmpty p {
+  margin: 0;
+  max-width: 44ch;
+}
+.appShell .excSkeleton {
+  display: grid;
+  gap: var(--space-2);
+}
+.appShell .excSkeleton span {
+  height: 84px;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, #f1f3f8, #f8f9fc, #f1f3f8);
+  background-size: 200% 100%;
+  animation: excPulse 1.4s ease-in-out infinite;
+}
+@keyframes excPulse {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .appShell .excSkeleton span {
+    animation: none;
+  }
+}
+/* Phones: the action moves under the facts and fills the card. */
+@media (max-width: 640px) {
+  .appShell .excCard {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "facts" "action";
+  }
+  .appShell .excCard > button {
+    justify-self: stretch;
+    min-height: 40px;
+  }
+  .appShell .excFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .appShell .excBar select {
+    width: 100%;
+  }
+  .appShell .excBar label:not(.setupCheckbox) {
+    flex: 1 1 140px;
+  }
+}

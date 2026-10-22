@@ -1250,3 +1250,78 @@ test("friendly wording: wrong password and the show-password option", async ({
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.locator(".alert.error")).toContainText("don't match");
 });
+
+test("exceptions page: summary tiles, severity cards, and a phone layout without overflow", async ({
+  page,
+}) => {
+  const origin = { Origin: "http://localhost:3000" };
+  await page.request.post("/api/login", {
+    headers: origin,
+    data: {
+      email: "dispatcher@relay.test",
+      password: process.env.SEED_PASSWORD,
+    },
+  });
+  const me = await (await page.request.get("/api/me")).json();
+  const carrier = me.carriers.find(
+    (c: { name: string }) => c.name === "Blue Ridge Transport",
+  ).id;
+  const start = Date.now() + 5 * 3600000;
+  const reference = "EXC-" + randomUUID().slice(0, 8);
+  const created = await page.request.post("/api/loads", {
+    headers: { ...origin, "Idempotency-Key": randomUUID() },
+    data: {
+      carrierId: carrier,
+      reference,
+      source: "Fictional QA",
+      amountMinor: 100000,
+      stops: [
+        {
+          kind: "pickup",
+          address: "Chicago, IL",
+          timezone: "America/Chicago",
+          windowStart: new Date(start).toISOString(),
+          windowEnd: new Date(start + 3600000).toISOString(),
+        },
+        {
+          kind: "delivery",
+          address: "Nashville, TN",
+          timezone: "America/Chicago",
+          windowStart: new Date(start + 86400000).toISOString(),
+          windowEnd: new Date(start + 90000000).toISOString(),
+        },
+      ],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const load = await created.json();
+  const raised = await page.request.post(`/api/loads/${load.id}/exceptions`, {
+    headers: origin,
+    data: {
+      type: "delay",
+      severity: "high",
+      summary: "Driver is running late " + reference,
+      idempotency_key: randomUUID(),
+    },
+  });
+  expect(raised.status()).toBe(201);
+  for (const [w, h] of [
+    [1440, 900],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/exceptions");
+    const region = page.getByRole("region", { name: "Exception queue" });
+    await expect(
+      region.getByRole("group", { name: "Exception summary" }),
+    ).toContainText("High severity");
+    await expect(
+      region.getByRole("article").filter({ hasText: reference }),
+    ).toContainText("Unassigned");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+});

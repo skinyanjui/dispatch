@@ -83,46 +83,51 @@ export function ExceptionQueue({
     void load();
     // revision is a refresh signal from exception changes made elsewhere.
   }, [load, revision]);
+  const overdueNow = (item: LoadException) =>
+    item.status !== "resolved" && !!item.due_at && Date.parse(item.due_at) < now;
+  const tiles: [string, number][] = items
+    ? [
+        ["Shown", items.length],
+        ["High severity", items.filter((i) => i.severity === "high").length],
+        ["Overdue", items.filter(overdueNow).length],
+        [
+          "Unassigned",
+          items.filter((i) => !i.owner_name && i.status !== "resolved").length,
+        ],
+      ]
+    : [];
   return (
-    <section className="carrierDirectory" aria-label="Exception queue">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Exceptions</h2>
-          <p>
-            Delays, missed appointments and missing paperwork, with an owner and
-            a resolution trail.
-          </p>
-        </div>
-        <div className="directoryControls opsFilters">
+    <section className="excPage" aria-label="Exception queue">
+      <h2 className="srOnly">Exceptions</h2>
+      <div className="excBar opsFilters">
+        <label>
+          <span className="srOnly">Exception status</span>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="active">Open and in progress</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="all">All</option>
+          </select>
+        </label>
+        {!driverOnly && (
           <label>
-            <span className="srOnly">Exception status</span>
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="active">Open and in progress</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="all">All</option>
+            <span className="srOnly">Owner</span>
+            <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+              <option value="any">Any owner</option>
+              <option value="me">Assigned to me</option>
+              <option value="unassigned">Unassigned</option>
             </select>
           </label>
-          {!driverOnly && (
-            <label>
-              <span className="srOnly">Owner</span>
-              <select value={owner} onChange={(e) => setOwner(e.target.value)}>
-                <option value="any">Any owner</option>
-                <option value="me">Assigned to me</option>
-                <option value="unassigned">Unassigned</option>
-              </select>
-            </label>
-          )}
-          <label className="setupCheckbox">
-            <input
-              type="checkbox"
-              checked={overdue}
-              onChange={(e) => setOverdue(e.target.checked)}
-            />
-            <span>Overdue only</span>
-          </label>
-        </div>
+        )}
+        <label className="setupCheckbox">
+          <input
+            type="checkbox"
+            checked={overdue}
+            onChange={(e) => setOverdue(e.target.checked)}
+          />
+          <span>Overdue only</span>
+        </label>
       </div>
       {error && (
         <div className="alert error" role="alert">
@@ -139,52 +144,84 @@ export function ExceptionQueue({
             ? `${items.length} exceptions shown`
             : ""}
       </p>
-      {items && items.length > 0 && (
-        <div className="opsList">
-          {items.map((item) => (
-            <article className="opsCard" key={item.id}>
-              <div className="opsCardHeading">
-                <WarningIcon size={16} aria-hidden="true" />
-                <h3>{item.summary}</h3>
-                <span className={"opsPill " + severityClass(item.severity)}>
-                  {item.severity}
-                </span>
-                <span
-                  className={
-                    "opsPill " + (item.status === "resolved" ? "good" : "")
-                  }
-                >
-                  {exceptionStatusLabels[item.status]}
-                </span>
-              </div>
-              <p className="opsMeta">
-                {item.load_reference} · {item.carrier_name} ·{" "}
-                {exceptionTypeLabels[item.type]} · Owner{" "}
-                {item.owner_name || "unassigned"}
-                {item.due_at && (
-                  <>
-                    {" "}
-                    · Due {when(item.due_at)}
-                    {item.status !== "resolved" &&
-                      Date.parse(item.due_at) < now && (
-                        <strong> (overdue)</strong>
-                      )}
-                  </>
-                )}
-              </p>
-              <button
-                className="secondary"
-                onClick={() => onOpenLoad(item.load_id)}
-                aria-label={`Open load ${item.load_reference} for exception ${item.summary}`}
-              >
-                Open load
-              </button>
-            </article>
-          ))}
+      {loading && !items && !error && (
+        <div className="excSkeleton" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </div>
       )}
+      {items && items.length > 0 && (
+        <>
+          <div className="excTiles" role="group" aria-label="Exception summary">
+            {tiles.map(([label, n]) => (
+              <div key={label} className="excTile">
+                <strong>{n}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="excList">
+            {items.map((item) => (
+              <article
+                className={"excCard sev-" + item.severity}
+                key={item.id}
+              >
+                <header>
+                  <WarningIcon size={16} aria-hidden="true" />
+                  <h3>{item.summary}</h3>
+                  <span className={"opsPill " + severityClass(item.severity)}>
+                    {item.severity}
+                  </span>
+                  <span
+                    className={
+                      "opsPill " + (item.status === "resolved" ? "good" : "")
+                    }
+                  >
+                    {exceptionStatusLabels[item.status]}
+                  </span>
+                </header>
+                <dl className="excFacts">
+                  <div>
+                    <dt>Load</dt>
+                    <dd>{item.load_reference}</dd>
+                  </div>
+                  <div>
+                    <dt>Carrier</dt>
+                    <dd>{item.carrier_name}</dd>
+                  </div>
+                  <div>
+                    <dt>Type</dt>
+                    <dd>{exceptionTypeLabels[item.type]}</dd>
+                  </div>
+                  <div>
+                    <dt>Owner</dt>
+                    <dd>{item.owner_name || "Unassigned"}</dd>
+                  </div>
+                  {item.due_at && (
+                    <div className={overdueNow(item) ? "late" : undefined}>
+                      <dt>Due</dt>
+                      <dd>
+                        {when(item.due_at)}
+                        {overdueNow(item) && <strong> (overdue)</strong>}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                <button
+                  className="secondary"
+                  onClick={() => onOpenLoad(item.load_id)}
+                  aria-label={`Open load ${item.load_reference} for exception ${item.summary}`}
+                >
+                  Open load
+                </button>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
       {items && !items.length && !loading && (
-        <div className="directoryEmpty">
+        <div className="excEmpty">
           <WarningIcon size={40} weight="light" aria-hidden="true" />
           <h3>No exceptions match</h3>
           {needle ? (

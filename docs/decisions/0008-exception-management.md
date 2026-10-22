@@ -20,3 +20,7 @@ An exception (`load_exceptions`) is a per-load aggregate with its own optimistic
 ## Rollback
 
 Revert the application while keeping migration 006 (additive). Exceptions and their events remain.
+
+## Queue page redesign
+
+The Exceptions page was restyled without changing the API, schema or permissions. A filter row (status, owner, overdue only) sits above four summary tiles that share one row (shown, high severity, overdue, unassigned, counted from the loaded list, which is capped at 100). Each exception is a card with a severity stripe, its pills, a wrapping row of labelled facts (load, carrier, type, owner, due, overdue in red) and the Open load button; on phones the facts become two columns and the button fills the card. Loading shows a placeholder, and accessible names are unchanged.

@@ -14,6 +14,7 @@ import "./assistant.css";
 import "./fleet.css";
 import "./controls.css";
 import "./loads.css";
+import "./exceptions.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
   description: "Carrier-scoped freight dispatch operations",
