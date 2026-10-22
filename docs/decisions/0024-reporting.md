@@ -29,3 +29,7 @@ No schema change. Remove the page and routes.
 ## Layout pass
 
 Presentation only; no API, schema or permission change. Every tile group (headline figures, pipeline, billing) fills its row and the pipeline is left-aligned like the other tiles. On phones the date range is a two-by-two grid, so "Custom" is no longer hidden off the edge; the carrier choice and CSV export share the toolbar and fill its rows; and tiles sit two across, which shortens the page by about a quarter. The by-carrier table still scrolls sideways on phones.
+
+## By-carrier and exceptions tables on phones
+
+Presentation only. From tablets up both tables are unchanged, with sortable column headers. On phones each row is a card: the carrier (or exception type) first, then its figures in two columns with their labels, which are the same text as the column headers. Phones have no column headers to click, so the By carrier section gets a "Sort:" select (name, loads, delivered, cancelled, freight, open exceptions) that is hidden from tablets up. The header row stays in the page, clipped to nothing, for screen readers.

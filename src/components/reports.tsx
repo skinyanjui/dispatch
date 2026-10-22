@@ -515,8 +515,25 @@ export function Reports({
           )}
 
           <h3>By carrier</h3>
+          {/* Phones show cards without column headers, so sorting is a select. */}
+          <label className="reportSort">
+            <span className="srOnly">Sort carriers by</span>
+            <select
+              value={sort.key}
+              onChange={(e) => {
+                const col = sortColumns.find((c) => c.key === e.target.value)!;
+                setSort({ key: col.key, desc: col.numeric });
+              }}
+            >
+              {sortColumns.map((c) => (
+                <option key={c.key} value={c.key}>
+                  Sort: {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <div
-            className="tableScroll"
+            className="tableScroll reportCards"
             role="region"
             aria-label="By carrier"
             tabIndex={0}
@@ -575,11 +592,11 @@ export function Reports({
                         c.name
                       )}
                     </th>
-                    <td>{c.loads}</td>
-                    <td>{c.delivered}</td>
-                    <td>{c.cancelled}</td>
-                    <td>{formatMoney(c.freight_minor)}</td>
-                    <td>{c.open_exceptions}</td>
+                    <td data-label="Loads">{c.loads}</td>
+                    <td data-label="Delivered">{c.delivered}</td>
+                    <td data-label="Cancelled">{c.cancelled}</td>
+                    <td data-label="Freight">{formatMoney(c.freight_minor)}</td>
+                    <td data-label="Open exceptions">{c.open_exceptions}</td>
                   </tr>
                 ))}
                 {!rows.length && (
@@ -608,7 +625,7 @@ export function Reports({
             <>
               <h3>Exceptions</h3>
               <div
-                className="tableScroll"
+                className="tableScroll reportCards"
                 role="region"
                 aria-label="Exceptions"
                 tabIndex={0}
@@ -639,10 +656,10 @@ export function Reports({
                             (typeLabels[x.type] ?? x.type)
                           )}
                         </th>
-                        <td>{x.opened}</td>
-                        <td>{x.open_now}</td>
-                        <td>{x.overdue}</td>
-                        <td>{x.avg_hours}</td>
+                        <td data-label="Opened">{x.opened}</td>
+                        <td data-label="Open now">{x.open_now}</td>
+                        <td data-label="Overdue">{x.overdue}</td>
+                        <td data-label="Avg. hours to resolve">{x.avg_hours}</td>
                       </tr>
                     ))}
                   </tbody>
