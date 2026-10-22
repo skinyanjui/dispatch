@@ -6,6 +6,7 @@ import {
   CaretLeftIcon,
   CaretRightIcon,
   CaretDownIcon,
+  PlusIcon,
 } from "@phosphor-icons/react";
 import { formatMoney } from "@/lib/entry";
 import { stageLabels, type Load } from "@/lib/contracts";
@@ -50,6 +51,30 @@ const sum = (loads: Load[]) =>
   formatMoney(
     loads.reduce((t, l) => t + BigInt(l.amount_minor), 0n).toString(),
   );
+export type Calc = "none" | "sum" | "average" | "min" | "max";
+export const calcLabels: Record<Calc, string> = {
+  none: "Calculate",
+  sum: "Sum",
+  average: "Average",
+  min: "Min",
+  max: "Max",
+};
+/** Freight totals in integer minor units; the average rounds half up. */
+export function calcFreight(loads: Load[], calc: Calc) {
+  if (calc === "none" || !loads.length) return "";
+  const amounts = loads.map((l) => BigInt(l.amount_minor));
+  const total = amounts.reduce((t, a) => t + a, 0n);
+  const n = BigInt(amounts.length);
+  const value =
+    calc === "sum"
+      ? total
+      : calc === "average"
+        ? (total * 2n + n) / (n * 2n)
+        : amounts.reduce((m, a) =>
+            calc === "min" ? (a < m ? a : m) : a > m ? a : m,
+          );
+  return formatMoney(value.toString());
+}
 const dateOf = (l: Load, field: "next" | "created") =>
   field === "created" ? l.created_at : (l.summary?.next?.window_start ?? "");
 const day = (iso: string) =>
@@ -103,14 +128,18 @@ export function TableView({
   config,
   onConfig,
   onOpen,
+  onAdd,
   disabled,
 }: {
   loads: Load[];
   config: ViewConfig;
   onConfig: (patch: Partial<ViewConfig>) => void;
   onOpen: (id: string) => void;
+  /** Opens the new-load form; omitted when the person cannot create loads. */
+  onAdd?: () => void;
   disabled: boolean;
 }) {
+  const [calc, setCalc] = useState<Calc>("none");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const show = (f: ViewField) => !config.hidden_fields.includes(f);
   const sorted = useMemo(() => sortLoads(loads, config.sort), [loads, config]);
@@ -277,6 +306,51 @@ export function TableView({
             </tr>
           </tbody>
         )}
+        <tfoot>
+          {onAdd && (
+            <tr className="addRow">
+              <td colSpan={columns.length}>
+                <button
+                  type="button"
+                  className="textButton"
+                  disabled={disabled}
+                  onClick={onAdd}
+                >
+                  <PlusIcon size={12} aria-hidden="true" /> Add new
+                </button>
+              </td>
+            </tr>
+          )}
+          <tr className="calcRow">
+            <th scope="row">
+              {loads.length} {loads.length === 1 ? "load" : "loads"}
+            </th>
+            {allFields.filter(show).map((f) =>
+              f === "freight" ? (
+                <td key={f}>
+                  <label className="calcPicker">
+                    <span className="srOnly">Calculate freight</span>
+                    <select
+                      value={calc}
+                      onChange={(e) => setCalc(e.target.value as Calc)}
+                    >
+                      {(Object.keys(calcLabels) as Calc[]).map((c) => (
+                        <option key={c} value={c}>
+                          {calcLabels[c]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <output aria-label="Freight calculation">
+                    {calcFreight(loads, calc)}
+                  </output>
+                </td>
+              ) : (
+                <td key={f} />
+              ),
+            )}
+          </tr>
+        </tfoot>
       </table>
     </div>
   );

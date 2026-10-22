@@ -1028,6 +1028,7 @@ export default function Workspace({ demo = false }: { demo?: boolean } = {}) {
                   config={view}
                   onConfig={(patch) => setView((old) => ({ ...old, ...patch }))}
                   onOpen={open}
+                  onAdd={createLoad}
                   disabled={busy || loading}
                 />
               ) : view.layout === "calendar" && !driverOnly ? (

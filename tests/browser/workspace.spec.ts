@@ -1142,3 +1142,34 @@ test("load record: breadcrumb, fields panel and keyboard-operable tabs", async (
   await record.getByRole("button", { name: "Close load details" }).click();
   await expect(record).toHaveCount(0);
 });
+
+test("loads table: Add new opens the form and Calculate summarizes freight", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/");
+  await page
+    .getByRole("group", { name: "Layout" })
+    .getByRole("button", { name: "Table" })
+    .click();
+  const table = page.getByRole("region", { name: "Load table" });
+  await expect(table).toBeVisible();
+  const calc = table.getByLabel("Calculate freight");
+  const out = table.getByLabel("Freight calculation");
+  await expect(out).toHaveText("");
+  await calc.selectOption("sum");
+  await expect(out).toContainText("$");
+  const sum = await out.textContent();
+  await calc.selectOption("max");
+  const max = await out.textContent();
+  await calc.selectOption("min");
+  const min = await out.textContent();
+  const n = (t: string | null) => Number(t!.replace(/[^0-9.]/g, ""));
+  expect(n(max)).toBeGreaterThanOrEqual(n(min));
+  expect(n(sum)).toBeGreaterThanOrEqual(n(max));
+  await calc.selectOption("average");
+  expect(n(await out.textContent())).toBeLessThanOrEqual(n(max));
+  await table.getByRole("button", { name: "Add new" }).click();
+  await expect(page.getByRole("dialog", { name: "Create load" })).toBeVisible();
+});
