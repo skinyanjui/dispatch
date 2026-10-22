@@ -1,0 +1,163 @@
+/* Loads page: phone-first rules for the toolbar, attention strip, board,
+   table and calendar. Controls keep the shared scale (ADR 0044). */
+
+/* The stage pills scroll under a soft edge so a cut-off pill reads as "more". */
+@media (max-width: 700px) {
+  .appShell .queueRow .queueTabs {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  }
+}
+
+@media (max-width: 560px) {
+  /* Layout switch on a full row, saved view and tools fill the next. */
+  .appShell .viewBar {
+    gap: var(--space-2);
+  }
+  .appShell .viewBar .segmented {
+    display: flex;
+    flex: 1 1 100%;
+  }
+  .appShell .viewBar .segment {
+    flex: 1 1 0;
+    text-align: center;
+  }
+  .appShell .viewPicker {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .appShell .viewPicker select {
+    width: 100%;
+  }
+  .appShell .viewTools {
+    flex: 1 1 auto;
+    margin-left: 0;
+    flex-wrap: nowrap;
+  }
+  .appShell .viewTools > details {
+    flex: 1 1 0;
+  }
+  .appShell .viewTools summary {
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Attention: title on its own line, the three counts share one row. */
+  .appShell .attention {
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .appShell .attentionTitle {
+    flex: 1 1 100%;
+  }
+  .appShell .attentionChips {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    flex: 1 1 100%;
+    gap: 6px;
+  }
+  .appShell .attentionChip {
+    justify-content: center;
+    padding: 0 6px;
+    gap: 6px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  /* Board: each stage is nearly a screen wide, so the next one peeks in. */
+  .appShell .kanban {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 86%;
+    scroll-snap-type: x mandatory;
+  }
+  .appShell .lane {
+    min-height: 0;
+  }
+}
+
+/* Table: the load reference stays in view while the rest scrolls. */
+@media (max-width: 900px) {
+  .appShell .loadTable thead th:first-child,
+  .appShell .loadTable tbody tr:not(.groupRow):not(.addRow):not(.calcRow) > th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--panel);
+    box-shadow: 1px 0 0 var(--border);
+  }
+}
+
+/* Calendar: grid from tablets up, an agenda list on phones. */
+.appShell .calendarAgenda {
+  display: none;
+}
+@media (max-width: 640px) {
+  .appShell .calendarGrid {
+    display: none;
+  }
+  .appShell .calendarAgenda {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .appShell .calendarBar {
+    gap: var(--space-2);
+  }
+}
+.appShell .agendaDay h3 {
+  margin: 0 0 var(--space-1);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.appShell .agendaDay h3.today {
+  color: var(--accent);
+}
+.appShell .agendaDay ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.appShell .agendaItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "time ref" "time carrier";
+  column-gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: #fff;
+  text-align: left;
+}
+.appShell .agendaItem.level-late {
+  border-left-color: var(--error);
+}
+.appShell .agendaTime {
+  grid-area: time;
+  align-self: center;
+  min-width: 56px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.appShell .agendaItem strong {
+  grid-area: ref;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appShell .agendaItem small {
+  grid-area: carrier;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appShell .calendarNone {
+  margin: 0;
+  color: var(--muted);
+}

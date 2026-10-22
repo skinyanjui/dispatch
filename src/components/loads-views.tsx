@@ -588,6 +588,49 @@ export function CalendarView({
           );
         })}
       </div>
+      {/* Phones: the grid is too small to read, so the month is a list. */}
+      <div className="calendarAgenda" aria-label={`Loads in ${title}`}>
+        {(() => {
+          const days = cells
+            .filter(({ d }) => d.getMonth() === cursor.getMonth())
+            .map(({ d }) => ({ d, items: byDay.get(dayKey(d)) ?? [] }))
+            .filter((x) => x.items.length > 0);
+          if (!days.length)
+            return <p className="calendarNone">No loads this month.</p>;
+          return days.map(({ d, items }) => (
+            <section key={dayKey(d)} className="agendaDay">
+              <h3 className={dayKey(d) === todayKey ? "today" : undefined}>
+                {d.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </h3>
+              <ul>
+                {items.map((l) => (
+                  <li key={l.id}>
+                    <button
+                      type="button"
+                      className={
+                        "agendaItem level-" +
+                        (l.summary?.attention.level ?? "ok")
+                      }
+                      disabled={disabled}
+                      onClick={() => onOpen(l.id)}
+                    >
+                      <span className="agendaTime">
+                        {time(dateOf(l, field))}
+                      </span>
+                      <strong>{l.reference}</strong>
+                      <small>{l.carrier_name ?? ""}</small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ));
+        })()}
+      </div>
     </section>
   );
 }

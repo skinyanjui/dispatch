@@ -19,3 +19,7 @@ Field reordering by drag, other aggregations (average, min, max), calendar week/
 ## Rollback
 
 `saved_views` is additive and the layouts are client-side; reverting the client restores the board. The table can stay unused.
+
+## Responsive pass (phones)
+
+CSS plus one small component addition; no API or schema change. On phones: the stage pills scroll under a soft edge instead of being cut off; the layout switch fills its row and the saved view and Filter, Sort and Options fill the next; the three attention counts share one row under their title; board stages are 86% of the screen wide with the next stage peeking and snapping; the table keeps its load column pinned while the rest scrolls; and the calendar, whose month grid is unreadable at that size, is a list of days with their loads (the grid returns from 641px up). Rollback: revert the commit.
