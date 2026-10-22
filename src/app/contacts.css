@@ -1,0 +1,110 @@
+/* Contacts directory: each person is one row in a bordered list: avatar,
+   name and details, then one row of actions. Controls use the 32px scale. */
+.appShell .dirNote {
+  margin: 0;
+  color: var(--muted);
+}
+.appShell .dirList {
+  max-width: 1000px;
+  margin: 0 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+.appShell .dirList:empty {
+  display: none;
+}
+.appShell .dirRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "avatar main actions";
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.appShell .dirRow + .dirRow {
+  border-top: 1px solid var(--border);
+}
+.appShell .dirAvatar {
+  grid-area: avatar;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e9edfb;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.appShell .dirAvatar.carrier {
+  background: #e6f4ec;
+  color: #1f7a4d;
+}
+.appShell .dirAvatar.driver {
+  background: #fdf3dc;
+  color: #8a5a00;
+}
+.appShell .dirAvatar.external {
+  background: #f1f1f1;
+  color: #444;
+}
+.appShell .dirMain {
+  grid-area: main;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.appShell .dirMain strong {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.appShell .dirMain small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.appShell .dirLines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  color: var(--ink) !important;
+}
+.appShell .dirActions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.appShell .dirActions .secondary {
+  margin-left: var(--space-1);
+}
+.appShell .dirSectionLabel,
+.appShell .sidebarLabel {
+  max-width: 1000px;
+}
+/* Phones: actions drop under the details and fill the row; Message and Edit
+   share what is left after the icons. */
+@media (max-width: 640px) {
+  .appShell .dirRow {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "avatar main" "actions actions";
+    align-items: start;
+  }
+  .appShell .dirActions {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .appShell .dirActions .secondary {
+    order: 1;
+    flex: 1 1 calc(50% - var(--space-2));
+    min-height: 40px;
+    margin-left: 0;
+  }
+  .appShell .dirActions .iconAction {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+}

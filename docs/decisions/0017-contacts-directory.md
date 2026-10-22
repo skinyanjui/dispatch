@@ -34,3 +34,7 @@ CSV import/export, duplicate detection and merging, per-contact history, groups 
 ## Rollback
 
 Keep migration 015 (additive).
+
+## Directory rows
+
+Presentation only; no API, schema or permission change. Each person is a row in one bordered list: an initials avatar tinted by group (team, driver, carrier, other), the name, the role and first carrier with "+N more" when a person is linked to several (the full list is in the tooltip), the phone and email, then one row of actions (call, text, email, copy, favorite, Message, Edit). On phones the icon actions share one row and Message and Edit share the next at full width. Accessible names are unchanged. The old two-column card grid and its CSS were left in place but are no longer used by this page.

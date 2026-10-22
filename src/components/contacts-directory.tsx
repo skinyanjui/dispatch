@@ -31,6 +31,13 @@ type Directory = {
 };
 
 const icon = { size: 15, "aria-hidden": true } as const;
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
 
 function Row({
   entry,
@@ -53,17 +60,20 @@ function Row({
     });
   return (
     <article
-      className="contactRow"
+      className="dirRow"
       aria-label={`${entry.name}, ${entry.detail}`}
     >
-      <div className="contactMain">
+      <span className={"dirAvatar " + entry.group} aria-hidden="true">
+        {initials(entry.name)}
+      </span>
+      <div className="dirMain">
         <strong>{entry.name}</strong>
-        <small>
+        <small title={entry.carriers.map((c) => c.name).join(", ")}>
           {entry.detail}
-          {entry.carriers.length > 0 &&
-            " · " + entry.carriers.map((c) => c.name).join(", ")}
+          {entry.carriers.length > 0 && " · " + entry.carriers[0].name}
+          {entry.carriers.length > 1 && ` +${entry.carriers.length - 1} more`}
         </small>
-        <small className="contactLines">
+        <small className="dirLines">
           {entry.phone && <span>{entry.phone}</span>}
           {entry.email && <span>{entry.email}</span>}
           {!entry.phone && !entry.email && <span>No contact details yet</span>}
@@ -75,7 +85,7 @@ function Row({
           </small>
         )}
       </div>
-      <div className="contactActions">
+      <div className="dirActions">
         {entry.phone && (
           <a
             className="iconAction"
@@ -144,7 +154,7 @@ function Row({
           <StarIcon {...icon} weight={entry.favorite ? "fill" : "regular"} />
         </button>
         {onEdit && (
-          <button className="textButton" disabled={disabled} onClick={onEdit}>
+          <button className="secondary" disabled={disabled} onClick={onEdit}>
             Edit
           </button>
         )}
@@ -231,9 +241,9 @@ export function ContactsDirectory({
       <div className="directoryIntro">
         <div>
           <h2 className="srOnly">Contacts</h2>
-          <p>
-            Everyone you work with, one search away. Tap call, text or email to
-            reach out from this device, or Message to keep it in Relay.
+          <p className="dirNote">
+            Tap call, text or email to reach out from this device, or Message to
+            keep it in Relay.
           </p>
         </div>
         {data?.can_add && (
@@ -346,7 +356,7 @@ export function ContactsDirectory({
       {starred.length > 0 && (
         <>
           <p className="sidebarLabel">Favorites</p>
-          <div className="contactList">
+          <div className="dirList">
             {starred.map((e) => (
               <Row
                 key={"fav-" + e.key}
@@ -361,7 +371,7 @@ export function ContactsDirectory({
           <p className="sidebarLabel">Everyone</p>
         </>
       )}
-      <div className="contactList">
+      <div className="dirList">
         {entries
           .filter((e) => !starred.some((s) => s.key === e.key))
           .map((e) => (

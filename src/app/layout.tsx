@@ -16,6 +16,7 @@ import "./controls.css";
 import "./loads.css";
 import "./exceptions.css";
 import "./billing.css";
+import "./contacts.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
   description: "Carrier-scoped freight dispatch operations",
