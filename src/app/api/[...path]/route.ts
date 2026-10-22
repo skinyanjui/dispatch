@@ -9,6 +9,8 @@ import {
   HttpError,
   digest,
   rememberDays,
+  consumeAttempt,
+  clientIp,
 } from "@/lib/auth";
 import {
   createCarrier,
@@ -334,6 +336,22 @@ async function handle(req: NextRequest) {
   let actor: string | undefined;
   try {
     const path = req.nextUrl.pathname.slice(5).split("/");
+    // Liveness and database reachability for load balancers and monitors.
+    // Public by design: it returns no data and no error detail.
+    if (path.length === 1 && path[0] === "health" && req.method === "GET") {
+      try {
+        await pool.query("SELECT 1");
+      } catch {
+        return NextResponse.json(
+          { status: "unavailable" },
+          { status: 503, headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      return NextResponse.json(
+        { status: "ok" },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     // Provider webhooks carry no browser origin or session; each verifies its
     // own signature before anything is read or written.
     if (path[0] === "webhooks" && path.length === 2 && req.method === "POST") {
@@ -372,6 +390,7 @@ async function handle(req: NextRequest) {
           remember: z.boolean().optional(),
         })
         .parse(await readJson(req));
+      await consumeAttempt("login-ip:" + clientIp(req), 60);
       const result = await login(
         input.email,
         input.password,
@@ -389,6 +408,7 @@ async function handle(req: NextRequest) {
       );
     }
     if (req.method === "POST" && path.join("/") === "login/mfa") {
+      await consumeAttempt("login-ip:" + clientIp(req), 60);
       const done = await completeMfaLogin(await readJson(req));
       return withSession(
         NextResponse.json({ ok: true }),
@@ -457,6 +477,18 @@ async function handle(req: NextRequest) {
       );
     }
     const user = await session(req);
+    // Per-person budgets (ADR 0049). Reads are not limited; every write shares
+    // one budget and calls that can incur provider cost have a smaller one.
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      await consumeAttempt("write:" + user.id, 240);
+      const sub = path.join("/");
+      if (
+        sub === "assistant/ask" ||
+        /^extractions(\/|$)/.test(sub) ||
+        /^documents\/[^/]+\/read$/.test(sub)
+      )
+        await consumeAttempt("ai:" + user.id, 20);
+    }
     actor = user.id;
     if (path[0] === "fleet") {
       if (path.length === 1 && req.method === "GET")

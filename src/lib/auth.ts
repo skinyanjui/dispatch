@@ -29,13 +29,27 @@ export async function verifyPassword(password: string, stored: string) {
   const actual = (await deriveKey(password, salt, 64)) as Buffer;
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
+/**
+ * The caller's address for rate limiting. Behind Vercel or another proxy the
+ * first x-forwarded-for entry is set by the platform; without a proxy a client
+ * can spoof it, which only lets it dodge its own limit, never raise another's.
+ */
+export function clientIp(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0];
+  return (forwarded || request.headers.get("x-real-ip") || "unknown")
+    .trim()
+    .slice(0, 64);
+}
 export async function consumeLoginAttempt(email: string) {
   await consumeAttempt(email.trim().toLowerCase(), 8);
 }
 /** Shared fixed-window limiter (one minute) keyed by a hashed identity. */
 export async function consumeAttempt(identity: string, limit: number) {
   const key = digest(identity);
-  await pool.query("DELETE FROM login_attempts WHERE resets_at < now()");
+  // Expired windows are reset by the upsert below; the sweep only keeps the
+  // table small, so it need not run on every request.
+  if (Math.random() < 0.02)
+    await pool.query("DELETE FROM login_attempts WHERE resets_at < now()");
   const result = await pool.query(
     `INSERT INTO login_attempts VALUES($1,1,now()+interval '1 minute')
     ON CONFLICT(identity_hash) DO UPDATE SET
