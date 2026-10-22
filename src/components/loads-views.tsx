@@ -51,30 +51,121 @@ const sum = (loads: Load[]) =>
   formatMoney(
     loads.reduce((t, l) => t + BigInt(l.amount_minor), 0n).toString(),
   );
-export type Calc = "none" | "sum" | "average" | "min" | "max";
+export type Calc =
+  | "none"
+  | "sum"
+  | "average"
+  | "min"
+  | "max"
+  | "earliest"
+  | "latest"
+  | "filled"
+  | "empty"
+  | "unique";
 export const calcLabels: Record<Calc, string> = {
   none: "Calculate",
   sum: "Sum",
   average: "Average",
   min: "Min",
   max: "Max",
+  earliest: "Earliest",
+  latest: "Latest",
+  filled: "Filled",
+  empty: "Empty",
+  unique: "Unique",
 };
-/** Freight totals in integer minor units; the average rounds half up. */
-export function calcFreight(loads: Load[], calc: Calc) {
-  if (calc === "none" || !loads.length) return "";
-  const amounts = loads.map((l) => BigInt(l.amount_minor));
-  const total = amounts.reduce((t, a) => t + a, 0n);
-  const n = BigInt(amounts.length);
-  const value =
-    calc === "sum"
-      ? total
-      : calc === "average"
-        ? (total * 2n + n) / (n * 2n)
-        : amounts.reduce((m, a) =>
-            calc === "min" ? (a < m ? a : m) : a > m ? a : m,
-          );
-  return formatMoney(value.toString());
+/** Which aggregations make sense for each column's type. */
+export const calcOptions: Record<ViewField, Calc[]> = {
+  carrier: ["none", "filled", "empty", "unique"],
+  stage: ["none", "unique"],
+  next: ["none", "earliest", "latest", "filled", "empty"],
+  driver: ["none", "filled", "empty", "unique"],
+  docs: ["none", "sum", "average", "min", "max"],
+  freight: ["none", "sum", "average", "min", "max"],
+  created: ["none", "earliest", "latest"],
+};
+const formatNext = (l: Load) =>
+  l.summary?.next
+    ? `${l.summary.next.label} ${new Date(l.summary.next.window_start).toLocaleString("en-US", { timeZone: l.summary.next.timezone, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+    : "—";
+const formatCreated = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const textOf = (l: Load, f: "carrier" | "stage" | "driver") =>
+  f === "carrier"
+    ? (l.carrier_name ?? "")
+    : f === "stage"
+      ? stageLabels[l.stage]
+      : (l.summary?.driver_name ?? "");
+/** Integer min/max/sum/average (half up) over BigInt values. */
+function reduceBig(values: bigint[], calc: Calc) {
+  const n = BigInt(values.length);
+  const total = values.reduce((t, a) => t + a, 0n);
+  return calc === "sum"
+    ? total
+    : calc === "average"
+      ? (total * 2n + n) / (n * 2n)
+      : values.reduce((m, a) =>
+          calc === "min" ? (a < m ? a : m) : a > m ? a : m,
+        );
 }
+/** Footer figure for one column over the loads shown; "" when there is nothing to show. */
+export function calcColumn(loads: Load[], field: ViewField, calc: Calc) {
+  if (calc === "none" || !loads.length || !calcOptions[field].includes(calc))
+    return "";
+  switch (field) {
+    case "freight":
+      return formatMoney(
+        reduceBig(
+          loads.map((l) => BigInt(l.amount_minor)),
+          calc,
+        ).toString(),
+      );
+    case "docs": {
+      // Accepted documents out of those required, for loads with a summary.
+      const counted = loads.filter((l) => l.summary);
+      if (!counted.length) return "";
+      const required = loadDocumentTypes.length;
+      const accepted = counted.map((l) => BigInt(l.summary!.docs.accepted));
+      if (calc === "sum")
+        return `${reduceBig(accepted, calc)}/${counted.length * required}`;
+      if (calc === "average") {
+        // One decimal, rounded half up, in integer tenths.
+        const n = BigInt(accepted.length);
+        const tenths = (reduceBig(accepted, "sum") * 20n + n) / (n * 2n);
+        return `${tenths / 10n}.${tenths % 10n}/${required}`;
+      }
+      return `${reduceBig(accepted, calc)}/${required}`;
+    }
+    case "next": {
+      const dated = loads.filter((l) => l.summary?.next);
+      if (calc === "filled") return String(dated.length);
+      if (calc === "empty") return String(loads.length - dated.length);
+      if (!dated.length) return "";
+      const at = (l: Load) => Date.parse(l.summary!.next!.window_start);
+      return formatNext(
+        dated.reduce((m, l) =>
+          calc === "earliest" ? (at(l) < at(m) ? l : m) : at(l) > at(m) ? l : m,
+        ),
+      );
+    }
+    case "created": {
+      const at = (l: Load) => Date.parse(l.created_at);
+      const pick = loads.reduce((m, l) =>
+        calc === "earliest" ? (at(l) < at(m) ? l : m) : at(l) > at(m) ? l : m,
+      );
+      return formatCreated(pick.created_at);
+    }
+    default: {
+      const values = loads.map((l) => textOf(l, field));
+      if (calc === "filled") return String(values.filter(Boolean).length);
+      if (calc === "empty") return String(values.filter((v) => !v).length);
+      return String(new Set(values.filter(Boolean)).size);
+    }
+  }
+}
+/** Freight totals in integer minor units; the average rounds half up. */
+export const calcFreight = (loads: Load[], calc: Calc) =>
+  calcColumn(loads, "freight", calc);
 const dateOf = (l: Load, field: "next" | "created") =>
   field === "created" ? l.created_at : (l.summary?.next?.window_start ?? "");
 const day = (iso: string) =>
@@ -139,7 +230,7 @@ export function TableView({
   onAdd?: () => void;
   disabled: boolean;
 }) {
-  const [calc, setCalc] = useState<Calc>("none");
+  const [calcs, setCalcs] = useState<Partial<Record<ViewField, Calc>>>({});
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const show = (f: ViewField) => !config.hidden_fields.includes(f);
   const sorted = useMemo(() => sortLoads(loads, config.sort), [loads, config]);
@@ -179,9 +270,7 @@ export function TableView({
       case "stage":
         return l.cancelled_at ? "Cancelled" : stageLabels[l.stage];
       case "next":
-        return l.summary?.next
-          ? `${l.summary.next.label} ${new Date(l.summary.next.window_start).toLocaleString("en-US", { timeZone: l.summary.next.timezone, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
-          : "—";
+        return formatNext(l);
       case "driver":
         return l.summary?.driver_name ?? "—";
       case "docs":
@@ -191,10 +280,7 @@ export function TableView({
       case "freight":
         return formatMoney(l.amount_minor);
       default:
-        return new Date(l.created_at).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
+        return formatCreated(l.created_at);
     }
   };
   return (
@@ -325,30 +411,36 @@ export function TableView({
             <th scope="row">
               {loads.length} {loads.length === 1 ? "load" : "loads"}
             </th>
-            {allFields.filter(show).map((f) =>
-              f === "freight" ? (
+            {allFields.filter(show).map((f) => {
+              const calc = calcs[f] ?? "none";
+              return (
                 <td key={f}>
                   <label className="calcPicker">
-                    <span className="srOnly">Calculate freight</span>
+                    <span className="srOnly">
+                      Calculate {fieldLabels[f].toLowerCase()}
+                    </span>
                     <select
                       value={calc}
-                      onChange={(e) => setCalc(e.target.value as Calc)}
+                      onChange={(e) =>
+                        setCalcs((old) => ({
+                          ...old,
+                          [f]: e.target.value as Calc,
+                        }))
+                      }
                     >
-                      {(Object.keys(calcLabels) as Calc[]).map((c) => (
+                      {calcOptions[f].map((c) => (
                         <option key={c} value={c}>
                           {calcLabels[c]}
                         </option>
                       ))}
                     </select>
                   </label>
-                  <output aria-label="Freight calculation">
-                    {calcFreight(loads, calc)}
+                  <output aria-label={`${fieldLabels[f]} calculation`}>
+                    {calcColumn(loads, f, calc)}
                   </output>
                 </td>
-              ) : (
-                <td key={f} />
-              ),
-            )}
+              );
+            })}
           </tr>
         </tfoot>
       </table>

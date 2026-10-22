@@ -1170,6 +1170,10 @@ test("loads table: Add new opens the form and Calculate summarizes freight", asy
   expect(n(sum)).toBeGreaterThanOrEqual(n(max));
   await calc.selectOption("average");
   expect(n(await out.textContent())).toBeLessThanOrEqual(n(max));
+  await table.getByLabel("Calculate carrier").selectOption("unique");
+  await expect(table.getByLabel("Carrier calculation")).toHaveText(/^\d+$/);
+  await table.getByLabel("Calculate created").selectOption("earliest");
+  await expect(table.getByLabel("Created calculation")).not.toHaveText("");
   await table.getByRole("button", { name: "Add new" }).click();
   await expect(page.getByRole("dialog", { name: "Create load" })).toBeVisible();
 });
