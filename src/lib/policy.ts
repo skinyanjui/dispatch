@@ -13,9 +13,16 @@ import { pool } from "./db";
  *   any         any signed-in person (records are checked by the handler)
  *   non-driver  organization staff, dispatchers and carrier managers; drivers get 404
  *   staff       organization staff and dispatchers only; carrier managers and drivers get 404
+ *   org-admin   organization owners and admins only
  *   self        the person's own session or account
  */
-export type Audience = "public" | "any" | "non-driver" | "staff" | "self";
+export type Audience =
+  | "public"
+  | "any"
+  | "non-driver"
+  | "staff"
+  | "org-admin"
+  | "self";
 export const familyAudience: Record<string, Audience> = {
   health: "public",
   webhooks: "public",
@@ -26,13 +33,13 @@ export const familyAudience: Record<string, Audience> = {
   logout: "self",
   me: "self",
   account: "self",
-  fleet: "any",
-  audit: "any", // organization admins, checked by the handler
+  fleet: "non-driver",
+  audit: "org-admin",
   documents: "any",
-  extractions: "any",
-  carriers: "any",
-  billing: "any",
-  "dispatch-invoices": "any",
+  extractions: "non-driver",
+  carriers: "non-driver",
+  billing: "non-driver",
+  "dispatch-invoices": "non-driver",
   organizations: "any", // organization admins, checked by the handler
   views: "any",
   threads: "any",
@@ -58,6 +65,14 @@ export const familyAudience: Record<string, Audience> = {
 export async function enforceAudience(user: string, family: string) {
   const audience = familyAudience[family];
   if (audience === undefined) throw new HttpError(404, "NOT_FOUND");
+  if (audience === "org-admin") {
+    const admin = await pool.query(
+      "SELECT 1 FROM organization_members WHERE user_id=$1 LIMIT 1",
+      [user],
+    );
+    if (!admin.rowCount) throw new HttpError(404, "NOT_FOUND");
+    return;
+  }
   if (audience !== "staff" && audience !== "non-driver") return;
   const a = await access(pool, user);
   const staff = a.organizations.length > 0;
