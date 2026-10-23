@@ -91,7 +91,14 @@ export function QueueTabs({
 }) {
   return (
     <div className="queueRow">
-      <nav className="queueTabs" aria-label="Dispatch queues">
+      {/* On phones the strip scrolls sideways. While busy every tab is
+          disabled, and a scroll region with nothing focusable in it cannot be
+          scrolled from the keyboard, so the strip itself takes focus then. */}
+      <nav
+        className="queueTabs"
+        aria-label="Dispatch queues"
+        tabIndex={busy ? 0 : undefined}
+      >
         {queues
           .filter(
             (q) =>

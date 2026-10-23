@@ -1,14 +1,16 @@
 import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
-import { pool } from "../../src/lib/db";
-import { reportOverview } from "../../src/lib/reports";
 import { bookedLoad, tenant } from "./fixtures";
 
 // Report and audit ranges are UTC dates (ADR 0024) whatever timezone the
-// database session runs in. Every connection here is moved west of UTC to prove it.
-pool.on("connect", (client) => {
-  client.query("SET TIME ZONE 'America/Los_Angeles'");
-});
+// database session runs in. Every connection here is moved west of UTC to prove
+// it, as a connection option: node-postgres reads PGOPTIONS when the pool is
+// created, so the pool is imported after it is set. (An un-awaited SET TIME ZONE
+// in a "connect" handler raced the first query and triggers pg's
+// "already executing a query" deprecation, an error in pg 9.)
+process.env.PGOPTIONS = "-c TimeZone=America/Los_Angeles";
+const { pool } = await import("../../src/lib/db");
+const { reportOverview } = await import("../../src/lib/reports");
 
 let t: Awaited<ReturnType<typeof tenant>>;
 before(async () => {
@@ -17,6 +19,11 @@ before(async () => {
 after(() => pool.end());
 
 test("a pickup at 02:00 UTC on Monday is in Monday's range and week, not Sunday's", async () => {
+  // The point of the test is lost if the session is quietly back on UTC.
+  assert.equal(
+    (await pool.query("SHOW TimeZone")).rows[0].TimeZone,
+    "America/Los_Angeles",
+  );
   const load = await bookedLoad(t.dispatcher, t.carrier);
   // Sunday 18:00 in Los Angeles, Monday 02:00 in UTC.
   await pool.query(

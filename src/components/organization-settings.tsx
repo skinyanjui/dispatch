@@ -187,7 +187,17 @@ export function OrganizationSettings({
           You are not an administrator of a dispatch organization.
         </p>
       )}
-      <ErrorAlert error={error} />
+      <ErrorAlert
+        error={error}
+        onRetry={
+          data
+            ? undefined
+            : () => {
+                setError("");
+                void load();
+              }
+        }
+      />
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice}
       </p>

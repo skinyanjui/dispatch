@@ -688,7 +688,8 @@ export default function Workspace({
     <ErrorAlert>
       <WarningCircleIcon size={18} aria-hidden="true" />
       <span>{describe(error)}</span>
-      {context && !selected && !creating && section === "loads" && (
+      {/* Retrying cannot change "not available to your account". */}
+      {context && !selected && !creating && error !== "NOT_FOUND" && (
         <button
           className="textButton"
           disabled={busy}

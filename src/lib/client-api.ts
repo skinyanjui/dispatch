@@ -26,7 +26,7 @@ const messages: Record<string, string> = {
   PASSWORD_REQUIRED:
     "Pick a password with at least 12 characters. A few random words works great.",
   VERSION_CONFLICT:
-    "Someone just updated this load. Refresh to see the latest, then try again.",
+    "Someone just updated this. Refresh the page to see the latest, then try again.",
   INVALID_CREDENTIALS:
     "That email and password don't match. Give it another try, or use “Forgot password” and we'll help.",
   SERVICE_UNAVAILABLE:

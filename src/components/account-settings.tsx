@@ -77,7 +77,17 @@ export function AccountSettings({
       <PageIntro title="Account and security">
         {account && `${account.name} · ${account.email}`}
       </PageIntro>
-      <ErrorAlert error={error} />
+      <ErrorAlert
+        error={error}
+        onRetry={
+          account
+            ? undefined
+            : () => {
+                setError("");
+                void load();
+              }
+        }
+      />
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice}
       </p>

@@ -206,7 +206,7 @@ test("known version conflicts preserve entries and allow a new attempt after det
     .getByRole("button", { name: "Record check-in", exact: true })
     .click();
   await expect(dialog.getByRole("alert")).toContainText(
-    "Someone just updated this load",
+    "Someone just updated this",
   );
   await dialog.getByRole("button", { name: "Refresh load details" }).click();
   await expect(form.getByLabel("Reported location")).toHaveValue("Gary, IN");
