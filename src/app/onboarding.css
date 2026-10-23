@@ -1,6 +1,6 @@
 .onboardingPanel {
   width: min(600px, 100%);
-  padding: 28px 34px;
+  padding: var(--space-7) var(--space-7);
 }
 .setupMark {
   display: inline-flex;
@@ -31,7 +31,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
-  margin: var(--space-6) 0 30px;
+  margin: var(--space-6) 0 var(--space-7);
   font-size: 11px;
   color: var(--muted);
 }
@@ -98,7 +98,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: var(--space-4);
-  margin: var(--space-3) 0 26px;
+  margin: var(--space-3) 0 var(--space-6);
 }
 .setupSummary strong {
   flex-basis: 100%;
@@ -112,7 +112,7 @@
 .setupPending {
   font-size: 10px;
   border-radius: 4px;
-  padding: 5px 7px;
+  padding: var(--space-1) var(--space-2);
 }
 .setupReady {
   color: var(--success);
@@ -148,7 +148,7 @@
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  padding: 15px 0;
+  padding: var(--space-4) 0;
   border-top: 1px solid var(--border);
   font-size: 11px;
 }
@@ -162,7 +162,7 @@
   overflow-wrap: anywhere;
 }
 .setupDriver small {
-  margin-top: 5px;
+  margin-top: var(--space-1);
   color: var(--muted);
 }
 .setupDriver > span {
@@ -238,7 +238,7 @@
 .joinIdentity span {
   display: block;
   color: var(--muted);
-  margin-top: 7px;
+  margin-top: var(--space-2);
   overflow-wrap: anywhere;
 }
 .joinPassword {
@@ -252,7 +252,7 @@
 }
 .joinPassword button {
   font-size: 11px;
-  padding: 9px;
+  padding: var(--space-2);
 }
 .directoryControls {
   display: flex;
@@ -267,7 +267,7 @@
 }
 @media (max-width: 760px) {
   .onboardingPanel {
-    padding: 22px;
+    padding: var(--space-6);
   }
   .onboardingPanel h2 {
     font-size: 25px;
@@ -304,7 +304,7 @@
 }
 .demoBanner strong {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: var(--space-1);
 }
 .demoBanner span {
   font-size: 11px;

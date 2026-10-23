@@ -31,8 +31,8 @@
 .appShell .search {
   width: min(480px, 100%);
   border-radius: 25px;
-  padding: 0 15px;
-  gap: 9px;
+  padding: 0 var(--space-4);
+  gap: var(--space-2);
   background: var(--panel);
   border-color: var(--border);
   height: 40px;
@@ -51,7 +51,7 @@
 .appShell .toolbarLeft > .secondary {
   background: transparent;
   border-color: transparent;
-  padding: 7px;
+  padding: var(--space-2);
   color: var(--muted);
 }
 .appShell .toolbarMeta {
@@ -229,14 +229,14 @@
   .appShell .workspace > footer {
     line-height: 1.8;
     font-size: 8px;
-    gap: 5px;
+    gap: var(--space-1);
   }
 
   .directoryIntro {
     flex-direction: column;
     align-items: flex-start;
-    gap: 22px;
-    margin-bottom: 28px;
+    gap: var(--space-6);
+    margin-bottom: var(--space-7);
   }
   .directoryIntro h2 {
     font-size: 23px;
@@ -251,11 +251,11 @@
 
   .roleLabel {
     font-size: 10px;
-    padding-left: 50px;
+    padding-left: var(--space-9);
   }
 
   .directoryNote {
-    padding: 26px 0;
+    padding: var(--space-6) 0;
     font-size: 10px;
   }
   .carrierDirectory {
@@ -283,7 +283,7 @@
 .appliedFilters {
   display: flex;
   gap: var(--space-2);
-  margin: -7px 0 var(--space-5);
+  margin: calc(var(--space-2) * -1) 0 var(--space-5);
   min-width: 0;
 }
 .scopeChip {

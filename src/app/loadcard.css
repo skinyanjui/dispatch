@@ -5,7 +5,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-content: stretch;
-  gap: 3px;
+  gap: var(--space-1);
   padding: var(--space-3) var(--space-3);
   align-content: start;
 }
@@ -46,7 +46,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px 5px;
+  gap: 2px var(--space-1);
   margin-top: var(--space-1);
   font-size: 12.5px;
   font-weight: 500;

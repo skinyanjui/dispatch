@@ -29,7 +29,7 @@
 }
 .docVersion {
   display: grid;
-  gap: 3px;
+  gap: var(--space-1);
   font-size: 12px;
 }
 .docVersion small,
@@ -122,8 +122,8 @@
   flex-basis: 100%;
 }
 .loadExceptions {
-  margin: 26px 0;
-  padding-top: 22px;
+  margin: var(--space-6) 0;
+  padding-top: var(--space-6);
   border-top: 1px solid var(--border);
 }
 .opsCard.suggestion {
@@ -320,7 +320,7 @@
 .navBadge {
   margin-left: auto;
   min-width: 18px;
-  padding: 0 5px;
+  padding: 0 var(--space-1);
   border-radius: 9px;
   background: var(--action);
   color: var(--action-ink);

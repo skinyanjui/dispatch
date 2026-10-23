@@ -206,7 +206,7 @@
 
 /* ---- Count badge: beside a tab, heading or menu label ---- */
 .appShell .countBadge {
-  padding: 0 7px;
+  padding: 0 var(--space-2);
   border-radius: 999px;
   background: var(--panel-soft);
   font-size: 11px;

@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: 22px var(--space-5) 26px;
+  padding: var(--space-6) var(--space-5) var(--space-6);
   background:
     radial-gradient(
       ellipse at 15% 0%,
@@ -80,7 +80,7 @@
 .authCard {
   width: min(520px, calc(100% - 32px));
   margin: var(--space-4) auto var(--space-7);
-  padding: 26px 22px;
+  padding: var(--space-6) var(--space-6);
   background: var(--panel);
   border: 1px solid var(--login-line);
   border-radius: 16px;
@@ -233,7 +233,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  margin: 22px 0 var(--space-4);
+  margin: var(--space-6) 0 var(--space-4);
   font-size: 13px;
   color: var(--login-muted);
 }
@@ -247,7 +247,7 @@
 
 /* ---- Access guidance ---- */
 .loginAccess {
-  margin: 22px 0 0;
+  margin: var(--space-6) 0 0;
   font-size: 13px;
   line-height: 1.6;
   color: var(--login-muted);
@@ -269,9 +269,10 @@
   }
   .loginHero {
     justify-content: flex-start;
-    gap: clamp(var(--space-7), 9vh, 88px);
+    gap: clamp(var(--space-7), 9vh, var(--space-12));
     /* Content stays above the scene (mountains and water) at the bottom. */
-    padding: clamp(28px, 4vw, 56px) clamp(var(--space-7), 6vw, 96px) 36%;
+    padding: clamp(var(--space-7), 4vw, var(--space-10))
+      clamp(var(--space-7), 6vw, var(--space-12)) 36%;
     min-height: 100dvh;
   }
   .loginHero::before,
@@ -320,7 +321,7 @@
   .heroLead {
     display: block;
     max-width: 30ch;
-    margin: 22px 0 28px;
+    margin: var(--space-6) 0 var(--space-7);
     font-size: 19px;
     line-height: 1.5;
     color: var(--login-muted);
@@ -361,13 +362,13 @@
     /* Same width as the card so the link lines up with its right edge. */
     width: min(540px, calc(100% - clamp(48px, 10vw, 128px)));
     margin: 0 auto;
-    padding: 28px 0 0;
+    padding: var(--space-7) 0 0;
     font-size: 14px;
   }
   .authCard {
     width: min(540px, calc(100% - clamp(48px, 10vw, 128px)));
     margin: auto;
-    padding: clamp(28px, 3.4vw, 48px);
+    padding: clamp(var(--space-7), 3.4vw, var(--space-9));
   }
   .loginPanel h1 {
     font-size: 40px;
@@ -463,12 +464,12 @@
 /* ---- Compact and responsive: sign-in should not need scrolling ----
    Sizes follow the viewport height, so short laptops and phones fit too. */
 .authTop {
-  padding-top: clamp(var(--space-3), 2.4vh, 28px);
+  padding-top: clamp(var(--space-3), 2.4vh, var(--space-7));
 }
 .authCard {
   margin-block: clamp(var(--space-2), 1.6vh, var(--space-4))
     clamp(var(--space-3), 2vh, var(--space-7));
-  padding: clamp(var(--space-4), 2.6vh, 26px) var(--space-5);
+  padding: clamp(var(--space-4), 2.6vh, var(--space-6)) var(--space-5);
 }
 .loginPanel h1 {
   font-size: clamp(24px, 3.6vh, 30px);
@@ -541,7 +542,8 @@
 }
 @media (min-width: 900px) {
   .authCard {
-    padding: clamp(var(--space-5), 3.4vh, 44px) clamp(28px, 3.4vw, 48px);
+    padding: clamp(var(--space-5), 3.4vh, var(--space-9))
+      clamp(var(--space-7), 3.4vw, var(--space-9));
   }
   .loginPanel h1 {
     font-size: clamp(28px, 4.4vh, 40px);
@@ -550,7 +552,7 @@
     font-size: 15px;
   }
   .authTop {
-    padding-top: clamp(var(--space-3), 3vh, 28px);
+    padding-top: clamp(var(--space-3), 3vh, var(--space-7));
   }
 }
 @media (max-width: 899px) and (max-height: 900px) {

@@ -25,7 +25,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 30px;
-  padding: 0 9px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--mk-line);
   border-radius: 7px;
   color: var(--mk-ink);
@@ -56,7 +56,7 @@
   margin: 0 0 var(--space-3);
 }
 .legalDoc ul {
-  padding-left: 22px;
+  padding-left: var(--space-6);
 }
 .legalDoc li {
   margin-bottom: var(--space-2);
@@ -79,12 +79,12 @@
   font-size: 14px;
 }
 .legalBack {
-  margin-top: 28px;
+  margin-top: var(--space-7);
 }
 @media (min-width: 960px) {
   .mk .legalLayout {
     grid-template-columns: 220px minmax(0, 70ch);
-    gap: 56px;
+    gap: var(--space-10);
     align-items: start;
   }
   .legalToc {

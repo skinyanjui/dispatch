@@ -101,11 +101,12 @@
   gap: var(--space-3);
 }
 .mkHero {
-  padding: clamp(36px, 8vh, 88px) 0 clamp(28px, 6vh, 56px);
+  padding: clamp(var(--space-8), 8vh, var(--space-12)) 0
+    clamp(var(--space-7), 6vh, var(--space-10));
   border-radius: 24px;
 }
 .mkHero.compact {
-  padding-block: clamp(var(--space-6), 5vh, 48px) var(--space-2);
+  padding-block: clamp(var(--space-6), 5vh, var(--space-9)) var(--space-2);
 }
 .mkEyebrow {
   margin: 0 0 var(--space-3);
@@ -139,7 +140,7 @@
   color: var(--muted);
 }
 .mkSection {
-  padding: clamp(var(--space-6), 5vh, 48px) 0;
+  padding: clamp(var(--space-6), 5vh, var(--space-9)) 0;
 }
 .mkSection > h2,
 .mkSplit h2,
@@ -180,7 +181,7 @@
 @media (min-width: 800px) {
   .mkSplit {
     grid-template-columns: 1fr 1.3fr;
-    gap: 48px;
+    gap: var(--space-9);
   }
 }
 .mkSplit p {
@@ -189,7 +190,7 @@
 }
 
 .mkBand {
-  padding: 28px clamp(var(--space-5), 4vw, var(--space-8));
+  padding: var(--space-7) clamp(var(--space-5), 4vw, var(--space-8));
   margin-block: var(--space-3);
   background: var(--accent-tint);
   border-radius: 16px;
@@ -232,7 +233,7 @@
 }
 .mkCta {
   margin-block: var(--space-7);
-  padding: clamp(var(--space-6), 5vw, 48px);
+  padding: clamp(var(--space-6), 5vw, var(--space-9));
   text-align: center;
   background: var(--ink);
   color: var(--ink-inverse);
@@ -672,7 +673,7 @@
   gap: var(--space-6);
   width: min(1080px, calc(100% - 40px));
   margin: 0 auto;
-  padding: clamp(28px, 6vh, 56px) 0;
+  padding: clamp(var(--space-7), 6vh, var(--space-10)) 0;
   align-items: center;
 }
 .mkFeature h2 {
@@ -688,7 +689,7 @@
 @media (min-width: 860px) {
   .mkFeature {
     grid-template-columns: 1fr 1fr;
-    gap: 56px;
+    gap: var(--space-10);
   }
   .mkFeature.flip > :first-child {
     order: 2;
@@ -858,7 +859,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .pvCard {
-  gap: 3px;
+  gap: var(--space-1);
 }
 .pvHead {
   display: flex;

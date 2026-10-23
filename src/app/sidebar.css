@@ -135,7 +135,7 @@
 .accountButton {
   width: 100%;
   justify-content: flex-start;
-  gap: 9px;
+  gap: var(--space-2);
   padding: var(--space-2);
   border-radius: 8px;
   text-align: left;
@@ -194,8 +194,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 9px;
-  padding: 7px var(--space-2);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
   border-radius: 6px;
   font-size: 13px;
   color: var(--ink);
@@ -210,7 +210,7 @@
 .accountMenu hr {
   border: 0;
   border-top: 1px solid var(--border);
-  margin: 3px 0;
+  margin: var(--space-1) 0;
 }
 .accountMenuEmail {
   font-size: 11px;
@@ -406,7 +406,7 @@
   gap: var(--space-2);
 }
 .sidebarSub.firstBox {
-  margin-top: 7px;
+  margin-top: var(--space-2);
   position: relative;
   overflow: visible;
 }
@@ -421,7 +421,7 @@
 }
 .subCount {
   min-width: 18px;
-  padding: 0 5px;
+  padding: 0 var(--space-1);
   border-radius: 999px;
   background: var(--accent);
   color: var(--action-ink);

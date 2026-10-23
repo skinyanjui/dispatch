@@ -6,23 +6,23 @@ body {
   line-height: 1.45;
 }
 label {
-  gap: 5px;
+  gap: var(--space-1);
   margin-bottom: var(--space-3);
   font-weight: 500;
 }
 input,
 select {
-  padding: 7px var(--space-3);
+  padding: var(--space-2) var(--space-3);
 }
 textarea {
-  padding: 7px var(--space-3);
+  padding: var(--space-2) var(--space-3);
 }
 .secondary {
-  padding: 5px var(--space-3);
+  padding: var(--space-1) var(--space-3);
   font-size: 12.5px;
 }
 .primary {
-  padding: 7px var(--space-4);
+  padding: var(--space-2) var(--space-4);
   font-size: 12.5px;
 }
 .textButton {
@@ -78,7 +78,7 @@ small {
 /* Board: shorter cards with the route on one line. */
 
 .appShell .loadCard {
-  padding: var(--space-3) 11px;
+  padding: var(--space-3) var(--space-3);
 }
 
 /* Section pages: the top bar carries the title; intros stay short. */
@@ -106,7 +106,7 @@ small {
 
 /* Record inspector. */
 .inspector {
-  padding: var(--space-4) 22px var(--space-6);
+  padding: var(--space-4) var(--space-6) var(--space-6);
 }
 .inspectorHeader {
   margin-bottom: var(--space-3);
@@ -146,7 +146,7 @@ small {
 /* Cards and lists in operational views. */
 .docSlot,
 .opsCard {
-  padding: 9px var(--space-3);
+  padding: var(--space-2) var(--space-3);
   gap: var(--space-2);
 }
 .docPanel,
@@ -164,7 +164,7 @@ small {
 .opsPill {
   font-size: 11px;
   font-weight: 500;
-  padding: 1px 7px;
+  padding: 1px var(--space-2);
 }
 .docVersion small,
 .opsMeta {

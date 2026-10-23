@@ -1,6 +1,6 @@
 // Guards the design system (docs/design-system.md): patterns that have one
 // canonical component must not be rebuilt inline. Runs with `npm run lint`.
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -103,19 +103,25 @@ for (const path of files) {
 }
 /**
  * Spacing (padding, margin, gap) comes from the --space-* scale. A literal px
- * value is allowed only as a 1-2px hairline or optical nudge. A literal that
- * equals a token must be the token. Older off-scale literals are counted per
- * file in scripts/spacing-baseline.json, which may only shrink: fix some, then
- * lower the number.
+ * value is allowed only as a 1-2px hairline or optical nudge; any other literal
+ * is an error, and so is a literal that equals a token.
  */
 const spacingDecl =
   /(?<![\w-])((?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?|gap|row-gap|column-gap)\s*:\s*([^;{}]*)/g;
-const scale = { 4: 1, 8: 2, 12: 3, 16: 4, 20: 5, 24: 6, 32: 7, 40: 8 };
-const baselinePath = join(root, "scripts/spacing-baseline.json");
-const baseline = existsSync(baselinePath)
-  ? JSON.parse(readFileSync(baselinePath, "utf8"))
-  : {};
-const offScale = {};
+const scale = {
+  4: 1,
+  8: 2,
+  12: 3,
+  16: 4,
+  20: 5,
+  24: 6,
+  32: 7,
+  40: 8,
+  48: 9,
+  64: 10,
+  80: 11,
+  96: 12,
+};
 for (const path of files) {
   const file = relative(root, path);
   if (!file.endsWith(".css") || file === "src/app/tokens.css") continue;
@@ -126,28 +132,13 @@ for (const path of files) {
     for (const v of m[2].matchAll(/(?<![\w.-])(-?\d+(?:\.\d+)?)px\b/g)) {
       const n = Math.abs(Number(v[1]));
       if (n <= 2) continue;
-      if (scale[n] && Number(v[1]) > 0)
-        problems.push(
-          `${file}:${line} ${m[1]}: ${v[0]} is a token, use var(--space-${scale[n]})`,
-        );
-      else (offScale[file] ??= []).push(line);
+      problems.push(
+        scale[n] && Number(v[1]) > 0
+          ? `${file}:${line} ${m[1]}: ${v[0]} is a token, use var(--space-${scale[n]})`
+          : `${file}:${line} ${m[1]}: ${v[0]} is off the spacing scale, use var(--space-1..12)`,
+      );
     }
   }
-}
-for (const file of new Set([
-  ...Object.keys(offScale),
-  ...Object.keys(baseline),
-])) {
-  const found = offScale[file]?.length ?? 0;
-  const allowed = baseline[file] ?? 0;
-  if (found > allowed)
-    problems.push(
-      `${file}: ${found} off-scale spacing value(s), ${allowed} allowed; use var(--space-1..8) (lines ${offScale[file].join(", ")})`,
-    );
-  else if (found < allowed)
-    problems.push(
-      `${file}: ${found} off-scale spacing value(s) left; lower scripts/spacing-baseline.json from ${allowed} to ${found}`,
-    );
 }
 for (const [file, name] of used)
   if (!defined.has(name))

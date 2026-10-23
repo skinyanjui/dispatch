@@ -28,7 +28,7 @@
   padding-right: var(--control-pad);
 }
 .appShell textarea {
-  padding: 7px var(--control-pad);
+  padding: var(--space-2) var(--control-pad);
 }
 /* Search fields draw their own box and padding; their input fills it. */
 .appShell .sidebarSearch input,
@@ -40,7 +40,7 @@
   padding-right: 0;
 }
 .appShell .currencyInput input {
-  padding-left: 7px;
+  padding-left: var(--space-2);
   padding-right: var(--control-pad);
 }
 /* Selects: the same arrow everywhere, 10px from the border, with room so the
@@ -49,7 +49,7 @@
 .demoBanner select:not([multiple], [size]) {
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 30px;
+  padding-right: var(--space-7);
   /* A down arrow from two gradients: no image, so it follows --select-arrow. */
   background-image:
     linear-gradient(45deg, transparent 50%, var(--select-arrow) 50%),

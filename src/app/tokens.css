@@ -44,6 +44,10 @@
   --space-6: 24px;
   --space-7: 32px;
   --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+  --space-11: 80px;
+  --space-12: 96px;
   /* Page layout: blocks on a page are this far apart, and a section heading
      adds one --page-section-step above itself (src/app/page-layout.css). */
   --page-max: 1100px;

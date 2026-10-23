@@ -50,7 +50,7 @@ Three layers, all in that one file:
 | Action            | `--accent`, `--action`, `--action-hover`, `--action-ink`, `--focus`, `--accent-soft`, `--accent-tint`                                                                        |
 | Status            | `--error*`, `--success*`, `--warn*` (each with `-bg` and `-border` where used), `--star`                                                                                     |
 | Stages            | `--stage-all`, `-booked`, `-dispatched`, `-transit`, `-delivered`, `-cancelled`, `-contacted`                                                                                |
-| Spacing           | `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-5` 20, `-6` 24, `-7` 32, `-8` 40                                                                                                  |
+| Spacing           | `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-5` 20, `-6` 24, `-7` 32, `-8` 40, `-9` 48, `-10` 64, `-11` 80, `-12` 96                                                           |
 | Page layout       | `--page-gap` 12px between blocks, `--page-section-step` 12px extra above a section heading, `--page-max` 1100px page width (ADR 0053)                                        |
 | Controls          | `--control-h` 32px (fields, buttons, tabs, search), `--control-h-sm` 28px (toolbars, chips, in-table controls), `--control-min` 24px (smallest target), `--control-pad` 10px |
 | Radii and shadow  | `--radius`, `--control-radius`, `--field-radius`, `--shadow-menu`, `--shadow-sheet`                                                                                          |
@@ -61,7 +61,7 @@ Three layers, all in that one file:
 | Avatars           | `--avatar-bg`, `--avatar-carrier-bg`/`-ink`, `--avatar-driver-bg`/`-ink`, `--avatar-external-bg`/`-ink`, `--avatar-record-bg`                                                |
 | More shadows      | `--shadow-raised`, `--shadow-card-hover`, `--shadow-inspector`                                                                                                               |
 
-Spacing rule: `padding`, `margin` and `gap` use `--space-1` to `--space-8`. A literal `px` value is allowed only as a 1–2px hairline or optical nudge, and a literal that equals a token fails lint. Off-scale literals that predate the rule are counted per file in `scripts/spacing-baseline.json`; the count can only go down, so lint also fails when a file has fewer than its baseline until you lower the number.
+Spacing rule: `padding`, `margin` and `gap` use `--space-1` to `--space-12`. A literal `px` value is allowed only as a 1–2px hairline or optical nudge; any other literal, on or off the scale, fails lint. If the scale lacks a step, add a token rather than a literal.
 
 Rules: add a token before using a new colour. `check-design-system.mjs` fails any `#hex` colour in a stylesheet other than `tokens.css`, and any `var(--x)` whose token is not defined. Check the scope too: a token defined only in `.appShell`, `.login` or `.mk` is undefined outside it.
 

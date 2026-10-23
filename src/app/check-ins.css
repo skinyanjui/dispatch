@@ -1,6 +1,6 @@
 .checkIns {
-  margin: 26px 0;
-  padding-top: 22px;
+  margin: var(--space-6) 0;
+  padding-top: var(--space-6);
   border-top: 1px solid var(--border);
 }
 .checkInHeading {
@@ -14,7 +14,7 @@
   margin: 0;
 }
 .checkInHeading button {
-  padding: var(--space-2) 9px;
+  padding: var(--space-2) var(--space-2);
   font-size: 11px;
 }
 .checkInHelp {
@@ -25,8 +25,8 @@
 .checkInEmpty {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 22px 0 var(--space-2);
+  gap: var(--space-2);
+  padding: var(--space-6) 0 var(--space-2);
   color: var(--muted);
   font-size: 12px;
 }
@@ -44,14 +44,14 @@
   color: var(--muted);
   font-weight: 400;
   font-size: 10px;
-  margin-top: -5px;
+  margin-top: calc(var(--space-1) * -1);
 }
 .checkInForm textarea {
   resize: vertical;
   min-height: 70px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: var(--space-3) 11px;
+  padding: var(--space-3) var(--space-3);
   font: inherit;
   font-weight: 400;
   color: var(--ink);
@@ -84,7 +84,7 @@
 .checkInLocation {
   display: flex;
   align-items: flex-start;
-  gap: 7px;
+  gap: var(--space-2);
 }
 .checkInLocation > svg {
   color: var(--accent);
@@ -99,21 +99,21 @@
 .checkInStale {
   color: var(--warn);
   background: var(--warn-bg);
-  padding: 3px var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-radius: 4px;
   font-size: 10px;
 }
 .checkInAge {
   color: var(--muted);
   font-size: 11px;
-  margin-top: 9px;
+  margin-top: var(--space-2);
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
 }
 .checkInNote {
   font-size: 12px;
-  margin-top: 13px;
+  margin-top: var(--space-3);
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

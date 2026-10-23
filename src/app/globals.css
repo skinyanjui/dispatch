@@ -26,7 +26,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--control-radius);
   background: transparent;
@@ -103,7 +103,7 @@ a svg {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
-  padding: 0 28px;
+  padding: 0 var(--space-7);
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
@@ -119,10 +119,10 @@ a svg {
   letter-spacing: -1px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
 }
 .brandPeriod {
-  margin-left: -6px;
+  margin-left: calc(var(--space-2) * -1);
   color: var(--accent);
 }
 
@@ -134,7 +134,7 @@ a svg {
 }
 
 .iconButton {
-  padding: 7px;
+  padding: var(--space-2);
   color: var(--muted);
   border-radius: 5px;
 }
@@ -145,7 +145,7 @@ a svg {
   border-left: 1px solid var(--border);
 }
 .workspace {
-  padding: 22px 26px var(--space-4);
+  padding: var(--space-6) var(--space-6) var(--space-4);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -156,7 +156,7 @@ a svg {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-4);
-  margin-bottom: 22px;
+  margin-bottom: var(--space-6);
 }
 .secondary {
   border: 1px solid var(--border);
@@ -168,7 +168,7 @@ a svg {
   font-size: 10px;
   background: var(--accent-soft);
   border-radius: 4px;
-  padding: 1px 5px;
+  padding: 1px var(--space-1);
 }
 .toolbarMeta {
   color: var(--muted);
@@ -205,7 +205,7 @@ kbd {
   color: var(--muted);
   background: var(--soft);
   border-radius: 3px;
-  padding: 3px 5px;
+  padding: var(--space-1) var(--space-1);
   white-space: nowrap;
 }
 
@@ -227,7 +227,7 @@ kbd {
   gap: 0;
   align-items: stretch;
   text-align: left;
-  padding: 15px 13px;
+  padding: var(--space-4) var(--space-3);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -250,7 +250,7 @@ th {
   font-weight: 500;
   color: var(--muted);
   background: var(--soft);
-  padding: 13px var(--space-5);
+  padding: var(--space-3) var(--space-5);
 }
 td {
   font-size: 12px;
@@ -260,8 +260,8 @@ td {
 td small {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 7px;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
   font-size: 10px;
 }
 
@@ -272,7 +272,7 @@ td small {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 5px var(--space-2);
+  padding: var(--space-1) var(--space-2);
   font-size: 10px;
   line-height: 1;
   border-radius: 5px;
@@ -303,7 +303,7 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
+  gap: var(--space-4);
   font-size: 10px;
   color: var(--muted);
   margin-top: var(--space-5);
@@ -312,7 +312,7 @@ footer > span,
 footer a {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
 }
 footer a {
   margin-left: var(--space-4);
@@ -326,7 +326,7 @@ footer a {
   color: var(--accent);
 }
 .footerDivider {
-  margin: 0 3px;
+  margin: 0 var(--space-1);
 }
 .primary {
   background: var(--action);
@@ -349,7 +349,7 @@ footer a {
   gap: var(--space-2);
   align-items: center;
   border-radius: 6px;
-  padding: 11px 13px;
+  padding: var(--space-3) var(--space-3);
   margin-bottom: var(--space-4);
   font-size: 12px;
   line-height: 1.5;
@@ -436,7 +436,7 @@ footer a {
 .stopIndex {
   font-size: 10px;
   color: var(--subtle);
-  padding-top: 3px;
+  padding-top: var(--space-1);
 }
 .stop small {
   text-transform: capitalize;
@@ -450,7 +450,7 @@ footer a {
 .stop p {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   font-size: 11px;
   color: var(--muted);
 }
@@ -463,9 +463,9 @@ footer a {
 .assignedDriver {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--space-2);
   font-size: 12px;
-  margin-bottom: 15px;
+  margin-bottom: var(--space-4);
 }
 .assignedDriver > svg {
   color: var(--subtle);
@@ -493,8 +493,8 @@ footer a {
 .event {
   position: relative;
   border-left: 1px solid var(--border);
-  padding: 0 0 var(--space-6) 17px;
-  margin-left: 3px;
+  padding: 0 0 var(--space-6) var(--space-4);
+  margin-left: var(--space-1);
   font-size: 12px;
 }
 .event > svg {
@@ -519,7 +519,7 @@ footer a {
 .formIntro {
   font-size: 12px;
   color: var(--muted);
-  margin: var(--space-3) 0 27px;
+  margin: var(--space-3) 0 var(--space-6);
   line-height: 1.6;
 }
 .helpText {
@@ -544,11 +544,11 @@ footer a {
 }
 .currencyInput > span {
   color: var(--muted);
-  padding-left: 11px;
+  padding-left: var(--space-3);
 }
 .currencyInput input {
   border: 0;
-  padding-left: 7px;
+  padding-left: var(--space-2);
 }
 .currencyInput:focus-within {
   outline: 2px solid var(--focus);
@@ -565,7 +565,7 @@ legend {
   text-transform: capitalize;
   font-size: 12px;
   font-weight: 500;
-  padding: 0 7px;
+  padding: 0 var(--space-2);
 }
 legend > span {
   margin-right: var(--space-2);
@@ -583,13 +583,13 @@ fieldset label:last-child {
   padding-top: var(--space-5);
 }
 .empty {
-  padding: 60px 25px;
+  padding: var(--space-10) var(--space-6);
   text-align: center;
   color: var(--muted);
 }
 .empty h2 {
   font-size: 14px;
-  margin: 15px 0 var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
 }
 .empty p {
   font-size: 12px;
@@ -616,7 +616,7 @@ fieldset label:last-child {
   overflow-wrap: anywhere;
 }
 .loading {
-  padding: 80px;
+  padding: var(--space-11);
   text-align: center;
   color: var(--muted);
 }
@@ -697,7 +697,7 @@ fieldset label:last-child {
   .toolbar {
     align-items: flex-start;
     gap: var(--space-3);
-    margin-bottom: 15px;
+    margin-bottom: var(--space-4);
     flex-wrap: wrap;
   }
   .toolbarLeft {
@@ -723,7 +723,7 @@ fieldset label:last-child {
   }
 
   .inspector {
-    padding: var(--space-5) 22px;
+    padding: var(--space-5) var(--space-6);
   }
   .formGrid {
     gap: var(--space-3);
@@ -734,7 +734,7 @@ fieldset label:last-child {
     padding: var(--space-3) var(--space-2);
   }
   footer {
-    gap: 9px;
+    gap: var(--space-2);
     font-size: 9px;
     line-height: 1.7;
   }
