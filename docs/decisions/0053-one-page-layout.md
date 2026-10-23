@@ -14,11 +14,11 @@ A spacing audit of the demo's eleven pages (computed styles in a browser at 1280
 
 - `src/app/page-layout.css` is the single page layout. A page root (`.carrierDirectory`, `.excPage`, `.fleetPage`, `.orgPage`, `.reports`, `.reportBody`) is a column with `gap: var(--page-gap)` (12px, `--space-3`) and no padding of its own, so the first block sits exactly at the workspace padding.
 - Direct children of a page root have no outer margin. `.stats`, `.tabs` and `.directoryIntro` no longer carry margins in their own rules.
-- Every block directly in the workspace is at most `--page-max` (1100px) wide and left-aligned, so the right edge is the same on all eleven pages, including Loads, Inbox and Assistant, and a new page follows without being listed. The per-page caps (Fleet 1100, Organization 1040, Contacts and Documents lists 1000, Account 960, Notifications 900) are removed.
+- Every page fills the workspace width, with no maximum width, so all eleven pages share the same left and right edges at any screen size. The per-page caps (Fleet 1100, Organization 1040, Contacts and Documents lists 1000, Account 960, Notifications 900) are removed, and a single shared cap was tried (1100px) and rejected: on a wide screen the pages should use the screen.
 - A section heading (`h2`/`h3`) directly in a page root adds one `--page-section-step` (12px) above itself, so it is 24px below the previous block and 12px above its content.
 - A new page uses one of these roots, or adds its class to the list in `page-layout.css`. Do not add vertical margins to blocks.
-- Inbox, Assistant and the Loads board are full-height layouts with their own columns and are not page stacks, but they share the page width.
+- Inbox, Assistant and the Loads board are full-height layouts with their own columns and are not page stacks, but they fill the same width.
 
 ## Verification and rollback
 
-`tests/browser/page-layout.spec.ts` (demo, no database) checks the offset, gap and block margins on eight pages at 1280px and 390px, and the shared width at 1920px. Rollback: remove the `page-layout.css` import from `layout.tsx` and restore the removed margins from git history (commit "One layout for every page").
+`tests/browser/page-layout.spec.ts` (demo, no database) checks the offset, gap and block margins on eight pages at 1280px and 390px, and that all eleven pages fill the workspace at 1920px. Rollback: remove the `page-layout.css` import from `layout.tsx` and restore the removed margins from git history (commit "One layout for every page").

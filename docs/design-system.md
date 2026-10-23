@@ -51,7 +51,7 @@ Three layers, all in that one file:
 | Status            | `--error*`, `--success*`, `--warn*` (each with `-bg` and `-border` where used), `--star`                                                                                     |
 | Stages            | `--stage-all`, `-booked`, `-dispatched`, `-transit`, `-delivered`, `-cancelled`, `-contacted`                                                                                |
 | Spacing           | `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-5` 20, `-6` 24, `-7` 32, `-8` 40, `-9` 48, `-10` 64, `-11` 80, `-12` 96                                                           |
-| Page layout       | `--page-gap` 12px between blocks, `--page-section-step` 12px extra above a section heading, `--page-max` 1100px page width (ADR 0053)                                        |
+| Page layout       | `--page-gap` 12px between blocks, `--page-section-step` 12px extra above a section heading (ADR 0053)                                                                        |
 | Controls          | `--control-h` 32px (fields, buttons, tabs, search), `--control-h-sm` 28px (toolbars, chips, in-table controls), `--control-min` 24px (smallest target), `--control-pad` 10px |
 | Radii and shadow  | `--radius`, `--control-radius`, `--field-radius`, `--shadow-menu`, `--shadow-sheet`                                                                                          |
 | Loading           | `--skeleton-from`, `--skeleton-to`                                                                                                                                           |

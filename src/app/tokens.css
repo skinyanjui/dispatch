@@ -50,7 +50,6 @@
   --space-12: 96px;
   /* Page layout: blocks on a page are this far apart, and a section heading
      adds one --page-section-step above itself (src/app/page-layout.css). */
-  --page-max: 1100px;
   --page-gap: var(--space-3);
   --page-section-step: var(--space-3);
   --control-h: 32px;

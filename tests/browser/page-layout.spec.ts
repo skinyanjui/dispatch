@@ -96,37 +96,36 @@ const allPages = [
   "Reports",
 ];
 
-test("all eleven pages are the same width on a wide screen", async ({
+test("all eleven pages fill the same width on a wide screen", async ({
   page,
 }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 1920, height: 1000 });
   await page.goto("/demo");
   const nav = page.getByRole("navigation", { name: "Workspace navigation" });
-  const max = await page.evaluate(() =>
-    parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--page-max"),
-    ),
-  );
-  expect(max).toBe(1100);
   for (const name of allPages) {
     await nav.getByRole("button", { name, exact: true }).click();
-    // The widest block of the page is --page-max and none is wider.
-    const widths = await page.evaluate(() =>
-      [...document.querySelector(".workspace")!.children]
+    // The widest block fills the workspace, and no block is narrower than the
+    // page's other blocks by more than its own layout (all are full width).
+    const m = await page.evaluate(() => {
+      const ws = document.querySelector(".workspace")!;
+      const s = getComputedStyle(ws);
+      const available =
+        ws.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+      const widths = [...ws.children]
         .filter(
           (c) =>
             c.tagName !== "FOOTER" &&
-            c.getBoundingClientRect().height > 0 &&
+            c.getBoundingClientRect().height > 8 &&
+            c.getBoundingClientRect().width > 8 &&
             getComputedStyle(c).position !== "fixed",
         )
-        .map((c) => Math.round(c.getBoundingClientRect().width)),
-    );
-    expect(Math.max(...widths), `${name} widest block`).toBe(max);
-    expect(
-      Math.min(...widths.map((w) => w - max)),
-      `${name} blocks`,
-    ).toBeLessThanOrEqual(0);
+        .map((c) => Math.round(c.getBoundingClientRect().width));
+      return { available: Math.round(available), widths };
+    });
+    expect(m.available, `${name} workspace`).toBeGreaterThan(1600);
+    expect(Math.max(...m.widths), `${name} widest block`).toBe(m.available);
+    expect(Math.min(...m.widths), `${name} narrowest block`).toBe(m.available);
   }
 });
 
