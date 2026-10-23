@@ -242,7 +242,7 @@ kbd {
 .loadCard:hover {
   background: var(--panel);
   border-color: var(--border-strong);
-  box-shadow: 0 3px 12px #141f3f07;
+  box-shadow: var(--shadow-raised);
 }
 
 table {
@@ -285,16 +285,16 @@ td small {
   color: var(--muted);
 }
 .badge.dispatched {
-  background: #f1edf7;
-  color: #80669f;
+  background: var(--stage-dispatched-bg);
+  color: var(--stage-dispatched-ink);
 }
 .badge.picked-up {
-  background: #faf1e1;
-  color: #9c7735;
+  background: var(--stage-transit-bg);
+  color: var(--stage-transit-ink);
 }
 .badge.delivered {
-  background: #eaf2ec;
-  color: #55775d;
+  background: var(--stage-delivered-bg);
+  color: var(--stage-delivered-ink);
 }
 .pagination {
   text-align: center;
@@ -388,7 +388,7 @@ footer a {
   overflow: hidden;
 }
 .overlay::backdrop {
-  background: #131c382d;
+  background: var(--backdrop);
   backdrop-filter: blur(1px);
 }
 .inspector {
@@ -399,7 +399,7 @@ footer a {
   border-left: 1px solid var(--border);
   overflow: auto;
   padding: 24px 30px 30px;
-  box-shadow: -8px 0 32px #141f3f0a;
+  box-shadow: var(--shadow-inspector);
 }
 .inspectorHeader {
   display: flex;

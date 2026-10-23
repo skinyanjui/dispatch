@@ -40,9 +40,9 @@ Naming: components are `PascalCase` and named for what they are (`DataTable`, `S
 
 Three layers, all in that one file:
 
-- `:root`: the global palette and type, used by public pages, sign-in and the app.
-- `.appShell`: the signed-in app's neutral palette, the spacing scale and control scale. It overrides the global palette inside the app.
-- `.login`, `.mk`: aliases and public-page colours.
+- `:root`: the global palette, type, spacing scale and control scale, used by public pages, sign-in and the app.
+- `.appShell`: the signed-in app's neutral palette. It overrides the global palette inside the app.
+- `.login`, `.mk`: aliases, public-page colours and the sign-in hero illustration (`--login-glow-*`, `--login-hills-*`, `--login-water-*`).
 
 | Group               | Tokens                                                                                                                                                                       |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -54,8 +54,13 @@ Three layers, all in that one file:
 | Controls            | `--control-h` 32px (fields, buttons, tabs, search), `--control-h-sm` 28px (toolbars, chips, in-table controls), `--control-min` 24px (smallest target), `--control-pad` 10px |
 | Radii and shadow    | `--radius`, `--control-radius`, `--field-radius`, `--shadow-menu`, `--shadow-sheet`                                                                                          |
 | Loading             | `--skeleton-from`, `--skeleton-to`                                                                                                                                           |
+| Inverse and tints   | `--ink-inverse`, `--faint`, `--surface-cool`, `--accent-tint-soft`, `--action-disabled`, `--link-on-dark`, `--backdrop`                                                      |
+| Time and trend      | `--late`, `--trend-up`, `--trend-down`, `--soon-border`, `--soon-ink`, `--soon-ink-on-dark`, `--caution-ink`                                                                 |
+| Stage badges        | `--stage-dispatched-bg`/`-ink`, `--stage-transit-bg`/`-ink`, `--stage-delivered-bg`/`-ink`                                                                                   |
+| Avatars             | `--avatar-bg`, `--avatar-carrier-bg`/`-ink`, `--avatar-driver-bg`/`-ink`, `--avatar-external-bg`/`-ink`, `--avatar-record-bg`                                                |
+| More shadows        | `--shadow-raised`, `--shadow-card-hover`, `--shadow-inspector`                                                                                                               |
 
-Rules: add a token before using a new raw colour. `check-design-system.mjs` fails a stylesheet that adds a `#hex` colour; seven older stylesheets have a capped allowance that may only go down.
+Rules: add a token before using a new colour. `check-design-system.mjs` fails any `#hex` colour in a stylesheet other than `tokens.css`, and any `var(--x)` whose token is not defined. Check the scope too: a token defined only in `.appShell`, `.login` or `.mk` is undefined outside it.
 
 **Typography.** Signed-in text is 13px (tables 13px, notes 12.5px, captions 11–12px). Weights are 400 and 500 for text and 600 for figures and headings, and the weight of an item never changes with its state. Public pages use their own larger scale (ADR 0041).
 
@@ -142,7 +147,7 @@ Enforced by `scripts/check-design-system.mjs`:
 - A raw `<table>` outside `DataTable`.
 - `data-label` / `attr(data-label)` (per-row field names).
 - A hand-built `role="tablist"`, `className="alert error"`, `directoryEmpty` or `directoryIntro`.
-- New raw `#hex` colours outside `tokens.css`.
+- Raw `#hex` colours outside `tokens.css`, and `var(--x)` for an undefined token.
 
 Enforced by lint: unused imports and variables.
 

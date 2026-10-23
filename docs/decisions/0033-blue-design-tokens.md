@@ -11,7 +11,7 @@ The whole application, not only the sign-in screens, uses one blue palette. (Sin
 | `--accent`, `--action`, `--focus`                               | `#2f4cf5` (primary actions, links, active states, focus ring) |
 | `--action-hover`                                                | `#2440d8`                                                     |
 | `--action-ink`                                                  | `#fff` (white on blue is 6.5:1)                               |
-| `--accent-soft`, `--accent-soft-hover`                          | `#e8edff`, `#d6defd`                                          |
+| `--accent-soft` (`--accent-soft-hover` was removed in ADR 0052, unused) | `#e8edff`                                                     |
 | `--ink`, `--muted`, `--subtle`                                  | `#0f1b3d`, `#4a5578`, `#5f6a8d`                               |
 | `--border`, `--border-strong`                                   | `#e3e7f3`, `#c3cae0`                                          |
 | `--soft`, `--sidebar-bg`, `--sidebar-hover`, `--sidebar-active` | `#f6f8fd`, `#f6f8fd`, `#eceffa`, `#e1e7fb`                    |

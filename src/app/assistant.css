@@ -63,11 +63,11 @@
   text-overflow: ellipsis;
 }
 .appShell .asstHistoryItem:hover {
-  background: var(--panel-soft, #eef1fb);
+  background: var(--panel-soft);
   color: var(--ink);
 }
 .appShell .asstHistoryItem[aria-current] {
-  background: #e9edfb;
+  background: var(--accent-tint);
   color: var(--accent);
   font-weight: 600;
 }
@@ -112,7 +112,7 @@
   place-items: center;
   flex: none;
   border-radius: 50%;
-  background: #e9edfb;
+  background: var(--accent-tint);
   color: var(--accent);
 }
 .appShell .asstMark {
@@ -149,7 +149,7 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--panel);
   color: var(--ink);
   font-weight: 500;
   text-align: left;
@@ -157,7 +157,7 @@
 }
 .appShell .asstExamples button:hover:not(:disabled) {
   border-color: var(--accent);
-  background: #f6f8fd;
+  background: var(--surface-cool);
 }
 .appShell .asstTurn {
   display: flex;
@@ -170,7 +170,7 @@
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius) var(--radius) 2px var(--radius);
-  background: var(--sidebar-hover, #edeef3);
+  background: var(--sidebar-hover);
   overflow-wrap: anywhere;
 }
 .appShell .asstReply {
@@ -209,7 +209,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--panel);
   color: var(--ink);
   font-size: 12.5px;
 }
@@ -248,7 +248,7 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-2) 0 var(--space-3);
-  background: var(--panel, #fff);
+  background: var(--panel);
 }
 .appShell .asstComposer {
   display: flex;
@@ -257,7 +257,7 @@
   padding: 6px 6px 6px var(--space-3);
   border: 1px solid var(--border-strong, var(--border));
   border-radius: 14px;
-  background: #fff;
+  background: var(--panel);
 }
 .appShell .asstComposer:focus-within {
   border-color: var(--accent);
@@ -291,11 +291,11 @@
   border: 0;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--action-ink);
 }
 .appShell .asstSend:disabled {
-  background: #d9dce6;
-  color: #fff;
+  background: var(--action-disabled);
+  color: var(--action-ink);
 }
 .appShell .asstNote {
   color: var(--muted);

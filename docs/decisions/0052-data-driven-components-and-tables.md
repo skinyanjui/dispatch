@@ -34,14 +34,14 @@ An audit of `src/components`, `src/app/*.css` and the pages that use them found:
 - **Tokens:**
   - `src/app/tokens.css`, loaded first, holds every token, scoped to global, app, sign-in and marketing, with the final effective values.
   - New tokens: stage colours (shared by queue pills and board lanes), `--warn*`, `--accent-tint`, skeleton, shadow, `--star` and `--select-arrow`.
-  - The shared stylesheets (`ui.css`, `board.css`, `loadcard.css`) and 18 of the 25 page stylesheets have no raw colours.
+  - No stylesheet but `tokens.css` has raw colours. The spacing and control scale is global, so public pages that used it resolve it.
 - **Guards:**
   - `scripts/check-design-system.mjs` runs in `npm run lint`. It fails on:
     - inline SVG and inline styles (except `global-error.tsx`)
     - raw tables, `data-label` and hand-built tab lists
     - hand-built alerts, empty states and intros
     - hand-formatted dates
-    - raw colours above each older stylesheet's allowance, which may only go down
+    - any raw colour outside `tokens.css`, and any use of an undefined token
   - ESLint now fails on unused variables and imports.
 
 ## Consequences
@@ -52,10 +52,10 @@ An audit of `src/components`, `src/app/*.css` and the pages that use them found:
   - Carriers and Exceptions are tables with sortable headers, and their separate sort select is gone.
   - Stage dots on the board use the queue-pill colours.
   - Weekly loads in Reports are horizontal bars.
+  - The app breadcrumb uses the muted text colour, the directory search icon uses `--subtle`, and the Loads calculation row uses `--ink` (it referred to an undefined `--text`).
   - Inbox timestamps use the app's fixed US English format instead of the browser's locale.
 - About 200 dead selectors were removed, and the browser tests were updated to the new markup (headers, row headers, "Show more").
 - **Remaining exceptions:**
-  - Seven older page stylesheets still hold capped raw colours, listed in the check script.
   - Kanban and load cards, chat messages and the record's field list are not tables. They name values with icons or position, or are a single record.
 
 Rollback: revert the commits; no data migration is involved.

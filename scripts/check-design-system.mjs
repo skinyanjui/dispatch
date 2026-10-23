@@ -80,33 +80,30 @@ const rules = [
   },
 ];
 
-/**
- * Raw colours belong in src/app/tokens.css. These older page stylesheets
- * still hold some; each count may only go down (lower it here when you
- * replace one with a token). Every other stylesheet must have none.
- */
-const rawColourAllowance = {
-  "src/app/assistant.css": 12,
-  "src/app/contacts.css": 8,
-  "src/app/globals.css": 9,
-  "src/app/login.css": 23,
-  "src/app/marketing.css": 34,
-  "src/app/system.css": 27,
-  "src/app/workspace-shell.css": 16,
-};
+/** Raw colours belong in src/app/tokens.css; no other stylesheet has any. */
 const hex = /#[0-9a-fA-F]{3,8}\b/g;
 
 const problems = [];
-for (const path of files.filter((f) => f.endsWith(".css"))) {
+// Every token used is defined, and only tokens.css holds raw colours.
+const defined = new Set();
+const used = [];
+for (const path of files) {
   const file = relative(root, path);
-  if (file === "src/app/tokens.css") continue;
-  const found = (readFileSync(path, "utf8").match(hex) ?? []).length;
-  const allowed = rawColourAllowance[file] ?? 0;
-  if (found > allowed)
-    problems.push(
-      `${file}: ${found} raw colours (allowed ${allowed}): use a token from src/app/tokens.css`,
-    );
+  const text = readFileSync(path, "utf8");
+  if (file.endsWith(".css"))
+    for (const m of text.matchAll(/(--[\w-]+)\s*:/g)) defined.add(m[1]);
+  for (const m of text.matchAll(/var\((--[\w-]+)/g)) used.push([file, m[1]]);
+  if (file.endsWith(".css") && file !== "src/app/tokens.css") {
+    const found = (text.match(hex) ?? []).length;
+    if (found)
+      problems.push(
+        `${file}: ${found} raw colour(s): use a token from src/app/tokens.css`,
+      );
+  }
 }
+for (const [file, name] of used)
+  if (!defined.has(name))
+    problems.push(`${file}: ${name} is not a defined token`);
 for (const path of files) {
   const file = relative(root, path);
   const text = readFileSync(path, "utf8");

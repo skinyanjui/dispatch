@@ -5,7 +5,7 @@
   margin: 0 0 var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
 }
 .appShell .dirList:empty {
@@ -29,22 +29,22 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #e9edfb;
+  background: var(--avatar-bg);
   color: var(--accent);
   font-size: 12.5px;
   font-weight: 600;
 }
 .appShell .dirAvatar.carrier {
-  background: #e6f4ec;
-  color: #1f7a4d;
+  background: var(--avatar-carrier-bg);
+  color: var(--avatar-carrier-ink);
 }
 .appShell .dirAvatar.driver {
-  background: #fdf3dc;
-  color: #8a5a00;
+  background: var(--avatar-driver-bg);
+  color: var(--avatar-driver-ink);
 }
 .appShell .dirAvatar.external {
-  background: #f1f1f1;
-  color: #444;
+  background: var(--avatar-external-bg);
+  color: var(--avatar-external-ink);
 }
 .appShell .dirMain {
   grid-area: main;
