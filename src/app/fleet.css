@@ -5,7 +5,6 @@
   display: grid;
   gap: var(--space-4);
   align-content: start;
-  max-width: 1100px;
 }
 .appShell .fleetBar {
   display: flex;

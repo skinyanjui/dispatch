@@ -81,3 +81,28 @@ for (const width of [1280, 390]) {
     }
   });
 }
+
+test("every page is the same width on a wide screen", async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 1920, height: 1000 });
+  await page.goto("/demo");
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  const max = await page.evaluate(() =>
+    parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--page-max"),
+    ),
+  );
+  expect(max).toBe(1100);
+  for (const name of pages) {
+    await nav.getByRole("button", { name, exact: true }).click();
+    const width = await page.evaluate(
+      () =>
+        document
+          .querySelector(
+            ".workspace :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports)",
+          )!
+          .getBoundingClientRect().width,
+    );
+    expect(width, `${name} width`).toBe(max);
+  }
+});

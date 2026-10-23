@@ -1147,7 +1147,6 @@ select {
 .appShell .orgPage {
   display: grid;
   gap: var(--space-3);
-  max-width: 1040px;
 }
 .appShell .orgIntro {
   display: flex;

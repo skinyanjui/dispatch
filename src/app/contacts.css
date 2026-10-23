@@ -1,7 +1,6 @@
 /* Contacts directory: each person is one row in a bordered list: avatar,
    name and details, then one row of actions. Controls use the 32px scale. */
 .appShell .dirList {
-  max-width: 1000px;
   margin: 0 0 var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -75,9 +74,6 @@
 }
 .appShell .dirActions .secondary {
   margin-left: var(--space-1);
-}
-.appShell .sidebarLabel {
-  max-width: 1000px;
 }
 /* Phones: actions drop under the details and fill the row; Message and Edit
    share what is left after the icons. */

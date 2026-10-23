@@ -3,7 +3,7 @@
    sits at the same offset on every page. Blocks (stat tiles, tabs, page
    intros, alerts, tables) carry no outer margin of their own, so gaps never
    stack. A section heading is a block that adds one --page-section-step above
-   itself. Loaded after ui.css so it replaces the per-component margins. */
+   itself. Every page is also at most --page-max wide. Loaded after ui.css so it replaces the per-component margins. */
 .appShell
   :is(
     .carrierDirectory,
@@ -27,4 +27,9 @@
   :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports, .reportBody)
   > :is(h2, h3):not(.srOnly) {
   margin-top: var(--page-section-step);
+}
+/* Every page is the same width (--page-max) and left-aligned, so the right edge
+   does not move between pages on a wide screen. */
+.appShell :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports) {
+  max-width: var(--page-max);
 }
