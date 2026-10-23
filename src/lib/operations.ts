@@ -1,3 +1,4 @@
+import { configWarnings } from "./config-check";
 import { pool } from "./db";
 import { HttpError } from "./auth";
 import { canSeeJobStatus, jobStatus } from "./jobs";
@@ -29,6 +30,8 @@ export async function operationsStatus(user: string) {
       cron_configured:
         !!process.env.CRON_SECRET && process.env.CRON_SECRET.length >= 16,
     },
+    config_warnings:
+      process.env.NODE_ENV === "production" ? configWarnings() : [],
     jobs: await jobStatus(),
     // Exports waiting more than two minutes mean the worker is not keeping up;
     // stalled ones were failed after 30 minutes without starting.

@@ -126,6 +126,14 @@ Rating is residual risk after current controls (L low, M medium, H high).
 9. **Supply chain (E5).** Turn on automated dependency updates and `npm audit` in CI; pin Actions by commit.
 10. **Operator error.** Production start-up should refuse to run without `APP_ORIGIN`, `RELAY_DATA_KEY`, `CRON_SECRET` and a scanner, rather than warn.
 
+### Progress since this assessment
+
+- Item 4 (partly): `tests/integration/public-surface.test.ts` fails if any API family not on an explicit public list answers a caller without a session. It does not yet test roles or foreign IDs per endpoint.
+- Item 9: Dependabot is enabled for npm and Actions (`.github/dependabot.yml`); Actions are not yet pinned by commit.
+- Item 10 (partly): production builds print named warnings for missing `RELAY_DATA_KEY`, `CRON_SECRET`, `APP_ORIGIN` and malware scanning, and fail when `RELAY_STRICT_CONFIG=true`; the operations status lists the same warnings. It is opt-in so an existing deployment is not broken by an upgrade.
+- The stray `undefined/` screenshots were removed.
+- Still open: items 1, 2, 3, 5, 6, 7 and 8, which need infrastructure or product decisions.
+
 ## 6. Not assessed
 
 Live providers, a production build behind real infrastructure, Vercel and database account security (SSO, access keys), physical and personnel controls, privacy-law obligations (retention, deletion, consent for tracking and messaging), FMCSA brokerage rules, denial-of-service at network level, and any third-party penetration test. Housekeeping: `undefined/` at the repository root holds tracked screenshots created by a test with an undefined output path; they contain only fictional data but should be removed.

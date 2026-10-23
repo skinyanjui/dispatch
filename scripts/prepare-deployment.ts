@@ -1,3 +1,4 @@
+import { configWarnings } from "../src/lib/config-check";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +26,15 @@ if (process.env.VERCEL_ENV !== "production") {
   ) {
     console.error(
       "QA setup requires SEED_PASSWORD with at least 12 characters. Set it privately in Vercel.",
+    );
+    process.exit(1);
+  }
+
+  const warnings = configWarnings();
+  for (const w of warnings) console.warn("Security configuration: " + w);
+  if (warnings.length && process.env.RELAY_STRICT_CONFIG === "true") {
+    console.error(
+      "RELAY_STRICT_CONFIG=true: fix the settings above and redeploy.",
     );
     process.exit(1);
   }
