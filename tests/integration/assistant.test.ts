@@ -13,6 +13,7 @@ import {
 } from "../../src/lib/assistant-ai";
 import { runTool, toolDefinitions } from "../../src/lib/assistant-tools";
 import { ProviderError } from "../../src/lib/ai";
+import { boundedToolResult } from "../../src/lib/assistant-result";
 import { aiStatus, saveAiSettings } from "../../src/lib/extractions";
 import { createProspect } from "../../src/lib/prospects";
 import { bookedLoad, request, sessionFor, tenant } from "./fixtures";
@@ -31,6 +32,42 @@ before(async () => {
 });
 afterEach(() => setAssistantProvider(fixtureAssistant()));
 after(() => pool.end());
+
+test("bounded assistant lookups retain valid complete records and never turn lookup errors into empty success", async () => {
+  const data = {
+    shown: 25,
+    loads: Array.from({ length: 25 }, (_, i) => ({
+      reference: "BOUNDED-" + i,
+      reasons: ["Fictional attention reason ".repeat(30)],
+    })),
+  };
+  const serialized = boundedToolResult(data, 1200);
+  assert.ok(serialized.length <= 1200);
+  const result = JSON.parse(serialized);
+  assert.equal(result.truncated, true);
+  assert.ok(result.loads.length > 0 && result.loads.length < 25);
+  assert.equal(result.shown, result.loads.length);
+  assert.deepEqual(result.loads[0], data.loads[0]);
+  assert.equal(data.loads.length, 25);
+  const provider = fixtureAssistant();
+  const answer = await provider.run({
+    history: [],
+    question: "What needs my attention right now?",
+    callTool: async () => serialized,
+    deadline: Date.now() + 10000,
+  });
+  assert.match(answer.answer, /loads need attention.*shown subset/);
+  for (const response of ["{broken", JSON.stringify({ error: "Lookup failed" })])
+    await assert.rejects(
+      provider.run({
+        history: [],
+        question: "What needs my attention right now?",
+        callTool: async () => response,
+        deadline: Date.now() + 10000,
+      }),
+      { code: "PROVIDER_UNAVAILABLE" },
+    );
+});
 
 const turn = (user: string, question: string, extra: object = {}) =>
   ask(user, { question, ...extra }, randomUUID());

@@ -14,6 +14,7 @@ import {
   type ChatMessage,
 } from "./assistant-ai";
 import { runTool, ToolError } from "./assistant-tools";
+import { boundedToolResult } from "./assistant-result";
 import type {
   AssistantState,
   AssistantTurn,
@@ -254,10 +255,7 @@ export async function ask(
       const result = await runTool(user, started.org, name, toolInput);
       for (const s of result.sources)
         if (sources.size < 40) sources.set(`${s.kind}:${s.id}`, s);
-      const text = JSON.stringify(result.data);
-      return text.length > resultChars
-        ? text.slice(0, resultChars) + "…(truncated)"
-        : text;
+      return boundedToolResult(result.data, resultChars);
     } catch (e) {
       // The model reads this and can recover; nothing is thrown past the loop.
       const message =
