@@ -86,7 +86,7 @@ function Row({
       <div className="dirActions">
         {entry.phone && (
           <a
-            className="iconAction"
+            className="iconAction dirCall"
             href={`tel:${dialable(entry.phone)}`}
             aria-label={`Call ${entry.name}`}
             title="Call"
@@ -96,7 +96,7 @@ function Row({
         )}
         {entry.phone && (
           <a
-            className="iconAction"
+            className="iconAction dirText"
             href={`sms:${dialable(entry.phone)}`}
             aria-label={`Text ${entry.name}`}
             title="Text from this device"
@@ -106,7 +106,7 @@ function Row({
         )}
         {entry.email && (
           <a
-            className="iconAction"
+            className="iconAction dirEmail"
             href={`mailto:${entry.email}`}
             aria-label={`Email ${entry.name}`}
             title="Email"
@@ -116,7 +116,7 @@ function Row({
         )}
         {onMessage && (entry.email || entry.phone) && (
           <button
-            className="secondary"
+            className="secondary dirMessage"
             disabled={disabled}
             onClick={() => onMessage(entry)}
             aria-label={`Message ${entry.name}`}
@@ -126,7 +126,7 @@ function Row({
         )}
         {(entry.phone || entry.email) && (
           <button
-            className="iconAction"
+            className="iconAction dirCopy"
             aria-label={`Copy ${entry.name}'s ${entry.phone ? "phone number" : "email"}`}
             title="Copy"
             onClick={() =>
@@ -139,7 +139,7 @@ function Row({
           </button>
         )}
         <button
-          className={"iconAction" + (entry.favorite ? " starred" : "")}
+          className={"iconAction dirStar" + (entry.favorite ? " starred" : "")}
           disabled={disabled}
           aria-pressed={entry.favorite}
           aria-label={
@@ -152,7 +152,11 @@ function Row({
           <StarIcon {...icon} weight={entry.favorite ? "fill" : "regular"} />
         </button>
         {onEdit && (
-          <button className="secondary" disabled={disabled} onClick={onEdit}>
+          <button
+            className="secondary dirEdit"
+            disabled={disabled}
+            onClick={onEdit}
+          >
             Edit
           </button>
         )}

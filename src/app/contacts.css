@@ -66,17 +66,46 @@
   gap: 0 var(--space-3);
   color: var(--ink) !important;
 }
+/* Each action has its own column, so one a person lacks (no phone, not
+   editable) leaves a gap instead of shifting the others: the same action sits
+   at the same place in every row. */
 .appShell .dirActions {
   grid-area: actions;
-  display: flex;
+  display: grid;
+  grid-template-columns:
+    repeat(3, var(--control-h)) var(--space-11) repeat(2, var(--control-h))
+    var(--space-10);
   align-items: center;
   gap: var(--space-1);
 }
-.appShell .dirActions .secondary {
-  margin-left: var(--space-1);
+.appShell .dirCall {
+  grid-column: 1;
 }
-/* Phones: actions drop under the details and fill the row; Message and Edit
-   share what is left after the icons. */
+.appShell .dirText {
+  grid-column: 2;
+}
+.appShell .dirEmail {
+  grid-column: 3;
+}
+.appShell .dirMessage {
+  grid-column: 4;
+}
+.appShell .dirCopy {
+  grid-column: 5;
+}
+.appShell .dirStar {
+  grid-column: 6;
+}
+.appShell .dirEdit {
+  grid-column: 7;
+}
+.appShell .dirActions .secondary {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0;
+}
+/* Phones: actions drop under the details. Five 40px icon slots, then Message
+   and Edit on the second line in fixed positions. */
 @media (max-width: 640px) {
   .appShell .dirRow {
     grid-template-columns: auto minmax(0, 1fr);
@@ -84,17 +113,45 @@
     align-items: start;
   }
   .appShell .dirActions {
-    flex-wrap: wrap;
-    gap: var(--space-1);
+    grid-template-columns: repeat(5, 40px);
+    justify-content: start;
+  }
+  .appShell .dirCall {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .appShell .dirText {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .appShell .dirEmail {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .appShell .dirCopy {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .appShell .dirStar {
+    grid-column: 5;
+    grid-row: 1;
+  }
+  .appShell .dirMessage {
+    grid-column: 1 / span 3;
+    grid-row: 2;
+  }
+  .appShell .dirEdit {
+    grid-column: 4 / span 2;
+    grid-row: 2;
+  }
+  /* With no Edit beside it, Message takes the whole line. */
+  .appShell .dirMessage:last-child {
+    grid-column: 1 / -1;
   }
   .appShell .dirActions .secondary {
-    order: 1;
-    flex: 1 1 calc(50% - var(--space-2));
     min-height: 40px;
-    margin-left: 0;
   }
   .appShell .dirActions .iconAction {
-    flex: 0 0 40px;
     width: 40px;
     height: 40px;
   }
