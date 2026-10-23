@@ -217,19 +217,29 @@
   margin-left: var(--space-2);
 }
 
-/* ---- Stat tiles: summary figures, some of them filters or links ---- */
+/* ---- Stat tiles: summary figures, some of them filters or links ----
+   A row of tiles shares four row tracks (label, figure, detail, action) by
+   subgrid, so the figure, detail and action of every tile in a row start at
+   the same height even when one label wraps to two lines. */
 .appShell .stats {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-2);
 }
 .appShell .stat {
   box-sizing: border-box;
-  display: flex;
-  flex: 1 1 150px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  /* One column as wide as the tile, so text wraps inside it. */
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 2px;
+  justify-items: start;
+  /* Button tiles inherit nowrap from controls; tile text wraps. */
+  white-space: normal;
+  /* Buttons centre their content by default; every slot starts at its top. */
+  align-items: start;
+  align-content: start;
   min-width: 0;
   padding: var(--space-3);
   border: 1px solid var(--border);
@@ -239,8 +249,18 @@
   color: var(--ink);
   font: inherit;
   text-align: left;
-  white-space: normal;
-  overflow-wrap: anywhere;
+}
+.appShell .stat .statLabel {
+  grid-row: 1;
+}
+.appShell .stat strong {
+  grid-row: 2;
+}
+.appShell .stat .statDetail {
+  grid-row: 3;
+}
+.appShell .stat .statAction {
+  grid-row: 4;
 }
 .appShell .stat small {
   max-width: 100%;
@@ -272,8 +292,18 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
+/* Hint and change read as one block under the figure. */
+.appShell .statDetail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+/* The action is pinned to the tile's bottom edge, so it sits at the same
+   height in every tile of a row whatever the text above it. */
 .appShell .statAction {
-  margin-top: var(--space-1);
+  align-self: end;
+  padding-top: var(--space-2);
   color: var(--accent);
   font-size: 12px;
   font-weight: 500;
@@ -288,16 +318,12 @@
   );
 }
 @media (max-width: 640px) {
-  .appShell .stat {
-    flex-basis: calc(50% - var(--space-2));
+  .appShell .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .appShell .stat strong {
     font-size: 20px;
   }
-}
-/* Buttons centre their content by default; a tile reads from the top. */
-.appShell .stat.link {
-  justify-content: flex-start;
 }
 
 /* ---- Data table (components/ui/data-table.tsx) ----

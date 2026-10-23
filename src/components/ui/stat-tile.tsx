@@ -35,7 +35,8 @@ export function StatTilesLoading({ count }: { count: number }) {
 }
 
 /**
- * One figure: its label, the value, and an optional hint below. With
+ * One figure in fixed slots, so tiles in a row line up: label, value, detail
+ * (hint and any change) and, pinned to the bottom edge, the action. With
  * `onSelect` the tile is a button: it filters (`pressed`) or opens the
  * records behind it (`actionLabel`, e.g. "Open loads").
  */
@@ -67,10 +68,14 @@ export function StatTile({
   const cls = "stat" + (tone ? " " + tone : "");
   const body = (
     <>
-      <small>{label}</small>
+      <small className="statLabel">{label}</small>
       <strong>{value}</strong>
-      {hint && <small>{hint}</small>}
-      {extra}
+      {(hint || extra) && (
+        <span className="statDetail">
+          {hint && <small>{hint}</small>}
+          {extra}
+        </span>
+      )}
       {onSelect && actionLabel && pressed === undefined && (
         <span className="statAction">
           {actionLabel} <CaretRightIcon size={11} aria-hidden="true" />
