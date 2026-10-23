@@ -258,7 +258,7 @@
 }
 
 /* Page sections inside the card pages. */
-.appShell .carrierDirectory h2:not(.directoryIntro h2, .opsCard h2) {
+.appShell .carrierDirectory h2:not(.directoryIntro h2, .opsCard h2, .laneHeading h2) {
   margin: var(--space-5) 0 var(--space-2);
   font-size: 14px;
   font-weight: 600;
@@ -632,13 +632,10 @@
   .primary.full + .textButton {
     padding-left: 0;
   }
-  .appShell .kanban,
   .appShell .loadSurface {
     scroll-snap-type: x proximity;
   }
-  .appShell .lane {
-    scroll-snap-align: start;
-  }
+  
   .appShell fieldset + h2,
   .appShell fieldset + h3 {
     margin-top: var(--space-5);
@@ -729,17 +726,6 @@ select {
 }
 
 /* Tablets and touch screens: lanes keep a readable width and scroll sideways. */
-@media (max-width: 1100px) {
-  .appShell .kanban {
-    grid-template-columns: repeat(4, minmax(250px, 1fr));
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    padding-bottom: var(--space-2);
-  }
-  .appShell .lane {
-    scroll-snap-align: start;
-  }
-}
 
 /* Links and summaries stay tappable on tablets and touch screens too. */
 @media (max-width: 1000px), (pointer: coarse) {
@@ -976,27 +962,7 @@ select {
   }
 }
 
-/* Prospects (ADR 0030): six stages, so the board scrolls sideways before it
-   squeezes cards below a readable width. */
-.appShell .prospectBoard {
-  grid-template-columns: repeat(6, minmax(210px, 1fr));
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  min-height: 0;
-}
-.appShell .prospectBoard .lane {
-  min-height: 160px;
-  scroll-snap-align: start;
-}
-.appShell .prospectCard {
-  gap: var(--space-1);
-  padding: var(--space-3);
-}
-.appShell .prospectCard strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* Prospects (ADR 0030) */
 .appShell .prospectMeta {
   align-self: end;
   margin: 0 0 var(--space-2);
@@ -1066,10 +1032,7 @@ select {
   white-space: normal;
 }
 /* Empty states read from the left, like everything else. */
-.appShell .laneEmpty {
-  text-align: left;
-  padding: var(--space-3);
-}
+
 .appShell .directoryEmpty {
   align-items: flex-start;
   justify-content: flex-start;
@@ -2146,20 +2109,7 @@ select {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.appShell .lane.dropping {
-  outline: 2px dashed var(--accent);
-  outline-offset: -2px;
-}
-.appShell .cardDrag {
-  display: block;
-}
-.appShell .cardDrag[draggable="true"] {
-  cursor: grab;
-}
-.appShell .kanban.compact .cardFacts,
-.appShell .kanban.compact .cardStep {
-  display: none;
-}
+
 .appShell .loadTable .groupRow th {
   background: var(--panel-soft, #f6f8fd);
   text-align: left;
@@ -2263,9 +2213,6 @@ select {
   .appShell .calendarEvent span {
     display: none;
   }
-}
-.appShell .cardDrag > .loadCard {
-  width: 100%;
 }
 
 /* ---- Documents ---- */

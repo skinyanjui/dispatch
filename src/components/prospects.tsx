@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import { Sheet } from "@/components/modal";
+import { Board } from "@/components/board";
 import {
   activityKinds,
   activityLabels,
@@ -49,9 +50,14 @@ function Card({
   const follow = prospect.next_follow_up_on;
   const text = followUpText(follow, today);
   const overdue = follow !== null && follow < today;
+  const trucks =
+    prospect.truck_count === null
+      ? ""
+      : `${prospect.truck_count} ${prospect.truck_count === 1 ? "truck" : "trucks"}`;
+  // The same card anatomy as a load: name and size, who, then small facts.
   return (
     <button
-      className="loadCard prospectCard"
+      className="loadCard lc prospectCard"
       onClick={() => onOpen(prospect.id)}
       aria-label={[
         prospect.company,
@@ -62,24 +68,27 @@ function Card({
         .filter(Boolean)
         .join(". ")}
     >
-      <strong>{prospect.company}</strong>
-      {prospect.contact_name && <small>{prospect.contact_name}</small>}
-      <span className="cardFacts">
+      <span className="lcHead">
+        <strong className="lcRef" title={prospect.company}>
+          {prospect.company}
+        </strong>
+        {trucks && <span className="lcAmount">{trucks}</span>}
+      </span>
+      {prospect.contact_name && (
+        <span className="lcSub">{prospect.contact_name}</span>
+      )}
+      <span className="lcFacts">
         {text && (
-          <span className={"cardFact" + (overdue ? " warn" : "")}>
-            <CalendarBlankIcon {...icon} size={13} />
+          <span className={"lcFact" + (overdue ? " warn" : "")}>
+            <CalendarBlankIcon size={12} aria-hidden="true" />
             {text}
           </span>
         )}
-        <span className="cardFact">
-          <UserIcon {...icon} size={13} />
+        <span className="lcFact">
+          <UserIcon size={12} aria-hidden="true" />
           {prospect.owner?.name ?? "No owner"}
         </span>
-        <span className="cardFact">
-          {sourceLabels[prospect.source]}
-          {prospect.truck_count !== null &&
-            ` · ${prospect.truck_count} ${prospect.truck_count === 1 ? "truck" : "trucks"}`}
-        </span>
+        <span className="lcFact">{sourceLabels[prospect.source]}</span>
       </span>
     </button>
   );
@@ -272,6 +281,7 @@ function Detail({
   onChanged,
   onAuthError,
   onOpenCarriers,
+  startLosing = false,
 }: {
   id: string;
   list: ProspectList;
@@ -280,12 +290,14 @@ function Detail({
   onChanged: (message: string) => Promise<void>;
   onAuthError: (e: unknown) => void;
   onOpenCarriers?: () => void;
+  /** Opened by dropping the card on Lost: ask why straight away. */
+  startLosing?: boolean;
 }) {
   const api = useApi();
   const [detail, setDetail] = useState<ProspectDetail | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [losing, setLosing] = useState(false);
+    [losing, setLosing] = useState(startLosing);
   const activityKey = useRef<{ signature: string; key: string } | null>(null);
   const reload = useCallback(
     () =>
@@ -570,6 +582,7 @@ export function Prospects({
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [selected, setSelected] = useState<string | null>(null),
+    [losingId, setLosingId] = useState<string | null>(null),
     [adding, setAdding] = useState(false),
     [busy, setBusy] = useState(false);
   const q = query ?? ownQ;
@@ -602,6 +615,29 @@ export function Prospects({
     ? prospectStages.reduce((sum, s) => sum + list.counts[s], 0)
     : 0;
   const filtered = !!(q || owner || follow);
+  /** Dragging a card to another stage; Lost first asks why. */
+  async function moveTo(id: string, stage: ProspectStage) {
+    const p = list?.prospects.find((x) => x.id === id);
+    if (!p || p.stage === stage || p.carrier_id) return;
+    if (stage === "lost") {
+      setLosingId(id);
+      setSelected(id);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await api(`prospects/${id}/stage`, { stage, version: p.version });
+      setNotice(`${p.company} moved to ${stageLabels[stage]}.`);
+      await load();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) onAuthError(e);
+      setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <section className="carrierDirectory" aria-label="Prospects">
       <div className="directoryIntro">
@@ -686,46 +722,37 @@ export function Prospects({
           </p>
         </div>
       ) : (
-        <div
-          className="kanban prospectBoard"
-          role="region"
-          aria-label="Prospect board"
-          tabIndex={0}
-        >
-          {prospectStages.map((stage) => {
+        <Board
+          label="Prospect board"
+          noun="prospects"
+          className="prospectBoard"
+          lanes={prospectStages.map((stage) => {
             const items =
               list?.prospects.filter((p) => p.stage === stage) ?? [];
-            return (
-              <section
-                className={"lane prospect-" + stage}
-                key={stage}
-                aria-label={stageLabels[stage] + " prospects"}
-              >
-                <div className="laneHeading">
-                  <h2>{stageLabels[stage]}</h2>
-                  <span className="laneCount">
-                    {filtered ? items.length : (list?.counts[stage] ?? 0)}
-                  </span>
-                </div>
-                <div className="laneCards">
-                  {items.map((p) => (
-                    <Card
-                      key={p.id}
-                      prospect={p}
-                      today={list!.today}
-                      onOpen={setSelected}
-                    />
-                  ))}
-                  {!items.length && (
-                    <div className="laneEmpty">
-                      {loading ? "Loading…" : "None here"}
-                    </div>
-                  )}
-                </div>
-              </section>
-            );
+            return {
+              id: stage,
+              label: stageLabels[stage],
+              items,
+              count: filtered ? items.length : (list?.counts[stage] ?? 0),
+            };
           })}
-        </div>
+          laneClass={(stage) => "prospect-" + stage}
+          itemKey={(p) => p.id}
+          renderCard={(p) => (
+            <Card
+              prospect={p}
+              today={list!.today}
+              onOpen={(id) => {
+                setLosingId(null);
+                setSelected(id);
+              }}
+            />
+          )}
+          empty={loading ? "Loading…" : "None here"}
+          // A prospect that became a carrier keeps that outcome.
+          canDrag={(p) => !busy && !offline && !p.carrier_id}
+          onMove={(id, stage) => void moveTo(id, stage as ProspectStage)}
+        />
       )}
       {list?.truncated && (
         <small>Showing the first 500. Search or filter to narrow down.</small>
@@ -770,10 +797,15 @@ export function Prospects({
       )}
       {selected && list && (
         <Detail
+          key={selected + (losingId === selected ? ":lost" : "")}
+          startLosing={losingId === selected}
           id={selected}
           list={list}
           offline={offline}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null);
+            setLosingId(null);
+          }}
           onAuthError={onAuthError}
           onOpenCarriers={onOpenCarriers}
           onChanged={async (message) => {

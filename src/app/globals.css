@@ -255,53 +255,7 @@ kbd {
   flex-direction: column;
   min-width: 0;
 }
-.kanban {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  flex: 1;
-  align-items: start;
-  min-height: calc(100dvh - 190px);
-}
-.lane {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
-  min-height: calc(100dvh - 190px);
-  background: var(--panel);
-}
-.laneHeading {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 5px 3px 15px;
-}
-.laneHeading > svg {
-  color: var(--subtle);
-}
-.laneHeading h2 {
-  font-size: 12px;
-  font-weight: 600;
-}
-.laneCount {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 11px;
-}
-.lane.dispatched > .laneHeading > svg {
-  color: #a78bd0;
-}
-.lane.picked-up > .laneHeading > svg {
-  color: #d7a45b;
-}
-.lane.delivered > .laneHeading > svg {
-  color: #78a38b;
-}
-.laneCards {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
+
 .loadCard {
   display: flex;
   flex-direction: column;
@@ -319,15 +273,6 @@ kbd {
   background: var(--panel);
   border-color: var(--border-strong);
   box-shadow: 0 3px 12px #141f3f07;
-}
-
-.laneEmpty {
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  padding: 28px 8px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--muted);
 }
 
 table {
@@ -742,19 +687,13 @@ fieldset label:last-child {
   top: 10px;
 }
 @media (min-width: 1800px) {
-  .kanban {
-    gap: 20px;
-  }
+  
   .loadCard {
     padding: 18px;
   }
 
-  .lane {
-    padding: 12px;
-  }
-  .laneHeading {
-    padding-bottom: 18px;
-  }
+  
+  
 }
 @media (max-width: 1050px) {
   .topbar {
@@ -771,12 +710,8 @@ fieldset label:last-child {
   .workspace {
     padding: 18px;
   }
-  .kanban {
-    gap: 10px;
-  }
-  .lane {
-    padding: 8px;
-  }
+  
+  
   .loadCard {
     padding: 12px 10px;
   }
@@ -831,21 +766,8 @@ fieldset label:last-child {
   .workspace {
     padding: 16px 12px;
   }
-  .kanban {
-    display: flex;
-    overflow-x: auto;
-    gap: 12px;
-    scroll-snap-type: x proximity;
-    min-height: calc(100dvh - 290px);
-    padding-bottom: 10px;
-  }
-  .lane {
-    min-width: 290px;
-    width: 82vw;
-    max-width: 360px;
-    min-height: calc(100dvh - 290px);
-    scroll-snap-align: start;
-  }
+  
+  
   .loadCard {
     padding: 16px;
   }
@@ -891,7 +813,6 @@ fieldset label:last-child {
 .stopZone,
 .eyebrow,
 .toolbarMeta,
-.laneCount,
 .detailFoot {
   color: var(--muted);
 }
@@ -899,6 +820,4 @@ fieldset label:last-child {
 .helpText {
   font-size: 11px;
 }
-.laneEmpty {
-  color: var(--muted);
-}
+

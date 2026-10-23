@@ -19,6 +19,7 @@ import "./billing.css";
 import "./contacts.css";
 import "./carriers.css";
 import "./prospects.css";
+import "./board.css";
 import "./documents.css";
 import "./reports.css";
 import "./inbox.css";

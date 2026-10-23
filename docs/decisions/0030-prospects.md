@@ -29,3 +29,7 @@ Import/export of prospects, bulk edits, reminders by email or push, drag-and-dro
 ## Board layout
 
 Presentation only. The six stages now share the page width (each at least 176px wide) so the last stage, Lost, is no longer cut off at desktop widths; below that the board still scrolls sideways. On phones each stage is about 84% of the screen and snaps, with the next stage peeking in. Company names wrap to two lines instead of being truncated, the stage count lines up with its name, and the intro keeps only the sentence that matters: starting carrier setup creates the carrier record only.
+
+## Addendum: one shared board
+
+Loads and Prospects are drawn by the same board component (`src/components/board.tsx`) and styled from one stylesheet (`src/app/board.css`), which replaces board rules that had spread across eight stylesheets. Both boards have the same lane anatomy (stage dot, name, count), empty state, phone and tablet scrolling, and drag-to-move. Prospect cards use the load card's layout: name and truck count, contact, then small facts. Dragging a prospect to another stage records the stage change like the Stage menu does. Dropping it on Lost opens the prospect at "Why was it lost?", because Lost needs a reason. A prospect that became a carrier cannot be dragged. Dragging is a shortcut: every move can still be made from the record. No API or permission change.

@@ -77,6 +77,7 @@ import { OrganizationSettings } from "@/components/organization-settings";
 import { AuditLog } from "@/components/audit-log";
 import { AssignVehicleSelect, FleetPage } from "@/components/fleet";
 import { driverUploadTypes } from "@/lib/compliance";
+import { Board } from "@/components/board";
 import { LoadCard } from "@/components/load-card";
 import {
   AttentionStrip,
@@ -148,7 +149,6 @@ export default function Workspace({
     [view, setView] = useState<ViewConfig>(defaultView),
     [recordTab, setRecordTab] = useState<RecordTab>("timeline"),
     [draftToOpen, setDraftToOpen] = useState<string | null>(null),
-    [dragOver, setDragOver] = useState<string | null>(null),
     [q, setQ] = useState(""),
     [carrier, setCarrier] = useState(""),
     [status, setStatus] = useState(""),
@@ -1205,77 +1205,37 @@ export default function Workspace({
                   disabled={busy || loading}
                 />
               ) : (
-                <div
-                  className={"kanban" + (view.compact ? " compact" : "")}
-                  role="region"
-                  aria-label="Load board"
-                  tabIndex={0}
-                >
-                  {stages.map((stage) => {
+                <Board
+                  label="Load board"
+                  noun="loads"
+                  compact={view.compact}
+                  lanes={stages.map((stage) => {
                     const items = shownLoads.filter((l) => l.stage === stage);
-                    return (
-                      <section
-                        className={
-                          "lane " +
-                          stage +
-                          (dragOver === stage ? " dropping" : "")
-                        }
-                        key={stage}
-                        aria-label={stageLabels[stage] + " loads"}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setDragOver(stage);
-                        }}
-                        onDragLeave={() => setDragOver(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragOver(null);
-                          const id = e.dataTransfer.getData("text/plain");
-                          if (id) void moveLoad(id, stage);
-                        }}
-                      >
-                        <div className="laneHeading">
-                          <CircleIcon
-                            weight="fill"
-                            size={9}
-                            aria-hidden="true"
-                          />
-                          <h2>{stageLabels[stage]}</h2>
-                          <span className="laneCount">
-                            <Totals loads={items} />
-                          </span>
-                        </div>
-                        <div className="laneCards">
-                          {items.map((load) => (
-                            <div
-                              key={load.id}
-                              className="cardDrag"
-                              draggable={!busy && !loading && !offline}
-                              onDragStart={(e) =>
-                                e.dataTransfer.setData("text/plain", load.id)
-                              }
-                            >
-                              <LoadCard
-                                load={load}
-                                disabled={busy || loading}
-                                onOpen={open}
-                              />
-                            </div>
-                          ))}
-                          {!items.length && (
-                            <div className="laneEmpty">
-                              {loading
-                                ? "Loading…"
-                                : queueFailed
-                                  ? "Couldn't load"
-                                  : "No loads here"}
-                            </div>
-                          )}
-                        </div>
-                      </section>
-                    );
+                    return {
+                      id: stage,
+                      label: stageLabels[stage],
+                      items,
+                      count: <Totals loads={items} />,
+                    };
                   })}
-                </div>
+                  itemKey={(load) => load.id}
+                  renderCard={(load) => (
+                    <LoadCard
+                      load={load}
+                      disabled={busy || loading}
+                      onOpen={open}
+                    />
+                  )}
+                  empty={
+                    loading
+                      ? "Loading…"
+                      : queueFailed
+                        ? "Couldn't load"
+                        : "No loads here"
+                  }
+                  canDrag={() => !busy && !loading && !offline}
+                  onMove={(id, stage) => void moveLoad(id, stage as Stage)}
+                />
               )}
               {cursor && (
                 <div className="pagination">

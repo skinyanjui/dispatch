@@ -72,6 +72,9 @@
   color: var(--muted);
   font-size: 11.5px;
   line-height: 1.5;
+  /* A long fact wraps inside the card instead of running past it. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .appShell .lc .lcFact svg {
   flex: none;

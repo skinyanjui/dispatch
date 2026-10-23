@@ -195,3 +195,75 @@ test("prospects on a phone: lanes scroll sideways and the sheet fits", async ({
   expect(box!.x + box!.width).toBeLessThanOrEqual(390);
   await scan(page, "add prospect (phone)");
 });
+
+test("prospects board: drag a card to the next stage; dropping on Lost asks why", async ({
+  page,
+}) => {
+  await signIn(page);
+  const company = "Drag Haulers " + randomUUID().slice(0, 6);
+  const res = await page.request.post("/api/prospects", {
+    headers: origin,
+    data: { idempotency_key: randomUUID(), company },
+  });
+  expect(res.status()).toBe(201);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await open(page);
+  await page.getByRole("searchbox", { name: "Search prospects" }).fill(company);
+  const board = page.getByRole("region", { name: "Prospect board" });
+  const lane = (name: string) =>
+    board.getByRole("region", { name: `${name} prospects` });
+  const card = (name: string) =>
+    lane(name).getByRole("button", { name: new RegExp(company) });
+  await card("New").dragTo(lane("Qualified"));
+  await expect(card("Qualified")).toBeVisible();
+  await expect(page.getByText(`${company} moved to Qualified.`)).toBeAttached();
+  // Lost needs a reason, so the drop opens the prospect at that question.
+  await card("Qualified").dragTo(lane("Lost"));
+  const detail = page.getByRole("dialog", { name: "Prospect" });
+  await expect(detail.getByLabel("Why was it lost?")).toBeFocused();
+  await detail
+    .getByLabel("Why was it lost?")
+    .fill("Went with another dispatcher");
+  await detail.getByRole("button", { name: "Mark as lost" }).click();
+  await expect(
+    detail.getByText("Lost: Went with another dispatcher", { exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(card("Lost")).toBeVisible();
+});
+
+test("both boards share one lane anatomy: dot, name, count, and the same type", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.request.post("/api/prospects", {
+    headers: origin,
+    data: {
+      idempotency_key: randomUUID(),
+      company: "Anatomy " + randomUUID().slice(0, 6),
+    },
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const anatomy = () =>
+    page.evaluate(() => {
+      const lane = document.querySelector(".kanban .lane")!;
+      const h2 = getComputedStyle(lane.querySelector(".laneHeading h2")!);
+      return {
+        dot: !!lane.querySelector(".laneHeading > svg"),
+        count: !!lane.querySelector(".laneHeading .laneCount"),
+        size: h2.fontSize,
+        weight: h2.fontWeight,
+        card: !!document.querySelector(".kanban .cardDrag > .loadCard.lc"),
+      };
+    });
+  await page.goto("/");
+  await expect(page.locator(".kanban .loadCard").first()).toBeVisible();
+  const loads = await anatomy();
+  await open(page);
+  await expect(
+    page.getByRole("region", { name: "Prospect board" }),
+  ).toBeVisible();
+  await expect(page.locator(".prospectCard").first()).toBeVisible();
+  expect(await anatomy()).toEqual(loads);
+});

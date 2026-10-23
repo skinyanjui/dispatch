@@ -163,8 +163,7 @@
 .appShell .reportTile,
 .appShell .carrierStat,
 .appShell .pipelineStep,
-.appShell .loadCard,
-.appShell .lane {
+.appShell .loadCard {
   box-shadow: none;
   border-color: var(--border);
 }

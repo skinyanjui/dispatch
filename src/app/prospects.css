@@ -1,67 +1,10 @@
-/* Prospects board: six stages share the page width instead of the last one
-   hiding off-screen; phones show one stage at a time with the next peeking. */
-.appShell .prospectBoard {
-  grid-template-columns: repeat(6, minmax(176px, 1fr));
-  gap: var(--space-2);
-  align-items: start;
-}
-.appShell .prospectBoard .lane {
-  padding: var(--space-2);
-}
-.appShell .prospectBoard .laneHeading {
-  align-items: center;
-  padding: 2px var(--space-1) var(--space-2);
-}
-.appShell .prospectBoard .laneHeading h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-.appShell .prospectBoard .laneCount {
-  margin-left: auto;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.appShell .prospectCard {
-  text-align: left;
-}
-.appShell .prospectCard strong {
-  font-size: 13.5px;
-}
-.appShell .prospectCard .cardFact {
-  align-items: flex-start;
-}
-.appShell .prospectCard .cardFact svg {
-  flex: none;
-  margin-top: 2px;
-}
-@media (max-width: 640px) {
-  .appShell .prospectBoard {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 84%;
-    scroll-snap-type: x mandatory;
-  }
-  .appShell .prospectBoard .lane {
-    min-height: 0;
-  }
-}
-/* Names wrap to two lines instead of being cut off; the count lines up with
-   the stage name. */
-.appShell .prospectCard strong {
+/* Prospects use the shared board (board.css) and load card (loadcard.css).
+   A company name can be long, so it wraps to two lines instead of being cut. */
+.appShell .lc.prospectCard .lcRef {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  overflow: hidden;
   white-space: normal;
   overflow-wrap: anywhere;
-}
-.appShell .prospectBoard .laneHeading h2,
-.appShell .prospectBoard .laneCount {
-  line-height: 1.2;
-}
-.appShell .prospectBoard .laneHeading {
-  min-height: 28px;
-  padding-top: 0;
 }

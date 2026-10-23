@@ -1,0 +1,138 @@
+/* Kanban boards (Loads, Prospects), drawn by components/board.tsx. Every
+   board rule lives here: lanes share the page width on a desktop, keep a
+   readable width and scroll sideways on tablets, and are nearly a screen wide
+   on phones so the next one peeks in. A board sets --lanes (and, if it has
+   many, --lane-min) instead of its own layout. */
+.appShell .kanban {
+  --lanes: 4;
+  --lane-min: 0px;
+  display: grid;
+  grid-template-columns: repeat(var(--lanes), minmax(var(--lane-min), 1fr));
+  gap: 10px;
+  flex: 1;
+  align-items: start;
+  min-height: calc(100dvh - 198px);
+}
+.appShell .lane {
+  min-height: calc(100dvh - 198px);
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fefefe;
+  box-shadow: none;
+}
+.appShell .lane.dropping {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* Heading: a stage dot, the name, and the count (or count and total). */
+.appShell .laneHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 8px;
+}
+.appShell .laneHeading > svg {
+  flex: none;
+  color: var(--subtle);
+}
+.appShell .laneHeading h2 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.appShell .laneCount {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+/* Stage dots, matching the queue pills. */
+.appShell .lane.dispatched > .laneHeading > svg,
+.appShell .lane.prospect-qualified > .laneHeading > svg {
+  color: #a78bd0;
+}
+.appShell .lane.picked-up > .laneHeading > svg,
+.appShell .lane.prospect-proposal > .laneHeading > svg {
+  color: #d7a45b;
+}
+.appShell .lane.delivered > .laneHeading > svg,
+.appShell .lane.prospect-won > .laneHeading > svg {
+  color: #78a38b;
+}
+.appShell .lane.prospect-contacted > .laneHeading > svg {
+  color: #7d9be0;
+}
+.appShell .lane.prospect-lost > .laneHeading > svg {
+  color: #d58a8a;
+}
+
+/* Cards and the empty state. */
+.appShell .laneCards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.appShell .cardDrag {
+  display: block;
+}
+.appShell .cardDrag[draggable="true"] {
+  cursor: grab;
+}
+.appShell .cardDrag > .loadCard {
+  width: 100%;
+}
+.appShell .laneEmpty {
+  padding: var(--space-3);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: left;
+}
+
+/* Prospects: six stages share the width before the board scrolls. */
+.appShell .kanban.prospectBoard {
+  --lanes: 6;
+  --lane-min: 176px;
+}
+
+@media (min-width: 1800px) {
+  .appShell .laneHeading h2 {
+    font-size: 13px;
+  }
+}
+/* Tablets and touch screens: lanes keep a readable width and scroll sideways. */
+@media (max-width: 1100px) {
+  .appShell .kanban {
+    --lane-min: 250px;
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    scroll-snap-type: x proximity;
+  }
+  .appShell .lane {
+    scroll-snap-align: start;
+  }
+}
+/* Phones: each lane is most of the screen, so the next one peeks in. */
+@media (max-width: 760px) {
+  .appShell .kanban {
+    display: flex;
+    min-height: calc(100dvh - 320px);
+  }
+  .appShell .lane {
+    min-width: 258px;
+    width: 76vw;
+    max-width: 360px;
+    min-height: calc(100dvh - 320px);
+  }
+}
+@media (max-width: 560px) {
+  .appShell .kanban {
+    scroll-snap-type: x mandatory;
+  }
+  .appShell .lane {
+    min-height: 0;
+  }
+}

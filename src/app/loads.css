@@ -66,15 +66,8 @@
   }
 
   /* Board: each stage is nearly a screen wide, so the next one peeks in. */
-  .appShell .kanban {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 86%;
-    scroll-snap-type: x mandatory;
-  }
-  .appShell .lane {
-    min-height: 0;
-  }
+  
+  
 }
 
 /* Table: the load reference stays in view while the rest scrolls. */

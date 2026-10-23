@@ -66,20 +66,7 @@
   font-size: 10px;
   color: #8890a6;
 }
-.appShell .kanban {
-  gap: 13px;
-  min-height: calc(100dvh - 198px);
-}
-.appShell .lane {
-  min-height: calc(100dvh - 198px);
-  background: #fefefe;
-  border-color: #e8eaf0;
-  padding: 9px;
-  border-radius: 9px;
-}
-.appShell .laneHeading {
-  padding: 6px 4px 16px;
-}
+
 .appShell .loadCard {
   border-color: #e5e8ee;
   border-radius: 7px;
@@ -247,9 +234,7 @@
     font-size: 13px;
   }
 
-  .appShell .laneHeading h2 {
-    font-size: 13px;
-  }
+  
 }
 @media (max-width: 1150px) and (min-width: 1001px) {
   .appShell .workspace {
@@ -258,12 +243,8 @@
   .appShell .topbar {
     padding-inline: 18px;
   }
-  .appShell .kanban {
-    gap: 9px;
-  }
-  .appShell .lane {
-    padding: 6px;
-  }
+  
+  
 
   .appShell .search {
     width: 300px;
@@ -332,16 +313,8 @@
   .appShell .toolbarMeta {
     font-size: 9px;
   }
-  .appShell .kanban {
-    gap: 10px;
-    min-height: calc(100dvh - 320px);
-  }
-  .appShell .lane {
-    min-width: 258px;
-    width: 76vw;
-    min-height: calc(100dvh - 320px);
-    padding: 9px;
-  }
+  
+  
 
   .appShell .workspace > footer {
     line-height: 1.8;
