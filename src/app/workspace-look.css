@@ -50,7 +50,7 @@
 .appShell .secondary,
 .appShell a.secondary {
   min-height: 28px;
-  padding: 0 10px;
+  padding: 0 var(--space-3);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 4px;

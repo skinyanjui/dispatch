@@ -8,7 +8,7 @@
   padding-block: clamp(var(--space-4), 4vh, 40px) 32px;
 }
 .legalToc p {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-2);
   color: var(--mk-muted);
   font-size: 12.5px;
   font-weight: 600;
@@ -16,7 +16,7 @@
 .legalToc ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -59,7 +59,7 @@
   padding-left: 22px;
 }
 .legalDoc li {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 .legalDoc a {
   color: var(--accent);
@@ -71,7 +71,7 @@
 }
 .legalDraft {
   margin: 0 0 var(--space-2);
-  padding: var(--space-3) 14px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--warn-border);
   border-radius: 10px;
   background: var(--warn-bg);

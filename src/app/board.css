@@ -8,14 +8,14 @@
   --lane-min: 0px;
   display: grid;
   grid-template-columns: repeat(var(--lanes), minmax(var(--lane-min), 1fr));
-  gap: 10px;
+  gap: var(--space-3);
   flex: 1;
   align-items: start;
   min-height: calc(100dvh - 198px);
 }
 .appShell .lane {
   min-height: calc(100dvh - 198px);
-  padding: 6px;
+  padding: var(--space-2);
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
@@ -72,7 +72,7 @@
 .appShell .laneCards {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 .appShell .cardDrag {
   display: block;

@@ -25,7 +25,7 @@
 }
 .appShell .toolbarRight {
   order: 1;
-  gap: 10px;
+  gap: var(--space-3);
   flex: 1;
 }
 .appShell .search {
@@ -76,10 +76,10 @@
    content on long ones. */
 .appShell .workspace > footer {
   margin-top: auto;
-  padding-top: 18px;
+  padding-top: var(--space-5);
 }
 .appShell footer a {
-  margin-left: 10px;
+  margin-left: var(--space-3);
 }
 
 .carrierDirectory {
@@ -97,7 +97,7 @@
   font-size: 25px;
   letter-spacing: -0.6px;
   font-weight: 500;
-  margin: var(--space-3) 0 10px;
+  margin: var(--space-3) 0 var(--space-3);
 }
 .directoryIntro p:not(.eyebrow) {
   font-size: 12px;
@@ -120,7 +120,7 @@
 .directorySearch input {
   border: 0;
   background: transparent;
-  padding: 10px 0;
+  padding: var(--space-3) 0;
   font-size: 11px;
 }
 .directorySearch:focus-within {
@@ -140,7 +140,7 @@
   font-size: 11px;
   color: var(--muted);
   line-height: 1.7;
-  padding: var(--space-6) 18px;
+  padding: var(--space-6) var(--space-5);
   margin-top: auto;
   max-width: 650px;
 }
@@ -161,10 +161,10 @@
 }
 @media (max-width: 1150px) and (min-width: 1001px) {
   .appShell .workspace {
-    padding-inline: 18px;
+    padding-inline: var(--space-5);
   }
   .appShell .topbar {
-    padding-inline: 18px;
+    padding-inline: var(--space-5);
   }
 
   .appShell .search {
@@ -187,8 +187,8 @@
   .appShell .topbar {
     height: auto;
     min-height: 112px;
-    padding: var(--space-4) 14px;
-    gap: 14px;
+    padding: var(--space-4) var(--space-4);
+    gap: var(--space-4);
     align-items: center;
   }
 
@@ -197,11 +197,11 @@
   }
 
   .appShell .workspace {
-    padding: 14px 10px;
+    padding: var(--space-4) var(--space-3);
   }
   .appShell .toolbar {
     gap: var(--space-3);
-    margin-bottom: 18px;
+    margin-bottom: var(--space-5);
     flex-wrap: wrap;
   }
   .appShell .toolbarRight {
@@ -267,9 +267,9 @@
   line-height: 1.6;
   color: var(--success);
   background: var(--success-bg);
-  padding: 10px var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border-radius: 6px;
-  margin: var(--space-4) 0 10px;
+  margin: var(--space-4) 0 var(--space-3);
 }
 .appShell button:focus-visible,
 .appShell a:focus-visible,
@@ -283,17 +283,17 @@
 .appliedFilters {
   display: flex;
   gap: var(--space-2);
-  margin: -7px 0 18px;
+  margin: -7px 0 var(--space-5);
   min-width: 0;
 }
 .scopeChip {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
   background: var(--soft);
   border: 1px solid var(--border);
   color: var(--muted);
   font-size: 10px;
-  padding: 6px var(--space-2);
+  padding: var(--space-2) var(--space-2);
   max-width: 100%;
 }
 .scopeChip > span {

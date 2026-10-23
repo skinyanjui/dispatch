@@ -262,7 +262,7 @@
   min-width: var(--control-h-sm);
   min-height: var(--control-h-sm);
   height: var(--control-h-sm);
-  padding: 0 6px;
+  padding: 0 var(--space-2);
 }
 .appShell .sidebarIcon {
   box-sizing: border-box;

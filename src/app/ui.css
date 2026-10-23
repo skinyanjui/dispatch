@@ -142,7 +142,7 @@
 }
 .appShell .folder .toggleCount {
   min-width: 20px;
-  padding: 0 6px;
+  padding: 0 var(--space-2);
   border-radius: 999px;
   background: var(--accent);
   color: var(--action-ink);
@@ -321,7 +321,7 @@
 .appShell .dataTable th,
 .appShell .dataTable td {
   height: 32px;
-  padding: 0 10px;
+  padding: 0 var(--space-3);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   font-weight: 400;

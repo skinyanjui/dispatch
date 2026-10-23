@@ -45,7 +45,7 @@
 }
 .mkHeader nav a,
 .mkActions > a:not(.mkButton) {
-  padding: 6px 10px;
+  padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   color: var(--ink);
   font-size: 14px;
@@ -71,7 +71,7 @@
   align-items: center;
   gap: var(--space-2);
   min-height: 42px;
-  padding: 0 18px;
+  padding: 0 var(--space-5);
   border-radius: 10px;
   background: var(--accent);
   color: var(--ink-inverse);
@@ -86,7 +86,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 42px;
-  padding: 0 18px;
+  padding: 0 var(--space-5);
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   background: var(--panel);
@@ -98,7 +98,7 @@
 .mkRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--space-3);
 }
 .mkHero {
   padding: clamp(36px, 8vh, 88px) 0 clamp(28px, 6vh, 56px);
@@ -126,7 +126,7 @@
 }
 .mkLead {
   max-width: 54ch;
-  margin: 18px 0 var(--space-6);
+  margin: var(--space-5) 0 var(--space-6);
   font-size: clamp(16px, 2vw, 19px);
   color: var(--muted);
 }
@@ -134,7 +134,7 @@
   margin-bottom: 0;
 }
 .mkNote {
-  margin: 14px 0 0;
+  margin: var(--space-4) 0 0;
   font-size: 13px;
   color: var(--muted);
 }
@@ -145,14 +145,14 @@
 .mkSplit h2,
 .mkBand h2,
 .mkCta h2 {
-  margin: 0 0 14px;
+  margin: 0 0 var(--space-4);
   font-size: clamp(22px, 3vw, 30px);
   letter-spacing: -0.02em;
 }
 .mkGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+  gap: var(--space-4);
 }
 .mkCard {
   padding: var(--space-5);
@@ -164,7 +164,7 @@
   color: var(--accent);
 }
 .mkCard h3 {
-  margin: 10px 0 var(--space-1);
+  margin: var(--space-3) 0 var(--space-1);
   font-size: 17px;
 }
 .mkCard p {
@@ -272,7 +272,7 @@
 .mkFooter nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) 18px;
+  gap: var(--space-1) var(--space-5);
   align-content: flex-start;
 }
 @media (max-width: 720px) {
@@ -412,7 +412,7 @@
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -423,7 +423,7 @@
 .crumbs li {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .crumbs a {
@@ -462,7 +462,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: 14px var(--space-4);
+  padding: var(--space-4) var(--space-4);
   border-top: 1px solid var(--mk-line, var(--border));
 }
 .listItem:first-child {
@@ -530,11 +530,11 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
 }
 .previewTabs button {
   min-height: 34px;
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   border: 1px solid var(--mk-line);
   border-radius: 999px;
   background: var(--panel);
@@ -569,7 +569,7 @@
   font-size: 13px;
 }
 .previewSide span {
-  padding: 6px var(--space-2);
+  padding: var(--space-2) var(--space-2);
   border-radius: 6px;
   color: var(--mk-app-ink);
 }
@@ -578,7 +578,7 @@
   font-weight: 500;
 }
 .previewMain {
-  padding: 14px;
+  padding: var(--space-4);
   background: var(--panel);
   border: 1px solid var(--mk-line);
   border-radius: 10px;
@@ -587,7 +587,7 @@
 .pvBoard {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 .pvBoard > div {
   display: grid;
@@ -602,7 +602,7 @@
 .pvCard {
   display: grid;
   gap: 2px;
-  padding: 10px;
+  padding: var(--space-3);
   border: 1px solid var(--mk-line);
   border-radius: 8px;
   font-size: 12px;
@@ -625,7 +625,7 @@
 }
 .pvTable th,
 .pvTable td {
-  padding: var(--space-2) 10px;
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--mk-line);
   white-space: nowrap;
@@ -661,7 +661,7 @@
 }
 .pvDoc {
   display: grid;
-  gap: 10px;
+  gap: var(--space-3);
   max-width: 460px;
   font-size: 14px;
 }
@@ -701,7 +701,7 @@
   align-items: center;
 }
 .mkFeature h2 {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-3);
   font-size: clamp(24px, 3.4vw, 36px);
   letter-spacing: -0.025em;
   line-height: 1.1;
@@ -793,7 +793,7 @@
     gap: var(--space-1);
   }
   .previewTabs button {
-    padding: 0 10px;
+    padding: 0 var(--space-3);
     font-size: 13px;
   }
 }
@@ -821,11 +821,11 @@
 }
 .mkFooter nav {
   flex: 1 1 auto;
-  gap: var(--space-1) 14px;
+  gap: var(--space-1) var(--space-4);
 }
 @media (max-width: 480px) {
   .mkHeader nav a {
-    padding: 6px var(--space-2);
+    padding: var(--space-2) var(--space-2);
   }
   .mkFooter nav {
     gap: var(--space-1) var(--space-3);
@@ -839,7 +839,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--space-4);
-  padding: 10px 0;
+  padding: var(--space-3) 0;
 }
 .mkHeader nav {
   flex: none;
@@ -853,7 +853,7 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--control-h, 32px);
-  padding: 0 var(--control-pad, 10px);
+  padding: 0 var(--control-pad, var(--space-3));
   border-radius: var(--control-radius, 7px);
   font-size: 13.5px;
   font-weight: 500;
@@ -861,7 +861,7 @@
 }
 .mk .mkHeader a.mkButton {
   min-height: var(--control-h, 32px);
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   border-radius: var(--control-radius, 7px);
   font-size: 13.5px;
   font-weight: 600;
@@ -873,7 +873,7 @@
 @media (max-width: 720px) {
   .mkBar .mkHeader {
     grid-template-columns: auto 1fr;
-    gap: 6px var(--space-3);
+    gap: var(--space-2) var(--space-3);
   }
   .mkHeader nav {
     grid-column: 1 / -1;
@@ -905,7 +905,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .pvHead strong {
@@ -921,7 +921,7 @@
 .pvCard .pvChip {
   justify-self: start;
   margin-top: 2px;
-  padding: 0 6px;
+  padding: 0 var(--space-2);
   border-radius: 6px;
   background: var(--mk-app-canvas);
   font-size: 11px;

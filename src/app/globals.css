@@ -111,7 +111,7 @@ a svg {
 .toolbarRight {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-4);
 }
 .brand {
   font-size: 22px;
@@ -183,7 +183,7 @@ a svg {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
-  padding: 0 10px;
+  padding: 0 var(--space-3);
   margin: 0;
   color: var(--muted);
 }
@@ -250,12 +250,12 @@ th {
   font-weight: 500;
   color: var(--muted);
   background: var(--soft);
-  padding: 13px 18px;
+  padding: 13px var(--space-5);
 }
 td {
   font-size: 12px;
   border-top: 1px solid var(--border);
-  padding: var(--space-4) 18px;
+  padding: var(--space-4) var(--space-5);
 }
 td small {
   display: flex;
@@ -271,7 +271,7 @@ td small {
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   padding: 5px var(--space-2);
   font-size: 10px;
   line-height: 1;
@@ -306,7 +306,7 @@ footer {
   gap: 15px;
   font-size: 10px;
   color: var(--muted);
-  margin-top: 18px;
+  margin-top: var(--space-5);
 }
 footer > span,
 footer a {
@@ -315,12 +315,12 @@ footer a {
   gap: 7px;
 }
 footer a {
-  margin-left: 14px;
+  margin-left: var(--space-4);
 }
 .qa {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 .qa > svg {
   color: var(--accent);
@@ -414,7 +414,7 @@ footer a {
 .detailCarrier {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   color: var(--muted);
   font-size: 12px;
 }
@@ -458,7 +458,7 @@ footer a {
   display: block;
   color: var(--muted);
   font-size: 10px;
-  margin-top: 6px;
+  margin-top: var(--space-2);
 }
 .assignedDriver {
   display: flex;
@@ -506,7 +506,7 @@ footer a {
 }
 .event small {
   display: block;
-  margin-top: 6px;
+  margin-top: var(--space-2);
   font-size: 10px;
 }
 .detailFoot {
@@ -519,7 +519,7 @@ footer a {
 .formIntro {
   font-size: 12px;
   color: var(--muted);
-  margin: 10px 0 27px;
+  margin: var(--space-3) 0 27px;
   line-height: 1.6;
 }
 .helpText {
@@ -531,7 +531,7 @@ footer a {
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: var(--space-4);
 }
 .formGrid > label {
   min-width: 0;
@@ -580,7 +580,7 @@ fieldset label:last-child {
   justify-content: flex-end;
   gap: var(--space-2);
   border-top: 1px solid var(--border);
-  padding-top: 18px;
+  padding-top: var(--space-5);
 }
 .empty {
   padding: 60px 25px;
@@ -644,12 +644,12 @@ fieldset label:last-child {
 }
 @media (min-width: 1800px) {
   .loadCard {
-    padding: 18px;
+    padding: var(--space-5);
   }
 }
 @media (max-width: 1050px) {
   .topbar {
-    padding: 0 18px;
+    padding: 0 var(--space-5);
   }
 
   .brand {
@@ -660,11 +660,11 @@ fieldset label:last-child {
   }
 
   .workspace {
-    padding: 18px;
+    padding: var(--space-5);
   }
 
   .loadCard {
-    padding: var(--space-3) 10px;
+    padding: var(--space-3) var(--space-3);
   }
 
   footer {
@@ -701,7 +701,7 @@ fieldset label:last-child {
     flex-wrap: wrap;
   }
   .toolbarLeft {
-    gap: 10px;
+    gap: var(--space-3);
   }
   .toolbarRight {
     width: 100%;
@@ -726,12 +726,12 @@ fieldset label:last-child {
     padding: var(--space-5) 22px;
   }
   .formGrid {
-    gap: 10px;
+    gap: var(--space-3);
   }
   .formGrid input,
   .formGrid select {
     font-size: 11px;
-    padding: 10px var(--space-2);
+    padding: var(--space-3) var(--space-2);
   }
   footer {
     gap: 9px;
