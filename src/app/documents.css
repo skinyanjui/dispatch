@@ -1,12 +1,6 @@
 /* Documents: drafts as compact cards on phones, templates as a bordered list
    with a two-line preview, and status chips that fill their rows. */
-.appShell .documents .attentionChips {
-  flex-wrap: wrap;
-}
-.appShell .documents .attentionChip {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
+
 .appShell .documents .templateList {
   display: grid;
   gap: 0;
@@ -54,10 +48,6 @@
   gap: var(--space-2);
 }
 @media (max-width: 640px) {
-  .appShell .documents .attentionChip {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
   .appShell .documents .templateList li {
     grid-template-columns: minmax(0, 1fr);
   }

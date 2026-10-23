@@ -20,7 +20,7 @@ test("billing on a phone: tiles share rows, filter chips never overlap, invoice 
   const tiles = page.getByRole("group", { name: "Billing summary" });
   await expect(tiles).toBeVisible();
   const tops = await tiles
-    .locator(".reportTile")
+    .locator(".stat")
     .evaluateAll((els) => [
       ...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))),
     ]);
@@ -29,7 +29,7 @@ test("billing on a phone: tiles share rows, filter chips never overlap, invoice 
     await page.getByRole("tab", { name: tab }).click();
     const rects = await page
       .getByRole("tabpanel")
-      .locator(".attentionChip")
+      .locator(".chip")
       .evaluateAll((els) =>
         els.map((e) => {
           const r = e.getBoundingClientRect();
@@ -40,7 +40,10 @@ test("billing on a phone: tiles share rows, filter chips never overlap, invoice 
       for (let j = i + 1; j < rects.length; j++) {
         const [a, b] = [rects[i], rects[j]];
         const overlap =
-          a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1;
+          a[0] < b[2] - 1 &&
+          b[0] < a[2] - 1 &&
+          a[1] < b[3] - 1 &&
+          b[1] < a[3] - 1;
         expect(overlap).toBe(false);
       }
   }

@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, PlusIcon } from "@phosphor-icons/react";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { Sheet } from "@/components/modal";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 
@@ -140,35 +142,21 @@ export function DocumentsPage({
             here.
           </p>
         </div>
-        {tab === "templates" && (
-          <button
-            className="primary"
-            disabled={offline}
-            onClick={() => setEditing("new")}
-          >
-            <PlusIcon size={14} weight="bold" aria-hidden="true" /> New template
-          </button>
-        )}
       </div>
-      <div className="orgTabs" role="tablist" aria-label="Documents">
-        {(
-          [
-            ["drafts", "Drafts", drafts?.length ?? 0],
-            ["templates", "Templates", templates?.length ?? 0],
-          ] as const
-        ).map(([key, label, n]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            className={"orgTab" + (tab === key ? " active" : "")}
-            onClick={() => setTab(key)}
-          >
-            {label}
-            <span className="orgCount">{n}</span>
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Documents"
+        idPrefix="documents"
+        items={[
+          { id: "drafts", label: "Drafts", count: drafts?.length ?? 0 },
+          {
+            id: "templates",
+            label: "Templates",
+            count: templates?.length ?? 0,
+          },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       {error && (
         <div className="alert error" role="alert">
           {describe(error)}
@@ -181,155 +169,168 @@ export function DocumentsPage({
         {status}
       </p>
 
-      {tab === "drafts" && (
-        <>
-          <div className="attentionChips" role="group" aria-label="Show drafts">
-            {(["draft", "approved", "discarded", "all"] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                className="attentionChip"
-                aria-pressed={filter === f}
-                onClick={() => setFilter(f)}
-              >
-                {f === "all" ? "All" : statusLabels[f]}
-                <b>
-                  {f === "all"
-                    ? (drafts ?? []).length
-                    : (drafts ?? []).filter((d) => d.status === f).length}
-                </b>
-              </button>
-            ))}
-          </div>
-          {shown.length ? (
-            <div className="tableScroll billingTable">
-              <table className="reportTable">
-                <caption className="srOnly">Document drafts</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Draft</th>
-                    <th scope="col">For</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Made by</th>
-                    <th scope="col">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((d) => (
-                    <tr
-                      key={d.id}
-                      className="clickRow"
-                      onClick={(e) => {
-                        if (!(e.target as HTMLElement).closest("button"))
-                          setOpen(d.id);
-                      }}
-                    >
-                      <th scope="row" data-label="Draft">
-                        <button
-                          type="button"
-                          className="textButton"
-                          onClick={() => setOpen(d.id)}
-                          aria-label={`Open draft ${d.template_name} for ${d.target_label}`}
-                        >
-                          <FileTextIcon size={14} aria-hidden="true" />
-                          {d.template_name}
-                        </button>
-                      </th>
-                      <td data-label="For">{d.target_label}</td>
-                      <td data-label="Status">
-                        <span
-                          className={
-                            "opsPill " +
-                            (d.status === "approved"
-                              ? "good"
-                              : d.status === "discarded"
-                                ? ""
-                                : "warn")
-                          }
-                        >
-                          {statusLabels[d.status]}
-                        </span>
-                        {d.missing.length > 0 && d.status === "draft" && (
-                          <small className="agingNote late">
-                            {d.missing.length} missing
-                          </small>
-                        )}
-                      </td>
-                      <td data-label="Made by">
-                        {d.source === "assistant"
-                          ? "Assistant for " + d.created_by_name
-                          : d.created_by_name}
-                      </td>
-                      <td data-label="Created">{when(d.created_at)}</td>
+      <TabPanel idPrefix="documents" value={tab}>
+        {tab === "drafts" && (
+          <>
+            <ToggleGroup
+              label="Show drafts"
+              items={(["draft", "approved", "discarded", "all"] as const).map(
+                (f) => ({
+                  id: f,
+                  label: f === "all" ? "All" : statusLabels[f],
+                  count:
+                    f === "all"
+                      ? (drafts ?? []).length
+                      : (drafts ?? []).filter((d) => d.status === f).length,
+                }),
+              )}
+              value={filter}
+              onChange={(f) => f && setFilter(f)}
+            />
+            {shown.length ? (
+              <div className="tableScroll billingTable">
+                <table className="reportTable">
+                  <caption className="srOnly">Document drafts</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Draft</th>
+                      <th scope="col">For</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Made by</th>
+                      <th scope="col">Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="directoryEmpty">
-              <FileTextIcon size={32} weight="light" aria-hidden="true" />
-              <h3>{drafts ? "No drafts here" : "Loading…"}</h3>
-              <p>
-                Ask the assistant to draft one, or use Draft document on a load.
-              </p>
-            </div>
-          )}
-        </>
-      )}
+                  </thead>
+                  <tbody>
+                    {shown.map((d) => (
+                      <tr
+                        key={d.id}
+                        className="clickRow"
+                        onClick={(e) => {
+                          if (!(e.target as HTMLElement).closest("button"))
+                            setOpen(d.id);
+                        }}
+                      >
+                        <th scope="row" data-label="Draft">
+                          <button
+                            type="button"
+                            className="textButton"
+                            onClick={() => setOpen(d.id)}
+                            aria-label={`Open draft ${d.template_name} for ${d.target_label}`}
+                          >
+                            <FileTextIcon size={14} aria-hidden="true" />
+                            {d.template_name}
+                          </button>
+                        </th>
+                        <td data-label="For">{d.target_label}</td>
+                        <td data-label="Status">
+                          <span
+                            className={
+                              "opsPill " +
+                              (d.status === "approved"
+                                ? "good"
+                                : d.status === "discarded"
+                                  ? ""
+                                  : "warn")
+                            }
+                          >
+                            {statusLabels[d.status]}
+                          </span>
+                          {d.missing.length > 0 && d.status === "draft" && (
+                            <small className="agingNote late">
+                              {d.missing.length} missing
+                            </small>
+                          )}
+                        </td>
+                        <td data-label="Made by">
+                          {d.source === "assistant"
+                            ? "Assistant for " + d.created_by_name
+                            : d.created_by_name}
+                        </td>
+                        <td data-label="Created">{when(d.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="directoryEmpty">
+                <FileTextIcon size={32} weight="light" aria-hidden="true" />
+                <h3>{drafts ? "No drafts here" : "Loading…"}</h3>
+                <p>
+                  Ask the assistant to draft one, or use Draft document on a
+                  load.
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
-      {tab === "templates" && (
-        <>
-          {templates && templates.length ? (
-            <ul className="templateList" aria-label="Templates">
-              {templates.map((t) => (
-                <li key={t.id}>
-                  <div>
-                    <strong>{t.name}</strong>
-                    <small>Fills from a {t.target}</small>
-                    <p>{t.body.slice(0, 160)}</p>
-                  </div>
-                  <div className="actionRow">
-                    <button
-                      className="secondary"
-                      disabled={offline}
-                      onClick={() => setEditing(t)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="textButton"
-                      disabled={busy || offline}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Archive “${t.name}”? Existing drafts stay.`,
-                          )
-                        )
-                          void run(
-                            () => api(`document-templates/${t.id}/archive`, {}),
-                            "Template archived.",
-                          );
-                      }}
-                    >
-                      Archive
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="directoryEmpty">
-              <FileTextIcon size={32} weight="light" aria-hidden="true" />
-              <h3>{templates ? "No templates yet" : "Loading…"}</h3>
-              <p>
-                A template is text like “Hi {"{{carrier.contact}}"}, an update
-                on {"{{load.reference}}"}…”. Create one to start drafting.
-              </p>
+        {tab === "templates" && (
+          <>
+            {/* The page action for this tab sits in its panel, so switching
+              tabs never moves the tab strip. */}
+            <div className="panelToolbar">
+              <button
+                className="primary"
+                disabled={offline}
+                onClick={() => setEditing("new")}
+              >
+                <PlusIcon size={14} weight="bold" aria-hidden="true" /> New
+                template
+              </button>
             </div>
-          )}
-        </>
-      )}
+            {templates && templates.length ? (
+              <ul className="templateList" aria-label="Templates">
+                {templates.map((t) => (
+                  <li key={t.id}>
+                    <div>
+                      <strong>{t.name}</strong>
+                      <small>Fills from a {t.target}</small>
+                      <p>{t.body.slice(0, 160)}</p>
+                    </div>
+                    <div className="actionRow">
+                      <button
+                        className="secondary"
+                        disabled={offline}
+                        onClick={() => setEditing(t)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="textButton"
+                        disabled={busy || offline}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Archive “${t.name}”? Existing drafts stay.`,
+                            )
+                          )
+                            void run(
+                              () =>
+                                api(`document-templates/${t.id}/archive`, {}),
+                              "Template archived.",
+                            );
+                        }}
+                      >
+                        Archive
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="directoryEmpty">
+                <FileTextIcon size={32} weight="light" aria-hidden="true" />
+                <h3>{templates ? "No templates yet" : "Loading…"}</h3>
+                <p>
+                  A template is text like “Hi {"{{carrier.contact}}"}, an update
+                  on {"{{load.reference}}"}…”. Create one to start drafting.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </TabPanel>
 
       {current && (
         <Sheet

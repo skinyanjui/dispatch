@@ -1164,12 +1164,14 @@ test("load record: breadcrumb, fields panel and keyboard-operable tabs", async (
   const tabs = record.getByRole("tablist", { name: "Load sections" });
   const timeline = tabs.getByRole("tab", { name: /^Timeline/ });
   await expect(timeline).toHaveAttribute("aria-selected", "true");
+  // One tab stop; arrow keys move between tabs and select them.
+  await expect(timeline).toHaveAttribute("tabindex", "0");
   await timeline.focus();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Enter");
+  await page.keyboard.press("ArrowRight");
   const routeTab = tabs.getByRole("tab", { name: /^Route/ });
-  if ((await routeTab.getAttribute("aria-selected")) !== "true")
-    await routeTab.click();
+  await expect(routeTab).toBeFocused();
+  await expect(routeTab).toHaveAttribute("aria-selected", "true");
+  await expect(timeline).toHaveAttribute("tabindex", "-1");
   await expect(
     record.getByRole("tabpanel").getByRole("heading", {
       name: "Route & appointments",
@@ -1246,10 +1248,10 @@ test("loads toolbar: Filter, Sort and Options sit on one row and work", async ({
   // Filter
   await page.locator(".viewTools summary", { hasText: "Filter" }).click();
   await page.getByLabel("Status").selectOption("delivered");
-  await expect(page.locator(".viewMenu summary .orgCount")).toHaveText("1");
+  await expect(page.locator(".viewMenu summary .countBadge")).toHaveText("1");
 
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.locator(".viewMenu summary .orgCount")).toHaveCount(0);
+  await expect(page.locator(".viewMenu summary .countBadge")).toHaveCount(0);
 });
 
 test("loads: the carrier list sits under Loads and folds away", async ({

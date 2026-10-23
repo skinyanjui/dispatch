@@ -117,14 +117,9 @@
   border-radius: 4px;
   color: var(--muted);
 }
-.appShell .segment.active {
-  background: var(--sidebar-active);
-  color: var(--ink);
-  box-shadow: none;
-}
+
 /* Pills and chips are flat. */
-.appShell .queueTab,
-.appShell .attentionChip {
+.appShell .queueTab {
   border-color: var(--border);
   box-shadow: none;
 }
@@ -160,17 +155,11 @@
 }
 /* Cards and panels: flat with a hairline. */
 .appShell .opsCard,
-.appShell .reportTile,
-.appShell .carrierStat,
-.appShell .pipelineStep,
 .appShell .loadCard {
   box-shadow: none;
   border-color: var(--border);
 }
-.appShell .reportTile strong,
-.appShell .carrierStat strong {
-  font-weight: 500;
-}
+
 /* Inputs: light borders, 4px radius. */
 .appShell
   input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]),

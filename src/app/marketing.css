@@ -545,7 +545,7 @@
   color: var(--mk-muted);
   font-weight: 500;
 }
-.previewTabs button.active {
+.previewTabs button[aria-selected="true"] {
   background: var(--mk-ink);
   border-color: var(--mk-ink);
   color: #fff;

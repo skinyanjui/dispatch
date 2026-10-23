@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AiSettings } from "@/components/ai-settings";
 import { StaffInvites } from "./staff-invites";
 import { ApiError, describe, useApi } from "@/lib/client-api";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
 import type { Context } from "@/lib/contracts";
 
 type Person = {
@@ -102,7 +103,6 @@ export function OrganizationSettings({
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
-  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const load = useCallback(async () => {
     if (!orgId) return;
     try {
@@ -156,22 +156,7 @@ export function OrganizationSettings({
     [data, carrierFilter, needle],
   );
   const visible = people.slice(0, shown);
-  function onTabKey(e: React.KeyboardEvent, index: number) {
-    const next =
-      e.key === "ArrowRight"
-        ? (index + 1) % tabs.length
-        : e.key === "ArrowLeft"
-          ? (index + tabs.length - 1) % tabs.length
-          : e.key === "Home"
-            ? 0
-            : e.key === "End"
-              ? tabs.length - 1
-              : -1;
-    if (next < 0) return;
-    e.preventDefault();
-    setTab(tabs[next].id);
-    tabRefs.current[tabs[next].id]?.focus();
-  }
+
   return (
     <section className="orgPage" aria-label="Organization settings">
       <div className="orgIntro">
@@ -216,35 +201,16 @@ export function OrganizationSettings({
       )}
       {data && (
         <>
-          <div className="orgTabs" role="tablist" aria-label="Organization">
-            {tabs.map((t, i) => (
-              <button
-                key={t.id}
-                ref={(el) => {
-                  tabRefs.current[t.id] = el;
-                }}
-                role="tab"
-                id={"org-tab-" + t.id}
-                aria-selected={tab === t.id}
-                aria-controls={"org-panel-" + t.id}
-                tabIndex={tab === t.id ? 0 : -1}
-                className={"orgTab" + (tab === t.id ? " active" : "")}
-                onClick={() => setTab(t.id)}
-                onKeyDown={(e) => onTabKey(e, i)}
-              >
-                {t.label}
-                {t.id === "people" && (
-                  <span className="orgCount">{data.team.length}</span>
-                )}
-              </button>
-            ))}
-          </div>
-          <div
-            role="tabpanel"
-            id={"org-panel-" + tab}
-            aria-labelledby={"org-tab-" + tab}
-            className="orgPanel"
-          >
+          <Tabs
+            label="Organization"
+            idPrefix="org"
+            items={tabs.map((t) =>
+              t.id === "people" ? { ...t, count: data.team.length } : t,
+            )}
+            value={tab}
+            onChange={setTab}
+          />
+          <TabPanel idPrefix="org" value={tab} className="orgPanel">
             {tab === "profile" && (
               <div className="orgGrid">
                 <form
@@ -508,7 +474,7 @@ export function OrganizationSettings({
             {tab === "ai" && (
               <AiSettings organizationId={data.id} onAuthError={onAuthError} />
             )}
-          </div>
+          </TabPanel>
         </>
       )}
     </section>

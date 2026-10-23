@@ -22,19 +22,18 @@ test("documents: the page opens on a list that has something in it", async ({
   const chips = page.getByRole("group", { name: "Show drafts" });
   await expect(chips).toBeVisible();
   const total = Number(
-    await chips.getByRole("button", { name: /^All/ }).locator("b").innerText(),
+    await chips.getByRole("button", { name: /^All/ }).locator(".toggleCount").innerText(),
   );
   const needs = Number(
     await chips
       .getByRole("button", { name: /^Needs review/ })
-      .locator("b")
+      .locator(".toggleCount")
       .innerText(),
   );
   const pressed = chips.locator('[aria-pressed="true"]');
   await expect(pressed).toHaveCount(1);
   // "Needs review" is the default only when something needs review.
-  if (total > 0 && needs === 0)
-    await expect(pressed).toContainText("All");
+  if (total > 0 && needs === 0) await expect(pressed).toContainText("All");
   if (needs > 0) await expect(pressed).toContainText("Needs review");
 });
 
@@ -46,7 +45,7 @@ test("documents on a phone: chips and cards fit, template actions stay inside th
   await page.goto("/documents");
   const rects = await page
     .getByRole("group", { name: "Show drafts" })
-    .locator(".attentionChip")
+    .locator(".chip")
     .evaluateAll((els) =>
       els.map((e) => {
         const r = e.getBoundingClientRect();
@@ -57,7 +56,10 @@ test("documents on a phone: chips and cards fit, template actions stay inside th
     for (let j = i + 1; j < rects.length; j++) {
       const [a, b] = [rects[i], rects[j]];
       expect(
-        a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1,
+        a[0] < b[2] - 1 &&
+          b[0] < a[2] - 1 &&
+          a[1] < b[3] - 1 &&
+          b[1] < a[3] - 1,
       ).toBe(false);
     }
   expect(await noOverflow(page)).toBe(true);

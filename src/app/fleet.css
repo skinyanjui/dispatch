@@ -21,30 +21,7 @@
   font-size: 15px;
   font-weight: 600;
 }
-.appShell .fleetTiles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.appShell .fleetTile {
-  display: grid;
-  flex: 1 1 140px;
-  gap: 2px;
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fff;
-}
-.appShell .fleetTile strong {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.appShell .fleetTile span {
-  color: var(--muted);
-  font-size: 12.5px;
-}
+
 .appShell .fleetPanel {
   border: 1px solid var(--border);
   border-radius: var(--radius);

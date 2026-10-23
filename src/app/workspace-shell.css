@@ -233,8 +233,6 @@
   .appShell .search input {
     font-size: 13px;
   }
-
-  
 }
 @media (max-width: 1150px) and (min-width: 1001px) {
   .appShell .workspace {
@@ -243,8 +241,6 @@
   .appShell .topbar {
     padding-inline: 18px;
   }
-  
-  
 
   .appShell .search {
     width: 300px;
@@ -313,8 +309,6 @@
   .appShell .toolbarMeta {
     font-size: 9px;
   }
-  
-  
 
   .appShell .workspace > footer {
     line-height: 1.8;

@@ -37,7 +37,9 @@ for (const [name, width, height] of [
     }
     await expect(page.getByLabel("Sort carriers")).toBeVisible();
     // The signed-in person's own role is not repeated on every row.
-    await expect(page.locator(".roleLabel", { hasText: "Dispatcher" })).toHaveCount(0);
+    await expect(
+      page.locator(".roleLabel", { hasText: "Dispatcher" }),
+    ).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

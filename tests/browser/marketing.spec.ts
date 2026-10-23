@@ -73,7 +73,9 @@ test("public pages render, are accessible, fit phones and link to real destinati
   // workspace (made-up sample values) is excluded from this check.
   const copy = await page.evaluate(() => {
     const clone = document.body.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll(".preview, script, style").forEach((e) => e.remove());
+    clone
+      .querySelectorAll(".preview, script, style")
+      .forEach((e) => e.remove());
     return clone.innerText ?? clone.textContent ?? "";
   });
   expect(copy).not.toMatch(/\$\d|testimonial|trusted by/i);
@@ -97,14 +99,19 @@ test("tabs and header links share one row on a phone instead of stranding one", 
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto("/welcome");
   const rows = (sel: string) =>
-    page.locator(sel).evaluateAll(
-      (els) =>
-        new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size,
-    );
+    page
+      .locator(sel)
+      .evaluateAll(
+        (els) =>
+          new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))
+            .size,
+      );
   expect(await rows(".previewTabs button")).toBe(1);
   expect(await rows(".mkHeader nav a")).toBe(1);
   expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
   ).toBe(true);
 });
 

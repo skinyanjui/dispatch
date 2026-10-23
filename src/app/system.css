@@ -127,9 +127,6 @@
 .appShell .reports .helpText {
   margin: 0 0 var(--space-2);
 }
-.appShell .reportTiles {
-  margin: var(--space-2) 0 0;
-}
 
 /* Fieldsets with a legend (e.g. the invoice picker) pad like other panels. */
 .appShell fieldset.opsChecklist {
@@ -258,7 +255,9 @@
 }
 
 /* Page sections inside the card pages. */
-.appShell .carrierDirectory h2:not(.directoryIntro h2, .opsCard h2, .laneHeading h2) {
+.appShell
+  .carrierDirectory
+  h2:not(.directoryIntro h2, .opsCard h2, .laneHeading h2) {
   margin: var(--space-5) 0 var(--space-2);
   font-size: 14px;
   font-weight: 600;
@@ -378,31 +377,7 @@
 }
 
 /* Inbox as an email client: tabs, dense rows, flat messages. */
-.appShell .inboxTabs {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  gap: var(--space-1);
-  border-bottom: 1px solid var(--border);
-}
-.appShell .inboxTab {
-  flex: none;
-  min-height: var(--control-h);
-  padding: 0 var(--space-3);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  color: var(--muted);
-  font-weight: 500;
-}
-.appShell .inboxTab:hover {
-  color: var(--ink);
-  background: transparent;
-}
-.appShell .inboxTab.active {
-  color: var(--ink);
-  border-bottom-color: var(--accent);
-}
+
 .appShell .threadList {
   gap: 0;
   border: 1px solid var(--border);
@@ -540,8 +515,7 @@
 /* Comfortable tap targets on phones. */
 @media (max-width: 760px) {
   .appShell .textButton,
-  .appShell button.secondary,
-  .appShell .inboxTab {
+  .appShell button.secondary {
     min-height: 40px;
   }
 }
@@ -635,7 +609,7 @@
   .appShell .loadSurface {
     scroll-snap-type: x proximity;
   }
-  
+
   .appShell fieldset + h2,
   .appShell fieldset + h3 {
     margin-top: var(--space-5);
@@ -887,34 +861,11 @@ select {
 .appShell .attentionTitle {
   font-weight: 600;
 }
-.appShell .attentionChips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+/* "Show all loads" keeps its place while no chip is pressed. */
+.appShell .attentionReset.idle {
+  visibility: hidden;
 }
-.appShell .attentionChip {
-  gap: var(--space-2);
-  min-height: 30px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--panel);
-  font-weight: 500;
-}
-.appShell .attentionChip b {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.appShell .attentionChip.late {
-  color: var(--error);
-  border-color: var(--error-border);
-  background: var(--error-bg);
-}
-.appShell .attentionChip[aria-pressed="true"] {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
+
 .appShell .loadCard.level-late {
   border-left: 3px solid var(--error);
 }
@@ -1058,47 +1009,7 @@ select {
 }
 
 /* Billing: summary, tabs, a plain invoice table that stacks on phones. */
-.appShell .reportTile small {
-  color: var(--muted);
-  font-weight: 400;
-}
-.appShell .reportTile strong {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.appShell .reportTile.bad strong {
-  color: var(--error);
-}
-.appShell .reportTile.good strong {
-  color: #1f7a4d;
-}
-.appShell .billingTabs {
-  display: flex;
-  gap: var(--space-1);
-  margin: var(--space-4) 0 var(--space-3);
-  border-bottom: 1px solid var(--border);
-}
-.appShell .billingTab {
-  gap: var(--space-2);
-  min-height: 36px;
-  padding: 0 var(--space-3);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 500;
-}
-.appShell .billingTab[aria-selected="true"] {
-  color: var(--ink);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
-.appShell .billingTab b {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-}
+
 .appShell .billingTable {
   margin-top: var(--space-3);
 }
@@ -1153,14 +1064,6 @@ select {
     border: 0;
   }
 }
-@media (max-width: 640px) {
-  .appShell .billing .reportTiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .appShell .billing .reportTile strong {
-    font-size: 18px;
-  }
-}
 
 /* Hierarchy: the name first, then what it is, then how to reach it. */
 
@@ -1202,7 +1105,6 @@ select {
 }
 .appShell .queueTab.active {
   color: var(--ink);
-  font-weight: 600;
   border-color: var(--ink);
   background: var(--soft);
 }
@@ -1211,6 +1113,25 @@ select {
   height: 9px;
   border-radius: 50%;
   flex: none;
+}
+/* Queue colours, matching the board's stage dots. */
+.appShell .queueDot.all {
+  background: var(--accent);
+}
+.appShell .queueDot.booked {
+  background: #5b6b7a;
+}
+.appShell .queueDot.dispatched {
+  background: #8b5cf6;
+}
+.appShell .queueDot.picked-up {
+  background: #f59e0b;
+}
+.appShell .queueDot.delivered {
+  background: #10b981;
+}
+.appShell .queueDot.cancelled {
+  background: #ef4444;
 }
 @media (max-width: 1000px), (pointer: coarse) {
   .appShell .queueTab {
@@ -1377,39 +1298,7 @@ select {
   align-items: center;
   width: auto;
 }
-.appShell .orgTabs {
-  display: flex;
-  gap: var(--space-1);
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.appShell .orgTab {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 38px;
-  padding: 0 var(--space-3);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 500;
-}
-.appShell .orgTab:hover {
-  color: var(--ink);
-}
-.appShell .orgTab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-.appShell .orgCount {
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--panel-soft, #eef1fb);
-  font-size: 11px;
-}
+
 .appShell .orgPanel {
   display: grid;
   gap: var(--space-3);
@@ -1527,11 +1416,7 @@ select {
   color: var(--muted);
   font-weight: 500;
 }
-.appShell .segment.active {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgb(15 27 61 / 0.12);
-}
+
 .appShell .reportDates {
   display: flex;
   gap: var(--space-2);
@@ -1544,20 +1429,7 @@ select {
 .appShell .reportExport {
   margin-left: auto;
 }
-.appShell .reportTile.link {
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
-.appShell .reportTile.link:hover {
-  border-color: var(--accent);
-}
-.appShell .reportOpen {
-  margin-top: var(--space-1);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-}
+
 .appShell .reportDelta {
   color: var(--muted);
 }
@@ -1567,37 +1439,15 @@ select {
 .appShell .reportDelta.down {
   color: #b42318;
 }
-.appShell .reportTile.skeleton {
-  min-height: 92px;
-  background: linear-gradient(90deg, #f1f3fb, #e6eaf8, #f1f3fb);
-}
+
 .appShell .reportStale {
   opacity: 0.6;
   transition: opacity 0.15s;
 }
-.appShell .pipeline {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-.appShell .pipelineStep {
-  display: grid;
-  gap: 2px;
-  padding: var(--space-3);
-  text-align: left;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.appShell .pipelineStep strong {
-  font-size: 22px;
-}
-.appShell .pipelineStep:not(:disabled):hover {
-  border-color: var(--accent);
-}
-.appShell .weekChart {
+
+.appShell .columnChart {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: var(--space-2);
   height: 150px;
   margin: 0;
@@ -1608,23 +1458,20 @@ select {
   border-radius: 10px;
   overflow-x: auto;
 }
-.appShell .weekChart li {
+.appShell .columnChart li {
   flex: 1 0 34px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
   gap: 2px;
-  height: 100%;
 }
-.appShell .weekChart .column {
+.appShell .columnChart .column {
+  flex: 1;
   width: 100%;
   max-width: 36px;
-  min-height: 4px;
-  border-radius: 4px 4px 0 0;
-  background: var(--accent);
+  fill: var(--accent);
 }
-.appShell .weekChart small {
+.appShell .columnChart small {
   color: var(--muted);
   font-size: 11px;
 }
@@ -1640,9 +1487,7 @@ select {
   color: inherit;
 }
 @media (max-width: 640px) {
-  .appShell .pipeline {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  
   .appShell .reportExport {
     margin-left: 0;
   }
@@ -1656,34 +1501,9 @@ select {
   flex: none;
   white-space: nowrap;
 }
-.appShell .reportTile.link {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 2px;
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.appShell .reportTile {
-  padding: var(--space-3) var(--space-4);
-}
 
 /* ---- Inbox ---- */
-.appShell .inboxList > .inboxTabs {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  gap: var(--space-1);
-  padding: var(--space-2) 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: var(--bg, #fff);
-}
+
 .appShell .composerVia {
   display: flex;
   align-items: center;
@@ -1699,42 +1519,13 @@ select {
     display: none;
   }
 }
-.appShell .inboxList > .inboxTabs .inboxTab {
-  flex: 1 0 auto;
-  padding-inline: 10px;
-  white-space: nowrap;
-}
+
 .appShell .composerRow {
   align-items: flex-end;
 }
 
 /* ---- Carriers ---- */
-.appShell .carrierStats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: var(--space-2);
-}
-.appShell .carrierStat {
-  display: grid;
-  gap: 0;
-  min-width: 112px;
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.appShell .carrierStat strong {
-  font-size: 20px;
-}
-.appShell .carrierStat small {
-  color: var(--muted);
-}
-.appShell .carrierStat.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
+
 .appShell .carrierSort {
   margin-left: auto;
   align-self: center;
@@ -1793,7 +1584,6 @@ select {
 .appShell .directoryRowActions {
   flex-wrap: wrap;
 }
-.appShell .carrierStat,
 .appShell .carrierMetric {
   justify-items: start;
   text-align: left;
@@ -1827,67 +1617,7 @@ select {
   justify-content: center;
   padding-inline: var(--space-2);
 }
-.appShell .inboxRail .inboxTabs {
-  position: static;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0;
-  overflow: visible;
-  border: 0;
-}
-.appShell .inboxRail .inboxTab {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: 32px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: 8px;
-  text-align: left;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.appShell .inboxRail .inboxTab:hover {
-  background: var(--panel-soft, #eef1fb);
-  color: var(--ink);
-}
-.appShell .inboxRail .inboxTab.active {
-  background: #e9edfb;
-  color: var(--accent);
-  font-weight: 600;
-}
-.appShell .inboxRail .inboxTab.firstBox {
-  margin-top: var(--space-2);
-  position: relative;
-}
-.appShell .inboxRail .inboxTab.firstBox::before {
-  content: "";
-  position: absolute;
-  top: calc(-1 * var(--space-1) - 1px);
-  left: var(--space-3);
-  right: var(--space-3);
-  height: 1px;
-  background: var(--border);
-}
-.appShell .tabCount {
-  min-width: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
-}
-.appShell .tabCount.quiet {
-  background: transparent;
-  color: var(--muted);
-  font-weight: 500;
-}
+
 .appShell .undoBar {
   display: flex;
   align-items: center;
@@ -1935,23 +1665,10 @@ select {
   .appShell .inboxRail .primary {
     flex: none;
   }
-  .appShell .inboxRail .inboxTabs {
-    flex-direction: row;
-    gap: var(--space-1);
-  }
-  .appShell .inboxRail .inboxTab {
-    width: auto;
-  }
-  .appShell .inboxRail .inboxTab.firstBox::before {
-    display: none;
-  }
 }
 
 /* ---- Billing ---- */
-.appShell .billing .reportTile.link.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
+
 .appShell .billingTable .clickRow {
   cursor: pointer;
 }
@@ -2319,6 +2036,8 @@ select {
 }
 .recordFields {
   display: grid;
+  /* One column as wide as the panel, never as wide as its widest child. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   justify-items: start;
   gap: var(--space-2);
@@ -2369,9 +2088,7 @@ select {
   min-width: 0;
   min-height: 0;
 }
-.recordMain .orgTabs {
-  padding: 0 var(--space-4);
-}
+
 .recordPanel {
   display: grid;
   align-content: start;
@@ -2450,9 +2167,24 @@ select {
   gap: var(--space-2);
   margin-left: auto;
 }
-.appShell .viewMenu summary .orgCount {
-  margin-left: var(--space-2);
-}
+
 .appShell .viewTools .viewOptionsBody {
   right: 0;
+}
+
+/* The load record's tabs sit inside its padded main column. */
+.recordMain .tabs {
+  margin-bottom: 0;
+  padding: 0 var(--space-4);
+}
+
+/* The driver, vehicle and Assign controls wrap inside the record panel. */
+.recordFields .assignForm {
+  flex-wrap: wrap;
+  width: 100%;
+}
+.recordFields .nextMilestone {
+  width: 100%;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }

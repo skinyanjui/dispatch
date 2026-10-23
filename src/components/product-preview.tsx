@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
 
 /**
  * A picture of the workspace, drawn in plain markup with made-up sample
@@ -54,28 +55,16 @@ export function ProductPreview() {
   const [tab, setTab] = useState<Tab>("board");
   return (
     <div className="preview">
-      <div className="previewTabs" role="tablist" aria-label="Product views">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            id={"pv-tab-" + t.id}
-            aria-selected={tab === t.id}
-            aria-controls="pv-panel"
-            className={tab === t.id ? "active" : ""}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Product views"
+        idPrefix="pv"
+        className="previewTabs"
+        items={tabs}
+        value={tab}
+        onChange={setTab}
+      />
       <p className="previewText">{tabs.find((t) => t.id === tab)!.text}</p>
-      <div
-        className="previewFrame"
-        role="tabpanel"
-        id="pv-panel"
-        aria-labelledby={"pv-tab-" + tab}
-      >
+      <TabPanel idPrefix="pv" value={tab} className="previewFrame">
         <div className="previewSide" aria-hidden="true">
           {[
             "Loads",
@@ -162,7 +151,7 @@ export function ProductPreview() {
             </div>
           )}
         </div>
-      </div>
+      </TabPanel>
       <small className="previewNote">
         A drawing with made-up sample values, not live data.
       </small>

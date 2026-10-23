@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Sheet } from "@/components/modal";
 import { ApiError, describe, useApi } from "@/lib/client-api";
@@ -208,18 +209,15 @@ export function FleetPage({
       )}
       {data && (
         <>
-          <div className="fleetTiles" role="group" aria-label="Fleet summary">
+          <StatTiles label="Fleet summary">
             {tiles.map(([label, n]) => (
-              <div key={label} className="fleetTile">
-                <strong>{n}</strong>
-                <span>{label}</span>
-              </div>
+              <StatTile key={label} label={label} value={n} />
             ))}
-          </div>
+          </StatTiles>
           <section className="fleetPanel" aria-labelledby="fleet-vehicles">
             <header>
               <h3 id="fleet-vehicles">
-                Vehicles <span className="orgCount">{vehicles.length}</span>
+                Vehicles <span className="countBadge">{vehicles.length}</span>
               </h3>
               {retiredCount > 0 && (
                 <label className="filterCheck">
@@ -343,7 +341,7 @@ export function FleetPage({
           <section className="fleetPanel" aria-labelledby="fleet-drivers">
             <header>
               <h3 id="fleet-drivers">
-                Drivers <span className="orgCount">{drivers.length}</span>
+                Drivers <span className="countBadge">{drivers.length}</span>
               </h3>
               <button
                 type="button"
@@ -384,9 +382,7 @@ export function FleetPage({
                               (d.status === "ready" ? "good" : "warn")
                             }
                           >
-                            {d.status === "ready"
-                              ? "Active"
-                              : "Invite pending"}
+                            {d.status === "ready" ? "Active" : "Invite pending"}
                           </span>
                         </td>
                         <td data-label="Phone">{d.phone || "—"}</td>

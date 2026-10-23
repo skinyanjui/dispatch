@@ -39,7 +39,10 @@ test("loads on a phone: toolbar rows fill, counts share a row, board peeks the n
     for (let j = i + 1; j < chips.length; j++) {
       const [a, b] = [chips[i], chips[j]];
       expect(
-        a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1,
+        a[0] < b[2] - 1 &&
+          b[0] < a[2] - 1 &&
+          a[1] < b[3] - 1 &&
+          b[1] < a[3] - 1,
       ).toBe(false);
     }
   }
@@ -82,9 +85,9 @@ test("loads on a phone: the calendar is a list of days, the table keeps its firs
     .click();
   const first = page.locator(".loadTable tbody th").first();
   await expect(first).toBeVisible();
-  expect(
-    await first.evaluate((el) => getComputedStyle(el).position),
-  ).toBe("sticky");
+  expect(await first.evaluate((el) => getComputedStyle(el).position)).toBe(
+    "sticky",
+  );
   expect(await noOverflow(page)).toBe(true);
 });
 

@@ -30,9 +30,7 @@ for (const [path, title] of [
     }
     // Following one lands on its heading, below the sticky bar.
     await links.last().click();
-    const target = page.locator(
-      (await links.last().getAttribute("href"))!,
-    );
+    const target = page.locator((await links.last().getAttribute("href"))!);
     await expect(target).toBeInViewport();
     expect((await target.boundingBox())!.y).toBeGreaterThan(50);
     // The reading column is not wider than about 70 characters.

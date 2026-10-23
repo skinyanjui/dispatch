@@ -74,14 +74,6 @@ export const queues = [
   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
 ];
-const dotColors: Record<string, string> = {
-  "": "var(--accent)",
-  booked: "#5b6b7a",
-  dispatched: "#8b5cf6",
-  "picked-up": "#f59e0b",
-  delivered: "#10b981",
-  cancelled: "#ef4444",
-};
 /** The load queues, as a row above the board with a coloured dot each. */
 export function QueueTabs({
   status,
@@ -115,8 +107,7 @@ export function QueueTabs({
               onClick={() => onQueue(value)}
             >
               <span
-                className="queueDot"
-                style={{ background: dotColors[value] }}
+                className={"queueDot " + (value || "all")}
                 aria-hidden="true"
               />
               {driverOnly && value === "" ? "My loads" : label}

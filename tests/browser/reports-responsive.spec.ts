@@ -30,7 +30,7 @@ test("reports on a phone: every date option is reachable, tiles sit two across, 
     expect(r.left).toBeGreaterThanOrEqual(0);
     expect(r.right).toBeLessThanOrEqual(390);
   }
-  const tiles = page.locator(".reportTiles").first().locator(".reportTile");
+  const tiles = page.locator(".stats").first().locator(".stat");
   await expect(tiles.first()).toBeVisible();
   const lefts = await tiles.evaluateAll((els) => [
     ...new Set(els.map((e) => Math.round(e.getBoundingClientRect().left))),
@@ -46,13 +46,13 @@ test("reports on a desktop: tiles of every group fill their row", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/reports");
   await expect(page.getByRole("heading", { name: "Billing" })).toBeVisible();
-  const groups = page.locator(".reports .reportTiles");
+  const groups = page.locator(".reports .stats");
   const count = await groups.count();
   for (let i = 0; i < count; i++) {
     const g = groups.nth(i);
     const frame = (await g.boundingBox())!;
     const boxes = await g
-      .locator(".reportTile")
+      .locator(".stat")
       .evaluateAll((els) => els.map((e) => e.getBoundingClientRect()));
     const top = Math.min(...boxes.map((b) => b.top));
     const firstRow = boxes.filter((b) => Math.abs(b.top - top) < 2);
@@ -69,7 +69,9 @@ test("by carrier: a table with sortable headers on a desktop, cards with a sort 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/reports");
   const region = page.getByRole("region", { name: "By carrier" });
-  await expect(region.getByRole("columnheader", { name: /^Loads/ })).toBeVisible();
+  await expect(
+    region.getByRole("columnheader", { name: /^Loads/ }),
+  ).toBeVisible();
   await expect(page.getByLabel("Sort carriers by")).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });

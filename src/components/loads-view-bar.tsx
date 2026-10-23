@@ -1,4 +1,5 @@
 "use client";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import {
@@ -121,19 +122,13 @@ export function LoadsViewBar({
     });
   return (
     <div className="viewBar">
-      <div className="segmented" role="group" aria-label="Layout">
-        {layouts.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={"segment" + (config.layout === key ? " active" : "")}
-            aria-pressed={config.layout === key}
-            onClick={() => onConfig({ layout: key })}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <ToggleGroup
+        label="Layout"
+        variant="segmented"
+        items={layouts.map(([id, label]) => ({ id, label }))}
+        value={config.layout}
+        onChange={(layout) => layout && onConfig({ layout })}
+      />
       <label className="viewPicker">
         <span className="srOnly">Saved view</span>
         <select
@@ -178,7 +173,7 @@ export function LoadsViewBar({
           <summary>
             Filter
             {(filters.status ? 1 : 0) + (filters.carrier_id ? 1 : 0) > 0 && (
-              <span className="orgCount">
+              <span className="countBadge">
                 {(filters.status ? 1 : 0) + (filters.carrier_id ? 1 : 0)}
               </span>
             )}

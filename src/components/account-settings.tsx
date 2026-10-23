@@ -1,7 +1,8 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ShieldCheckIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
 
 type Account = {
   name: string;
@@ -37,7 +38,6 @@ export function AccountSettings({
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState<Tab>("profile");
-  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const load = useCallback(async () => {
     try {
       setAccount(await api<Account>("account"));
@@ -68,22 +68,6 @@ export function AccountSettings({
       setBusy(false);
     }
   }
-  function onTabKey(e: React.KeyboardEvent, index: number) {
-    const next =
-      e.key === "ArrowRight"
-        ? (index + 1) % tabs.length
-        : e.key === "ArrowLeft"
-          ? (index + tabs.length - 1) % tabs.length
-          : e.key === "Home"
-            ? 0
-            : e.key === "End"
-              ? tabs.length - 1
-              : -1;
-    if (next < 0) return;
-    e.preventDefault();
-    setTab(tabs[next].id);
-    tabRefs.current[tabs[next].id]?.focus();
-  }
   return (
     <section
       className="carrierDirectory accountPage"
@@ -109,32 +93,14 @@ export function AccountSettings({
       </p>
       {account && (
         <>
-          <div className="orgTabs" role="tablist" aria-label="Account">
-            {tabs.map((t, i) => (
-              <button
-                key={t.id}
-                ref={(el) => {
-                  tabRefs.current[t.id] = el;
-                }}
-                role="tab"
-                id={"account-tab-" + t.id}
-                aria-selected={tab === t.id}
-                aria-controls={"account-panel-" + t.id}
-                tabIndex={tab === t.id ? 0 : -1}
-                className={"orgTab" + (tab === t.id ? " active" : "")}
-                onClick={() => setTab(t.id)}
-                onKeyDown={(e) => onTabKey(e, i)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div
-            role="tabpanel"
-            id={"account-panel-" + tab}
-            aria-labelledby={"account-tab-" + tab}
-            className="billingColumns"
-          >
+          <Tabs
+            label="Account"
+            idPrefix="account"
+            items={tabs}
+            value={tab}
+            onChange={setTab}
+          />
+          <TabPanel idPrefix="account" value={tab} className="billingColumns">
             <div className="opsList">
               {tab === "profile" && (
                 <form
@@ -454,7 +420,7 @@ export function AccountSettings({
                 </article>
               )}
             </div>
-          </div>
+          </TabPanel>
         </>
       )}
     </section>

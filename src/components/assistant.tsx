@@ -1,10 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowUpIcon,
-  PlusIcon,
-  SparkleIcon,
-} from "@phosphor-icons/react";
+import { ArrowUpIcon, PlusIcon, SparkleIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import {
   examplePrompts,

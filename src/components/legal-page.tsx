@@ -39,8 +39,8 @@ export function LegalPage({
           <p className="legalDraft" role="note">
             <strong>Draft, not reviewed by a lawyer.</strong> This page
             describes how Relay works today in plain language. It has not been
-            through legal review and should be before real customers rely on
-            it. Items in [brackets] still need to be filled in by the operator.
+            through legal review and should be before real customers rely on it.
+            Items in [brackets] still need to be filled in by the operator.
           </p>
           <h1>{title}</h1>
           <p className="legalMeta">

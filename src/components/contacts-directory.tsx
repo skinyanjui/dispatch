@@ -59,10 +59,7 @@ function Row({
       setTimeout(() => setCopied(""), 2000);
     });
   return (
-    <article
-      className="dirRow"
-      aria-label={`${entry.name}, ${entry.detail}`}
-    >
+    <article className="dirRow" aria-label={`${entry.name}, ${entry.detail}`}>
       <span className={"dirAvatar " + entry.group} aria-hidden="true">
         {initials(entry.name)}
       </span>

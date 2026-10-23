@@ -78,6 +78,7 @@ import { AuditLog } from "@/components/audit-log";
 import { AssignVehicleSelect, FleetPage } from "@/components/fleet";
 import { driverUploadTypes } from "@/lib/compliance";
 import { Board } from "@/components/board";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { LoadCard } from "@/components/load-card";
 import {
   AttentionStrip,
@@ -1669,7 +1670,10 @@ export default function Workspace({
                             ? "Record next milestone"
                             : "Choose a driver to continue"}
                           <ArrowRightIcon size={15} aria-hidden="true" />
-                          <small>{stageLabels[nextStage]}</small>
+                          {/* The stage it moves to, once it can move. */}
+                          {selected.assignment && (
+                            <small>{stageLabels[nextStage]}</small>
+                          )}
                         </button>
                       )}
                     </>
@@ -1722,34 +1726,16 @@ export default function Workspace({
                 )}
               </aside>
               <div className="recordMain">
-                <div
-                  className="orgTabs"
-                  role="tablist"
-                  aria-label="Load sections"
-                >
-                  {recordTabs.map((t) => (
-                    <button
-                      key={t.id}
-                      role="tab"
-                      id={"record-tab-" + t.id}
-                      aria-selected={recordTab === t.id}
-                      aria-controls="record-panel"
-                      className={
-                        "orgTab" + (recordTab === t.id ? " active" : "")
-                      }
-                      onClick={() => setRecordTab(t.id)}
-                    >
-                      {t.label}
-                      {t.count !== undefined && (
-                        <span className="orgCount">{t.count}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div
-                  role="tabpanel"
-                  id="record-panel"
-                  aria-labelledby={"record-tab-" + recordTab}
+                <Tabs
+                  label="Load sections"
+                  idPrefix="record"
+                  items={recordTabs}
+                  value={recordTab}
+                  onChange={setRecordTab}
+                />
+                <TabPanel
+                  idPrefix="record"
+                  value={recordTab}
                   className="recordPanel"
                 >
                   {recordTab === "timeline" && (
@@ -1964,7 +1950,7 @@ export default function Workspace({
                         )}
                     </>
                   )}
-                </div>
+                </TabPanel>
               </div>
             </div>
             <p className="detailFoot">

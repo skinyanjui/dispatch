@@ -26,6 +26,7 @@ import "./inbox.css";
 import "./account.css";
 import "./loadcard.css";
 import "./legal.css";
+import "./ui.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
   description: "Carrier-scoped freight dispatch operations",

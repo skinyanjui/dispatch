@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import {
   ArrowUpRightIcon,
   BuildingsIcon,
@@ -204,25 +205,18 @@ export function CarrierDirectory({
               </button>
             </div>
           )}
-          <div
-            className="carrierStats"
-            role="group"
-            aria-label="Filter carriers"
-          >
+          <StatTiles label="Filter carriers">
             {stats.map((s) => (
-              <button
+              <StatTile
                 key={s.id}
-                type="button"
-                className={"carrierStat" + (filter === s.id ? " active" : "")}
-                aria-pressed={filter === s.id}
+                label={s.label}
+                value={summary ? s.value : "–"}
+                pressed={filter === s.id}
                 disabled={!summary}
-                onClick={() => pick(s.id)}
-              >
-                <strong>{summary ? s.value : "–"}</strong>
-                <small>{s.label}</small>
-              </button>
+                onSelect={() => pick(s.id)}
+              />
             ))}
-          </div>
+          </StatTiles>
           <div className="carrierToolbar">
             <label className="carrierSort">
               <span className="srOnly">Sort carriers</span>

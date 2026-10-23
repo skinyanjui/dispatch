@@ -8,6 +8,9 @@ import {
   ReceiptIcon,
 } from "@phosphor-icons/react";
 import { Sheet } from "@/components/modal";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
+import { ToggleGroup } from "@/components/ui/toggle-group";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type {
   BillingOverview,
@@ -569,45 +572,6 @@ function shownStatus(i: DispatchInvoice, now: string) {
     return { key: "partial" as const, label: "Partly paid", tone: "warn" };
   return { key: "open" as const, label: "Open", tone: "warn" };
 }
-function Tile({
-  label,
-  value,
-  hint,
-  tone,
-  onOpen,
-  openLabel,
-  active,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "good" | "bad";
-  onOpen?: () => void;
-  openLabel?: string;
-  active?: boolean;
-}) {
-  const cls = "reportTile" + (tone ? " " + tone : "");
-  const body = (
-    <>
-      <small>{label}</small>
-      <strong>{value}</strong>
-      {hint && <small>{hint}</small>}
-    </>
-  );
-  return onOpen ? (
-    <button
-      type="button"
-      className={cls + " link" + (active ? " active" : "")}
-      aria-pressed={active}
-      aria-label={`${label}: ${value}. ${openLabel}`}
-      onClick={onOpen}
-    >
-      {body}
-    </button>
-  ) : (
-    <div className={cls}>{body}</div>
-  );
-}
 
 export function BillingWorkspace({
   context,
@@ -950,57 +914,53 @@ export function BillingWorkspace({
       </p>
       {data && (
         <>
-          <div
-            className="reportTiles"
-            role="group"
-            aria-label="Billing summary"
-          >
-            <Tile
+          <StatTiles label="Billing summary">
+            <StatTile
               label="Outstanding"
               value={money(outstanding)}
               hint={`${openCount} open ${openCount === 1 ? "invoice" : "invoices"}`}
-              openLabel="Show open invoices"
-              active={tab === "invoices" && filter === "open"}
-              onOpen={() => {
+              actionLabel="Show open invoices"
+              pressed={tab === "invoices" && filter === "open"}
+              onSelect={() => {
                 setTab("invoices");
                 setFilter("open");
                 setShownInvoices(pageSize);
               }}
             />
-            <Tile
+            <StatTile
               label="Overdue"
               value={money(overdue)}
               hint={`${overdueCount} past due`}
               tone={overdueCount ? "bad" : undefined}
-              openLabel="Show overdue invoices"
-              active={tab === "invoices" && filter === "overdue"}
-              onOpen={() => {
+              actionLabel="Show overdue invoices"
+              pressed={tab === "invoices" && filter === "overdue"}
+              onSelect={() => {
                 setTab("invoices");
                 setFilter("overdue");
                 setShownInvoices(pageSize);
               }}
             />
-            <Tile
+            <StatTile
               label="Collected"
               value={money(collected)}
               hint="On issued invoices"
               tone="good"
-              openLabel="Show paid invoices"
-              active={tab === "invoices" && filter === "paid"}
-              onOpen={() => {
+              actionLabel="Show paid invoices"
+              pressed={tab === "invoices" && filter === "paid"}
+              onSelect={() => {
                 setTab("invoices");
                 setFilter("paid");
                 setShownInvoices(pageSize);
               }}
             />
-            <Tile
+            <StatTile
               label="Ready to invoice"
               value={String(eligible.length)}
               hint={
                 eligible.length === 1 ? "delivered load" : "delivered loads"
               }
-              openLabel={data.can_invoice ? "Start a new invoice" : undefined}
-              onOpen={
+              actionLabel={data.can_invoice ? "Start a new invoice" : undefined}
+              onSelect={
                 data.can_invoice && eligible.length
                   ? () => {
                       setTab("invoices");
@@ -1009,70 +969,44 @@ export function BillingWorkspace({
                   : undefined
               }
             />
-          </div>
-          <div
-            className="billingTabs"
-            role="tablist"
-            aria-label="Billing views"
-          >
-            {(
-              [
-                ["invoices", "Invoices", invoices.length],
-                ["freight", "Carrier freight", billable.length],
-              ] as const
-            ).map(([key, label, n]) => (
-              <button
-                key={key}
-                role="tab"
-                id={"billing-tab-" + key}
-                aria-selected={tab === key}
-                aria-controls="billing-panel"
-                className="billingTab"
-                onClick={() => setTab(key)}
-              >
-                {label}
-                <b>{n}</b>
-              </button>
-            ))}
-          </div>
-          <div
-            id="billing-panel"
-            role="tabpanel"
-            aria-labelledby={"billing-tab-" + tab}
-          >
+          </StatTiles>
+          <Tabs
+            label="Billing views"
+            idPrefix="billing"
+            items={[
+              { id: "invoices", label: "Invoices", count: invoices.length },
+              {
+                id: "freight",
+                label: "Carrier freight",
+                count: billable.length,
+              },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+          <TabPanel idPrefix="billing" value={tab}>
             {tab === "invoices" ? (
               <>
                 <p className="helpText">
                   Relay&apos;s fee invoices to this carrier under the dispatch
                   agreement.
                 </p>
-                <div
-                  className="attentionChips"
-                  role="group"
-                  aria-label="Show invoices"
-                >
-                  {invoiceFilters.map(([key, label]) => {
-                    const n = counts(key);
-                    if (!n && key !== "all" && filter !== key) return null;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        className={
-                          "attentionChip" + (key === "overdue" ? " late" : "")
-                        }
-                        aria-pressed={filter === key}
-                        onClick={() => {
-                          setFilter(key);
-                          setShownInvoices(pageSize);
-                        }}
-                      >
-                        {label}
-                        <b>{n}</b>
-                      </button>
-                    );
-                  })}
-                </div>
+                <ToggleGroup
+                  label="Show invoices"
+                  items={invoiceFilters.map(([key, label]) => ({
+                    id: key,
+                    label,
+                    count: counts(key),
+                    tone: key === "overdue" ? ("late" as const) : undefined,
+                  }))}
+                  hideEmpty
+                  value={filter}
+                  onChange={(key) => {
+                    if (!key) return;
+                    setFilter(key);
+                    setShownInvoices(pageSize);
+                  }}
+                />
                 {sorted.length > shownInvoices && (
                   <p className="helpText" role="status">
                     Showing {shownInvoices} of {sorted.length}
@@ -1253,33 +1187,23 @@ export function BillingWorkspace({
                   The carrier&apos;s invoice to the broker or shipper. Proceeds
                   belong to the carrier; receipts are recorded as reported.
                 </p>
-                <div
-                  className="attentionChips"
-                  role="group"
-                  aria-label="Show freight bills"
-                >
-                  {freightFilters.map(([key, label]) => {
-                    const n =
+                <ToggleGroup
+                  label="Show freight bills"
+                  items={freightFilters.map(([key, label]) => ({
+                    id: key,
+                    label,
+                    count:
                       key === "all"
                         ? billable.length
-                        : billable.filter((l) => freightKind(l) === key).length;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        className="attentionChip"
-                        aria-pressed={freightFilter === key}
-                        onClick={() => {
-                          setFreightFilter(key);
-                          setShownFreight(pageSize);
-                        }}
-                      >
-                        {label}
-                        <b>{n}</b>
-                      </button>
-                    );
-                  })}
-                </div>
+                        : billable.filter((l) => freightKind(l) === key).length,
+                  }))}
+                  value={freightFilter}
+                  onChange={(key) => {
+                    if (!key) return;
+                    setFreightFilter(key);
+                    setShownFreight(pageSize);
+                  }}
+                />
                 <label className="setupCheckbox">
                   <input
                     type="checkbox"
@@ -1378,7 +1302,7 @@ export function BillingWorkspace({
                 )}
               </>
             )}
-          </div>
+          </TabPanel>
           {open === "new" && data.can_invoice && (
             <Sheet
               label="New dispatch invoice"

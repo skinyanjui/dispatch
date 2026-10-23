@@ -1,0 +1,301 @@
+/* Shared controls from src/components/ui (ADR 0051). One definition each,
+   on the control scale in controls.css. Selection is shown by colour,
+   underline or background, never by a heavier weight, so choosing an item
+   never moves its neighbours. Loaded last. */
+
+/* ---- Tabs: switch the panel below ---- */
+.appShell .tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.appShell .tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.appShell .tab:hover {
+  background: transparent;
+  color: var(--ink);
+}
+.appShell .tab[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+.appShell .tabCount {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--panel-soft, #eef1fb);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Chips: filters with a count ---- */
+.appShell .chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.appShell .chip .toggleCount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .chip.late {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+  color: var(--error);
+}
+.appShell .chip[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* A chip row inside or under tabs has air above and below. */
+.appShell .tabs ~ .chips,
+.appShell [role="tabpanel"] .chips {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* ---- Segmented: pick one option ---- */
+.appShell .segmented {
+  display: inline-flex;
+  gap: 2px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.appShell .segment {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.appShell .segment[aria-pressed="true"] {
+  background: var(--sidebar-active);
+  color: var(--ink);
+}
+
+/* ---- Folders: the Inbox rail ---- */
+.appShell .folders {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.appShell .folder {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.appShell .folder:hover {
+  background: var(--panel-soft, #eef1fb);
+  color: var(--ink);
+}
+.appShell .folder[aria-pressed="true"] {
+  background: #e9edfb;
+  color: var(--accent);
+}
+.appShell .folder .toggleCount {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.appShell .folder.box .toggleCount {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .folder.firstBox {
+  position: relative;
+  margin-top: var(--space-2);
+}
+.appShell .folder.firstBox::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 1px);
+  right: var(--space-3);
+  left: var(--space-3);
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---- Phones ---- */
+@media (max-width: 800px) {
+  .appShell .folders {
+    flex-direction: row;
+    gap: var(--space-1);
+  }
+  .appShell .folder {
+    flex: none;
+    width: auto;
+  }
+  .appShell .folder.firstBox::before {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .appShell .folder {
+    min-height: 40px;
+  }
+}
+@media (max-width: 640px) {
+  .appShell .chip {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+/* A tab's own actions sit at the top of its panel, right-aligned. */
+.appShell .panelToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* ---- Count badge: beside a tab, heading or menu label ---- */
+.appShell .countBadge {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--panel-soft, #eef1fb);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .viewMenu summary .countBadge {
+  margin-left: var(--space-2);
+}
+
+/* ---- Stat tiles: summary figures, some of them filters or links ---- */
+.appShell .stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 var(--space-3);
+}
+.appShell .stat {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 150px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.appShell .stat small {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.appShell .stat strong {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .stat.bad strong {
+  color: var(--error);
+}
+.appShell .stat.good strong {
+  color: #1f7a4d;
+}
+.appShell .stat.link {
+  cursor: pointer;
+}
+.appShell .stat.link:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.appShell .stat[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.appShell .statAction {
+  margin-top: var(--space-1);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+.appShell .stat.skeleton {
+  min-height: 92px;
+  background: linear-gradient(90deg, #f1f3fb, #e6eaf8, #f1f3fb);
+}
+@media (max-width: 640px) {
+  .appShell .stat {
+    flex-basis: calc(50% - var(--space-2));
+  }
+  .appShell .stat strong {
+    font-size: 20px;
+  }
+}
+/* Buttons centre their content by default; a tile reads from the top. */
+.appShell .stat.link {
+  justify-content: flex-start;
+}

@@ -11,6 +11,7 @@ import {
   TrayIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "@/components/modal";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { DirectoryEntry } from "@/lib/contact-types";
 
@@ -330,28 +331,21 @@ function Composer({
       <div className="composerRow">
         {staff ? (
           <div className="composerVia">
-            <div className="segmented" role="group" aria-label="Send via">
-              {(
-                [
-                  ["in_app", "Relay"],
-                  ["email", "Email"],
-                  ["sms", "Text"],
-                ] as const
-              ).map(([m, label]) => (
-                <button
-                  key={m}
-                  type="button"
-                  className={"segment" + (mode === m ? " active" : "")}
-                  aria-pressed={mode === m}
-                  onClick={() => {
-                    setMode(m);
-                    key.current = crypto.randomUUID();
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <ToggleGroup
+              label="Send via"
+              variant="segmented"
+              items={[
+                { id: "in_app", label: "Relay" },
+                { id: "email", label: "Email" },
+                { id: "sms", label: "Text" },
+              ]}
+              value={log ? null : mode}
+              onChange={(m) => {
+                if (!m) return;
+                setMode(m as Mode);
+                key.current = crypto.randomUUID();
+              }}
+            />
             <label className="composerLog">
               <span className="srOnly">Log activity</span>
               <select
@@ -1015,40 +1009,26 @@ export function Inbox({
       )}
       <div className={"inboxLayout hasRail" + (hasDetail ? " hasDetail" : "")}>
         <aside className="inboxRail">
-          <div
-            className="inboxTabs"
-            role="group"
-            aria-label="Filter conversations"
-          >
-            {Object.keys(inboxFolders).map((tab) => {
-              const active = folder;
-              const isBox = tab === "archived" || tab === "trash";
-              const count = folderCount(tab, counts);
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  className={
-                    "inboxTab" +
-                    (active === tab ? " active" : "") +
-                    (tab === "archived" ? " firstBox" : "")
-                  }
-                  aria-pressed={active === tab}
-                  onClick={() => onFolder(tab)}
-                >
-                  <span>{inboxFolders[tab]}</span>
-                  {count > 0 && (
-                    <span
-                      className={"tabCount" + (isBox ? " quiet" : "")}
-                      aria-label={`${count} ${isBox ? "conversations" : "unread"}`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
+          <ToggleGroup
+            label="Filter conversations"
+            variant="folders"
+            items={Object.keys(inboxFolders).map((f) => {
+              const isBox = f === "archived" || f === "trash";
+              return {
+                id: f,
+                label: inboxFolders[f],
+                count: folderCount(f, counts),
+                className: isBox
+                  ? "box" + (f === "archived" ? " firstBox" : "")
+                  : undefined,
+              };
             })}
-          </div>
+            countLabel={(n, item) =>
+              `${n} ${item.className ? "conversations" : "unread"}`
+            }
+            value={folder}
+            onChange={(f) => f && onFolder(f)}
+          />
         </aside>
         <div className="inboxList">
           <div className="inboxListHead">

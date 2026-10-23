@@ -6,6 +6,13 @@ import {
   CaretRightIcon,
   DownloadSimpleIcon,
 } from "@phosphor-icons/react";
+import { ToggleGroup } from "@/components/ui/toggle-group";
+import { ColumnChart } from "@/components/ui/column-chart";
+import {
+  StatTile,
+  StatTiles,
+  StatTilesLoading,
+} from "@/components/ui/stat-tile";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import { formatMoney } from "@/lib/entry";
 import type { AttentionKey } from "@/lib/attention";
@@ -128,47 +135,6 @@ function Delta({
   );
 }
 
-function Tile({
-  label,
-  value,
-  hint,
-  delta,
-  onOpen,
-  openLabel,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  delta?: React.ReactNode;
-  onOpen?: () => void;
-  openLabel?: string;
-}) {
-  const inner = (
-    <>
-      <small>{label}</small>
-      <strong>{value}</strong>
-      {hint && <small>{hint}</small>}
-      {delta}
-      {onOpen && (
-        <span className="reportOpen" aria-hidden="true">
-          {openLabel} <CaretRightIcon size={11} />
-        </span>
-      )}
-    </>
-  );
-  return onOpen ? (
-    <button
-      type="button"
-      className="reportTile link"
-      onClick={onOpen}
-      aria-label={`${label}: ${value}. ${openLabel}`}
-    >
-      {inner}
-    </button>
-  ) : (
-    <div className="reportTile">{inner}</div>
-  );
-}
 const pct = (t: Timing) => (t.on_time_pct === null ? "—" : `${t.on_time_pct}%`);
 const timingHint = (t: Timing) =>
   `${t.on_time} of ${t.measured} reported on time` +
@@ -283,37 +249,27 @@ export function Reports({
       return (sort.desc ? -order : order) || a.name.localeCompare(b.name);
     });
   }, [data, search, sort]);
-  const maxWeek = Math.max(1, ...(data?.weekly.map((w) => w.loads) ?? [1]));
   const openLoads = onOpenLoads;
   return (
     <section className="reports" aria-label="Reports">
       <div className="reportBar">
-        <div className="segmented" role="group" aria-label="Date range">
-          {presets.map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-pressed={activePreset === n}
-              className={"segment" + (activePreset === n ? " active" : "")}
-              onClick={() => {
-                setCustom(false);
-                setFrom(daysAgo(n - 1));
-                setTo(iso(new Date()));
-                setShown(pageSize);
-              }}
-            >
-              Last {n} days
-            </button>
-          ))}
-          <button
-            type="button"
-            aria-pressed={custom}
-            className={"segment" + (custom ? " active" : "")}
-            onClick={() => setCustom(true)}
-          >
-            Custom
-          </button>
-        </div>
+        <ToggleGroup
+          label="Date range"
+          variant="segmented"
+          items={[
+            ...presets.map((n) => ({ id: String(n), label: `Last ${n} days` })),
+            { id: "custom", label: "Custom" },
+          ]}
+          value={custom ? "custom" : activePreset ? String(activePreset) : null}
+          onChange={(id) => {
+            if (!id) return;
+            if (id === "custom") return setCustom(true);
+            setCustom(false);
+            setFrom(daysAgo(Number(id) - 1));
+            setTo(iso(new Date()));
+            setShown(pageSize);
+          }}
+        />
         {custom && (
           <div className="reportDates">
             <label>
@@ -378,45 +334,39 @@ export function Reports({
       <p className="srOnly" role="status">
         {loading ? "Loading report" : "Report loaded"}
       </p>
-      {loading && !data && (
-        <div className="reportTiles" aria-hidden="true">
-          {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="reportTile skeleton" />
-          ))}
-        </div>
-      )}
+      {loading && !data && <StatTilesLoading count={6} />}
       {data && (
         <div aria-busy={loading} className={loading ? "reportStale" : ""}>
-          <div className="reportTiles">
-            <Tile
+          <StatTiles>
+            <StatTile
               label="Loads"
               value={String(data.loads.loads)}
               hint={`${data.loads.delivered} delivered · ${data.loads.cancelled} cancelled`}
-              delta={
+              extra={
                 <Delta now={data.loads.loads} before={before?.loads.loads} />
               }
-              onOpen={
+              onSelect={
                 openLoads &&
                 (() => openLoads({ carrier: carrier || undefined }))
               }
-              openLabel="Open loads"
+              actionLabel="Open loads"
             />
-            <Tile
+            <StatTile
               label="Freight value"
               value={formatMoney(data.loads.freight_minor)}
               hint="Agreed rates, excluding cancelled"
-              delta={
+              extra={
                 <Delta
                   now={Number(data.loads.freight_minor)}
                   before={before ? Number(before.loads.freight_minor) : null}
                 />
               }
             />
-            <Tile
+            <StatTile
               label="Pickups on time"
               value={pct(data.timing.pickup)}
               hint={timingHint(data.timing.pickup)}
-              delta={
+              extra={
                 <Delta
                   unit="pts"
                   now={data.timing.pickup.on_time_pct}
@@ -424,11 +374,11 @@ export function Reports({
                 />
               }
             />
-            <Tile
+            <StatTile
               label="Deliveries on time"
               value={pct(data.timing.delivery)}
               hint={timingHint(data.timing.delivery)}
-              delta={
+              extra={
                 <Delta
                   unit="pts"
                   now={data.timing.delivery.on_time_pct}
@@ -436,17 +386,17 @@ export function Reports({
                 />
               }
             />
-            <Tile
+            <StatTile
               label="Open exceptions"
               value={String(data.exceptions.open_now)}
               hint={`${data.exceptions.overdue} overdue · ${data.exceptions.opened} opened`}
-              onOpen={onOpenExceptions}
-              openLabel="Open exceptions"
+              onSelect={onOpenExceptions}
+              actionLabel="Open exceptions"
             />
-            <Tile
+            <StatTile
               label="Delivered, no accepted POD"
               value={String(data.delivered_without_pod)}
-              onOpen={
+              onSelect={
                 openLoads &&
                 (() =>
                   openLoads({
@@ -454,12 +404,12 @@ export function Reports({
                     attention: "paperwork",
                   }))
               }
-              openLabel="Show these loads"
+              actionLabel="Show these loads"
             />
-          </div>
+          </StatTiles>
 
           <h3>Pipeline</h3>
-          <div className="pipeline" role="group" aria-label="Pipeline">
+          <StatTiles label="Pipeline">
             {(
               [
                 ["Booked", data.loads.booked, "booked"],
@@ -468,49 +418,31 @@ export function Reports({
                 ["Delivered", data.loads.delivered, "delivered"],
               ] as const
             ).map(([label, count, status]) => (
-              <button
+              <StatTile
                 key={label}
-                type="button"
-                className="pipelineStep"
+                label={label}
+                value={String(count)}
+                actionLabel="Open loads"
                 disabled={!openLoads}
-                onClick={() =>
+                onSelect={() =>
                   openLoads?.({ carrier: carrier || undefined, status })
                 }
-                aria-label={`${label}: ${count}. Open loads`}
-              >
-                <strong>{count}</strong>
-                <small>{label}</small>
-              </button>
+              />
             ))}
-          </div>
+          </StatTiles>
 
           {data.weekly.length > 0 && (
             <>
               <h3>Loads by pickup week</h3>
-              <ol className="weekChart" aria-label="Loads by pickup week">
-                {data.weekly.map((w) => (
-                  <li
-                    key={w.week}
-                    title={`Week of ${w.week}: ${w.loads} loads, ${formatMoney(w.freight_minor)}`}
-                  >
-                    <strong>{w.loads}</strong>
-                    <span
-                      className="column"
-                      style={{
-                        height: `${Math.max(4, (w.loads / maxWeek) * 100)}%`,
-                      }}
-                      aria-hidden="true"
-                    />
-                    <small>
-                      <span className="srOnly">Week of </span>
-                      {w.week.slice(5)}
-                    </small>
-                    <span className="srOnly">
-                      {w.loads} loads, {formatMoney(w.freight_minor)}
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <ColumnChart
+                label="Loads by pickup week"
+                columns={data.weekly.map((w) => ({
+                  key: w.week,
+                  value: w.loads,
+                  label: w.week.slice(5),
+                  description: `Week of ${w.week}: ${w.loads} loads, ${formatMoney(w.freight_minor)}`,
+                }))}
+              />
             </>
           )}
 
@@ -659,7 +591,9 @@ export function Reports({
                         <td data-label="Opened">{x.opened}</td>
                         <td data-label="Open now">{x.open_now}</td>
                         <td data-label="Overdue">{x.overdue}</td>
-                        <td data-label="Avg. hours to resolve">{x.avg_hours}</td>
+                        <td data-label="Avg. hours to resolve">
+                          {x.avg_hours}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -669,38 +603,38 @@ export function Reports({
           )}
 
           <h3>Billing</h3>
-          <div className="reportTiles">
+          <StatTiles>
             {data.dispatch_invoices && (
               <>
-                <Tile
+                <StatTile
                   label="Dispatch invoices issued"
                   value={formatMoney(data.dispatch_invoices.issued_minor)}
                   hint={`${data.dispatch_invoices.issued} invoices in range`}
-                  onOpen={onOpenBilling}
-                  openLabel="Open billing"
+                  onSelect={onOpenBilling}
+                  actionLabel="Open billing"
                 />
-                <Tile
+                <StatTile
                   label="Dispatch fees outstanding"
                   value={formatMoney(data.dispatch_invoices.outstanding_minor)}
                   hint={`${data.dispatch_invoices.overdue} overdue · ${formatMoney(data.dispatch_invoices.paid_minor)} paid`}
-                  onOpen={onOpenBilling}
-                  openLabel="Open billing"
+                  onSelect={onOpenBilling}
+                  actionLabel="Open billing"
                 />
               </>
             )}
-            <Tile
+            <StatTile
               label="Carrier freight billed"
               value={formatMoney(data.carrier_freight_billing.billed_minor)}
               hint={`${data.carrier_freight_billing.submitted} packets submitted`}
             />
-            <Tile
+            <StatTile
               label="Carrier freight outstanding"
               value={formatMoney(
                 data.carrier_freight_billing.outstanding_minor,
               )}
               hint="Reported by carriers; Relay holds no freight funds"
             />
-          </div>
+          </StatTiles>
           <p className="helpText">
             Generated {new Date(data.generated_at).toLocaleString()} from live
             records.

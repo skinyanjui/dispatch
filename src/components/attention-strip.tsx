@@ -5,6 +5,7 @@ import {
   attentionLabels,
   type AttentionKey,
 } from "@/lib/attention";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 
 export type AttentionCounts = Record<AttentionKey, number>;
 
@@ -38,31 +39,31 @@ export function AttentionStrip({
         {total} {total === 1 ? "load needs" : "loads need"} attention
         {truncated && " (showing the newest)"}
       </strong>
-      <div className="attentionChips" role="group" aria-label="Show only">
-        {attentionKeys
+      <ToggleGroup
+        label="Show only"
+        items={attentionKeys
           .filter((key) => counts[key] > 0)
-          .map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={"attentionChip " + key}
-              aria-pressed={active === key}
-              onClick={() => onToggle(active === key ? null : key)}
-            >
-              {attentionLabels[key]}
-              <b>{counts[key]}</b>
-            </button>
-          ))}
-        {active && (
-          <button
-            type="button"
-            className="textButton"
-            onClick={() => onToggle(null)}
-          >
-            Show all loads
-          </button>
-        )}
-      </div>
+          .map((key) => ({
+            id: key,
+            label: attentionLabels[key],
+            count: counts[key],
+            className: key,
+          }))}
+        value={active}
+        allowNone
+        onChange={onToggle}
+      />
+      {/* Always present, so pressing a chip never reflows the row. */}
+      <button
+        type="button"
+        className={"textButton attentionReset" + (active ? "" : " idle")}
+        disabled={!active}
+        aria-hidden={!active}
+        tabIndex={active ? 0 : -1}
+        onClick={() => onToggle(null)}
+      >
+        Show all loads
+      </button>
     </section>
   );
 }

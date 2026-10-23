@@ -687,13 +687,9 @@ fieldset label:last-child {
   top: 10px;
 }
 @media (min-width: 1800px) {
-  
   .loadCard {
     padding: 18px;
   }
-
-  
-  
 }
 @media (max-width: 1050px) {
   .topbar {
@@ -710,8 +706,7 @@ fieldset label:last-child {
   .workspace {
     padding: 18px;
   }
-  
-  
+
   .loadCard {
     padding: 12px 10px;
   }
@@ -766,8 +761,7 @@ fieldset label:last-child {
   .workspace {
     padding: 16px 12px;
   }
-  
-  
+
   .loadCard {
     padding: 16px;
   }
@@ -820,4 +814,3 @@ fieldset label:last-child {
 .helpText {
   font-size: 11px;
 }
-

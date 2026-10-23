@@ -15,30 +15,7 @@
 .appShell .excBar label {
   margin: 0;
 }
-.appShell .excTiles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.appShell .excTile {
-  display: grid;
-  flex: 1 1 130px;
-  gap: 2px;
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fff;
-}
-.appShell .excTile strong {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.appShell .excTile span {
-  color: var(--muted);
-  font-size: 12.5px;
-}
+
 .appShell .excList {
   display: grid;
   gap: var(--space-2);

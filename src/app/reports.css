@@ -1,24 +1,7 @@
 /* Reports: tiles of every group fill their row, the pipeline is left-aligned
    like the other tiles, and on phones the range switch wraps instead of
    hiding "Custom", tiles sit two across, and the toolbar fills its rows. */
-.appShell .reports .reportTiles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.appShell .reports .reportTile {
-  flex: 1 1 150px;
-  min-width: 0;
-}
-.appShell .reports .pipelineStep {
-  justify-content: stretch;
-  justify-items: start;
-  text-align: left;
-}
-.appShell .reports .pipelineStep strong {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
+
 .appShell .reports > div > .helpText:last-child,
 .appShell .reports .helpText:last-child {
   margin-top: var(--space-3);
@@ -43,13 +26,6 @@
   }
   .appShell .reports .reportExport {
     justify-content: center;
-  }
-  .appShell .reports .reportTile {
-    flex: 1 1 calc(50% - var(--space-2));
-    padding: var(--space-3);
-  }
-  .appShell .reports .reportTile strong {
-    font-size: 20px;
   }
 }
 
@@ -114,4 +90,15 @@
   .appShell .reportCards td[colspan]::before {
     content: none;
   }
+}
+/* Custom range: the date fields are control height, so showing them never
+   makes the row taller or moves the range buttons. */
+.appShell .reportDates input {
+  box-sizing: border-box;
+  height: var(--control-h);
+  min-height: 0;
+  padding-block: 0;
+}
+.appShell .reportDates label {
+  margin: 0;
 }

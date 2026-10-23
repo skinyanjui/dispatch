@@ -9,6 +9,7 @@ import {
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import { Sheet } from "@/components/modal";
 import { Board } from "@/components/board";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import {
   activityKinds,
   activityLabels,
@@ -680,24 +681,19 @@ export function Prospects({
             ))}
           </select>
         </label>
-        <div className="attentionChips" role="group" aria-label="Follow-ups">
-          {(Object.keys(followLabels) as FollowUp[]).map((key) => {
-            const count = list?.follow_ups[key] ?? 0;
-            if (!count && follow !== key) return null;
-            return (
-              <button
-                key={key}
-                type="button"
-                className={"attentionChip" + (key === "overdue" ? " late" : "")}
-                aria-pressed={follow === key}
-                onClick={() => setFollow(follow === key ? "" : key)}
-              >
-                {followLabels[key]}
-                <b>{count}</b>
-              </button>
-            );
-          })}
-        </div>
+        <ToggleGroup
+          label="Follow-ups"
+          items={(Object.keys(followLabels) as FollowUp[]).map((key) => ({
+            id: key,
+            label: followLabels[key],
+            count: list?.follow_ups[key] ?? 0,
+            tone: key === "overdue" ? ("late" as const) : undefined,
+          }))}
+          hideEmpty
+          allowNone
+          value={follow || null}
+          onChange={(key) => setFollow(key ?? "")}
+        />
       </div>
       {error && (
         <div className="alert error" role="alert">

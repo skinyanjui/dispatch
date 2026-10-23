@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { WarningIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import {
@@ -84,7 +85,9 @@ export function ExceptionQueue({
     // revision is a refresh signal from exception changes made elsewhere.
   }, [load, revision]);
   const overdueNow = (item: LoadException) =>
-    item.status !== "resolved" && !!item.due_at && Date.parse(item.due_at) < now;
+    item.status !== "resolved" &&
+    !!item.due_at &&
+    Date.parse(item.due_at) < now;
   const tiles: [string, number][] = items
     ? [
         ["Shown", items.length],
@@ -153,20 +156,14 @@ export function ExceptionQueue({
       )}
       {items && items.length > 0 && (
         <>
-          <div className="excTiles" role="group" aria-label="Exception summary">
+          <StatTiles label="Exception summary">
             {tiles.map(([label, n]) => (
-              <div key={label} className="excTile">
-                <strong>{n}</strong>
-                <span>{label}</span>
-              </div>
+              <StatTile key={label} label={label} value={n} />
             ))}
-          </div>
+          </StatTiles>
           <div className="excList">
             {items.map((item) => (
-              <article
-                className={"excCard sev-" + item.severity}
-                key={item.id}
-              >
+              <article className={"excCard sev-" + item.severity} key={item.id}>
                 <header>
                   <WarningIcon size={16} aria-hidden="true" />
                   <h3>{item.summary}</h3>

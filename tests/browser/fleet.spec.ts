@@ -242,9 +242,7 @@ test("fleet: summary tiles, and on a phone rows become cards without overflow", 
   const tiles = page.getByRole("group", { name: "Fleet summary" });
   await expect(tiles).toContainText("Vehicles in service");
   await expect(tiles).toContainText("Drivers active");
-  await expect(
-    page.getByRole("table", { name: "Drivers" }),
-  ).toBeVisible();
+  await expect(page.getByRole("table", { name: "Drivers" })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

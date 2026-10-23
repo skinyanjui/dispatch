@@ -176,8 +176,7 @@
 .appShell .viewMenu summary {
   padding: 0 var(--control-pad);
 }
-.appShell .queueTab,
-.appShell .attentionChip {
+.appShell .queueTab {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -185,9 +184,7 @@
   padding-top: 0;
   padding-bottom: 0;
 }
-.appShell .attentionChip {
-  min-height: var(--control-h-sm);
-}
+
 /* Menus float clear of the panel edge and the control that opened them. */
 .appShell .viewOptionsBody {
   margin-top: var(--space-2);
@@ -261,12 +258,6 @@
 .appShell .reportCarrier {
   margin-bottom: 0;
 }
-.appShell .carrierStats {
-  align-items: stretch;
-}
-.appShell .carrierStats .carrierSort {
-  align-self: center;
-}
 
 /* ---- Phones: menus stay inside the screen ---- */
 @media (max-width: 560px) {
@@ -295,13 +286,7 @@
   padding-top: 0;
   padding-bottom: 0;
 }
-.appShell .billingTab,
-.appShell .orgTab {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--control-h);
-}
+
 .appShell .iconButton {
   box-sizing: border-box;
   display: inline-flex;
@@ -344,10 +329,6 @@
 }
 
 /* ---- Filter chips inside a tab panel have air above and below ---- */
-.appShell [role="tabpanel"] .attentionChips {
-  margin-top: var(--space-2);
-  margin-bottom: var(--space-2);
-}
 
 /* Calendar events are real buttons: at least 24px tall. */
 .appShell .calendarEvent {
@@ -356,10 +337,6 @@
 }
 
 /* A chip row under a tab strip does not touch its underline. */
-.appShell .orgTabs ~ .attentionChips {
-  margin-top: var(--space-3);
-  margin-bottom: var(--space-2);
-}
 
 /* A status pill in a table cell keeps its own height; it is not stretched to
    the cell. */
