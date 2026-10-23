@@ -8,7 +8,7 @@
   --panel: #fff;
   --ink: #0f1b3d;
   --muted: #4a5578;
-  --subtle: #5f6a8d;
+  --subtle: #54607f;
   --border: #e3e7f3;
   --border-strong: #c3cae0;
   --soft: #f6f8fd;
@@ -125,8 +125,8 @@
   --canvas: #f3f3f3;
   --panel: #fff;
   --ink: #333;
-  --muted: #666;
-  --subtle: #6b6b6b;
+  --muted: #555;
+  --subtle: #606060;
   --border: #ebebeb;
   --border-strong: #d6d6d6;
   --soft: #f5f5f5;
@@ -160,7 +160,7 @@
 /* Public marketing pages (ADR 0041): neutral, large type. */
 .mk {
   --mk-ink: #1c1c1c;
-  --mk-muted: #666;
+  --mk-muted: #555;
   --mk-line: #ebebeb;
   --mk-soft: #f7f7f7;
   /* The call-to-action band. */

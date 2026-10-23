@@ -259,7 +259,10 @@
   display: none;
 }
 .navigationSheet {
-  background: var(--sidebar-bg);
+  /* Opaque: inside the app --sidebar-bg is transparent (the desktop sidebar
+     sits on the grey frame), which let the page show through the phone sheet. */
+  background: var(--canvas);
+  border-right: 1px solid var(--border);
   height: 100%;
   width: min(280px, calc(100vw - 48px));
   box-shadow: var(--shadow-sheet);
