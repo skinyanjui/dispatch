@@ -21,3 +21,5 @@ Found while building: absolutely positioned screen-reader text inside a scrollin
 ## Page redesign
 
 The page was rebuilt without changing the API, schema or permissions: a toolbar (carrier, Add vehicle), four summary tiles that share one row (vehicles in service, on active loads, drivers active, invites pending), a vehicles panel and a drivers panel, each with a count. Vehicles come first because they are what the page edits. The per-row "Manage" buttons became one "Invite or remove drivers" button, since drivers are still managed in carrier setup. On phones each table row becomes a card with its labels. Accessible names (tables "Vehicles" and "Drivers", the "Show retired" checkbox, row buttons) are unchanged.
+
+> **Superseded in part by ADR 0052.** Lists described above as cards on phones, or with labelled facts in each row, are now `DataTable`s: column names appear once in the header, narrow screens scroll sideways with the row name held in place, low-priority columns drop out under 640px, and sorting is on the column headers (no separate sort select). See `docs/design-system.md`.

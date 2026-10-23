@@ -95,6 +95,7 @@ import { dollarsToMinor, appointmentToInstant, formatMoney } from "@/lib/entry";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { pathFor, parsePath, sectionAllowed, type Route } from "@/lib/routes";
 import { ErrorAlert } from "@/components/ui/feedback";
+import { formatDate, formatDateTimeLong, formatTime } from "@/lib/format";
 const eventLabels: Record<string, string> = {
   "load.created": "Load created",
   "load.assign": "Driver assigned",
@@ -1433,10 +1434,7 @@ export default function Workspace({
             <span className="footerDivider">·</span>No live tracking or
             integrations
           </span>
-          <span>
-            {updated &&
-              `Updated ${updated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`}
-          </span>
+          <span>{updated && `Updated ${formatTime(updated)}`}</span>
         </footer>
       </main>
       {docsCarrier && (
@@ -1518,12 +1516,7 @@ export default function Workspace({
                 </span>
                 <h2 className="detailTitle">{selected.reference}</h2>
                 <small className="recordAdded">
-                  Added{" "}
-                  {new Date(selected.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
+                  Added {formatDate(selected.created_at)}
                 </small>
                 <span className={"badge " + selected.stage}>
                   <CircleIcon size={7} weight="fill" aria-hidden="true" />
@@ -1772,9 +1765,7 @@ export default function Workspace({
                                 aria-hidden="true"
                               />
                               {eventLabels[e.type] || "Load updated"}
-                              <small>
-                                {new Date(e.created_at).toLocaleString()}
-                              </small>
+                              <small>{formatDateTimeLong(e.created_at)}</small>
                             </p>
                           ))
                         ) : (

@@ -25,3 +25,5 @@ Additive. Leave both tables unused, or remove the two assistant tools; nothing e
 ## Page polish
 
 Presentation only; no API, schema or permission change. The page opens on "All" when nothing needs review (it used to open on an empty "Needs review" list while approved drafts existed); "Needs review" is still the default when something does. The intro keeps one sentence. Templates are a bordered list with a two-line preview and their actions on the right, or full-width under the text on phones. Drafts become compact cards on phones (name, then For and Status side by side), and the status chips wrap and fill their rows.
+
+> **Superseded in part by ADR 0052.** Lists described above as cards on phones, or with labelled facts in each row, are now `DataTable`s: column names appear once in the header, narrow screens scroll sideways with the row name held in place, low-priority columns drop out under 640px, and sorting is on the column headers (no separate sort select). See `docs/design-system.md`.

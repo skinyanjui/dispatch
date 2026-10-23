@@ -12,34 +12,25 @@ import {
   type TimedStop,
 } from "@/lib/stop-timing";
 import { ErrorAlert } from "@/components/ui/feedback";
+import {
+  dayInZone,
+  formatDateTimeLong,
+  formatInstant,
+  formatTime,
+} from "@/lib/format";
 
 function inZone(value: string, timezone: string, withDate = false) {
-  return new Date(value).toLocaleString("en-US", {
-    timeZone: timezone,
-    ...(withDate ? { month: "short", day: "numeric" } : {}),
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
+  return formatInstant(value, {
+    date: withDate ? "short" : undefined,
+    time: true,
+    zone: timezone,
+    zoneName: true,
   });
 }
 function appointmentLabel(start: string, end: string, timezone: string) {
-  const format = (value: string) =>
-    new Date(value).toLocaleString("en-US", {
-      timeZone: timezone,
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  const day = (value: string) =>
-    new Date(value).toLocaleDateString("en-CA", { timeZone: timezone });
-  const time = (value: string) =>
-    new Date(value).toLocaleTimeString("en-US", {
-      timeZone: timezone,
-      hour: "numeric",
-      minute: "2-digit",
-    });
+  const format = (value: string) => formatDateTimeLong(value, timezone);
+  const day = (value: string) => dayInZone(value, timezone);
+  const time = (value: string) => formatTime(value, timezone);
   if (new Date(start).getTime() === new Date(end).getTime())
     return format(start);
   // Same day: say the date once ("Nov 5, 2026, 9:00 AM – 10:00 AM").

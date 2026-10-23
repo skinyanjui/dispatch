@@ -1,5 +1,7 @@
 # 0051 Shared UI components for tabs, filters and figures
 
+The current, complete list of components and rules is `docs/design-system.md`; ADR 0052 extends this one.
+
 Status: accepted
 
 ## Context
@@ -17,7 +19,7 @@ Pages use components from `src/components/ui`, styled once in `src/app/ui.css` (
 | `ToggleGroup` variant `segmented` | Pick one option | Loads layout, Reports date range, Inbox send-via |
 | `ToggleGroup` variant `folders` | The Inbox rail where the sidebar does not list folders | Inbox |
 | `StatTiles`, `StatTile` | Summary figures, optionally a filter (`pressed`) or a link (`actionLabel`) | Billing, Reports (KPIs, pipeline, billing), Carriers, Exceptions, Fleet |
-| `ColumnChart` | Small column chart drawn in SVG | Reports |
+| `BarList` (replaced `ColumnChart`, ADR 0052) | Values compared as bars, a native `meter` per row | Reports |
 | `.countBadge` | A count beside a tab, heading or menu label | everywhere |
 
 Rules that go with them:

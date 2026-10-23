@@ -5,6 +5,13 @@ import { formatMoney } from "@/lib/entry";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { stageLabels, type Load } from "@/lib/contracts";
 import { loadDocumentTypes } from "@/lib/compliance";
+import {
+  formatDateTime,
+  formatInstant,
+  formatMonth,
+  formatShortDate,
+  formatTime,
+} from "@/lib/format";
 
 export type ViewField =
   | "carrier"
@@ -80,10 +87,9 @@ export const calcOptions: Record<ViewField, Calc[]> = {
 };
 const formatNext = (l: Load) =>
   l.summary?.next
-    ? `${l.summary.next.label} ${new Date(l.summary.next.window_start).toLocaleString("en-US", { timeZone: l.summary.next.timezone, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+    ? `${l.summary.next.label} ${formatDateTime(l.summary.next.window_start, l.summary.next.timezone)}`
     : "—";
-const formatCreated = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const formatCreated = formatShortDate;
 const textOf = (l: Load, f: "carrier" | "stage" | "driver") =>
   f === "carrier"
     ? (l.carrier_name ?? "")
@@ -164,11 +170,7 @@ const dateOf = (l: Load, field: "next" | "created") =>
   field === "created" ? l.created_at : (l.summary?.next?.window_start ?? "");
 const day = (iso: string) =>
   `${new Date(iso).getFullYear()}-${String(new Date(iso).getMonth() + 1).padStart(2, "0")}-${String(new Date(iso).getDate()).padStart(2, "0")}`;
-const time = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const time = (iso: string) => formatTime(iso);
 
 function sortValue(l: Load, key: ViewConfig["sort"]["key"]): string | number {
   switch (key) {
@@ -423,10 +425,7 @@ export function CalendarView({
   const dayKey = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const todayKey = dayKey(new Date());
-  const title = cursor.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const title = formatMonth(cursor);
   const move = (n: number) =>
     setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1));
   return (
@@ -487,11 +486,8 @@ export function CalendarView({
                 (k === todayKey ? " today" : "")
               }
               aria-label={
-                d.toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                }) + `: ${items.length} loads`
+                formatInstant(d, { weekday: "long", date: "long" }) +
+                `: ${items.length} loads`
               }
             >
               <span className="calendarDate">{d.getDate()}</span>
@@ -536,11 +532,7 @@ export function CalendarView({
           return days.map(({ d, items }) => (
             <section key={dayKey(d)} className="agendaDay">
               <h3 className={dayKey(d) === todayKey ? "today" : undefined}>
-                {d.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
+                {formatInstant(d, { weekday: "short", date: "short" })}
               </h3>
               <ul>
                 {items.map((l) => (

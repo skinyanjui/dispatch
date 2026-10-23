@@ -54,7 +54,8 @@
   --shadow-sheet: 10px 0 40px #12192e20;
   /* A darker hover over an already highlighted row. */
   --hover-overlay: #0000000d;
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  /* The dropdown arrow is drawn with CSS borders (controls.css), in this colour. */
+  --select-arrow: #666;
 }
 /* The signed-in app (ADR 0039, 0044): neutral palette, the 4px spacing scale and the control scale. These override the global palette inside the app only. */
 .appShell {

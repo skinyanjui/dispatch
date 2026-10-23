@@ -4,7 +4,7 @@ Status: accepted, 2026-10-22. Supersedes the mint action colour chosen in ADR 00
 
 ## Decision
 
-The whole application, not only the sign-in screens, uses one blue palette defined once in `:root` in `src/app/globals.css`. Sign-in styles (`src/app/login.css`) read the same tokens.
+The whole application, not only the sign-in screens, uses one blue palette. (Since ADR 0052 every token, including these, is defined in `src/app/tokens.css`; see `docs/design-system.md`.) Sign-in styles (`src/app/login.css`) read the same tokens.
 
 | Token                                                           | Value                                                         |
 | --------------------------------------------------------------- | ------------------------------------------------------------- |

@@ -24,3 +24,5 @@ Revert the application while keeping migration 006 (additive). Exceptions and th
 ## Queue page redesign
 
 The Exceptions page was restyled without changing the API, schema or permissions. A filter row (status, owner, overdue only) sits above four summary tiles that share one row (shown, high severity, overdue, unassigned, counted from the loaded list, which is capped at 100). Each exception is a card with a severity stripe, its pills, a wrapping row of labelled facts (load, carrier, type, owner, due, overdue in red) and the Open load button; on phones the facts become two columns and the button fills the card. Loading shows a placeholder, and accessible names are unchanged.
+
+> **Superseded in part by ADR 0052.** Lists described above as cards on phones, or with labelled facts in each row, are now `DataTable`s: column names appear once in the header, narrow screens scroll sideways with the row name held in place, low-priority columns drop out under 640px, and sorting is on the column headers (no separate sort select). See `docs/design-system.md`.

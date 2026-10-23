@@ -39,3 +39,5 @@ Styling only; no API, schema or permission change. The intro keeps one sentence 
 ## Addendum: no zero-fee invoices
 
 A dispatch invoice needs a fee of at least 0.01% (1 bp) and a total above $0.00. A fee that rounds to nothing is refused with `FEE_TOO_SMALL`, because a zero total would read as paid the moment it is issued.
+
+> **Superseded in part by ADR 0052.** Lists described above as cards on phones, or with labelled facts in each row, are now `DataTable`s: column names appear once in the header, narrow screens scroll sideways with the row name held in place, low-priority columns drop out under 640px, and sorting is on the column headers (no separate sort select). See `docs/design-system.md`.

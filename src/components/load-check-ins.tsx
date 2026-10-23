@@ -10,6 +10,7 @@ import type {
 } from "@/lib/contracts";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import { appointmentToInstant } from "@/lib/entry";
+import { formatInstant } from "@/lib/format";
 
 const zones = [
   "America/New_York",
@@ -23,14 +24,7 @@ const zones = [
 ];
 
 function timestamp(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
+  return formatInstant(value, { date: "year", time: true, zoneName: true });
 }
 
 function localInput(value: number) {

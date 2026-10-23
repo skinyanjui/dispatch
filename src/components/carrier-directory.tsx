@@ -11,6 +11,7 @@ import { ApiError, useApi } from "@/lib/client-api";
 import type { Context } from "@/lib/contracts";
 import type { CarrierSummary } from "@/lib/carrier-summary";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
+import { formatDate } from "@/lib/format";
 
 const roles: Record<string, string> = {
   dispatcher: "Dispatcher",
@@ -25,12 +26,7 @@ type Filter =
   | "exceptions";
 const pageSize = 25;
 const day = 86_400_000;
-const date = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const date = formatDate;
 
 function authLabel(a: CarrierSummary["authorization"]) {
   if (a.state === "none") return "No dispatch agreement";

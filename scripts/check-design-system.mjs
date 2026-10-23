@@ -58,6 +58,13 @@ const rules = [
     allow: { "src/components/ui/tabs.tsx": "the canonical tabs" },
   },
   {
+    name: "hand-formatted date or number",
+    test: /\.toLocale(String|DateString|TimeString)\(/,
+    in: /\.tsx$/,
+    use: "a helper from src/lib/format.ts",
+    allow: {},
+  },
+  {
     name: "hand-built error alert",
     test: /className="alert error"/,
     in: /\.tsx$/,

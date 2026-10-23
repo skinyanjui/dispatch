@@ -17,6 +17,7 @@ import { ApiError, useApi } from "@/lib/client-api";
 import { formatMoney } from "@/lib/entry";
 import type { AttentionKey } from "@/lib/attention";
 import { ErrorAlert } from "@/components/ui/feedback";
+import { formatDateTimeLong } from "@/lib/format";
 
 type Timing = {
   measured: number;
@@ -570,8 +571,7 @@ export function Reports({
             />
           </StatTiles>
           <p className="helpText">
-            Generated {new Date(data.generated_at).toLocaleString()} from live
-            records.
+            Generated {formatDateTimeLong(data.generated_at)} from live records.
           </p>
         </div>
       )}

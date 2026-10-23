@@ -9,6 +9,7 @@ import {
   type OptionalKind,
 } from "@/lib/notification-kinds";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
+import { formatDateTimeLong, formatTime } from "@/lib/format";
 
 const transportLabels: Record<string, string> = {
   none: "Not configured — messages are recorded but not emailed",
@@ -165,11 +166,10 @@ export function NotificationCenter({
                   </div>
                   <p className="opsMeta">
                     {notificationLabels[n.kind]} · To {n.recipient_email} ·{" "}
-                    {new Date(n.created_at).toLocaleString()} · Attempts{" "}
-                    {n.attempts}
+                    {formatDateTimeLong(n.created_at)} · Attempts {n.attempts}
                     {n.status === "pending" &&
                       n.attempts > 0 &&
-                      ` · Next try ${new Date(n.next_attempt_at).toLocaleTimeString()}`}
+                      ` · Next try ${formatTime(n.next_attempt_at)}`}
                     {n.last_error && <> · {n.last_error}</>}
                   </p>
                   {n.retryable && (

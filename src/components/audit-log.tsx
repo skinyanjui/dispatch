@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { ApiError, useApi } from "@/lib/client-api";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
+import { formatDateTimeLong } from "@/lib/format";
 
 type Entry = {
   id: string;
@@ -24,14 +25,7 @@ type Filters = {
   actors: { id: string; name: string }[];
 };
 
-const stamp = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const stamp = (iso: string) => formatDateTimeLong(iso);
 const jobCopy = {
   tick: {
     name: "Every 15 minutes",

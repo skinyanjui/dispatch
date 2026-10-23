@@ -33,3 +33,5 @@ Presentation only; no API, schema or permission change. Every tile group (headli
 ## By-carrier and exceptions tables on phones
 
 Presentation only. From tablets up both tables are unchanged, with sortable column headers. On phones each row is a card: the carrier (or exception type) first, then its figures in two columns with their labels, which are the same text as the column headers. Phones have no column headers to click, so the By carrier section gets a "Sort:" select (name, loads, delivered, cancelled, freight, open exceptions) that is hidden from tablets up. The header row stays in the page, clipped to nothing, for screen readers.
+
+> **Superseded in part by ADR 0052.** Lists described above as cards on phones, or with labelled facts in each row, are now `DataTable`s: column names appear once in the header, narrow screens scroll sideways with the row name held in place, low-priority columns drop out under 640px, and sorting is on the column headers (no separate sort select). See `docs/design-system.md`.

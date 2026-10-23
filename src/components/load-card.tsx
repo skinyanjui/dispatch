@@ -8,15 +8,14 @@ import {
 import { formatMoney } from "@/lib/entry";
 import { loadDocumentTypes } from "@/lib/compliance";
 import type { Load } from "@/lib/contracts";
+import { formatInstant, formatShortDate } from "@/lib/format";
 
 const appointment = (iso: string, timezone: string) =>
-  new Date(iso).toLocaleString("en-US", {
-    timeZone: timezone,
+  formatInstant(iso, {
     weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+    date: "short",
+    time: true,
+    zone: timezone,
   });
 
 /**
@@ -42,10 +41,7 @@ export function LoadCard({
   ]
     .filter(Boolean)
     .join(". ");
-  const when = new Date(load.created_at).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const when = formatShortDate(load.created_at);
   return (
     <button
       className={"loadCard lc level-" + level}

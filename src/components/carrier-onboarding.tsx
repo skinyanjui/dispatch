@@ -13,6 +13,7 @@ import { uploadDocumentFile } from "@/lib/upload-client";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { Modal } from "./modal";
 import { ErrorAlert } from "@/components/ui/feedback";
+import { formatDate } from "@/lib/format";
 
 export function CarrierOnboarding({
   carrierId,
@@ -774,8 +775,8 @@ export function CarrierOnboarding({
                   {demo
                     ? "Demo link: open it in this browser to try joining."
                     : "Share this link privately."}{" "}
-                  It expires {new Date(invite.expires_at).toLocaleDateString()}{" "}
-                  and works once. No email has been sent.
+                  It expires {formatDate(invite.expires_at)} and works once. No
+                  email has been sent.
                 </p>
                 <label>
                   <span className="srOnly">Invitation link</span>

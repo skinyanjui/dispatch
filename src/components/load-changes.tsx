@@ -5,6 +5,7 @@ import type { Load } from "@/lib/contracts";
 import { appointmentToInstant, dollarsToMinor } from "@/lib/entry";
 import { Sheet } from "./modal";
 import { ErrorAlert } from "@/components/ui/feedback";
+import { formatDateTime } from "@/lib/format";
 
 /** `datetime-local` value for an instant, in the stop's own time zone. */
 function localValue(instant: string, timezone: string) {
@@ -40,12 +41,7 @@ const show = (field: string, value: string) =>
   field === "amount_minor"
     ? "$" + minorToDollars(value)
     : field.startsWith("window")
-      ? new Date(value).toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        })
+      ? formatDateTime(value)
       : value;
 
 export function LoadChanges({
@@ -132,13 +128,7 @@ export function LoadChanges({
                 {show(c.field, c.old_value)} → {show(c.field, c.new_value)}
                 <small>
                   {" "}
-                  {c.actor_name},{" "}
-                  {new Date(c.created_at).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
+                  {c.actor_name}, {formatDateTime(c.created_at)}
                   {c.reason && ` — ${c.reason}`}
                 </small>
               </li>

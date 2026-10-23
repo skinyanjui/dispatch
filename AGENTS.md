@@ -21,6 +21,8 @@ Develop Relay, a production-ready carrier-agent freight dispatch management syst
 - Treat AI as a human-reviewed assistant for probabilistic tasks, not an authority for booking, rate confirmations, invoicing or funds movement.
 - Each change must include code, DB migration (where applicable), tests, docs and operational updates, in atomic commits.
 
+- Follow `docs/design-system.md`: build UI from `src/components/ui` and `src/app/tokens.css`; `npm run lint` enforces it.
+
 ## Immediate task
 Read `docs/codex-tasks.md` and `docs/build-plan.md`. First deliver Phase 1 foundation as a reviewable PR: database schema, tested carrier RBAC, authenticated sessions, load creation/list/detail APIs and a production UI derived from the demo. Leave demo accessible as a separate route or static reference during migration.
 
