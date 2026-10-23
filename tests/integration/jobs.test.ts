@@ -79,7 +79,11 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
   const res = await cron("tick");
   assert.equal(res.status, 200);
   const body = await res.json();
-  assert.deepEqual(Object.keys(body).sort(), ["appointments", "delivery"]);
+  assert.deepEqual(Object.keys(body).sort(), [
+    "appointments",
+    "delivery",
+    "exports",
+  ]);
   assert.equal(await appointment(soon.reference), 1);
   const podReminder = await pool.query(
     "SELECT 1 FROM notifications WHERE kind='document_reminder' AND subject LIKE $1",
@@ -97,6 +101,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
     "appointments",
     "cleanup",
     "delivery",
+    "exports",
     "pruned",
     "reminders",
   ]);

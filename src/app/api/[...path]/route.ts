@@ -1,3 +1,11 @@
+import {
+  createExport,
+  exportStatus,
+  runPendingExports,
+} from "@/lib/report-exports";
+import { createGunzip } from "node:zlib";
+import { Readable } from "node:stream";
+import { reportInvoices } from "@/lib/report-invoices";
 import { after, NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -924,7 +932,41 @@ async function handle(req: NextRequest) {
       return NextResponse.json(
         await resendText(user.id, z.uuid().parse(path[1]), await readJson(req)),
       );
+    if (path.join("/") === "reports/exports" && req.method === "POST")
+      return NextResponse.json(
+        await createExport(user.id, await readJson(req)),
+        { status: 202 },
+      );
+    if (
+      path[0] === "reports" &&
+      path[1] === "exports" &&
+      path.length >= 3 &&
+      req.method === "GET"
+    ) {
+      const id = z.uuid().parse(path[2]);
+      const download = path.length === 4 && path[3] === "download";
+      if (path.length !== 3 && !download) throw new HttpError(404, "NOT_FOUND");
+      const job = await exportStatus(user.id, id, download);
+      if (download) {
+        const stream = Readable.toWeb(
+          Readable.from([job.artifact!]).pipe(createGunzip()),
+        );
+        return new NextResponse(stream as ReadableStream, {
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${job.filename}"`,
+            "X-Relay-Row-Count": String(job.row_count),
+            "X-Relay-Export-Complete": "true",
+          },
+        });
+      }
+      return NextResponse.json(job);
+    }
     if (path[0] === "reports" && req.method === "GET") {
+      if (path.length === 2 && path[1] === "invoices")
+        return NextResponse.json(
+          await reportInvoices(user.id, req.nextUrl.searchParams),
+        );
       if (path.length === 1)
         return NextResponse.json(
           await reportOverview(user.id, req.nextUrl.searchParams),
@@ -936,7 +978,8 @@ async function handle(req: NextRequest) {
             "Content-Type": "text/csv; charset=utf-8",
             "Content-Disposition": `attachment; filename="${file.filename}"`,
             "X-Content-Type-Options": "nosniff",
-            ...(file.truncated ? { "X-Relay-Truncated": "true" } : {}),
+            "X-Relay-Row-Count": String(file.row_count),
+            "X-Relay-Export-Complete": "true",
           },
         });
       }
@@ -1275,10 +1318,10 @@ async function handle(req: NextRequest) {
         { error: "DUPLICATE_REFERENCE" },
         { status: 409 },
       );
-    console.error(
-      "api.failure",
-      e instanceof Error ? e.message : "Unknown error",
-    );
+    console.error("api.failure", {
+      kind: e instanceof Error ? e.name : "UnknownError",
+      code: (e as { code?: string }).code,
+    });
     return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
   }
 }
@@ -1293,7 +1336,33 @@ function cronAuthorized(req: NextRequest) {
     throw new HttpError(401, "AUTH_REQUIRED");
 }
 async function response(req: NextRequest) {
+  const requestId = crypto.randomUUID();
+  const started = Date.now();
   const result = await handle(req);
+  result.headers.set("X-Request-Id", requestId);
+  if (process.env.VERCEL_GIT_COMMIT_SHA)
+    result.headers.set("X-Relay-Revision", process.env.VERCEL_GIT_COMMIT_SHA);
+  if (result.status >= 400)
+    console.error("api.result", {
+      requestId,
+      method: req.method,
+      route: req.nextUrl.pathname,
+      status: result.status,
+      duration_ms: Date.now() - started,
+    });
+  if (
+    req.nextUrl.pathname.startsWith("/api/reports/exports") &&
+    result.status < 400
+  )
+    try {
+      after(() =>
+        runPendingExports(1)
+          .then(() => undefined)
+          .catch(() => console.error("report.export_worker_unavailable")),
+      );
+    } catch {
+      /* Scripts and test runners use the explicit worker. */
+    }
   // Writes may have queued notifications in their transaction; deliver them
   // after responding. The scheduled job retries anything left behind.
   if (req.method === "POST" && result.status < 400)

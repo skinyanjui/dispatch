@@ -2,6 +2,12 @@
 
 final result: passed
 
+## Repair verification — 2026-10-23
+
+The current workspace keeps the shared grey frame, white panels, dark text and blue actions. Reports now retain exact date/carrier scope, distinguish stale results and offer complete durable exports. Shared metric controls derive their accessible names from visible content, and their labels wrap inside narrow tiles.
+
+Evidence: `docs/audits/evidence/repair-report-mobile.png`, a 320 × 900 Chromium viewport with full-page capture, keyboard focus on Larger exports, actual local APIs and fictional QA data. Tables retain bounded horizontal scrolling; document width and metric label widths fit the viewport. Axe reported no serious/critical violations in the tested main region. The browser suite also checks desktop and phone workflows; final totals and remaining cross-engine/assistive-technology limits are in [the repair register](docs/repairs/repair-status.md). Historical captures below describe earlier design revisions.
+
 ## Compact shell revision — 2026-10-21
 
 The user asked for compact components, better font weights, lower cognitive load, and a Claude-inspired sidebar with smaller icons and no duplicated pages.

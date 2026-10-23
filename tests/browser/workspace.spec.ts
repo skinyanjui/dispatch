@@ -736,7 +736,7 @@ test("reports: pressed range, KPIs that open their loads, sortable table", async
   await header.getByRole("button").click();
   await expect(header).toHaveAttribute("aria-sort", "descending");
   // One click from a number to the records behind it.
-  await region.getByRole("button", { name: /^Open exceptions: / }).click();
+  await region.getByRole("button", { name: /^Open exceptions / }).click();
   await expect(
     page.getByRole("region", { name: "Exception queue" }),
   ).toBeVisible();
@@ -746,7 +746,7 @@ test("reports: pressed range, KPIs that open their loads, sortable table", async
     .click();
   await expect(page.locator(".loadSurface")).toBeVisible();
   await page.getByRole("button", { name: "Reports", exact: true }).click();
-  await region.getByRole("button", { name: /^Booked: / }).click();
+  await region.getByRole("button", { name: /^Booked / }).click();
   await expect(
     page.getByRole("button", { name: "Ready to dispatch", exact: true }),
   ).toHaveAttribute("aria-current", "page");

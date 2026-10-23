@@ -17,6 +17,8 @@ import { ApiError, useApi } from "@/lib/client-api";
 import { formatMoney } from "@/lib/entry";
 import type { AttentionKey } from "@/lib/attention";
 import { ErrorAlert } from "@/components/ui/feedback";
+import { ReportExports } from "./report-exports";
+import type { WorkspaceFilters } from "@/lib/routes";
 import { formatDateTimeLong } from "@/lib/format";
 
 type Timing = {
@@ -26,7 +28,7 @@ type Timing = {
   on_time_pct: number | null;
 };
 type Report = {
-  range: { from: string; to: string };
+  range: { from: string; to: string; carrier_id?: string | null };
   generated_at: string;
   loads: {
     loads: number;
@@ -91,6 +93,9 @@ export type OpenLoads = {
   carrier?: string;
   status?: string;
   attention?: AttentionKey;
+  from?: string;
+  to?: string;
+  missing_pod?: boolean;
 };
 
 /** The range just before this one, the same number of days long. */
@@ -212,18 +217,18 @@ const carrierColumns = (
 ];
 
 const exceptionColumns = (
-  onOpenExceptions?: () => void,
+  onOpenExceptions?: (type?: string) => void,
 ): ColumnDefinition<ExceptionRow>[] => [
   {
     id: "type",
     header: "Type",
     accessor: (x) => typeLabels[x.type] ?? x.type,
-    render: (label) =>
+    render: (label, x) =>
       onOpenExceptions ? (
         <button
           type="button"
           className="textButton rowOpen"
-          onClick={onOpenExceptions}
+          onClick={() => onOpenExceptions(x.type)}
         >
           {String(label)}
         </button>
@@ -249,21 +254,31 @@ export function Reports({
   onOpenExceptions,
   onOpenBilling,
   query: search = "",
+  scope = {},
+  onScopeChange,
+  demo = false,
 }: {
   carriers: { id: string; name: string }[];
   onAuthError: (e: unknown) => void;
   /** Jump to the Loads board with this scope. */
   onOpenLoads?: (scope: OpenLoads) => void;
-  onOpenExceptions?: () => void;
-  onOpenBilling?: () => void;
+  onOpenExceptions?: (scope: WorkspaceFilters) => void;
+  demo?: boolean;
+  scope?: WorkspaceFilters;
+  onScopeChange?: (scope: WorkspaceFilters) => void;
+  onOpenBilling?: (scope: WorkspaceFilters) => void;
   /** Search text from the sidebar; filters the by-carrier table. */
   query?: string;
 }) {
   const api = useApi();
-  const [from, setFrom] = useState(() => daysAgo(29)),
-    [to, setTo] = useState(() => iso(new Date())),
-    [custom, setCustom] = useState(false),
-    [carrier, setCarrier] = useState(""),
+  const from = scope.from ?? daysAgo(29),
+    to = scope.to ?? iso(new Date()),
+    carrier = scope.carrier_id ?? "";
+  const setFrom = (from: string) => onScopeChange?.({ ...scope, from });
+  const setTo = (to: string) => onScopeChange?.({ ...scope, to });
+  const setCarrier = (carrier_id: string) =>
+    onScopeChange?.({ ...scope, carrier_id });
+  const [custom, setCustom] = useState(Boolean(scope.from)),
     [data, setData] = useState<Report | null>(null),
     [before, setBefore] = useState<Report | null>(null),
     [loading, setLoading] = useState(true),
@@ -303,10 +318,16 @@ export function Reports({
       if (id === request.current) setLoading(false);
     }
   }, [api, from, to, carrier, onAuthError]);
+  const invalidate = useCallback(() => {
+    request.current++;
+  }, []);
   useEffect(() => {
     const timer = setTimeout(() => void load(), 200);
-    return () => clearTimeout(timer);
-  }, [load]);
+    return () => {
+      clearTimeout(timer);
+      invalidate();
+    };
+  }, [load, invalidate]);
   const activePreset = custom
     ? null
     : presets.find((n) => from === daysAgo(n - 1) && to === iso(new Date()));
@@ -316,7 +337,31 @@ export function Reports({
       c.name.toLowerCase().includes(needle),
     );
   }, [data, search]);
-  const openLoads = onOpenLoads;
+  const stale =
+    !!data &&
+    (loading ||
+      !!error ||
+      data.range.from !== from ||
+      data.range.to !== to ||
+      (data.range.carrier_id ?? "") !== carrier);
+  const successful = {
+    from: data?.range.from ?? from,
+    to: data?.range.to ?? to,
+    ...(data?.range.carrier_id ? { carrier: data.range.carrier_id } : {}),
+  };
+  const openLoads = onOpenLoads
+    ? (scope: OpenLoads) => onOpenLoads({ ...scope, ...successful })
+    : undefined;
+  const openExceptions = onOpenExceptions
+    ? (type?: string) =>
+        onOpenExceptions({
+          from: successful.from,
+          to: successful.to,
+          ...(successful.carrier ? { carrier_id: successful.carrier } : {}),
+          ...(type ? { type } : {}),
+          status: "active",
+        })
+    : undefined;
   return (
     <section className="reports" aria-label="Reports">
       <div className="reportBar">
@@ -332,8 +377,11 @@ export function Reports({
             if (!id) return;
             if (id === "custom") return setCustom(true);
             setCustom(false);
-            setFrom(daysAgo(Number(id) - 1));
-            setTo(iso(new Date()));
+            onScopeChange?.({
+              ...scope,
+              from: daysAgo(Number(id) - 1),
+              to: iso(new Date()),
+            });
           }}
         />
         {custom && (
@@ -376,28 +424,77 @@ export function Reports({
             </select>
           </label>
         )}
-        <a
-          className="secondary reportExport"
-          href={`/api/reports/loads.csv?${query}`}
-          download
-        >
-          <DownloadSimpleIcon size={15} aria-hidden="true" /> Export loads (CSV)
-        </a>
+        {!stale && !loading && !error && data && (
+          <a
+            className="secondary reportExport"
+            href={demo ? "#demo-export" : `/api/reports/loads.csv?${query}`}
+            onClick={
+              demo
+                ? async (e) => {
+                    e.preventDefault();
+                    const file = await api<{ csv: string; filename: string }>(
+                      "reports/loads.csv?" + query,
+                    );
+                    const url = URL.createObjectURL(
+                      new Blob([file.csv], { type: "text/csv" }),
+                    );
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = file.filename;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 0);
+                  }
+                : undefined
+            }
+            download
+          >
+            <DownloadSimpleIcon size={15} aria-hidden="true" /> Export loads
+            (CSV)
+          </a>
+        )}
       </div>
+      {!demo && (
+        <ReportExports
+          scope={scope}
+          from={from}
+          to={to}
+          carrier={carrier}
+          disabled={stale || loading || !!error || !data}
+          onScopeChange={onScopeChange}
+          onAuthError={onAuthError}
+        />
+      )}
       <p className="helpText">
         Loads are counted by first pickup (UTC dates). On-time uses arrivals
         people reported; stops with no report are shown separately.
       </p>
       {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className="srOnly" role="status">
-        {loading ? "Loading report" : "Report loaded"}
+        {loading
+          ? "Loading report"
+          : error
+            ? "Report refresh failed"
+            : "Report loaded"}
       </p>
       {loading && !data && <StatTilesLoading count={6} />}
       {data && (
         <div
           aria-busy={loading}
-          className={"reportBody" + (loading ? " reportStale" : "")}
+          className={"reportBody" + (stale ? " reportStale" : "")}
         >
+          {stale && (
+            <p className="inlineNotice" role="status">
+              Previous results — {data.range.from} to {data.range.to} UTC ·{" "}
+              {data.range.carrier_id
+                ? (carriers.find((c) => c.id === data.range.carrier_id)?.name ??
+                  "Selected carrier")
+                : "All authorized carriers"}
+              .{" "}
+              {loading
+                ? "Refreshing…"
+                : "Refresh failed; these results are not current. Retry above."}
+            </p>
+          )}
           <StatTiles>
             <StatTile
               label="Loads"
@@ -451,7 +548,7 @@ export function Reports({
               label="Open exceptions"
               value={String(data.exceptions.open_now)}
               hint={`${data.exceptions.overdue} overdue · ${data.exceptions.opened} opened`}
-              onSelect={onOpenExceptions}
+              onSelect={openExceptions ? () => openExceptions() : undefined}
               actionLabel="Open exceptions"
             />
             <StatTile
@@ -462,7 +559,8 @@ export function Reports({
                 (() =>
                   openLoads({
                     carrier: carrier || undefined,
-                    attention: "paperwork",
+                    missing_pod: true,
+                    status: "delivered",
                   }))
               }
               actionLabel="Show these loads"
@@ -532,7 +630,7 @@ export function Reports({
               <h3>Exceptions</h3>
               <DataTable
                 caption="Exceptions"
-                columns={exceptionColumns(onOpenExceptions)}
+                columns={exceptionColumns(openExceptions)}
                 data={data.exceptions.by_type}
                 getRowId={(x) => x.type}
                 empty={{ title: "No exceptions in this range." }}
@@ -548,14 +646,39 @@ export function Reports({
                   label="Dispatch invoices issued"
                   value={formatMoney(data.dispatch_invoices.issued_minor)}
                   hint={`${data.dispatch_invoices.issued} invoices in range`}
-                  onSelect={onOpenBilling}
+                  onSelect={
+                    onOpenBilling
+                      ? () =>
+                          onOpenBilling({
+                            from: successful.from,
+                            to: successful.to,
+                            basis: "issued",
+                            ...(successful.carrier
+                              ? { carrier_id: successful.carrier }
+                              : {}),
+                          })
+                      : undefined
+                  }
                   actionLabel="Open billing"
                 />
                 <StatTile
                   label="Dispatch fees outstanding"
                   value={formatMoney(data.dispatch_invoices.outstanding_minor)}
-                  hint={`${data.dispatch_invoices.overdue} overdue · ${formatMoney(data.dispatch_invoices.paid_minor)} paid`}
-                  onSelect={onOpenBilling}
+                  hint={`${data.dispatch_invoices.overdue} overdue · ${formatMoney(data.dispatch_invoices.paid_minor)} paid to date on invoices issued in range`}
+                  onSelect={
+                    onOpenBilling
+                      ? () =>
+                          onOpenBilling({
+                            from: successful.from,
+                            to: successful.to,
+                            basis: "issued",
+                            balance: "outstanding",
+                            ...(successful.carrier
+                              ? { carrier_id: successful.carrier }
+                              : {}),
+                          })
+                      : undefined
+                  }
                   actionLabel="Open billing"
                 />
               </>
@@ -570,7 +693,7 @@ export function Reports({
               value={formatMoney(
                 data.carrier_freight_billing.outstanding_minor,
               )}
-              hint="Reported by carriers; Relay holds no freight funds"
+              hint="Current unpaid balances on pickup-cohort packets; Relay holds no freight funds"
             />
           </StatTiles>
           <p className="helpText">

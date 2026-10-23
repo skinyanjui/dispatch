@@ -1,3 +1,5 @@
+import { pickupRange } from "./reporting-scope";
+import { decodeCursor, encodeCursor, pgTimestamp } from "./loads";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
@@ -463,12 +465,20 @@ export async function invoiceCarrier(user: string, invoiceId: string) {
 
 export async function billingOverview(user: string, params: URLSearchParams) {
   const carrierId = z.uuid().parse(params.get("carrier_id"));
-  // A linked invoice is always included, even beyond the newest hundred.
+  const range = pickupRange(params);
+  const shape = z.object({ at: pgTimestamp, id: z.uuid() });
+  const loadCursor = params.get("load_cursor")
+    ? decodeCursor(params.get("load_cursor")!, shape)
+    : null;
+  const invoiceCursor = params.get("invoice_cursor")
+    ? decodeCursor(params.get("invoice_cursor")!, shape)
+    : null;
+  // A linked invoice is always included independently of pagination.
   const linked = z.uuid().nullable().parse(params.get("invoice_id"));
   return transaction(async (c) => {
     const membership = await billingMember(c, user, carrierId);
     const loads = await c.query(
-      `SELECT l.id,l.reference,l.stage,l.amount_minor::text,l.created_at,
+      `SELECT l.id,l.reference,l.stage,l.amount_minor::text,l.created_at,l.created_at::text cursor_at,
         CASE WHEN p.load_id IS NULL THEN NULL ELSE json_build_object(
           'bill_to',p.bill_to,'carrier_invoice_number',p.carrier_invoice_number,
           'amount_minor',p.amount_minor::text,'status',p.status,'submitted_at',p.submitted_at,
@@ -480,9 +490,11 @@ export async function billingOverview(user: string, params: URLSearchParams) {
           FROM dispatch_invoice_lines dl JOIN dispatch_invoices i ON i.id=dl.invoice_id
           WHERE dl.load_id=l.id AND dl.active) invoice
       FROM loads l LEFT JOIN carrier_billing_packets p ON p.load_id=l.id
-      WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL ORDER BY l.created_at DESC,l.id LIMIT 100`,
-      [carrierId],
+      WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL AND ($2::timestamptz IS NULL OR l.created_at<$2 OR (l.created_at=$2 AND l.id>$3::uuid)) ORDER BY l.created_at DESC,l.id LIMIT 101`,
+      [carrierId, loadCursor?.at ?? null, loadCursor?.id ?? null],
     );
+    const loadsMore = loads.rows.length > 100;
+    loads.rows = loads.rows.slice(0, 100);
     const slotsByLoad = await loadDocumentSlotsFor(
       c,
       loads.rows.map((l) => l.id),
@@ -493,19 +505,42 @@ export async function billingOverview(user: string, params: URLSearchParams) {
         .get(l.id)!
         .every((s) => s.status === "accepted");
     const invoices = await c.query(
-      `SELECT i.id,i.number,i.status,i.fee_bps,i.total_minor::text,to_char(i.due_on,'YYYY-MM-DD') due_on,
-        i.issued_at,i.voided_at,i.void_reason,i.created_at,i.version,
+      `SELECT (i.id IN (SELECT id FROM dispatch_invoices WHERE carrier_id=$1 AND ($5::date IS NULL OR issued_at>=($5::date::timestamp AT TIME ZONE 'UTC')) AND ($6::date IS NULL OR issued_at<(($6::date+1)::timestamp AT TIME ZONE 'UTC')) AND ($3::timestamptz IS NULL OR created_at<$3 OR (created_at=$3 AND id>$4::uuid)) ORDER BY created_at DESC,id LIMIT 101)) page_row,i.id,i.number,i.status,i.fee_bps,i.total_minor::text,to_char(i.due_on,'YYYY-MM-DD') due_on,
+        i.issued_at,i.voided_at,i.void_reason,i.created_at,i.created_at::text cursor_at,i.version,
         (SELECT COALESCE(sum(amount_minor),0)::text FROM dispatch_invoice_payments WHERE invoice_id=i.id) paid_minor,
         (SELECT COALESCE(json_agg(json_build_object('load_id',dl.load_id,'reference',l.reference,'load_amount_minor',dl.load_amount_minor::text,'fee_minor',dl.fee_minor::text) ORDER BY l.reference),'[]')
           FROM dispatch_invoice_lines dl JOIN loads l ON l.id=dl.load_id WHERE dl.invoice_id=i.id) lines,
         (SELECT COALESCE(json_agg(json_build_object('id',p.id,'amount_minor',p.amount_minor::text,'received_on',p.received_on,'method',p.method,'reference',p.reference) ORDER BY p.received_on),'[]')
           FROM dispatch_invoice_payments p WHERE p.invoice_id=i.id) payments
       FROM dispatch_invoices i WHERE i.carrier_id=$1
-        AND (i.id=$2 OR i.id IN (SELECT id FROM dispatch_invoices WHERE carrier_id=$1 ORDER BY created_at DESC,id LIMIT 100))
+        AND (i.id=$2 OR i.id IN (SELECT id FROM dispatch_invoices WHERE carrier_id=$1 AND ($5::date IS NULL OR issued_at>=($5::date::timestamp AT TIME ZONE 'UTC')) AND ($6::date IS NULL OR issued_at<(($6::date+1)::timestamp AT TIME ZONE 'UTC')) AND ($3::timestamptz IS NULL OR created_at<$3 OR (created_at=$3 AND id>$4::uuid)) ORDER BY created_at DESC,id LIMIT 101))
       ORDER BY i.created_at DESC,i.id`,
-      [carrierId, linked],
+      [
+        carrierId,
+        linked,
+        invoiceCursor?.at ?? null,
+        invoiceCursor?.id ?? null,
+        range.from,
+        range.to,
+      ],
     );
+    const invoicesPage = invoices.rows.filter((i) => i.page_row);
+    const invoicesMore = invoicesPage.length > 100;
+    const nextInvoice = invoicesPage.slice(0, 100).at(-1);
+    const nextLoad = loads.rows.at(-1);
+    const linkedRow = invoices.rows.find((i) => i.id === linked);
+    invoices.rows = invoicesPage.slice(0, 100);
+    if (linkedRow && !invoices.rows.some((i) => i.id === linkedRow.id))
+      invoices.rows.push(linkedRow);
     return {
+      loads_cursor:
+        loadsMore && nextLoad
+          ? encodeCursor({ at: nextLoad.cursor_at, id: nextLoad.id })
+          : null,
+      invoices_cursor:
+        invoicesMore && nextInvoice
+          ? encodeCursor({ at: nextInvoice.cursor_at, id: nextInvoice.id })
+          : null,
       carrier_id: carrierId,
       can_invoice: membership.role === "dispatcher",
       loads: loads.rows.map((l) => ({

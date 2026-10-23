@@ -1,3 +1,4 @@
+import { runPendingExports } from "./report-exports";
 import { randomUUID } from "node:crypto";
 import { pool } from "@/lib/db";
 import { HttpError } from "@/lib/auth";
@@ -34,6 +35,7 @@ export function parseScope(value: string | null): JobScope {
 type Steps = Record<string, () => Promise<unknown>>;
 const defaultSteps = (scope: JobScope): Steps => ({
   appointments: scheduleAppointmentReminders,
+  exports:()=>runPendingExports(1),
   ...(scope === "daily" ? { reminders: scheduleDailyReminders } : {}),
   delivery: () => deliverDue(50),
   ...(scope === "daily"

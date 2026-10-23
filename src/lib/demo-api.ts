@@ -1,3 +1,4 @@
+import { csvCell } from "./csv";
 import type {
   BillingPacket,
   CarrierSetup,
@@ -454,6 +455,19 @@ export function createDemoApi() {
       ),
     };
   };
+  const inCohort = (load: Load, params: URLSearchParams) => {
+    const pickup = load.stops?.[0]?.window_start;
+    return (
+      (!params.get("from") ||
+        (!!pickup &&
+          Date.parse(pickup) >=
+            Date.parse(params.get("from") + "T00:00:00Z"))) &&
+      (!params.get("to") ||
+        (!!pickup &&
+          Date.parse(pickup) <
+            Date.parse(params.get("to") + "T00:00:00Z") + 86400000))
+    );
+  };
   const exceptionRequest = (
     path: string[],
     body: Record<string, unknown> | undefined,
@@ -477,6 +491,24 @@ export function createDemoApi() {
           .filter(
             (e) =>
               visible(e) &&
+              (!url.searchParams.get("carrier_id") ||
+                e.carrier_id === url.searchParams.get("carrier_id")) &&
+              (!url.searchParams.get("type") ||
+                e.type === url.searchParams.get("type")) &&
+              inCohort(
+                state.loads.find((l) => l.id === e.load_id)!,
+                url.searchParams,
+              ) &&
+              (!url.searchParams.get("q") ||
+                [
+                  e.summary,
+                  state.loads.find((l) => l.id === e.load_id)?.reference,
+                  e.owner_name,
+                  e.type,
+                ]
+                  .join(" ")
+                  .toLowerCase()
+                  .includes(url.searchParams.get("q")!.toLowerCase())) &&
               (status === "all" ||
                 (status === "active"
                   ? e.status !== "resolved"
@@ -497,6 +529,7 @@ export function createDemoApi() {
             };
           }),
         truncated: false,
+        nextCursor: null,
       };
     }
     const e =
@@ -1099,7 +1132,11 @@ export function createDemoApi() {
               error: "Demo: nothing leaves this browser",
             })),
       });
-      return { thread_id: thread.id, message_id: thread.messages.at(-1)!.id };
+      return {
+        thread_id: thread.id,
+        message_id: thread.messages.at(-1)!.id,
+        processingState: logged ? "recorded" : "not_sent",
+      };
     }
     if (path[0] === "threads") {
       const q = (url.searchParams.get("q") || "").toLowerCase();
@@ -1160,6 +1197,8 @@ export function createDemoApi() {
     if (path === "me") return context();
     if (p[0] === "documents") return documentRequest(p, body);
     if (p[0] === "extractions" && body) return extractionRequest(p);
+    if (p.join("/") === "messaging/capabilities")
+      return { in_app: true, email: false, sms: false };
     if (p[0] === "contacts") return contactsRequest(p, data, url);
     if (p[0] === "rate-confirmations") {
       // The demo reads nothing: it fills the form with labelled sample values.
@@ -1282,9 +1321,34 @@ export function createDemoApi() {
       const scoped = state.loads.filter(
         (l) =>
           allowed().some((c) => c.carrier.id === l.carrier_id) &&
-          (!carrierFilter || l.carrier_id === carrierFilter),
+          (!carrierFilter || l.carrier_id === carrierFilter) &&
+          inCohort(l, url.searchParams),
       );
       const live = scoped.filter((l) => !l.cancelled_at);
+      if (p[1] === "loads.csv")
+        return {
+          csv:
+            [
+              ["Reference", "Carrier", "Status", "Agreed rate (USD)"]
+                .map(csvCell)
+                .join(","),
+              ...live.map((l) =>
+                [
+                  l.reference,
+                  l.carrier_name,
+                  l.stage,
+                  (BigInt(l.amount_minor) / 100n).toString() +
+                    "." +
+                    (BigInt(l.amount_minor) % 100n).toString().padStart(2, "0"),
+                ]
+                  .map(csvCell)
+                  .join(","),
+              ),
+            ].join("\r\n") + "\r\n",
+          filename: "relay-demo-loads.csv",
+        };
+      if (p[1] === "invoices") return { invoices: [], nextCursor: null };
+
       const timing = (kind: string) => {
         let measured = 0,
           onTime = 0,
@@ -1312,7 +1376,7 @@ export function createDemoApi() {
           x.status !== "resolved" && scoped.some((l) => l.id === x.load_id),
       );
       const sum = (rows: Load[]) =>
-        String(rows.reduce((n, l) => n + Number(l.amount_minor), 0));
+        rows.reduce((n, l) => n + BigInt(l.amount_minor), 0n).toString();
       return {
         range: {
           from: url.searchParams.get("from") || "",
@@ -1340,7 +1404,13 @@ export function createDemoApi() {
           ).length,
           by_type: [],
         },
-        delivered_without_pod: 0,
+        delivered_without_pod: live.filter(
+          (l) =>
+            l.stage === "delivered" &&
+            slots(loadDocumentTypes, (d) => d.load_id === l.id).find(
+              (d) => d.type === "pod",
+            )?.status !== "accepted",
+        ).length,
         carriers: allowed()
           .filter((c) => !carrierFilter || c.carrier.id === carrierFilter)
           .map((c) => {
@@ -1465,6 +1535,12 @@ export function createDemoApi() {
       if (p.length === 1 && !body) {
         const records = visible.filter(
           (l) =>
+            inCohort(l, url.searchParams) &&
+            (url.searchParams.get("missing_pod") !== "true" ||
+              (l.stage === "delivered" &&
+                slots(loadDocumentTypes, (d) => d.load_id === l.id).find(
+                  (d) => d.type === "pod",
+                )?.status !== "accepted")) &&
             (!url.searchParams.get("q") ||
               l.reference
                 .toLowerCase()

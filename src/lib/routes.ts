@@ -106,8 +106,11 @@ export function sectionAllowed(section: WorkspaceSection, who: Who): boolean {
     case "carriers":
     case "fleet":
     case "billing":
-    case "reports":
       return !driverOnly;
+    case "reports":
+      return who.carriers.some(
+        (c) => c.role === "dispatcher" || c.role === "carrier-manager",
+      );
     case "prospects":
     case "assistant":
     case "documents":
@@ -118,4 +121,38 @@ export function sectionAllowed(section: WorkspaceSection, who: Who): boolean {
     default:
       return true;
   }
+}
+
+/** Public, navigable filters only. Never serialize content or credentials. */
+export type WorkspaceFilters = Record<string, string>;
+export function readFilters(search: string): WorkspaceFilters {
+  const params = new URLSearchParams(search),
+    result: WorkspaceFilters = {};
+  for (const key of [
+    "from",
+    "to",
+    "carrier_id",
+    "status",
+    "owner",
+    "overdue",
+    "type",
+    "q",
+    "missing_pod",
+    "basis",
+    "balance",
+    "export_id",
+    "sort",
+  ]) {
+    const value = params.get(key);
+    if (value && value.length <= 100) result[key] = value;
+  }
+  return result;
+}
+export function filterSearch(filters: WorkspaceFilters): string {
+  const values = new URLSearchParams();
+  for (const [key, value] of Object.entries(
+    readFilters(new URLSearchParams(filters).toString()),
+  ).sort(([a], [b]) => a.localeCompare(b)))
+    if (value) values.set(key, value);
+  return values.size ? "?" + values.toString() : "";
 }

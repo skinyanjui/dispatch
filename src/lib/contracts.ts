@@ -192,6 +192,8 @@ export type DispatchInvoice = {
   }[];
 };
 export type BillingOverview = {
+  loads_cursor?:string|null;
+  invoices_cursor?:string|null;
   carrier_id: string;
   can_invoice: boolean;
   loads: {

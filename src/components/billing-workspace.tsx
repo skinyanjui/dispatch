@@ -22,6 +22,7 @@ import {
   formatMoney,
   percentToBps,
 } from "@/lib/entry";
+import type { WorkspaceFilters } from "@/lib/routes";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 const paymentLabels: Record<PaymentState, string> = {
@@ -580,7 +581,9 @@ export function BillingWorkspace({
   onClearQuery,
   invoiceId = null,
   onInvoiceChange,
+  scope = {},
 }: {
+  scope?: WorkspaceFilters;
   context: Context;
   offline: boolean;
   onAuthError: (e: unknown) => void;
@@ -594,7 +597,9 @@ export function BillingWorkspace({
 }) {
   const api = useApi();
   const carriers = context.carriers.filter((c) => c.role !== "driver");
-  const [carrierId, setCarrierId] = useState(carriers[0]?.id || ""),
+  const [carrierId, setCarrierId] = useState(
+      scope.carrier_id || carriers[0]?.id || "",
+    ),
     [data, setData] = useState<BillingOverview | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -631,6 +636,10 @@ export function BillingWorkspace({
   // Only the newest request may fill the page: switching carriers quickly must
   // not let a slow earlier answer overwrite a later one.
   const loadSeq = useRef(0);
+  const rangeQuery = new URLSearchParams({
+    ...(scope.from ? { from: scope.from } : {}),
+    ...(scope.to ? { to: scope.to } : {}),
+  }).toString();
   const load = useCallback(async () => {
     if (!carrierId) return;
     const mine = ++loadSeq.current;
@@ -640,7 +649,9 @@ export function BillingWorkspace({
     setError("");
     try {
       const next = await api<BillingOverview>(
-        "billing?carrier_id=" +
+        "billing?" +
+          rangeQuery +
+          "&carrier_id=" +
           carrierId +
           (withInvoice ? "&invoice_id=" + link.id : ""),
       );
@@ -654,7 +665,7 @@ export function BillingWorkspace({
     } finally {
       if (mine === loadSeq.current) setBusy(false);
     }
-  }, [api, carrierId, onAuthError]);
+  }, [api, carrierId, onAuthError, rangeQuery]);
   useEffect(() => {
     // Fetch per selected carrier; state is set after the response.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -710,14 +721,63 @@ export function BillingWorkspace({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpenState(null);
   }, [invoiceId, open]);
+  async function loadMore(kind: "loads" | "invoices") {
+    const cursor =
+      kind === "loads" ? data?.loads_cursor : data?.invoices_cursor;
+    if (!cursor || busy) return;
+    const request = ++loadSeq.current;
+    setBusy(true);
+    setError("");
+    try {
+      const next = await api<BillingOverview>(
+        "billing?" +
+          new URLSearchParams({
+            ...Object.fromEntries(new URLSearchParams(rangeQuery)),
+            carrier_id: carrierId,
+            [kind === "loads" ? "load_cursor" : "invoice_cursor"]: cursor,
+          }),
+      );
+      if (request !== loadSeq.current) return;
+      setData((old) =>
+        old && old.carrier_id === next.carrier_id
+          ? {
+              ...old,
+              [kind]: [
+                ...old[kind],
+                ...next[kind].filter(
+                  (x) => !old[kind].some((y) => y.id === x.id),
+                ),
+              ],
+              [kind === "loads" ? "loads_cursor" : "invoices_cursor"]:
+                next[kind === "loads" ? "loads_cursor" : "invoices_cursor"],
+            }
+          : old,
+      );
+    } catch (e) {
+      if (request !== loadSeq.current) return;
+      if (e instanceof ApiError && e.status === 401) onAuthError(e);
+      setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
+    } finally {
+      if (request === loadSeq.current) setBusy(false);
+    }
+  }
   async function run(fn: () => Promise<string>) {
     setBusy(true);
     setError("");
     setNotice("");
     try {
       const message = await fn();
-      setData(await api<BillingOverview>("billing?carrier_id=" + carrierId));
       setNotice(message);
+      try {
+        setData(
+          await api<BillingOverview>(
+            "billing?" + rangeQuery + "&carrier_id=" + carrierId,
+          ),
+        );
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) onAuthError(e);
+        setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
+      }
       return true;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
@@ -1000,7 +1060,42 @@ export function BillingWorkspace({
       {!carriers.length && (
         <p className="helpText">No carrier billing access.</p>
       )}
+      {scope.from && scope.to && (
+        <p className="helpText" role="status">
+          Invoices issued {scope.from} through {scope.to} UTC. Balances include
+          payments recorded to date.
+        </p>
+      )}
       {error && <ErrorAlert error={error} onRetry={() => void load()} />}
+      {(data?.loads_cursor || data?.invoices_cursor) && (
+        <div
+          className="formActions"
+          role="group"
+          aria-label="More billing records"
+        >
+          {data.loads_cursor && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => void loadMore("loads")}
+            >
+              Load more billing loads
+            </button>
+          )}
+          {data.invoices_cursor && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => void loadMore("invoices")}
+            >
+              Load more invoices
+            </button>
+          )}
+          <span className="helpText">
+            Summary and filters describe loaded records; load more to continue.
+          </span>
+        </div>
+      )}
       <p
         className={notice || linkNote ? "inlineNotice" : "srOnly"}
         role="status"

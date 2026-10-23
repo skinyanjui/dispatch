@@ -1,6 +1,14 @@
 "use client";
 import { createContext, useContext } from "react";
 const messages: Record<string, string> = {
+  EXPORT_EXPIRED:
+    "This export has expired. Prepare a new export with the same filters.",
+  EXPORT_NOT_READY:
+    "This export is still being prepared. Check its status before downloading.",
+  EMAIL_UNAVAILABLE:
+    "Email delivery is not configured. No message was saved or sent. Use Relay messaging or explicitly log an email sent elsewhere.",
+  EXPORT_RANGE_TOO_LARGE:
+    "This export exceeds 50,000 loads. Use Prepare larger export, or choose a smaller range; no partial file was downloaded.",
   INVITE_UNAVAILABLE:
     "This invitation link has already been used or has expired. Ask whoever invited you for a fresh one, or just sign in if you've already joined.",
   INVITE_SIGN_IN_REQUIRED:
@@ -229,6 +237,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     code: string,
+    public requestId?: string,
+    public retryAfter?: number,
   ) {
     super(code);
   }
@@ -271,6 +281,10 @@ export async function api<T>(
     throw new ApiError(
       response.status,
       typeof data?.error === "string" ? data.error : "SERVICE_UNAVAILABLE",
+      response.headers.get("X-Request-Id") || undefined,
+      response.headers.has("Retry-After")
+        ? Number(response.headers.get("Retry-After"))
+        : undefined,
     );
   return data as T;
 }

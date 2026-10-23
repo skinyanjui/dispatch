@@ -1,4 +1,5 @@
 "use client";
+import { readFilters, filterSearch, type WorkspaceFilters } from "@/lib/routes";
 import { AuthLayout } from "@/components/auth-layout";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
@@ -67,6 +68,7 @@ import {
 } from "@/components/rate-confirmation-fill";
 import { uploadDocumentFile } from "@/lib/upload-client";
 import { Inbox, type Compose, type InboxCounts } from "@/components/inbox";
+import { ReportInvoices } from "@/components/report-invoices";
 import { Reports } from "@/components/reports";
 import { LoadChanges } from "@/components/load-changes";
 import { OrganizationSettings } from "@/components/organization-settings";
@@ -144,6 +146,10 @@ export default function Workspace({
       truncated: boolean;
       loads: Load[];
     } | null>(null),
+    [scopes, setScopes] = useState<
+      Partial<Record<WorkspaceSection, WorkspaceFilters>>
+    >({}),
+    [loadScope, setLoadScope] = useState<WorkspaceFilters>({}),
     [attentionKey, setAttentionKey] = useState<AttentionKey | null>(null),
     [view, setView] = useState<ViewConfig>(defaultView),
     [recordTab, setRecordTab] = useState<RecordTab>("timeline"),
@@ -227,12 +233,16 @@ export default function Workspace({
       new URLSearchParams({
         ...(q ? { q } : {}),
         ...(carrier ? { carrier_id: carrier } : {}),
+        ...loadScope,
         ...(status ? { status } : {}),
       }),
-    [q, carrier, status],
+    [q, carrier, status, loadScope],
   );
   const handleError = useCallback((e: unknown) => {
     if (e instanceof ApiError && e.status === 401) {
+      deepLink.current =
+        parsePath(window.location.pathname.split("/").filter(Boolean)) ??
+        undefined;
       active.current = false;
       setContext(null);
       setSelected(null);
@@ -431,6 +441,33 @@ export default function Workspace({
         const next = allowed ? r.section : "loads";
         if (!allowed) setError("NOT_FOUND");
         setSection(next);
+        const filters = readFilters(window.location.search);
+        setScopes((old) => ({ ...old, [next]: filters }));
+        if (next === "loads") {
+          setQ(filters.q ?? "");
+          setCarrier(filters.carrier_id ?? "");
+          setStatus(
+            [
+              "booked",
+              "dispatched",
+              "picked-up",
+              "delivered",
+              "cancelled",
+            ].includes(filters.status)
+              ? filters.status
+              : "",
+          );
+          const {
+            q: ignoredQ,
+            carrier_id: ignoredCarrier,
+            status: ignoredStatus,
+            ...rest
+          } = filters;
+          void ignoredQ;
+          void ignoredCarrier;
+          void ignoredStatus;
+          setLoadScope(rest);
+        }
         setInvoiceTarget(next === "billing" ? (r.invoiceId ?? null) : null);
         const carrierOk =
           next === "carriers" &&
@@ -499,8 +536,22 @@ export default function Workspace({
                 carrierPanel: "documents",
               }
             : { section };
-    const path = pathFor(route);
-    if (window.location.pathname !== path)
+    const routeFilters = selected
+      ? Object.fromEntries(
+          Object.entries(scopes[section] ?? {}).filter(([key]) =>
+            ["from", "to", "carrier_id"].includes(key),
+          ),
+        )
+      : section === "loads"
+        ? {
+            ...loadScope,
+            ...(q ? { q } : {}),
+            ...(carrier ? { carrier_id: carrier } : {}),
+            ...(status ? { status } : {}),
+          }
+        : (scopes[section] ?? {});
+    const path = pathFor(route) + filterSearch(routeFilters);
+    if (window.location.pathname + window.location.search !== path)
       window.history[replaceNext.current ? "replaceState" : "pushState"](
         null,
         "",
@@ -520,6 +571,11 @@ export default function Workspace({
     section,
     setupCarrier,
     docsCarrier,
+    scopes,
+    loadScope,
+    q,
+    carrier,
+    status,
   ]);
   function filterChange(
     patch: Partial<{ q: string; carrier: string; status: string }>,
@@ -958,7 +1014,12 @@ export default function Workspace({
     (c) => c.id === selected?.carrier_id,
   )?.name;
   // Strip and filter apply to the default view only, never mid-search.
-  const stripShown = section === "loads" && !q && !status && attention !== null;
+  const stripShown =
+    section === "loads" &&
+    !q &&
+    !status &&
+    !Object.keys(loadScope).length &&
+    attention !== null;
   const activeKey =
     stripShown && attentionKey && attention?.counts[attentionKey]
       ? attentionKey
@@ -1106,6 +1167,21 @@ export default function Workspace({
               onQueue={showQueue}
               trailing={controls}
             />
+            {Object.keys(loadScope).length > 0 && (
+              <div className="appliedFilters" role="status">
+                <span>
+                  {loadScope.from && loadScope.to
+                    ? `Pickup dates: ${loadScope.from} – ${loadScope.to} UTC`
+                    : "Filtered pickup cohort"}
+                  {loadScope.missing_pod === "true"
+                    ? " · Delivered without accepted current POD"
+                    : ""}
+                </span>
+                <button className="secondary" onClick={() => setLoadScope({})}>
+                  Clear report filters
+                </button>
+              </div>
+            )}
             {!driverOnly && (
               <LoadsViewBar
                 config={view}
@@ -1331,14 +1407,37 @@ export default function Workspace({
           />
         ) : section === "reports" ? (
           <Reports
+            demo={demo}
             query={pageQ.reports ?? ""}
-            onOpenLoads={({ carrier: c, status: st, attention: a }) => {
+            scope={scopes.reports ?? {}}
+            onScopeChange={(scope) =>
+              setScopes((old) => ({ ...old, reports: scope }))
+            }
+            onOpenLoads={({
+              carrier: c,
+              status: st,
+              attention: a,
+              from,
+              to,
+              missing_pod,
+            }) => {
               setSection("loads");
               filterChange({ carrier: c ?? "", status: st ?? "", q: "" });
+              setLoadScope({
+                ...(from ? { from } : {}),
+                ...(to ? { to } : {}),
+                ...(missing_pod ? { missing_pod: "true" } : {}),
+              });
               setAttentionKey(a ?? null);
             }}
-            onOpenExceptions={() => setSection("exceptions")}
-            onOpenBilling={() => setSection("billing")}
+            onOpenExceptions={(scope) => {
+              setScopes((old) => ({ ...old, exceptions: scope }));
+              setSection("exceptions");
+            }}
+            onOpenBilling={(scope) => {
+              setScopes((old) => ({ ...old, billing: scope }));
+              setSection("billing");
+            }}
             carriers={context.carriers.filter((c) => c.role !== "driver")}
             onAuthError={handleError}
           />
@@ -1388,8 +1487,17 @@ export default function Workspace({
             driverOnly={driverOnly}
             onAuthError={handleError}
           />
+        ) : section === "billing" &&
+          scopes.billing?.basis === "issued" &&
+          !invoiceTarget ? (
+          <ReportInvoices
+            scope={scopes.billing}
+            onAuthError={handleError}
+            onOpen={setInvoiceTarget}
+          />
         ) : section === "billing" ? (
           <BillingWorkspace
+            scope={scopes.billing ?? {}}
             query={pageQ.billing ?? ""}
             onClearQuery={() => setPageQ((old) => ({ ...old, billing: "" }))}
             context={context}
@@ -1400,6 +1508,10 @@ export default function Workspace({
           />
         ) : section === "exceptions" ? (
           <ExceptionQueue
+            scope={scopes.exceptions ?? {}}
+            onScopeChange={(scope) =>
+              setScopes((old) => ({ ...old, exceptions: scope }))
+            }
             query={pageQ.exceptions ?? ""}
             onClearQuery={() => setPageQ((old) => ({ ...old, exceptions: "" }))}
             revision={exceptionRevision}

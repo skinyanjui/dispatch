@@ -50,10 +50,8 @@ test("a load opens at its own address and survives reload, Back and Forward", as
 test("opening a load from the list gives it an address", async ({ page }) => {
   await login(page);
   await page.goto("/");
-  await page
-    .getByRole("button", { name: /^(?!Open )[A-Z0-9-]{3,}/ })
-    .first()
-    .click();
+  // Pick an actual load card; carrier names in navigation can share its prefix.
+  await page.locator(".loadSurface .loadCard").first().click();
   await expect(
     page.getByRole("dialog", { name: "Load details" }),
   ).toBeVisible();

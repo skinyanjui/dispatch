@@ -1,7 +1,8 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { WarningIcon } from "@phosphor-icons/react";
+import type { WorkspaceFilters } from "@/lib/routes";
 import { ApiError, useApi } from "@/lib/client-api";
 import {
   exceptionStatusLabels,
@@ -21,8 +22,12 @@ export function ExceptionQueue({
   onAuthError,
   driverOnly,
   revision,
+  scope = {},
+  onScopeChange,
 }: {
   revision: number;
+  scope?: WorkspaceFilters;
+  onScopeChange?: (scope: WorkspaceFilters) => void;
   /** Search text from the page header. */
   query?: string;
   onClearQuery?: () => void;
@@ -32,61 +37,76 @@ export function ExceptionQueue({
   driverOnly: boolean;
 }) {
   const api = useApi();
-  const [status, setStatus] = useState("active"),
-    [owner, setOwner] = useState("any"),
-    [overdue, setOverdue] = useState(false),
-    [all, setItems] = useState<LoadException[] | null>(null),
-    [truncated, setTruncated] = useState(false),
+  const status = scope.status ?? "active",
+    owner = scope.owner ?? "any",
+    overdue = scope.overdue === "true";
+  const setStatus = (status: string) => onScopeChange?.({ ...scope, status });
+  const setOwner = (owner: string) => onScopeChange?.({ ...scope, owner });
+  const setOverdue = (overdue: boolean) =>
+    onScopeChange?.({ ...scope, overdue: String(overdue) });
+  const [items, setItems] = useState<LoadException[] | null>(null),
+    [cursor, setCursor] = useState<string | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [now, setNow] = useState(0);
+  const sequence = useRef(0);
   const needle = query.trim().toLowerCase();
-  const items =
-    all && needle
-      ? all.filter((e) =>
-          [
-            e.summary,
-            (e as { load_reference?: string }).load_reference,
-            (e as { carrier_name?: string }).carrier_name,
-            e.owner_name,
-            e.type,
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle),
-        )
-      : all;
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await api<{
-        exceptions: LoadException[];
-        truncated: boolean;
-      }>(
-        "exceptions?" +
-          new URLSearchParams({
-            status,
-            owner,
-            ...(overdue ? { overdue: "true" } : {}),
-          }),
-      );
-      setNow(Date.now());
-      setItems(data.exceptions);
-      setTruncated(data.truncated);
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) onAuthError(e);
-      setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
-    } finally {
-      setLoading(false);
-    }
-  }, [api, status, owner, overdue, onAuthError]);
+  const queryScope = JSON.stringify({
+    ...scope,
+    status,
+    owner,
+    overdue: String(overdue),
+    ...(query ? { q: query } : {}),
+  });
+  const load = useCallback(
+    async (after?: string) => {
+      const request = ++sequence.current;
+      setLoading(true);
+      setError("");
+      try {
+        const data = await api<{
+          exceptions: LoadException[];
+          nextCursor: string | null;
+        }>(
+          "exceptions?" +
+            new URLSearchParams({
+              ...JSON.parse(queryScope),
+              ...(after ? { cursor: after } : {}),
+            }),
+        );
+        if (request !== sequence.current) return;
+        setNow(Date.now());
+        setItems((old) =>
+          after
+            ? [
+                ...(old ?? []),
+                ...data.exceptions.filter(
+                  (x) => !old?.some((y) => y.id === x.id),
+                ),
+              ]
+            : data.exceptions,
+        );
+        setCursor(data.nextCursor);
+      } catch (e) {
+        if (request !== sequence.current) return;
+        if (e instanceof ApiError && e.status === 401) onAuthError(e);
+        setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
+      } finally {
+        if (request === sequence.current) setLoading(false);
+      }
+    },
+    [api, queryScope, onAuthError],
+  );
+  const invalidate = useCallback(() => {
+    sequence.current++;
+  }, []);
   useEffect(() => {
     // Fetch whenever filters change; state is set after the response.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
+    return invalidate;
     // revision is a refresh signal from exception changes made elsewhere.
-  }, [load, revision]);
+  }, [load, revision, invalidate]);
   const overdueNow = (item: LoadException) =>
     item.status !== "resolved" &&
     !!item.due_at &&
@@ -278,9 +298,19 @@ export function ExceptionQueue({
           }
         />
       )}
-      {truncated && (
+      {cursor && (
+        <button
+          className="secondary"
+          disabled={loading}
+          onClick={() => void load(cursor)}
+        >
+          {loading ? "Loading…" : "Load more exceptions"}
+        </button>
+      )}
+      {!!items?.length && (
         <p className="helpText">
-          Showing the 100 most urgent. Narrow the filters to see others.
+          Counts describe {items.length} loaded exceptions
+          {cursor ? "; more records are available" : ""}.
         </p>
       )}
     </section>

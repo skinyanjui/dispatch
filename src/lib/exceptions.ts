@@ -1,9 +1,17 @@
+import { pickupRange, pickupCohort } from "./reporting-scope";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool, transaction } from "./db";
 import { digest, HttpError } from "./auth";
-import { event, member, scoped } from "./loads";
+import {
+  event,
+  member,
+  scoped,
+  decodeCursor,
+  encodeCursor,
+  pgTimestamp,
+} from "./loads";
 import { loadDocumentTypes } from "./compliance";
 import { enqueueForUser } from "./notifications";
 import {
@@ -259,6 +267,24 @@ export async function updateException(
 }
 
 export async function listExceptions(user: string, params: URLSearchParams) {
+  const cohort = pickupRange(params);
+  const cursor = params.get("cursor")
+    ? decodeCursor(
+        params.get("cursor")!,
+        z.object({
+          id: z.uuid(),
+          opened: pgTimestamp,
+          due: pgTimestamp.nullable(),
+          resolved: z.number().int().min(0).max(1),
+          severity: z.number().int().min(0).max(2),
+        }),
+      )
+    : null;
+  const type = z.enum(exceptionTypes).nullable().parse(params.get("type"));
+  const search = z
+    .string()
+    .max(100)
+    .parse(params.get("q") ?? "");
   const filters = z
     .object({
       status: z.enum([...exceptionStatuses, "active", "all"]).default("active"),
@@ -273,7 +299,7 @@ export async function listExceptions(user: string, params: URLSearchParams) {
       overdue: params.get("overdue") ?? undefined,
     });
   const { rows } = await pool.query(
-    `SELECT ${exceptionColumns},l.reference load_reference,c.name carrier_name
+    `SELECT ${exceptionColumns},e.opened_at::text cursor_opened,e.due_at::text cursor_due,l.reference load_reference,c.name carrier_name
     FROM load_exceptions e ${exceptionJoins}
     JOIN loads l ON l.id=e.load_id JOIN carriers c ON c.id=e.carrier_id
     JOIN memberships m ON m.carrier_id=e.carrier_id AND m.user_id=$1
@@ -282,9 +308,12 @@ export async function listExceptions(user: string, params: URLSearchParams) {
       AND ($3='any' OR ($3='me' AND e.owner_id=$1) OR ($3='unassigned' AND e.owner_id IS NULL))
       AND ($4::uuid IS NULL OR e.carrier_id=$4)
       AND ($5::boolean IS NOT TRUE OR (e.status<>'resolved' AND e.due_at<now()))
-    ORDER BY (e.status='resolved'),
-      CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-      e.due_at NULLS LAST,e.opened_at DESC,e.id
+      AND ${pickupCohort("l", "$11", "$12")}
+      AND ($13::text IS NULL OR e.type=$13)
+      AND ($14='' OR concat_ws(' ',e.summary,l.reference,c.name,o.name,e.type) ILIKE '%'||$14||'%')
+      AND ($10::uuid IS NULL OR ROW((e.status='resolved')::int,CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,(e.due_at IS NULL)::int,COALESCE(e.due_at,'epoch'),-extract(epoch FROM e.opened_at),e.id)
+        > ROW($6::int,$7::int,($8::timestamptz IS NULL)::int,COALESCE($8::timestamptz,'epoch'),-extract(epoch FROM $9::timestamptz),$10::uuid))
+    ORDER BY (e.status='resolved')::int,CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,(e.due_at IS NULL)::int,COALESCE(e.due_at,'epoch'),-extract(epoch FROM e.opened_at),e.id
     LIMIT 101`,
     [
       user,
@@ -292,7 +321,35 @@ export async function listExceptions(user: string, params: URLSearchParams) {
       filters.owner,
       filters.carrier_id ?? null,
       filters.overdue === undefined ? null : filters.overdue === "true",
+      cursor?.resolved ?? null,
+      cursor?.severity ?? null,
+      cursor?.due ?? null,
+      cursor?.opened ?? null,
+      cursor?.id ?? null,
+      cohort.from,
+      cohort.to,
+      type,
+      search,
     ],
   );
-  return { exceptions: rows.slice(0, 100), truncated: rows.length > 100 };
+  const page = rows.slice(0, 100),
+    last = page.at(-1);
+  return {
+    exceptions: page.map(({ cursor_opened, cursor_due, ...row }) => {
+      void cursor_opened;
+      void cursor_due;
+      return row;
+    }),
+    truncated: rows.length > 100,
+    nextCursor:
+      rows.length > 100 && last
+        ? encodeCursor({
+            id: last.id,
+            opened: last.cursor_opened,
+            due: last.cursor_due,
+            resolved: last.status === "resolved" ? 1 : 0,
+            severity: ["high", "medium", "low"].indexOf(last.severity),
+          })
+        : null,
+  };
 }

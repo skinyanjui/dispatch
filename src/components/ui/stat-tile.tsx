@@ -72,8 +72,8 @@ export function StatTile({
       {hint && <small>{hint}</small>}
       {extra}
       {onSelect && actionLabel && pressed === undefined && (
-        <span className="statAction" aria-hidden="true">
-          {actionLabel} <CaretRightIcon size={11} />
+        <span className="statAction">
+          {actionLabel} <CaretRightIcon size={11} aria-hidden="true" />
         </span>
       )}
     </>
@@ -84,11 +84,6 @@ export function StatTile({
       type="button"
       className={cls + " link"}
       aria-pressed={pressed}
-      aria-label={
-        actionLabel
-          ? `${label}: ${typeof value === "string" || typeof value === "number" ? value : ""}. ${actionLabel}`
-          : undefined
-      }
       disabled={disabled}
       onClick={onSelect}
     >

@@ -1,3 +1,5 @@
+import { pickupRange, pickupCohort } from "./reporting-scope";
+import { acceptedCurrentDocument } from "./document-readiness";
 import { linkRead } from "./rate-read-link";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
@@ -185,7 +187,7 @@ export async function createLoad(user: string, input: unknown, key: string) {
 }
 // PostgreSQL text timestamps keep microseconds, so paging never skips or
 // repeats rows the way millisecond JavaScript dates could.
-const pgTimestamp = z
+export const pgTimestamp = z
   .string()
   .max(50)
   .regex(
@@ -200,7 +202,7 @@ const pgTimestamp = z
       z.iso.datetime({ offset: true }).safeParse(iso).success
     );
   });
-function decodeCursor<T>(raw: string, shape: z.ZodType<T>): T {
+export function decodeCursor<T>(raw: string, shape: z.ZodType<T>): T {
   if (raw.length > 300) throw new HttpError(400, "INVALID_CURSOR");
   try {
     return shape.parse(JSON.parse(Buffer.from(raw, "base64url").toString()));
@@ -208,10 +210,14 @@ function decodeCursor<T>(raw: string, shape: z.ZodType<T>): T {
     throw new HttpError(400, "INVALID_CURSOR");
   }
 }
-const encodeCursor = (value: unknown) =>
+export const encodeCursor = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
 export async function listLoads(user: string, params: URLSearchParams) {
   const limit = 25;
+  const cohort = pickupRange(params);
+  const missingPod =
+    z.enum(["true", "false"]).nullable().parse(params.get("missing_pod")) ===
+    "true";
   const raw = params.get("cursor");
   const cursor = raw
     ? decodeCursor(raw, z.object({ at: pgTimestamp, id: z.uuid() }))
@@ -230,7 +236,7 @@ export async function listLoads(user: string, params: URLSearchParams) {
       q: params.get("q") ?? undefined,
     });
   const { rows } = await pool.query(
-    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id ORDER BY sequence DESC LIMIT 1) delivery,(SELECT count(*)::int FROM load_stops WHERE load_id=l.id) stop_count FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND (($3::text='cancelled' AND l.cancelled_at IS NOT NULL) OR ($3::text IS DISTINCT FROM 'cancelled' AND l.cancelled_at IS NULL AND ($3::text IS NULL OR l.stage=$3))) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
+    `SELECT l.*,l.created_at::text cursor_at,c.name carrier_name,(SELECT address FROM load_stops WHERE load_id=l.id AND sequence=1) pickup,(SELECT address FROM load_stops WHERE load_id=l.id ORDER BY sequence DESC LIMIT 1) delivery,(SELECT count(*)::int FROM load_stops WHERE load_id=l.id) stop_count FROM loads l JOIN carriers c ON c.id=l.carrier_id JOIN memberships m ON m.carrier_id=l.carrier_id AND m.user_id=$1 LEFT JOIN load_assignments a ON a.load_id=l.id WHERE (m.role<>'driver' OR a.driver_id=m.driver_id) AND ($2::text IS NULL OR l.carrier_id::text=$2) AND (($3::text='cancelled' AND l.cancelled_at IS NOT NULL) OR ($3::text IS DISTINCT FROM 'cancelled' AND l.cancelled_at IS NULL AND ($3::text IS NULL OR l.stage=$3))) AND ($4::text IS NULL OR l.reference ILIKE '%'||$4||'%') AND ${pickupCohort("l", "$8", "$9")} AND ($10::boolean=false OR (l.stage='delivered' AND l.cancelled_at IS NULL AND NOT ${acceptedCurrentDocument("l", "pod")})) AND ($6::timestamptz IS NULL OR l.created_at<$6 OR (l.created_at=$6 AND l.id>$7::uuid)) ORDER BY l.created_at DESC,l.id LIMIT $5`,
     [
       user,
       filters.carrier_id ?? null,
@@ -239,6 +245,9 @@ export async function listLoads(user: string, params: URLSearchParams) {
       limit + 1,
       cursor?.at ?? null,
       cursor?.id ?? null,
+      cohort.from,
+      cohort.to,
+      missingPod,
     ],
   );
   const page = rows.slice(0, limit).map(({ cursor_at, ...load }) => {
