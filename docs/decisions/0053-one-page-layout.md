@@ -14,10 +14,10 @@ A spacing audit of the demo's eleven pages (computed styles in a browser at 1280
 
 - `src/app/page-layout.css` is the single page layout. A page root (`.carrierDirectory`, `.excPage`, `.fleetPage`, `.orgPage`, `.reports`, `.reportBody`) is a column with `gap: var(--page-gap)` (12px, `--space-3`) and no padding of its own, so the first block sits exactly at the workspace padding.
 - Direct children of a page root have no outer margin. `.stats`, `.tabs` and `.directoryIntro` no longer carry margins in their own rules.
-- Every page root is at most `--page-max` (1100px) wide and left-aligned, so the right edge is the same on every page. The per-page caps (Fleet 1100, Organization 1040, Contacts and Documents lists 1000, Account 960, Notifications 900) are removed.
+- Every block directly in the workspace is at most `--page-max` (1100px) wide and left-aligned, so the right edge is the same on all eleven pages, including Loads, Inbox and Assistant, and a new page follows without being listed. The per-page caps (Fleet 1100, Organization 1040, Contacts and Documents lists 1000, Account 960, Notifications 900) are removed.
 - A section heading (`h2`/`h3`) directly in a page root adds one `--page-section-step` (12px) above itself, so it is 24px below the previous block and 12px above its content.
 - A new page uses one of these roots, or adds its class to the list in `page-layout.css`. Do not add vertical margins to blocks.
-- Inbox, Assistant and the Loads board are full-height layouts with their own columns and are not page stacks.
+- Inbox, Assistant and the Loads board are full-height layouts with their own columns and are not page stacks, but they share the page width.
 
 ## Verification and rollback
 

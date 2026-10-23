@@ -28,8 +28,10 @@
   > :is(h2, h3):not(.srOnly) {
   margin-top: var(--page-section-step);
 }
-/* Every page is the same width (--page-max) and left-aligned, so the right edge
-   does not move between pages on a wide screen. */
-.appShell :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports) {
+/* Every page is the same width: each block directly in the workspace (a page
+   root, or the queue row, view bar and board of Loads) is at most --page-max
+   and left-aligned, so the right edge is the same on all eleven pages and a
+   new page follows without listing it here. The status footer spans the panel. */
+.appShell .workspace > :not(footer, dialog, [role="dialog"]) {
   max-width: var(--page-max);
 }

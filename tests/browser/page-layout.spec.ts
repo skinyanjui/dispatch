@@ -82,7 +82,23 @@ for (const width of [1280, 390]) {
   });
 }
 
-test("every page is the same width on a wide screen", async ({ page }) => {
+const allPages = [
+  "Loads",
+  "Exceptions",
+  "Inbox",
+  "Contacts",
+  "Carriers",
+  "Fleet",
+  "Prospects",
+  "Assistant",
+  "Documents",
+  "Billing",
+  "Reports",
+];
+
+test("all eleven pages are the same width on a wide screen", async ({
+  page,
+}) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 1920, height: 1000 });
   await page.goto("/demo");
@@ -93,16 +109,38 @@ test("every page is the same width on a wide screen", async ({ page }) => {
     ),
   );
   expect(max).toBe(1100);
-  for (const name of pages) {
+  for (const name of allPages) {
     await nav.getByRole("button", { name, exact: true }).click();
-    const width = await page.evaluate(
-      () =>
-        document
-          .querySelector(
-            ".workspace :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports)",
-          )!
-          .getBoundingClientRect().width,
+    // The widest block of the page is --page-max and none is wider.
+    const widths = await page.evaluate(() =>
+      [...document.querySelector(".workspace")!.children]
+        .filter(
+          (c) =>
+            c.tagName !== "FOOTER" &&
+            c.getBoundingClientRect().height > 0 &&
+            getComputedStyle(c).position !== "fixed",
+        )
+        .map((c) => Math.round(c.getBoundingClientRect().width)),
     );
-    expect(width, `${name} width`).toBe(max);
+    expect(Math.max(...widths), `${name} widest block`).toBe(max);
+    expect(
+      Math.min(...widths.map((w) => w - max)),
+      `${name} blocks`,
+    ).toBeLessThanOrEqual(0);
+  }
+});
+
+test("no page scrolls sideways at laptop width", async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/demo");
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  for (const name of allPages) {
+    await nav.getByRole("button", { name, exact: true }).click();
+    const over = await page.evaluate(() => {
+      const ws = document.querySelector(".workspace")!;
+      return ws.scrollWidth - ws.clientWidth;
+    });
+    expect(over, `${name} overflows the page`).toBeLessThanOrEqual(1);
   }
 });

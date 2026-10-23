@@ -12,6 +12,8 @@
   flex: 1;
   align-items: start;
   min-height: calc(100dvh - 198px);
+  /* A board with more lanes than fit scrolls inside itself, not the page. */
+  overflow-x: auto;
 }
 .appShell .lane {
   min-height: calc(100dvh - 198px);
