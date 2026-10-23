@@ -99,6 +99,8 @@ const labels: Record<string, string> = {
   "prospect.updated": "Edited a prospect",
   "report.exported": "Exported a report",
   "session.created": "Signed in",
+  "session.revoked": "Ended a signed-in session",
+  "session.revoked_others": "Signed out all other sessions",
   "session.created.remembered": "Signed in (remembered device)",
   "sms.opted_out": "A contact opted out of texts",
   "staff_invitation.accepted": "Accepted a staff invitation",

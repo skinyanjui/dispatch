@@ -23,6 +23,7 @@
     "access:list": "tsx scripts/access-requests.ts list",
     "access:approve": "tsx scripts/access-requests.ts approve",
     "access:decline": "tsx scripts/access-requests.ts decline",
+    "db:restore-drill": "bash scripts/restore-drill.sh",
     "secrets:rotate": "tsx scripts/rotate-data-key.ts",
     "documents:migrate-storage": "tsx scripts/migrate-document-storage.ts",
     "demo": "node scripts/dev.mjs",

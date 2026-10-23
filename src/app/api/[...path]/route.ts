@@ -105,6 +105,9 @@ import {
   completeEmailVerification,
   completeMfaLogin,
   mfaRequired,
+  listSessions,
+  revokeSession,
+  revokeOtherSessions,
   completePasswordReset,
   mfaDisable,
   mfaEnable,
@@ -780,12 +783,34 @@ async function handle(req: NextRequest) {
       const route = path.slice(1).join("/");
       if (route === "" && req.method === "GET")
         return NextResponse.json(await accountSummary(user.id));
+      if (route === "sessions" && req.method === "GET")
+        return NextResponse.json(
+          await listSessions(
+            user.id,
+            req.cookies.get("relay_session")?.value || "",
+          ),
+        );
       if (req.method === "POST") {
         if (route === "password")
           return NextResponse.json(
             await changePassword(
               user.id,
               await readJson(req),
+              req.cookies.get("relay_session")?.value || "",
+            ),
+          );
+        if (route === "sessions/revoke-others")
+          return NextResponse.json(
+            await revokeOtherSessions(
+              user.id,
+              req.cookies.get("relay_session")?.value || "",
+            ),
+          );
+        if (/^sessions\/[^/]+\/revoke$/.test(route))
+          return NextResponse.json(
+            await revokeSession(
+              user.id,
+              z.uuid().parse(route.split("/")[1]),
               req.cookies.get("relay_session")?.value || "",
             ),
           );

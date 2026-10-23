@@ -7,6 +7,7 @@ import {
   scheduleAppointmentReminders,
   scheduleDailyReminders,
 } from "@/lib/notifications";
+import { pruneExpiredCredentials } from "./account";
 import { sendAlerts } from "./alerts";
 import { cleanupAbandoned } from "@/lib/message-attachments";
 
@@ -47,7 +48,11 @@ const defaultSteps = (scope: JobScope): Steps => ({
         error: e instanceof Error ? e.message.slice(0, 100) : "failed",
       })),
   ...(scope === "daily"
-    ? { cleanup: () => cleanupAbandoned(), pruned: pruneJobRuns }
+    ? {
+        cleanup: () => cleanupAbandoned(),
+        pruned: pruneJobRuns,
+        credentials: pruneExpiredCredentials,
+      }
     : {}),
 });
 

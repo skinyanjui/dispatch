@@ -102,6 +102,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
     "alerts",
     "appointments",
     "cleanup",
+    "credentials",
     "delivery",
     "exports",
     "pruned",

@@ -710,3 +710,60 @@ export async function mfaRequired(user: string) {
   );
   return rows[0]?.required === true;
 }
+
+// ---------- Sessions ----------
+
+/** The person's signed-in sessions, newest first; the caller's own is marked. */
+export async function listSessions(user: string, currentToken: string) {
+  const { rows } = await pool.query(
+    `SELECT id,created_at,expires_at,remember,token_hash=$2 AS current
+    FROM sessions WHERE user_id=$1 AND expires_at>now() ORDER BY created_at DESC`,
+    [user, digest(currentToken)],
+  );
+  return { sessions: rows };
+}
+
+/** Ends one session of this person. Anyone else's id is simply not found. */
+export async function revokeSession(
+  user: string,
+  id: string,
+  currentToken: string,
+) {
+  const r = await pool.query(
+    "DELETE FROM sessions WHERE id=$1 AND user_id=$2 AND token_hash<>$3",
+    [id, user, digest(currentToken)],
+  );
+  if (!r.rowCount) throw new HttpError(404, "NOT_FOUND");
+  await audit(user, "session.revoked", id);
+  return { ok: true };
+}
+
+/** "Sign out everywhere else": every session but this one. */
+export async function revokeOtherSessions(user: string, currentToken: string) {
+  const r = await pool.query(
+    "DELETE FROM sessions WHERE user_id=$1 AND token_hash<>$2",
+    [user, digest(currentToken)],
+  );
+  await audit(user, "session.revoked_others", user);
+  return { ok: true, ended: r.rowCount ?? 0 };
+}
+
+/** Rows that can never be used again; kept a week (sessions) or a month
+ *  (tokens) past expiry for support questions, then removed. */
+export async function pruneExpiredCredentials() {
+  const q = async (sql: string) => (await pool.query(sql)).rowCount ?? 0;
+  return {
+    sessions: await q(
+      "DELETE FROM sessions WHERE expires_at<now()-interval '7 days'",
+    ),
+    mfa_challenges: await q(
+      "DELETE FROM mfa_challenges WHERE expires_at<now()-interval '1 day'",
+    ),
+    account_tokens: await q(
+      "DELETE FROM account_tokens WHERE COALESCE(used_at,expires_at)<now()-interval '30 days'",
+    ),
+    login_attempts: await q(
+      "DELETE FROM login_attempts WHERE resets_at<now()-interval '1 day'",
+    ),
+  };
+}

@@ -372,7 +372,7 @@ test("operations metadata is limited to administrators and never returns secret 
     [t.organization, t.dispatcher],
   );
   const metadata = await operationsStatus(t.dispatcher);
-  assert.equal(metadata.release.schema.at(-1), "040");
+  assert.equal(metadata.release.schema.at(-1), "041");
   assert.ok(!JSON.stringify(metadata).includes(process.env.DATABASE_URL!));
 });
 
