@@ -35,15 +35,26 @@ Baseline: `d233668` on a local PostgreSQL 16 database (migrations 001–039, `np
 
 Each fix has a browser or integration test that fails without it (`tests/browser/error-states.spec.ts`, `tests/integration/utc-ranges.test.ts`).
 
+## Open items, closed in a follow-up (2026-10-23)
+
+All six items that were open here were fixed afterwards:
+
+1. **Two banners for one failure.** A failed loads request is the Loads page's own business: it is no longer raised as a shell banner while another page is showing (Loads shows "Couldn't load" in its list), and opening Loads retries it. A failure now shows one banner.
+2. **Pages a role cannot open fired requests first.** The shown page is derived from the role, so a page the person may not use is never mounted: no data requests, and no 404s in the console. (`dispatch-workspace.tsx`)
+3. **Typed work lost on session expiry.** The workspace now stays mounted when the session ends, and sign-in appears over it as a native modal dialog (it stacks above an open drawer, makes the rest inert and cannot be dismissed with Escape). After the same person signs in, their dialog and typed text are still there; if someone else signs in the page reloads, so they never inherit the previous person's screen. Only `AUTH_REQUIRED` and `SESSION_EXPIRED` mean the session ended: a wrong password in the overlay shows its own message.
+4. **Inbox "find people" hid a failed search.** A failed lookup now shows an error with Retry, and an empty one says "No one matches ...".
+5. **Reports tile label wrapped.** "Delivered, no accepted POD" is now "POD not accepted", with "On delivered loads" as its detail, so no label wraps at 1440px and no tile has a gap above its figure.
+6. **Exports could stall silently.** A queued export nobody starts within 30 minutes is failed with `EXPORT_STALLED` ("This export never started... Prepare it again"), which also frees its place in the user's limit of three waiting exports (three stuck jobs used to lock a person out for 24 hours). Waiting more than two minutes shows "This is taking longer than expected". The stall is logged (`report.export_stalled`) and counted in `GET /api/operations/status` (`exports.waiting`, `exports.stalled_last_24h`).
+
+Decision record: `docs/decisions/0057-session-expiry-keeps-drafts.md`.
+
+Tests: `tests/browser/error-states.spec.ts` (one test or more per item; the banner and gating tests fail on the earlier code), `tests/integration/report-export-stalls.test.ts` (fails without the stall rule) and `tests/browser/stat-tiles.spec.ts`.
+
 ## Open
 
-- **Two banners for one failure.** When reads fail, the shell banner and the page's own banner both show the same message. Each now recovers with its own Retry, but one banner would be clearer.
-- **Pages a role cannot open load data first.** A carrier manager or driver who opens `/audit`, `/organization` and similar addresses is sent to Loads with "We couldn't find that"; the page first fires its data requests (404s) before the role check. Harmless, but noisy and wasteful.
-- **Typed work is lost on session expiry.** A dialog the person was filling in closes when they are sent to sign-in.
 - **Edit conflicts have no in-dialog refresh.** The load dialog has "Refresh load details"; the vehicle, contact and other editors tell the person to refresh the page.
-- **Inbox "find people" hides a failed search.** A failed lookup shows an empty list, which reads as "no matches".
-- **Reports tile label wraps.** At about 1440px, "Delivered, no accepted POD" wraps to two lines, so the figures in the other tiles of that row sit one line lower to stay level with it. A shorter label would remove the gap.
-- **No stuck-export signal.** An export whose background worker never starts stays "queued or running"; the failure is only a `console.error`. This is the existing observability gap (no metrics, alerting or dead-letter view).
+- **No alerting on stalled exports.** The stall is now visible to the person, in the log and in the operations status, but nothing pages anyone: the existing observability gap (no metrics, alerting or dead-letter view).
+- **The expired-session overlay keeps page-owned data in the page.** The loads list is cleared at once, but data inside a page's own components (for example the Fleet table) stays behind the inert dialog until sign-in or reload (ADR 0057).
 - Everything listed as incomplete in `2026-10-22-completeness-audit.md` is unchanged (live-provider verification, daily reminders, tracking, retention policy, backups, per-action rate limiting).
 
 ## Not covered

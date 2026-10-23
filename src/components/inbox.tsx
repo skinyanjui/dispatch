@@ -748,6 +748,9 @@ export function Inbox({
     [newMessage, setNewMessage] = useState<Compose | null>(compose),
     [people, setPeople] = useState<DirectoryEntry[]>([]),
     [find, setFind] = useState(""),
+    [peopleError, setPeopleError] = useState(""),
+    [searchedFor, setSearchedFor] = useState<string | null>(null),
+    [findTick, setFindTick] = useState(0),
     [status, setStatus] = useState(""),
     [resending, setResending] = useState<string | null>(null);
   const q = query ?? ownQ;
@@ -862,12 +865,16 @@ export function Inbox({
           "contacts?" + new URLSearchParams(find.trim() ? { q: find } : {}),
         );
         setPeople(result.entries.filter((e) => e.key !== "user:" + userId));
-      } catch {
+        setPeopleError("");
+        setSearchedFor(find.trim());
+      } catch (e) {
+        // A failed lookup is not "no matches": say so, and offer to try again.
         setPeople([]);
+        setPeopleError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");
       }
     }, 200);
     return () => clearTimeout(timer);
-  }, [api, find, newMessage, userId]);
+  }, [api, find, findTick, newMessage, userId]);
   const openRequest = useRef(0);
   const openThread = useCallback(
     async (id: string) => {
@@ -1351,6 +1358,23 @@ export function Inbox({
                         </li>
                       ))}
                   </ul>
+                  <ErrorAlert
+                    error={peopleError}
+                    onRetry={() => {
+                      setPeopleError("");
+                      setFindTick((n) => n + 1);
+                    }}
+                  />
+                  {find.trim() &&
+                    searchedFor === find.trim() &&
+                    !peopleError &&
+                    !people.some(
+                      (p) => !newMessage.to.some((x) => x.key === p.key),
+                    ) && (
+                      <p className="helpText">
+                        No one matches “{find.trim()}”.
+                      </p>
+                    )}
                 </fieldset>
               )}
             />

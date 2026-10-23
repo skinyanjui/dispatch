@@ -552,7 +552,8 @@ export function Reports({
               actionLabel="Open exceptions"
             />
             <StatTile
-              label="Delivered, no accepted POD"
+              label="POD not accepted"
+              hint="On delivered loads"
               value={String(data.delivered_without_pod)}
               onSelect={
                 openLoads &&

@@ -742,7 +742,7 @@ test("reports: pressed range, KPIs that open their loads, sortable table", async
   ).toBeVisible();
   await page.getByRole("button", { name: "Reports", exact: true }).click();
   await region
-    .getByRole("button", { name: /^Delivered, no accepted POD/ })
+    .getByRole("button", { name: /^POD not accepted/ })
     .click();
   await expect(page.locator(".loadSurface")).toBeVisible();
   await page.getByRole("button", { name: "Reports", exact: true }).click();

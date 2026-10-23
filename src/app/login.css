@@ -637,3 +637,25 @@
     font-size: clamp(28px, 3.6vw, 44px);
   }
 }
+
+/* Sign-in over the workspace after a session expires (ExpiredSignIn in
+   dispatch-workspace.tsx): the workspace stays mounted underneath, so typed
+   work survives. */
+dialog.sessionOverlay {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: var(--space-4);
+  border: 0;
+  overflow: auto;
+  background: var(--surface-cool);
+}
+dialog.sessionOverlay[open] {
+  display: grid;
+  place-items: center;
+}
+.sessionOverlay .authCard {
+  width: min(440px, 100%);
+  max-width: 100%;
+}

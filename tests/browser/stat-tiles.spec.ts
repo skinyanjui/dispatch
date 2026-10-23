@@ -67,3 +67,26 @@ for (const width of [1920, 1280, 390]) {
     ).toBe(true);
   });
 }
+
+test("no report tile label wraps at 1440px, so no tile gets a gap above its figure", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/demo");
+  await page
+    .getByRole("navigation", { name: "Workspace navigation" })
+    .getByRole("button", { name: "Reports", exact: true })
+    .click();
+  await expect(page.locator(".statAction").first()).toBeVisible();
+  const labels = await page.evaluate(() =>
+    [...document.querySelectorAll(".stat .statLabel")].map((el) => ({
+      text: el.textContent,
+      lines: Math.round(
+        el.getBoundingClientRect().height /
+          parseFloat(getComputedStyle(el).lineHeight),
+      ),
+    })),
+  );
+  expect(labels.length).toBeGreaterThan(5);
+  for (const l of labels) expect(l.lines, l.text ?? "").toBe(1);
+});

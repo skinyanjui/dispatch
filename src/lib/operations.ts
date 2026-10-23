@@ -30,6 +30,15 @@ export async function operationsStatus(user: string) {
         !!process.env.CRON_SECRET && process.env.CRON_SECRET.length >= 16,
     },
     jobs: await jobStatus(),
+    // Exports waiting more than two minutes mean the worker is not keeping up;
+    // stalled ones were failed after 30 minutes without starting.
+    exports: (
+      await pool.query(
+        `SELECT count(*) FILTER (WHERE status='queued' AND created_at<now()-interval '2 minutes')::int waiting,
+                count(*) FILTER (WHERE error_code='EXPORT_STALLED' AND finished_at>now()-interval '24 hours')::int stalled_last_24h
+         FROM report_exports`,
+      )
+    ).rows[0] as { waiting: number; stalled_last_24h: number },
     observed_at: new Date().toISOString(),
   };
 }

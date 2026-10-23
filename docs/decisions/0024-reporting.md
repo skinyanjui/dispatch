@@ -8,7 +8,7 @@ A **Reports** page (dispatchers and carrier managers) and a loads CSV export, bo
 
 **Scope.** Loads whose first pickup window starts in a UTC date range (default last 30 days, at most 366), optionally one carrier. Only carriers where the caller is a dispatcher or carrier manager are included; a carrier outside that set is `NOT_FOUND`; drivers have no reports. Dispatch-service invoice figures appear only for carriers the caller dispatches; carrier managers see their carrier's freight-billing figures only.
 
-**Figures.** Load counts by stage and cancelled; freight value (agreed rates, cancelled excluded); on-time pickups and deliveries; exceptions by type (opened, open now, overdue, average hours to resolve); delivered loads with no accepted POD; per-carrier table; loads per pickup week; Relay dispatch invoices issued/paid/outstanding/overdue and carrier freight billed/received/outstanding.
+**Figures.** Load counts by stage and cancelled; freight value (agreed rates, cancelled excluded); on-time pickups and deliveries; exceptions by type (opened, open now, overdue, average hours to resolve); delivered loads with no accepted POD (the "POD not accepted" tile); per-carrier table; loads per pickup week; Relay dispatch invoices issued/paid/outstanding/overdue and carrier freight billed/received/outstanding.
 
 **Honesty rules.**
 

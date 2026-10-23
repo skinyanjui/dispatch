@@ -3,6 +3,8 @@ import { createContext, useContext } from "react";
 const messages: Record<string, string> = {
   EXPORT_EXPIRED:
     "This export has expired. Prepare a new export with the same filters.",
+  EXPORT_STALLED:
+    "This export never started, so nothing was produced. Prepare it again.",
   EXPORT_NOT_READY:
     "This export is still being prepared. Check its status before downloading.",
   EMAIL_UNAVAILABLE:

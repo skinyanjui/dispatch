@@ -22,6 +22,26 @@ async function authorize(
   )
     throw new HttpError(404, "NOT_FOUND");
 }
+/**
+ * A job nobody has started after this long is not going to run: it is failed
+ * with EXPORT_STALLED so the person is told, can ask again, and the job stops
+ * counting toward their limit of three waiting exports.
+ */
+export const stalledAfterMinutes = 30;
+export async function failStalledExports(
+  c: Pick<typeof pool, "query">,
+  user?: string,
+) {
+  const stalled = await c.query(
+    `UPDATE report_exports SET status='failed',error_code='EXPORT_STALLED',finished_at=now()
+     WHERE status='queued' AND created_at<now()-make_interval(mins => $1)
+       AND ($2::uuid IS NULL OR user_id=$2) RETURNING id`,
+    [stalledAfterMinutes, user ?? null],
+  );
+  for (const row of stalled.rows)
+    console.error("report.export_stalled", { id: row.id });
+  return stalled.rowCount ?? 0;
+}
 export async function createExport(user: string, input: unknown) {
   const data = z
     .object({
@@ -55,6 +75,7 @@ export async function createExport(user: string, input: unknown) {
         throw new HttpError(409, "IDEMPOTENCY_CONFLICT");
       return { id: existing.id as string };
     }
+    await failStalledExports(c, user);
     const pending = await c.query(
       "SELECT 1 FROM report_exports WHERE user_id=$1 AND status IN ('queued','running') AND expires_at>now()",
       [user],
@@ -147,6 +168,7 @@ export async function runPendingExports(limit = 1) {
       });
     }
   }
+  await failStalledExports(pool);
   await pool.query(
     "UPDATE report_exports SET artifact=NULL WHERE expires_at<=now() AND artifact IS NOT NULL",
   );

@@ -8,11 +8,11 @@ import { test, expect, type Page } from "@playwright/test";
  * failed background load left an unremovable banner on every page but Loads,
  * and Account and Organization had no Retry at all.
  */
-async function signIn(page: Page) {
+async function signIn(page: Page, email = "dispatcher@relay.test") {
   const response = await page.request.post("/api/login", {
     headers: { Origin: "http://localhost:3000" },
     data: {
-      email: "dispatcher@relay.test",
+      email,
       password: process.env.SEED_PASSWORD,
     },
   });
@@ -50,8 +50,12 @@ test("a failed read on Exceptions can be retried and leaves no stale banner", as
 }) => {
   await signIn(page);
   await failReads(page);
-  await page.goto("/exceptions");
+  await page.goto("/exceptions", { waitUntil: "networkidle" });
+  // The shell's loads request is debounced; let it finish before counting.
+  await page.waitForTimeout(600);
   await expect(visibleAlerts(page).first()).toBeVisible();
+  // One failure, one banner: the page's own, not a second one from the shell.
+  await expect(visibleAlerts(page)).toHaveCount(1);
   await retryAll(page);
   await expect(visibleAlerts(page)).toHaveCount(0);
   await expect(page.getByRole("table")).toBeVisible();
@@ -163,4 +167,228 @@ test("the queue strip stays keyboard-scrollable while its tabs are busy", async 
   });
   release();
   expect(violations).toEqual([]);
+});
+
+test("a loads failure seen from another page is retried when Loads opens", async ({
+  page,
+}) => {
+  await signIn(page);
+  await failReads(page);
+  await page.goto("/exceptions", { waitUntil: "networkidle" });
+  // The shell's loads request is debounced; let it finish before counting.
+  await page.waitForTimeout(600);
+  await expect(visibleAlerts(page)).toHaveCount(1);
+  await page.unroute("**/api/**");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(visibleAlerts(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Loads", exact: true }).click();
+  await expect(page.locator(".loadCard").first()).toBeVisible();
+  await expect(visibleAlerts(page)).toHaveCount(0);
+});
+
+for (const email of ["carrier@relay.test", "driver@relay.test"]) {
+  test(`${email} opening a page the role cannot use fires no requests for it`, async ({
+    page,
+  }) => {
+    await signIn(page, email);
+    const refused: string[] = [];
+    page.on("response", (r) => {
+      if (r.url().includes("/api/") && r.status() === 404)
+        refused.push(new URL(r.url()).pathname);
+    });
+    for (const path of [
+      "/audit",
+      "/organization",
+      "/assistant",
+      "/prospects",
+    ]) {
+      await page.goto(path);
+      await expect(page.locator(".alert.error:visible")).toContainText(
+        /couldn.t find that/,
+      );
+    }
+    // The person is told it is unavailable and no page asked for its data.
+    expect(refused).toEqual([]);
+  });
+}
+
+test("a failed people search says so, and an empty one says no one matches", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/inbox");
+  const inbox = page.getByRole("region", { name: "Inbox" });
+  await inbox.getByRole("button", { name: "New message" }).click();
+  const composer = inbox.getByRole("form", { name: "Write a message" });
+  const find = composer.getByRole("searchbox", { name: "Find people" });
+
+  // Nobody has this name: a plain, quiet answer, not an error.
+  await find.fill("zzzz-nobody-has-this-name");
+  await expect(composer.getByText(/No one matches/)).toBeVisible();
+  await expect(composer.locator(".alert.error")).toHaveCount(0);
+
+  // The lookup fails: an error with Retry, never "no one matches".
+  await page.route(/\/api\/contacts\?/, (route) =>
+    route.fulfill({ status: 500, json: { error: "INTERNAL_ERROR" } }),
+  );
+  await find.fill("Jordan");
+  await expect(composer.locator(".alert.error")).toBeVisible();
+  await expect(composer.getByText(/No one matches/)).toHaveCount(0);
+
+  // Lifting the fault and retrying shows the matches.
+  await page.unroute(/\/api\/contacts\?/);
+  await composer.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    composer.getByRole("button", { name: /^Add Jordan/ }),
+  ).toBeVisible();
+  await expect(composer.locator(".alert.error")).toHaveCount(0);
+});
+
+test("an export that waits more than two minutes says so without alarm", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/reports");
+  let status: Record<string, unknown> = {};
+  await page.route(/\/api\/reports\/exports\/[0-9a-f-]{36}$/, (route) =>
+    route.fulfill({ json: status }),
+  );
+  // Waiting two minutes: still queued, so say it is slow without alarm.
+  status = {
+    id: "11111111-1111-4111-8111-111111111111",
+    status: "queued",
+    row_count: null,
+    error_code: null,
+    created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+  };
+  await page.locator("summary", { hasText: "Larger exports" }).click();
+  await page.getByRole("button", { name: "Prepare larger export" }).click();
+  await expect(page.getByText(/taking longer than expected/)).toBeVisible();
+  await expect(page.locator(".alert.error")).toHaveCount(0);
+});
+
+test("a stalled export is shown as failed with its reason", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.route(/\/api\/reports\/exports\/[0-9a-f-]{36}$/, (route) =>
+    route.fulfill({
+      json: {
+        id: "11111111-1111-4111-8111-111111111111",
+        status: "failed",
+        row_count: null,
+        error_code: "EXPORT_STALLED",
+        created_at: new Date(Date.now() - 40 * 60_000).toISOString(),
+      },
+    }),
+  );
+  await page.goto("/reports?export_id=11111111-1111-4111-8111-111111111111");
+  await page.locator("summary", { hasText: "Larger exports" }).click();
+  await expect(page.locator(".alert.error")).toContainText(/never started/);
+  await expect(page.getByText(/Export failed/)).toBeVisible();
+});
+
+/** Expire the session server-side, as a timeout would, by dropping the cookie. */
+async function expireSession(page: Page) {
+  await page.context().clearCookies();
+}
+
+test("a session that expires mid-task keeps the dialog and its typed text", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/fleet");
+  const label = "Expiry " + Date.now().toString().slice(-6);
+  await page.getByRole("button", { name: "Add vehicle" }).first().click();
+  const add = page.getByRole("dialog", { name: "Add vehicle" });
+  await add.getByLabel("Unit name").fill(label);
+  await add.getByLabel("Plate (optional)").fill("keep me");
+
+  await expireSession(page);
+  await add.getByRole("button", { name: "Add vehicle", exact: true }).click();
+
+  // Sign-in appears over the workspace and says why.
+  const overlay = page.getByRole("dialog", { name: "Session expired" });
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toContainText("what you were working on is still here");
+
+  // A wrong password stays in the overlay with its message.
+  await overlay
+    .getByLabel("Email", { exact: true })
+    .fill("dispatcher@relay.test");
+  await overlay
+    .getByLabel("Password", { exact: true })
+    .fill("not-the-password");
+  await overlay.getByRole("button", { name: /^Sign in/ }).click();
+  await expect(overlay.locator(".alert.error")).toContainText(/don.t match/);
+  await expect(overlay).toBeVisible();
+
+  // The right one goes back to the same dialog, text intact.
+  await overlay
+    .getByLabel("Password", { exact: true })
+    .fill(process.env.SEED_PASSWORD!);
+  await overlay.getByRole("button", { name: /^Sign in/ }).click();
+  await expect(overlay).toHaveCount(0);
+  await expect(add).toBeVisible();
+  await expect(add.getByLabel("Unit name")).toHaveValue(label);
+  await expect(add.getByLabel("Plate (optional)")).toHaveValue("keep me");
+
+  // Saving now works, with the same text.
+  await add.getByRole("button", { name: "Add vehicle", exact: true }).click();
+  await expect(
+    page.getByRole("row", { name: new RegExp(label) }),
+  ).toContainText("KEEP ME");
+});
+
+test("someone else signing in after an expiry gets a fresh page, not the last person's screen", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/fleet");
+  await page.getByRole("button", { name: "Add vehicle" }).first().click();
+  await page
+    .getByRole("dialog", { name: "Add vehicle" })
+    .getByLabel("Unit name")
+    .fill("Private to the first person");
+  await expireSession(page);
+  await page
+    .getByRole("dialog", { name: "Add vehicle" })
+    .getByRole("button", { name: "Add vehicle", exact: true })
+    .click();
+  const overlay = page.getByRole("dialog", { name: "Session expired" });
+  await expect(overlay).toBeVisible();
+  await overlay.getByLabel("Email", { exact: true }).fill("driver@relay.test");
+  await overlay
+    .getByLabel("Password", { exact: true })
+    .fill(process.env.SEED_PASSWORD!);
+  await overlay.getByRole("button", { name: /^Sign in/ }).click();
+  // A driver's own workspace, with none of the first person's dialog or text.
+  await expect(
+    page.getByRole("dialog", { name: "Session expired" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Private to the first person")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Add vehicle" })).toHaveCount(
+    0,
+  );
+});
+
+test("after signing back in the loads board reloads", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/");
+  await expect(page.locator(".loadCard").first()).toBeVisible();
+  await expireSession(page);
+  await page.getByRole("button", { name: "Refresh loads" }).click();
+  const overlay = page.getByRole("dialog", { name: "Session expired" });
+  await expect(overlay).toBeVisible();
+  // Loaded business data does not outlive the session.
+  await expect(page.locator(".loadCard")).toHaveCount(0);
+  await overlay
+    .getByLabel("Email", { exact: true })
+    .fill("dispatcher@relay.test");
+  await overlay
+    .getByLabel("Password", { exact: true })
+    .fill(process.env.SEED_PASSWORD!);
+  await overlay.getByRole("button", { name: /^Sign in/ }).click();
+  await expect(overlay).toHaveCount(0);
+  await expect(page.locator(".loadCard").first()).toBeVisible();
 });
