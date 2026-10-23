@@ -2,12 +2,12 @@ import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import { pool } from "../../src/lib/db";
-import { POST } from "../../src/app/api/[...path]/route";
+import { GET, POST } from "../../src/app/api/[...path]/route";
 import { digest, hashNewPassword, login } from "../../src/lib/auth";
 import { completeMfaLogin, mfaEnable, mfaSetup } from "../../src/lib/account";
 import { appOrigin } from "../../src/lib/notifications";
 import { codeAt, stepAt } from "../../src/lib/totp";
-import { origin, request, tenant } from "./fixtures";
+import { origin, request, sessionFor, tenant } from "./fixtures";
 
 process.env.RELAY_DATA_KEY ||= randomBytes(32).toString("base64");
 const password = "fictional-security-password";
@@ -108,4 +108,70 @@ test("unauthenticated mail and token endpoints are limited per address", async (
   for (let i = 0; i < 41; i++) last = (await attempt(ip)).status;
   assert.equal(last, 429);
   assert.notEqual((await attempt("203.0.113.250")).status, 429);
+});
+
+test("required two-step verification blocks everything but Account until it is on", async () => {
+  process.env.RELAY_REQUIRE_MFA = "true";
+  try {
+    const dispatcher = await sessionFor(t.dispatcher);
+    const driver = await sessionFor(t.driverUser);
+    const blocked = await GET(request("loads", { token: dispatcher }));
+    assert.equal(blocked.status, 403);
+    assert.equal((await blocked.json()).error, "MFA_REQUIRED");
+    const me = await GET(request("me", { token: dispatcher }));
+    assert.equal((await me.json()).mfa_required, true);
+    assert.equal(
+      (await GET(request("account", { token: dispatcher }))).status,
+      200,
+    );
+    // Drivers are not required to enroll.
+    assert.notEqual(
+      (await GET(request("loads", { token: driver }))).status,
+      403,
+    );
+    // Without a key to store second factors, nobody is locked out.
+    const key = process.env.RELAY_DATA_KEY;
+    delete process.env.RELAY_DATA_KEY;
+    assert.notEqual(
+      (await GET(request("loads", { token: dispatcher }))).status,
+      403,
+    );
+    process.env.RELAY_DATA_KEY = key;
+    const { secret } = await mfaSetup(t.dispatcher);
+    await mfaEnable(t.dispatcher, { code: codeAt(secret, stepAt(Date.now())) });
+    assert.equal(
+      (await GET(request("loads", { token: dispatcher }))).status,
+      200,
+    );
+  } finally {
+    delete process.env.RELAY_REQUIRE_MFA;
+  }
+});
+
+test("secrets sealed with the previous key stay readable and can be re-sealed", async () => {
+  const { encrypt, decrypt, needsReseal } =
+    await import("../../src/lib/secrets");
+  const saved = {
+    key: process.env.RELAY_DATA_KEY,
+    previous: process.env.RELAY_DATA_KEY_PREVIOUS,
+  };
+  try {
+    const oldKey = randomBytes(32).toString("base64");
+    process.env.RELAY_DATA_KEY = oldKey;
+    delete process.env.RELAY_DATA_KEY_PREVIOUS;
+    const sealed = encrypt("fictional secret")!;
+    process.env.RELAY_DATA_KEY = randomBytes(32).toString("base64");
+    assert.throws(() => decrypt(sealed));
+    process.env.RELAY_DATA_KEY_PREVIOUS = oldKey;
+    assert.equal(decrypt(sealed), "fictional secret");
+    assert.equal(needsReseal(sealed), true);
+    const fresh = encrypt(decrypt(sealed))!;
+    assert.equal(needsReseal(fresh), false);
+    delete process.env.RELAY_DATA_KEY_PREVIOUS;
+    assert.equal(decrypt(fresh), "fictional secret");
+  } finally {
+    if (saved.key) process.env.RELAY_DATA_KEY = saved.key;
+    if (saved.previous) process.env.RELAY_DATA_KEY_PREVIOUS = saved.previous;
+    else delete process.env.RELAY_DATA_KEY_PREVIOUS;
+  }
 });

@@ -690,3 +690,23 @@ export async function removeTeamMember(
     return { ok: true };
   });
 }
+
+/**
+ * With RELAY_REQUIRE_MFA=true, people who run dispatch operations (organization
+ * members and carrier managers or dispatchers) must have two-step verification
+ * on before they can use anything but their account page. Drivers are not
+ * required. It stays off when the server cannot store second factors, so a
+ * missing RELAY_DATA_KEY never locks everyone out.
+ */
+export async function mfaRequired(user: string) {
+  if (process.env.RELAY_REQUIRE_MFA !== "true" || !encryptionAvailable())
+    return false;
+  const { rows } = await pool.query(
+    `SELECT u.mfa_enabled_at IS NULL AND (
+      EXISTS(SELECT 1 FROM organization_members WHERE user_id=u.id)
+      OR EXISTS(SELECT 1 FROM memberships WHERE user_id=u.id AND role<>'driver')) required
+    FROM users u WHERE u.id=$1`,
+    [user],
+  );
+  return rows[0]?.required === true;
+}

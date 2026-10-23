@@ -104,6 +104,7 @@ import {
   changePassword,
   completeEmailVerification,
   completeMfaLogin,
+  mfaRequired,
   completePasswordReset,
   mfaDisable,
   mfaEnable,
@@ -514,6 +515,9 @@ async function handle(req: NextRequest) {
         await consumeAttempt("ai:" + user.id, 20);
     }
     actor = user.id;
+    const mustEnrollMfa = await mfaRequired(user.id);
+    if (mustEnrollMfa && !["logout", "me", "account"].includes(path[0]))
+      throw new HttpError(403, "MFA_REQUIRED");
     if (path[0] === "fleet") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(
@@ -591,6 +595,7 @@ async function handle(req: NextRequest) {
         carriers: carriers.rows,
         drivers: drivers.rows,
         organizations: organizations.rows,
+        ...(mustEnrollMfa ? { mfa_required: true } : {}),
       });
     }
     if (path[0] === "onboarding" && path[1] === "carriers") {

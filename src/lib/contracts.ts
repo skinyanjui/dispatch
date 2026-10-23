@@ -106,6 +106,8 @@ export type Context = {
   carriers: { id: string; name: string; role: string }[];
   drivers: { id: string; name: string; carrier_id: string }[];
   organizations?: { id: string; name: string; role?: string | null }[];
+  /** Two-step verification is required before anything but Account opens. */
+  mfa_required?: boolean;
 };
 export type CarrierSetup = {
   carrier: { id: string; name: string; organization_id: string; role: string };

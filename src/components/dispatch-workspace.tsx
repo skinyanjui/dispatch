@@ -249,8 +249,9 @@ export default function Workspace({
     replaceNext = useRef(false);
   // The page shown. An address can name a page this person may not open; it is
   // never mounted, so it never fires its data requests (applyRoute explains).
-  const section: WorkspaceSection =
-    context && !sectionAllowed(chosenSection, context)
+  const section: WorkspaceSection = context?.mfa_required
+    ? "account"
+    : context && !sectionAllowed(chosenSection, context)
       ? "loads"
       : chosenSection;
   const sectionRef = useRef(section);
@@ -1570,7 +1571,21 @@ export default function Workspace({
               onCounts={setInboxCounts}
             />
           ) : section === "account" ? (
-            <AccountSettings onAuthError={handleError} />
+            <>
+              {context?.mfa_required && (
+                <p role="status" className="opsMeta">
+                  {describe("MFA_REQUIRED")}
+                </p>
+              )}
+              <AccountSettings
+                onAuthError={handleError}
+                onMfaEnabled={() => {
+                  // Stay on Account so the recovery codes remain visible.
+                  setSection("account");
+                  api<Context>("me").then(setContext).catch(handleError);
+                }}
+              />
+            </>
           ) : section === "organization" ? (
             <OrganizationSettings
               query={pageQ.organization ?? ""}

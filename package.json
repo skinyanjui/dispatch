@@ -23,6 +23,7 @@
     "access:list": "tsx scripts/access-requests.ts list",
     "access:approve": "tsx scripts/access-requests.ts approve",
     "access:decline": "tsx scripts/access-requests.ts decline",
+    "secrets:rotate": "tsx scripts/rotate-data-key.ts",
     "documents:migrate-storage": "tsx scripts/migrate-document-storage.ts",
     "demo": "node scripts/dev.mjs",
     "build:demo": "node scripts/build.mjs",

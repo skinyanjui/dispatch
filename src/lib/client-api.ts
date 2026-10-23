@@ -108,6 +108,8 @@ const messages: Record<string, string> = {
     "This link has expired or was already used. No worries, you can request a new one.",
   MFA_UNAVAILABLE:
     "Two-step verification isn't switched on for this server yet. Your administrator can set it up.",
+  MFA_REQUIRED:
+    "Your organization requires two-step verification. Turn it on in Account to continue.",
   MFA_ALREADY_ENABLED: "Two-step verification is already on. Nice and secure!",
   MFA_SETUP_REQUIRED: "Please start setup again to get a fresh key.",
   MFA_NOT_ENABLED: "Two-step verification isn't on yet.",

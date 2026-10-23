@@ -80,6 +80,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.deepEqual(Object.keys(body).sort(), [
+    "alerts",
     "appointments",
     "delivery",
     "exports",
@@ -98,6 +99,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
   );
   assert.ok(afterDaily.rowCount! >= 1, "the daily sweep does remind");
   assert.deepEqual(Object.keys(daily).sort(), [
+    "alerts",
     "appointments",
     "cleanup",
     "delivery",

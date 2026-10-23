@@ -7,6 +7,7 @@ import {
   scheduleAppointmentReminders,
   scheduleDailyReminders,
 } from "@/lib/notifications";
+import { sendAlerts } from "./alerts";
 import { cleanupAbandoned } from "@/lib/message-attachments";
 
 /**
@@ -35,9 +36,16 @@ export function parseScope(value: string | null): JobScope {
 type Steps = Record<string, () => Promise<unknown>>;
 const defaultSteps = (scope: JobScope): Steps => ({
   appointments: scheduleAppointmentReminders,
-  exports:()=>runPendingExports(1),
+  exports: () => runPendingExports(1),
   ...(scope === "daily" ? { reminders: scheduleDailyReminders } : {}),
   delivery: () => deliverDue(50),
+  // A broken alert channel must not fail the work above, so it reports itself.
+  alerts: () =>
+    jobStatus()
+      .then(sendAlerts)
+      .catch((e) => ({
+        error: e instanceof Error ? e.message.slice(0, 100) : "failed",
+      })),
   ...(scope === "daily"
     ? { cleanup: () => cleanupAbandoned(), pruned: pruneJobRuns }
     : {}),

@@ -1,5 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { pool, transaction } from "../src/lib/db";
+// Migrations may use a separate owner role (docs/runbooks/database-roles.md),
+// so the runtime role needs no rights to change tables or disable triggers.
+if (process.env.MIGRATION_DATABASE_URL)
+  process.env.DATABASE_URL = process.env.MIGRATION_DATABASE_URL;
+const { pool, transaction } = await import("../src/lib/db");
 try {
   await transaction(async (c) => {
     await c.query("SELECT pg_advisory_xact_lock(813371)");
@@ -46,6 +50,7 @@ try {
       ["037", "037_fleet_vehicles.sql"],
       ["038", "038_report_exports.sql"],
       ["039", "039_provider_receipts.sql"],
+      ["040", "040_alert_state.sql"],
     ]) {
       const exists = await c.query(
         "SELECT 1 FROM schema_migrations WHERE version=$1",

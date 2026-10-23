@@ -132,7 +132,11 @@ Rating is residual risk after current controls (L low, M medium, H high).
 - Item 9: Dependabot is enabled for npm and Actions (`.github/dependabot.yml`); Actions are not yet pinned by commit.
 - Item 10 (partly): production builds print named warnings for missing `RELAY_DATA_KEY`, `CRON_SECRET`, `APP_ORIGIN` and malware scanning, and fail when `RELAY_STRICT_CONFIG=true`; the operations status lists the same warnings. It is opt-in so an existing deployment is not broken by an upgrade.
 - The stray `undefined/` screenshots were removed.
-- Still open: items 1, 2, 3, 5, 6, 7 and 8, which need infrastructure or product decisions.
+- Item 5: `RELAY_REQUIRE_MFA=true` requires two-step verification for organization members, dispatchers and carrier managers; until enrolled they can open only Account (the UI moves them there). Off by default; it stays off if the server cannot store second factors.
+- Item 6: `RELAY_DATA_KEY_PREVIOUS` and `npm run secrets:rotate` make rotation possible without downtime (`docs/runbooks/key-rotation.md`).
+- Item 7: `RELAY_ALERT_WEBHOOK_URL` pushes failed jobs, failed or overdue notifications, stalled exports and unsafe configuration to a webhook (`docs/runbooks/alerting.md`, migration 040).
+- Item 2: `docs/runbooks/database-roles.sql` and `.md` split owner and runtime roles; `MIGRATION_DATABASE_URL` is honored by migrations. **Not applied to any database.** Correction: audit tables were already protected by append-only triggers; the remaining gap is that the table owner can disable them.
+- Still open and needing your decision or infrastructure: item 1 (run ClamAV, set `RELAY_REQUIRE_MALWARE_SCAN`), item 3 (protected branch and migration approval), item 8 (AI prompt-injection hardening and tool-call logging), applying the role split, and turning the new switches on in production.
 
 ## 6. Not assessed
 

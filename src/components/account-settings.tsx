@@ -24,8 +24,10 @@ type Tab = (typeof tabs)[number]["id"];
 
 export function AccountSettings({
   onAuthError,
+  onMfaEnabled,
 }: {
   onAuthError: (e: unknown) => void;
+  onMfaEnabled?: () => void;
 }) {
   const api = useApi();
   const [account, setAccount] = useState<Account | null>(null),
@@ -364,6 +366,7 @@ export function AccountSettings({
                           );
                           setSetup(null);
                           setCodes(r.recovery_codes);
+                          onMfaEnabled?.();
                           return "Two-step verification is on.";
                         });
                       }}
