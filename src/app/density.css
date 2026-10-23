@@ -83,7 +83,6 @@ small {
 
 /* Section pages: the top bar carries the title; intros stay short. */
 .directoryIntro {
-  margin: 0 0 14px;
   gap: 16px;
 }
 .directoryIntro .eyebrow {

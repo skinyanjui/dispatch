@@ -1,0 +1,30 @@
+/* One layout for every page (ADR 0053). A page root stacks its blocks with
+   --page-gap and starts flush with the workspace padding, so the first block
+   sits at the same offset on every page. Blocks (stat tiles, tabs, page
+   intros, alerts, tables) carry no outer margin of their own, so gaps never
+   stack. A section heading is a block that adds one --page-section-step above
+   itself. Loaded after ui.css so it replaces the per-component margins. */
+.appShell
+  :is(
+    .carrierDirectory,
+    .excPage,
+    .fleetPage,
+    .orgPage,
+    .reports,
+    .reportBody
+  ) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+  padding-top: 0;
+}
+.appShell
+  :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports, .reportBody)
+  > :not(.directoryNote) {
+  margin-block: 0;
+}
+.appShell
+  :is(.carrierDirectory, .excPage, .fleetPage, .orgPage, .reports, .reportBody)
+  > :is(h2, h3):not(.srOnly) {
+  margin-top: var(--page-section-step);
+}

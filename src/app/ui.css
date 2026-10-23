@@ -7,7 +7,6 @@
 .appShell .tabs {
   display: flex;
   gap: var(--space-1);
-  margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   scrollbar-width: none;
@@ -223,7 +222,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin: var(--space-2) 0 var(--space-3);
 }
 .appShell .stat {
   box-sizing: border-box;

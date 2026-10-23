@@ -2,10 +2,6 @@
    like the other tiles, and on phones the range switch wraps instead of
    hiding "Custom", tiles sit two across, and the toolbar fills its rows. */
 
-.appShell .reports > div > .helpText:last-child,
-.appShell .reports .helpText:last-child {
-  margin-top: var(--space-3);
-}
 @media (max-width: 640px) {
   .appShell .reports .segmented {
     display: grid;

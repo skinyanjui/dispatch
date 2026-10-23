@@ -68,7 +68,6 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-3) var(--space-4);
-  margin: 0 0 var(--space-3);
 }
 .appShell .directoryIntro > div:first-child {
   flex: 1 1 auto;
@@ -110,12 +109,8 @@
 
 /* Section headings inside a page: space above, tight to what they introduce. */
 .appShell .reports h3 {
-  margin: var(--space-6) 0 var(--space-2);
   font-size: 14px;
   font-weight: 600;
-}
-.appShell .reports .helpText {
-  margin: 0 0 var(--space-2);
 }
 
 /* Fieldsets with a legend (e.g. the invoice picker) pad like other panels. */
@@ -933,10 +928,6 @@ select {
   font-weight: 600;
   text-align: left;
   background: transparent;
-}
-/* Less air between the page bar and the page's first row. */
-.appShell .carrierDirectory > .directoryIntro:first-child {
-  margin-top: 0;
 }
 
 /* Billing: summary, tabs, a plain invoice table that stacks on phones. */

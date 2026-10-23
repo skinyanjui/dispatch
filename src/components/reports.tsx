@@ -394,7 +394,10 @@ export function Reports({
       </p>
       {loading && !data && <StatTilesLoading count={6} />}
       {data && (
-        <div aria-busy={loading} className={loading ? "reportStale" : ""}>
+        <div
+          aria-busy={loading}
+          className={"reportBody" + (loading ? " reportStale" : "")}
+        >
           <StatTiles>
             <StatTile
               label="Loads"
