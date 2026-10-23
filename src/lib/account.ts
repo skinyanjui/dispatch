@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { pool, transaction } from "./db";
 import {
+  clientIp,
   consumeAttempt,
   createSession,
   digest,
@@ -94,6 +95,9 @@ export async function completePasswordReset(input: unknown) {
     );
     await c.query("DELETE FROM sessions WHERE user_id=$1", [user]);
     await c.query("DELETE FROM mfa_challenges WHERE user_id=$1", [user]);
+    await c.query("DELETE FROM login_attempts WHERE identity_hash=$1", [
+      digest("mfa-login:" + user),
+    ]);
     await c.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
       randomUUID(),
       user,
@@ -317,20 +321,29 @@ export async function mfaDisable(user: string, input: unknown) {
   });
 }
 
-export async function completeMfaLogin(input: unknown) {
+export async function completeMfaLogin(input: unknown, request?: Request) {
   const data = z
     .object({ challenge: secretToken, code: z.string().max(40) })
     .strict()
     .parse(input);
   // A correct password mints a fresh challenge (and five guesses) each time, so
-  // the guess budget must follow the person, not the challenge: ten wrong or
-  // right tries per 15 minutes per account.
+  // the guess budget must follow the person, not the challenge. Each address
+  // gets 10 tries per 15 minutes, so someone who knows the password cannot
+  // lock the owner out from elsewhere; an account-wide ceiling of 30 an hour
+  // bounds guessing spread over many addresses, and a password reset lifts it.
   const owner = await pool.query(
     "SELECT user_id FROM mfa_challenges WHERE token_hash=$1 AND expires_at>now()",
     [digest(data.challenge)],
   );
-  if (owner.rows[0])
-    await consumeAttempt("mfa-login:" + owner.rows[0].user_id, 10, 900);
+  if (owner.rows[0]) {
+    const id = owner.rows[0].user_id as string;
+    await consumeAttempt(
+      "mfa-login:" + id + ":" + (request ? clientIp(request) : "unknown"),
+      10,
+      900,
+    );
+    await consumeAttempt("mfa-login:" + id, 30, 3600);
+  }
   const verified = await transaction(async (c) => {
     const { rows } = await c.query(
       "SELECT * FROM mfa_challenges WHERE token_hash=$1 AND expires_at>now() FOR UPDATE",

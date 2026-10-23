@@ -19,9 +19,14 @@ Scope: the code on `main` (`3330bca`), read and probed locally against fictional
 
 Tests: `tests/integration/security-hardening.test.ts` (each fails without its fix).
 
+## Follow-up: the three accepted items, now fixed
+
+1. **Spoofable client address.** In production the address is the entry `RELAY_PROXY_HOPS` from the right of `X-Forwarded-For` (default 1), which a client cannot forge because each proxy appends its own view. Set `RELAY_PROXY_HOPS` when more than one proxy sits in front. Outside production the first entry is used so tests can pose as different callers.
+2. **Inline scripts in the CSP.** Pages now render per request with a fresh nonce from `src/proxy.ts`; `script-src` is `'self' 'nonce-…' 'strict-dynamic'` with no `'unsafe-inline'`, and `form-action 'self'` is added. Styles keep `'unsafe-inline'` because components set style attributes; that allows styling tricks but not script execution. Cost: marketing and sign-in pages are no longer prerendered (ADR 0058).
+3. **MFA lockout.** The guess budget is 10 per 15 minutes per account and address, so an attacker elsewhere cannot spend the owner's allowance. Guessing spread over many addresses is stopped by an account ceiling of 30 an hour, and completing a password reset by email lifts that ceiling for the owner. An attacker who spreads guesses can still block the owner for up to an hour until they reset the password.
+
 ## Open / accepted
 
-- **The address limits trust `X-Forwarded-For`.** Behind Vercel the platform sets it; on a host with no proxy a client can spoof it and dodge the per-address limits (per-email and per-account limits still hold). Deploy behind a proxy that overwrites it.
-- **Content-Security-Policy keeps `'unsafe-inline'` for scripts and styles** because Next.js emits inline bootstrap scripts; moving to nonces is a larger change.
-- **A password holder can lock the owner's second-factor sign-in for up to 15 minutes** by spending the budget. Accepted: the alternative is guessable codes.
-- **Not tested here:** live provider behaviour, the production build's headers (checked on the development server), and a third-party penetration test. Cross-carrier isolation was not re-probed; it is covered by the existing authorization tests and the 2026-10-20 to 2026-10-22 audits.
+- **Style attributes** still need `'unsafe-inline'` in `style-src`.
+- **Ceiling lockout:** see 3 above; password reset by email is the recovery path.
+- **Not tested here:** live provider behaviour, a production build behind a real proxy chain, and a third-party penetration test. Cross-carrier isolation was not re-probed; it is covered by the existing authorization tests and the 2026-10-20 to 2026-10-22 audits.

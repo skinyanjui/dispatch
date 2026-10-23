@@ -5,6 +5,7 @@ import { pool } from "../../src/lib/db";
 import { GET, POST } from "../../src/app/api/[...path]/route";
 import { clientIp, consumeAttempt } from "../../src/lib/auth";
 import config from "../../next.config";
+import { contentSecurityPolicy } from "../../src/lib/csp";
 import { origin, request } from "./fixtures";
 
 after(() => pool.end());
@@ -19,9 +20,38 @@ test("health answers without a session and exposes nothing", async () => {
 test("the client address comes from the first forwarded entry", () => {
   const req = (h: Record<string, string>) =>
     new Request(origin + "/api/x", { headers: h });
-  assert.equal(clientIp(req({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" })), "203.0.113.9");
+  assert.equal(
+    clientIp(req({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" })),
+    "203.0.113.9",
+  );
   assert.equal(clientIp(req({ "x-real-ip": "198.51.100.4" })), "198.51.100.4");
   assert.equal(clientIp(req({})), "unknown");
+});
+
+test("in production the address comes from the proxy's end of the chain", () => {
+  const saved = {
+    env: process.env.NODE_ENV,
+    hops: process.env.RELAY_PROXY_HOPS,
+  };
+  const req = (h: Record<string, string>) =>
+    new Request(origin + "/api/x", { headers: h });
+  Object.assign(process.env, { NODE_ENV: "production" });
+  try {
+    // A forged leading entry is ignored; the proxy appended the real one.
+    assert.equal(
+      clientIp(req({ "x-forwarded-for": "6.6.6.6, 203.0.113.9" })),
+      "203.0.113.9",
+    );
+    process.env.RELAY_PROXY_HOPS = "2";
+    assert.equal(
+      clientIp(req({ "x-forwarded-for": "6.6.6.6, 203.0.113.9, 10.0.0.1" })),
+      "203.0.113.9",
+    );
+  } finally {
+    Object.assign(process.env, { NODE_ENV: saved.env });
+    if (saved.hops === undefined) delete process.env.RELAY_PROXY_HOPS;
+    else process.env.RELAY_PROXY_HOPS = saved.hops;
+  }
 });
 
 test("a limit allows its quota and then answers 429", async () => {
@@ -34,7 +64,10 @@ test("one address is throttled across many emails, others are not", async () => 
   const attempt = (ip: string) =>
     POST(
       request("login", {
-        json: { email: `nobody-${randomUUID()}@x.test`, password: "wrong-pass-1" },
+        json: {
+          email: `nobody-${randomUUID()}@x.test`,
+          password: "wrong-pass-1",
+        },
         headers: { "x-forwarded-for": ip },
       }),
     );
@@ -50,7 +83,9 @@ test("pages carry a CSP without framing, plugins or foreign scripts, and HSTS", 
   const headers = Object.fromEntries(
     rules.flatMap((r) => r.headers.map((h) => [h.key, h.value])),
   );
-  const csp = headers["Content-Security-Policy"];
+  const csp = contentSecurityPolicy("abc123");
+  assert.match(csp, /script-src 'self' 'nonce-abc123' 'strict-dynamic'/);
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /default-src 'self'/);

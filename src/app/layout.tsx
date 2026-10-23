@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import "./tokens.css";
 import "./globals.css";
 import "./workspace-shell.css";
@@ -35,7 +36,13 @@ export const metadata: Metadata = {
   description: "Carrier-scoped freight dispatch operations",
   icons: { icon: "/favicon.svg" },
 };
-export default function Layout({ children }: { children: React.ReactNode }) {
+// Scripts carry a per-request nonce (src/proxy.ts), so pages render per request.
+export default async function Layout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await connection();
   return (
     <html lang="en">
       <body>{children}</body>

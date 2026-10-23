@@ -30,13 +30,25 @@ export async function verifyPassword(password: string, stored: string) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 /**
- * The caller's address for rate limiting. Behind Vercel or another proxy the
- * first x-forwarded-for entry is set by the platform; without a proxy a client
- * can spoof it, which only lets it dodge its own limit, never raise another's.
+ * The caller's address for rate limiting. A client can put anything at the
+ * front of x-forwarded-for, but every proxy appends the address it saw at the
+ * end, so in production the entry RELAY_PROXY_HOPS from the right is used
+ * (default 1: Vercel or one load balancer). x-real-ip is only a fallback for
+ * a single proxy. Outside production the first entry is used so local tests
+ * can pose as different callers.
  */
 export function clientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0];
-  return (forwarded || request.headers.get("x-real-ip") || "unknown")
+  const chain = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  let ip: string | undefined;
+  if (process.env.NODE_ENV !== "production") ip = chain[0];
+  else {
+    const hops = Math.max(1, Number(process.env.RELAY_PROXY_HOPS) || 1);
+    ip = chain.length >= hops ? chain[chain.length - hops] : undefined;
+  }
+  return (ip || request.headers.get("x-real-ip") || "unknown")
     .trim()
     .slice(0, 64);
 }

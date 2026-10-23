@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import { pool } from "../../src/lib/db";
 import { POST } from "../../src/app/api/[...path]/route";
-import { hashNewPassword, login } from "../../src/lib/auth";
+import { digest, hashNewPassword, login } from "../../src/lib/auth";
 import { completeMfaLogin, mfaEnable, mfaSetup } from "../../src/lib/account";
 import { appOrigin } from "../../src/lib/notifications";
 import { codeAt, stepAt } from "../../src/lib/totp";
-import { request, tenant } from "./fixtures";
+import { origin, request, tenant } from "./fixtures";
 
 process.env.RELAY_DATA_KEY ||= randomBytes(32).toString("base64");
 const password = "fictional-security-password";
@@ -59,27 +59,40 @@ test("emailed links never take their origin from the request in production", () 
   );
 });
 
-test("second-factor guesses are budgeted per person, not per challenge", async () => {
+test("second-factor guesses are budgeted per address and per account, and a reset lifts the ceiling", async () => {
   const { secret } = await mfaSetup(t.manager);
   await mfaEnable(t.manager, { code: codeAt(secret, stepAt(Date.now())) });
   const email = (
     await pool.query("SELECT email FROM users WHERE id=$1", [t.manager])
   ).rows[0].email as string;
-  // Each correct password issues a fresh challenge with five more guesses.
-  for (let i = 0; i < 10; i++) {
-    const challenge = (await login(email, password)) as {
-      mfa_challenge: string;
-    };
-    await assert.rejects(
-      completeMfaLogin({ challenge: challenge.mfa_challenge, code: "000000" }),
-      { code: "INVALID_MFA_CODE" },
+  const from = (ip: string) =>
+    new Request(origin + "/api/login/mfa", {
+      headers: { "x-forwarded-for": ip },
+    });
+  const guess = async (ip: string) => {
+    // Each correct password issues a fresh challenge with five more guesses.
+    const c = (await login(email, password)) as { mfa_challenge: string };
+    return completeMfaLogin(
+      { challenge: c.mfa_challenge, code: "000000" },
+      from(ip),
     );
-  }
-  const fresh = (await login(email, password)) as { mfa_challenge: string };
-  await assert.rejects(
-    completeMfaLogin({ challenge: fresh.mfa_challenge, code: "000000" }),
-    { code: "TRY_AGAIN_LATER" },
-  );
+  };
+  for (let i = 0; i < 10; i++)
+    await assert.rejects(guess("192.0.2.10"), { code: "INVALID_MFA_CODE" });
+  await assert.rejects(guess("192.0.2.10"), { code: "TRY_AGAIN_LATER" });
+  // The attacker's address being spent does not lock out another address.
+  await assert.rejects(guess("192.0.2.11"), { code: "INVALID_MFA_CODE" });
+  // Spread over many addresses, the account-wide ceiling still stops guessing.
+  for (let i = 0; i < 19; i++)
+    await assert.rejects(guess("198.51.100." + (20 + i)), {
+      code: "INVALID_MFA_CODE",
+    });
+  await assert.rejects(guess("203.0.113.99"), { code: "TRY_AGAIN_LATER" });
+  // Resetting the password by email lifts the ceiling for the owner.
+  await pool.query("DELETE FROM login_attempts WHERE identity_hash=$1", [
+    digest("mfa-login:" + t.manager),
+  ]);
+  await assert.rejects(guess("203.0.113.99"), { code: "INVALID_MFA_CODE" });
 });
 
 test("unauthenticated mail and token endpoints are limited per address", async () => {

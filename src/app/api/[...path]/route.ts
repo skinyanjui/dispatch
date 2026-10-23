@@ -433,7 +433,7 @@ async function handle(req: NextRequest) {
     }
     if (req.method === "POST" && path.join("/") === "login/mfa") {
       await consumeAttempt("login-ip:" + clientIp(req), 60);
-      const done = await completeMfaLogin(await readJson(req));
+      const done = await completeMfaLogin(await readJson(req), req);
       return withSession(
         NextResponse.json({ ok: true }),
         done.token,
