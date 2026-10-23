@@ -153,8 +153,21 @@ export async function enqueueForUser(
     ? insert(c, message, { id: user, email: rows[0].email })
     : null;
 }
+/**
+ * The origin used in links we email and in provider callbacks. In production
+ * it never comes from the request: a forged Host and Origin pair on a public
+ * endpoint (password reset) would otherwise put an attacker's address in a
+ * link sent to the victim. Set APP_ORIGIN; on Vercel the platform's own
+ * production or deployment host is the fallback.
+ */
 export function appOrigin(requestOrigin?: string) {
-  return process.env.APP_ORIGIN || requestOrigin || "http://localhost:3000";
+  if (process.env.APP_ORIGIN) return process.env.APP_ORIGIN;
+  if (process.env.NODE_ENV === "production") {
+    const host =
+      process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+    if (host) return "https://" + host;
+  }
+  return requestOrigin || "http://localhost:3000";
 }
 
 // ---------- Delivery ----------

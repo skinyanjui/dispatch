@@ -322,6 +322,15 @@ export async function completeMfaLogin(input: unknown) {
     .object({ challenge: secretToken, code: z.string().max(40) })
     .strict()
     .parse(input);
+  // A correct password mints a fresh challenge (and five guesses) each time, so
+  // the guess budget must follow the person, not the challenge: ten wrong or
+  // right tries per 15 minutes per account.
+  const owner = await pool.query(
+    "SELECT user_id FROM mfa_challenges WHERE token_hash=$1 AND expires_at>now()",
+    [digest(data.challenge)],
+  );
+  if (owner.rows[0])
+    await consumeAttempt("mfa-login:" + owner.rows[0].user_id, 10, 900);
   const verified = await transaction(async (c) => {
     const { rows } = await c.query(
       "SELECT * FROM mfa_challenges WHERE token_hash=$1 AND expires_at>now() FOR UPDATE",

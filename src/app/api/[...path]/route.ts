@@ -361,6 +361,8 @@ async function handle(req: NextRequest) {
     // Provider webhooks carry no browser origin or session; each verifies its
     // own signature before anything is read or written.
     if (path[0] === "webhooks" && path.length === 2 && req.method === "POST") {
+      // The email hook accepts a large body before it can be verified.
+      await consumeAttempt("webhook-ip:" + clientIp(req), 300);
       // Email may carry base64 attachments (up to 6 files of 4 MB, encoded).
       const raw = (
         await readBody(req, path[1] === "email" ? 32 * 1024 * 1024 : 262144)
@@ -400,6 +402,10 @@ async function handle(req: NextRequest) {
       return await authRoutes(req, path);
     }
     if (req.method === "POST") sameOrigin(req);
+    // Unauthenticated endpoints that send mail or run a password hash have no
+    // person to budget by, so each address gets its own allowance.
+    if (req.method === "POST" && isPublicAction(path))
+      await consumeAttempt("public-ip:" + clientIp(req), 40);
     if (path.length === 1 && path[0] === "login" && req.method === "POST") {
       const input = z
         .object({
@@ -1352,6 +1358,17 @@ async function handle(req: NextRequest) {
     });
     return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
   }
+}
+const publicActions = [
+  "access-requests",
+  "password-reset/request",
+  "password-reset/complete",
+  "account/verify-email/complete",
+  "onboarding/invitations/inspect",
+  "onboarding/invitations/accept",
+];
+function isPublicAction(path: string[]) {
+  return publicActions.includes(path.join("/"));
 }
 /** Vercel Cron sends `Authorization: Bearer $CRON_SECRET`. */
 function cronAuthorized(req: NextRequest) {

@@ -43,20 +43,24 @@ export function clientIp(request: Request) {
 export async function consumeLoginAttempt(email: string) {
   await consumeAttempt(email.trim().toLowerCase(), 8);
 }
-/** Shared fixed-window limiter (one minute) keyed by a hashed identity. */
-export async function consumeAttempt(identity: string, limit: number) {
+/** Shared fixed-window limiter (one minute by default) keyed by a hashed identity. */
+export async function consumeAttempt(
+  identity: string,
+  limit: number,
+  windowSeconds = 60,
+) {
   const key = digest(identity);
   // Expired windows are reset by the upsert below; the sweep only keeps the
   // table small, so it need not run on every request.
   if (Math.random() < 0.02)
     await pool.query("DELETE FROM login_attempts WHERE resets_at < now()");
   const result = await pool.query(
-    `INSERT INTO login_attempts VALUES($1,1,now()+interval '1 minute')
+    `INSERT INTO login_attempts VALUES($1,1,now()+make_interval(secs => $2::int))
     ON CONFLICT(identity_hash) DO UPDATE SET
     attempts=CASE WHEN login_attempts.resets_at<=now() THEN 1 ELSE login_attempts.attempts+1 END,
-    resets_at=CASE WHEN login_attempts.resets_at<=now() THEN now()+interval '1 minute' ELSE login_attempts.resets_at END
+    resets_at=CASE WHEN login_attempts.resets_at<=now() THEN now()+make_interval(secs => $2::int) ELSE login_attempts.resets_at END
     RETURNING attempts`,
-    [key],
+    [key, windowSeconds],
   );
   if (result.rows[0].attempts > limit)
     throw new HttpError(429, "TRY_AGAIN_LATER");
