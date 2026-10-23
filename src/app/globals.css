@@ -30,7 +30,7 @@ button {
   border: 1px solid transparent;
   border-radius: var(--control-radius);
   background: transparent;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   color: var(--ink);
   transition:
     background 0.15s,
@@ -102,7 +102,7 @@ a svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: var(--space-5);
   padding: 0 28px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
@@ -141,11 +141,11 @@ a svg {
 .userName {
   font-size: 11px;
   color: var(--muted);
-  padding-left: 8px;
+  padding-left: var(--space-2);
   border-left: 1px solid var(--border);
 }
 .workspace {
-  padding: 22px 26px 16px;
+  padding: 22px 26px var(--space-4);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -155,7 +155,7 @@ a svg {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   margin-bottom: 22px;
 }
 .secondary {
@@ -178,7 +178,7 @@ a svg {
   position: relative;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 280px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -189,7 +189,7 @@ a svg {
 }
 .search input {
   border: 0;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   font-size: 12px;
   background: transparent;
 }
@@ -255,7 +255,7 @@ th {
 td {
   font-size: 12px;
   border-top: 1px solid var(--border);
-  padding: 16px 18px;
+  padding: var(--space-4) 18px;
 }
 td small {
   display: flex;
@@ -272,7 +272,7 @@ td small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 5px var(--space-2);
   font-size: 10px;
   line-height: 1;
   border-radius: 5px;
@@ -293,11 +293,11 @@ td small {
 }
 .pagination {
   text-align: center;
-  padding: 20px;
+  padding: var(--space-5);
 }
 .pagination small {
   display: block;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 footer {
   display: flex;
@@ -346,11 +346,11 @@ footer a {
 }
 .alert {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   border-radius: 6px;
   padding: 11px 13px;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -473,7 +473,7 @@ footer a {
 .assignForm {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .assignForm label {
   flex: 1;
@@ -483,7 +483,7 @@ footer a {
   font-size: 12px;
 }
 .nextMilestone {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   flex-wrap: wrap;
 }
 .nextMilestone small {
@@ -493,7 +493,7 @@ footer a {
 .event {
   position: relative;
   border-left: 1px solid var(--border);
-  padding: 0 0 24px 17px;
+  padding: 0 0 var(--space-6) 17px;
   margin-left: 3px;
   font-size: 12px;
 }
@@ -514,7 +514,7 @@ footer a {
   color: var(--muted);
   line-height: 1.6;
   border-top: 1px solid var(--border);
-  padding-top: 20px;
+  padding-top: var(--space-5);
 }
 .formIntro {
   font-size: 12px;
@@ -557,8 +557,8 @@ footer a {
 fieldset {
   border: 1px solid var(--border);
   border-radius: 7px;
-  padding: 16px;
-  margin: 12px 0 24px;
+  padding: var(--space-4);
+  margin: var(--space-3) 0 var(--space-6);
   min-width: 0;
 }
 legend {
@@ -568,17 +568,17 @@ legend {
   padding: 0 7px;
 }
 legend > span {
-  margin-right: 8px;
+  margin-right: var(--space-2);
   font-size: 10px;
   color: var(--subtle);
 }
 fieldset label:last-child {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .formActions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   border-top: 1px solid var(--border);
   padding-top: 18px;
 }
@@ -589,7 +589,7 @@ fieldset label:last-child {
 }
 .empty h2 {
   font-size: 14px;
-  margin: 15px 0 8px;
+  margin: 15px 0 var(--space-2);
 }
 .empty p {
   font-size: 12px;
@@ -608,7 +608,7 @@ fieldset label:last-child {
   outline-offset: 4px;
 }
 .loginAccess p {
-  margin: 12px 0;
+  margin: var(--space-3) 0;
 }
 .loginAccess strong {
   font-weight: 500;
@@ -636,7 +636,7 @@ fieldset label:last-child {
   top: -100px;
   left: 15px;
   background: var(--panel);
-  padding: 12px;
+  padding: var(--space-3);
   z-index: 20;
 }
 .skipLink:focus {
@@ -664,7 +664,7 @@ fieldset label:last-child {
   }
 
   .loadCard {
-    padding: 12px 10px;
+    padding: var(--space-3) 10px;
   }
 
   footer {
@@ -678,9 +678,9 @@ fieldset label:last-child {
   .topbar {
     height: auto;
     min-height: 112px;
-    padding: 16px;
+    padding: var(--space-4);
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .topbar h1 {
@@ -696,7 +696,7 @@ fieldset label:last-child {
 
   .toolbar {
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--space-3);
     margin-bottom: 15px;
     flex-wrap: wrap;
   }
@@ -705,7 +705,7 @@ fieldset label:last-child {
   }
   .toolbarRight {
     width: 100%;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .search {
     width: auto;
@@ -715,15 +715,15 @@ fieldset label:last-child {
     font-size: 10px;
   }
   .workspace {
-    padding: 16px 12px;
+    padding: var(--space-4) var(--space-3);
   }
 
   .loadCard {
-    padding: 16px;
+    padding: var(--space-4);
   }
 
   .inspector {
-    padding: 20px 22px;
+    padding: var(--space-5) 22px;
   }
   .formGrid {
     gap: 10px;
@@ -731,7 +731,7 @@ fieldset label:last-child {
   .formGrid input,
   .formGrid select {
     font-size: 11px;
-    padding: 10px 8px;
+    padding: 10px var(--space-2);
   }
   footer {
     gap: 9px;

@@ -7,7 +7,7 @@ body {
 }
 label {
   gap: 5px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   font-weight: 500;
 }
 input,
@@ -26,7 +26,7 @@ textarea {
   font-size: 12.5px;
 }
 .textButton {
-  padding: 4px 6px;
+  padding: var(--space-1) 6px;
   font-size: 12.5px;
   color: var(--accent);
   text-decoration: none;
@@ -48,7 +48,7 @@ small {
 /* Page header: one title, no breadcrumb or environment badge. */
 .appShell .topbar {
   height: 52px;
-  padding: 0 20px;
+  padding: 0 var(--space-5);
 }
 .appShell .topbar h1 {
   font-size: 15px;
@@ -57,10 +57,10 @@ small {
 }
 
 .appShell .workspace {
-  padding: 12px 20px 14px;
+  padding: var(--space-3) var(--space-5) 14px;
 }
 .appShell .toolbar {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .appShell .search {
   height: 34px;
@@ -83,7 +83,7 @@ small {
 
 /* Section pages: the top bar carries the title; intros stay short. */
 .directoryIntro {
-  gap: 16px;
+  gap: var(--space-4);
 }
 .directoryIntro .eyebrow {
   display: none;
@@ -101,12 +101,12 @@ small {
   line-height: 1.5;
 }
 .carrierDirectory {
-  padding-top: 4px;
+  padding-top: var(--space-1);
 }
 
 /* Record inspector. */
 .inspector {
-  padding: 16px 22px 24px;
+  padding: var(--space-4) 22px var(--space-6);
 }
 .inspectorHeader {
   margin-bottom: 10px;
@@ -116,19 +116,19 @@ small {
   letter-spacing: -0.3px;
 }
 .detailCarrier {
-  margin: 4px 0 10px;
+  margin: var(--space-1) 0 10px;
 }
 
 .inspector h3 {
   font-size: 13px;
-  margin: 20px 0 8px;
+  margin: var(--space-5) 0 var(--space-2);
 }
 .stop {
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
   gap: 10px;
 }
 .stop strong {
-  margin: 2px 0 4px;
+  margin: 2px 0 var(--space-1);
   font-size: 13px;
 }
 .stop small,
@@ -146,13 +146,13 @@ small {
 /* Cards and lists in operational views. */
 .docSlot,
 .opsCard {
-  padding: 9px 12px;
+  padding: 9px var(--space-3);
   gap: 6px;
 }
 .docPanel,
 .opsList {
   gap: 6px;
-  margin: 8px 0 16px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 .docHeading h3,
 .opsCardHeading h3,
@@ -173,7 +173,7 @@ small {
 @media (max-width: 760px) {
   .appShell .topbar {
     min-height: 0;
-    padding: 12px 14px 4px;
+    padding: var(--space-3) 14px var(--space-1);
   }
 }
 
@@ -182,7 +182,7 @@ small {
 .appShell .topbar.compact {
   height: auto;
   min-height: 52px;
-  padding: 8px 20px;
+  padding: var(--space-2) var(--space-5);
 }
 .appShell .topbar.compact .toolbar {
   flex: 1;
@@ -191,6 +191,6 @@ small {
 @media (max-width: 760px) {
   .appShell .topbar.compact {
     min-height: 0;
-    padding: 10px 16px;
+    padding: 10px var(--space-4);
   }
 }

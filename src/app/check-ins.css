@@ -7,8 +7,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 .inspector .checkInHeading h3 {
   margin: 0;
@@ -26,13 +26,13 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 22px 0 8px;
+  padding: 22px 0 var(--space-2);
   color: var(--muted);
   font-size: 12px;
 }
 .checkInForm fieldset {
-  margin: 16px 0;
-  padding: 16px;
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
   background: var(--soft);
 }
 .checkInForm .formGrid {
@@ -66,20 +66,20 @@
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
 }
 .checkInFormError {
   color: var(--error);
   font-size: 12px;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   line-height: 1.6;
 }
 .checkInReport {
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px;
-  margin-top: 16px;
+  padding: var(--space-4);
+  margin-top: var(--space-4);
 }
 .checkInLocation {
   display: flex;
@@ -120,7 +120,7 @@
 }
 .checkInProvenance {
   margin: 14px 0 0;
-  padding-top: 12px;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--border);
   font-size: 10px;
   line-height: 1.7;

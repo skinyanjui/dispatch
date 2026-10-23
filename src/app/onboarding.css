@@ -6,14 +6,14 @@
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px;
+  padding: var(--space-3);
   color: var(--accent);
-  margin: 10px 0 24px;
+  margin: 10px 0 var(--space-6);
 }
 .setupStepCount {
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .onboardingPanel h2 {
   font-size: 27px;
@@ -25,13 +25,13 @@
   font-size: 12px;
   color: var(--muted);
   line-height: 1.8;
-  margin: 14px 0 24px;
+  margin: 14px 0 var(--space-6);
 }
 .setupProgress {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin: 24px 0 30px;
+  margin: var(--space-6) 0 30px;
   font-size: 11px;
   color: var(--muted);
 }
@@ -55,10 +55,10 @@
   font-size: 13px;
 }
 .setupFields > .primary {
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 .setupOptional {
-  margin: 4px 0 24px;
+  margin: var(--space-1) 0 var(--space-6);
   color: var(--muted);
   font-size: 11px;
 }
@@ -74,8 +74,8 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  margin: 24px 0;
-  gap: 12px;
+  margin: var(--space-6) 0;
+  gap: var(--space-3);
   line-height: 1.7;
 }
 .setupCheckbox input {
@@ -88,16 +88,16 @@
 .setupCarrierName {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 .setupSummary {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   flex-wrap: wrap;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px;
+  padding: var(--space-4);
   margin: 10px 0 26px;
 }
 .setupSummary strong {
@@ -124,7 +124,7 @@
 }
 .setupSection {
   border-top: 1px solid var(--border);
-  padding: 6px 0 24px;
+  padding: 6px 0 var(--space-6);
 }
 .setupSection > p {
   font-size: 12px;
@@ -137,7 +137,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   margin: 14px 0;
 }
 .inspector .setupSectionHeading h3 {
@@ -171,9 +171,9 @@
 .setupActions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  margin: 24px 0 12px;
+  margin: var(--space-6) 0 var(--space-3);
 }
 .setupInvite,
 .setupCallout {
@@ -181,7 +181,7 @@
   border-radius: 8px;
   background: var(--soft);
   padding: 18px;
-  margin: 12px 0 24px;
+  margin: var(--space-3) 0 var(--space-6);
 }
 .setupInvite strong {
   font-size: 13px;
@@ -199,7 +199,7 @@
   font-size: 11px;
 }
 .setupInvite label {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .setupComplete {
   padding: 18px 0;
@@ -207,18 +207,18 @@
 .setupComplete svg,
 .joinSuccess {
   color: var(--accent);
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 .setupComplete p {
   font-size: 13px;
   line-height: 1.8;
   color: var(--muted);
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 .setupSaveHint {
   font-size: 10px;
   color: var(--muted);
-  margin-top: 24px;
+  margin-top: var(--space-6);
   padding-top: 18px;
   border-top: 1px solid var(--border);
   line-height: 1.7;
@@ -227,12 +227,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   text-decoration: none;
-  padding: 12px;
+  padding: var(--space-3);
 }
 .joinIdentity {
-  padding: 16px 0 24px;
+  padding: var(--space-4) 0 var(--space-6);
   font-size: 13px;
 }
 .joinIdentity span {
@@ -256,7 +256,7 @@
 }
 .directoryControls {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   align-items: center;
 }
@@ -287,7 +287,7 @@
   }
   .setupProgress {
     font-size: 10px;
-    gap: 8px;
+    gap: var(--space-2);
   }
 }
 .demoBanner {
@@ -296,7 +296,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 14px;
-  padding: 12px 24px;
+  padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--border-strong);
   background: var(--accent-soft);
   color: var(--ink);
@@ -320,7 +320,7 @@
 }
 .demoControls select {
   font-size: 12px;
-  padding: 8px;
+  padding: var(--space-2);
 }
 .demoBanner > a {
   font-size: 12px;

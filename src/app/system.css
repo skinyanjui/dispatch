@@ -1313,7 +1313,7 @@ select {
 .appShell .sortButton {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 0;
   border: 0;
   background: transparent;
@@ -1362,7 +1362,7 @@ select {
 .appShell .carrierAuth {
   cursor: pointer;
   font-size: 12px;
-  padding: 4px 10px;
+  padding: var(--space-1) 10px;
 }
 
 .appShell .skeletonLine {
@@ -1483,7 +1483,7 @@ select {
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 8px var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   cursor: pointer;
 }
@@ -1658,7 +1658,7 @@ select {
 .appShell .calendarDate {
   justify-self: start;
   min-width: 22px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   text-align: center;
   font-size: 12px;
 }
@@ -1754,7 +1754,7 @@ select {
   flex-direction: column;
   width: min(1180px, calc(100% - 32px));
   height: calc(100% - 32px);
-  margin: 16px auto;
+  margin: var(--space-4) auto;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1765,8 +1765,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 14px;
+  gap: var(--space-3);
+  padding: var(--space-2) 14px;
   border-bottom: 1px solid var(--border);
 }
 .recordCrumbs ol {

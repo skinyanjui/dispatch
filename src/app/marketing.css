@@ -18,7 +18,7 @@
   left: 12px;
   top: 12px;
   z-index: 10;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background: var(--panel);
   border-radius: 8px;
 }
@@ -31,15 +31,15 @@
 .mkHeader {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px 0;
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
 }
 .mkHeader .brand {
   color: var(--ink);
 }
 .mkHeader nav {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
   flex-wrap: wrap;
 }
@@ -63,13 +63,13 @@
 .mkActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .mkButton,
 .mk a.mkButton {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 42px;
   padding: 0 18px;
   border-radius: 10px;
@@ -105,10 +105,10 @@
   border-radius: 24px;
 }
 .mkHero.compact {
-  padding-block: clamp(24px, 5vh, 48px) 8px;
+  padding-block: clamp(var(--space-6), 5vh, 48px) var(--space-2);
 }
 .mkEyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   color: var(--accent);
   font-size: 13px;
   font-weight: 600;
@@ -126,7 +126,7 @@
 }
 .mkLead {
   max-width: 54ch;
-  margin: 18px 0 24px;
+  margin: 18px 0 var(--space-6);
   font-size: clamp(16px, 2vw, 19px);
   color: var(--muted);
 }
@@ -139,7 +139,7 @@
   color: var(--muted);
 }
 .mkSection {
-  padding: clamp(24px, 5vh, 48px) 0;
+  padding: clamp(var(--space-6), 5vh, 48px) 0;
 }
 .mkSection > h2,
 .mkSplit h2,
@@ -155,7 +155,7 @@
   gap: 14px;
 }
 .mkCard {
-  padding: 20px;
+  padding: var(--space-5);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -164,7 +164,7 @@
   color: var(--accent);
 }
 .mkCard h3 {
-  margin: 10px 0 4px;
+  margin: 10px 0 var(--space-1);
   font-size: 17px;
 }
 .mkCard p {
@@ -175,7 +175,7 @@
 .mkSplit {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
+  gap: var(--space-5);
 }
 @media (min-width: 800px) {
   .mkSplit {
@@ -189,8 +189,8 @@
 }
 
 .mkBand {
-  padding: 28px clamp(20px, 4vw, 40px);
-  margin-block: 12px;
+  padding: 28px clamp(var(--space-5), 4vw, 40px);
+  margin-block: var(--space-3);
   background: var(--accent-tint);
   border-radius: 16px;
 }
@@ -214,10 +214,10 @@
 
 .mkFaq {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .mkFaq details {
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -227,19 +227,19 @@
   font-weight: 600;
 }
 .mkFaq p {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--muted);
 }
 .mkCta {
   margin-block: 32px;
-  padding: clamp(24px, 5vw, 48px);
+  padding: clamp(var(--space-6), 5vw, 48px);
   text-align: center;
   background: var(--ink);
   color: var(--ink-inverse);
   border-radius: 20px;
 }
 .mkCta p {
-  margin: 0 auto 20px;
+  margin: 0 auto var(--space-5);
   max-width: 52ch;
   color: var(--mk-cta-muted);
 }
@@ -259,26 +259,26 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 20px;
-  padding: 24px 0 40px;
+  gap: var(--space-5);
+  padding: var(--space-6) 0 40px;
   border-top: 1px solid var(--border);
   font-size: 14px;
 }
 .mkFooter p {
   max-width: 36ch;
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--muted);
 }
 .mkFooter nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 18px;
+  gap: var(--space-1) 18px;
   align-content: flex-start;
 }
 @media (max-width: 720px) {
   .mkHeader {
     flex-wrap: wrap;
-    gap: 8px 12px;
+    gap: var(--space-2) var(--space-3);
   }
   .mkHeader nav {
     order: 3;
@@ -308,7 +308,7 @@
   }
 }
 .mkBar .mkHeader {
-  padding: 12px 0;
+  padding: var(--space-3) 0;
 }
 .mk {
   scroll-padding-top: 72px;
@@ -324,9 +324,9 @@
 .mkPlan {
   display: grid;
   justify-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   max-width: 520px;
-  padding: clamp(24px, 5vw, 40px);
+  padding: clamp(var(--space-6), 5vw, 40px);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -344,11 +344,11 @@
 }
 
 .mkPlan .mkNote {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
 }
 @media (max-width: 720px) {
   .mkBar .mkHeader {
-    padding: 8px 0;
+    padding: var(--space-2) 0;
   }
 }
 
@@ -406,7 +406,7 @@
 /* Breadcrumb */
 .mkCrumbs {
   width: min(1080px, calc(100% - 40px));
-  margin: 8px auto 0;
+  margin: var(--space-2) auto 0;
 }
 .crumbs ol {
   display: flex;
@@ -461,8 +461,8 @@
 .listItem {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: var(--space-3);
+  padding: 14px var(--space-4);
   border-top: 1px solid var(--mk-line, var(--border));
 }
 .listItem:first-child {
@@ -487,7 +487,7 @@
 .listItem.end .listItemBody {
   flex-direction: row;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .listItemLabel {
   font-weight: 500;
@@ -520,11 +520,11 @@
 /* Product preview */
 .mkWide {
   width: min(1080px, calc(100% - 40px));
-  margin: 0 auto 24px;
+  margin: 0 auto var(--space-6);
 }
 .preview {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .previewTabs {
   display: flex;
@@ -555,7 +555,7 @@
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
   min-height: 340px;
-  padding: 8px;
+  padding: var(--space-2);
   background: var(--mk-app-canvas);
   border: 1px solid var(--mk-line);
   border-radius: 16px;
@@ -565,11 +565,11 @@
   display: grid;
   align-content: start;
   gap: 2px;
-  padding: 8px;
+  padding: var(--space-2);
   font-size: 13px;
 }
 .previewSide span {
-  padding: 6px 8px;
+  padding: 6px var(--space-2);
   border-radius: 6px;
   color: var(--mk-app-ink);
 }
@@ -592,7 +592,7 @@
 .pvBoard > div {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .pvBoard b {
   font-size: 12px;
@@ -625,7 +625,7 @@
 }
 .pvTable th,
 .pvTable td {
-  padding: 8px 10px;
+  padding: var(--space-2) 10px;
   text-align: left;
   border-bottom: 1px solid var(--mk-line);
   white-space: nowrap;
@@ -646,7 +646,7 @@
 }
 .pvCal > div {
   min-height: 56px;
-  padding: 4px;
+  padding: var(--space-1);
   border-right: 1px solid var(--mk-line);
   border-bottom: 1px solid var(--mk-line);
   font-size: 11px;
@@ -654,7 +654,7 @@
 .pvCal span {
   display: block;
   margin-top: 2px;
-  padding: 1px 4px;
+  padding: 1px var(--space-1);
   border-left: 3px solid var(--mk-app-ink);
   background: var(--mk-app-canvas);
   border-radius: 3px;
@@ -667,13 +667,13 @@
 }
 .pvDoc p {
   margin: 0;
-  padding: 12px;
+  padding: var(--space-3);
   background: var(--mk-soft);
   border-radius: 8px;
 }
 .pvDoc span {
   justify-self: start;
-  padding: 2px 8px;
+  padding: 2px var(--space-2);
   border-radius: 999px;
   background: var(--warn-bg);
   color: var(--warn);
@@ -694,7 +694,7 @@
 /* Feature rows */
 .mkFeature {
   display: grid;
-  gap: 24px;
+  gap: var(--space-6);
   width: min(1080px, calc(100% - 40px));
   margin: 0 auto;
   padding: clamp(28px, 6vh, 56px) 0;
@@ -758,7 +758,7 @@
 }
 .mkFeature {
   align-items: start;
-  padding-block: clamp(20px, 4vh, 40px);
+  padding-block: clamp(var(--space-5), 4vh, 40px);
 }
 .mkSplit p {
   color: var(--mk-muted);
@@ -770,7 +770,7 @@
 }
 .mkPlan .listItems {
   width: 100%;
-  margin-top: 16px;
+  margin-top: var(--space-4);
   text-align: left;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
@@ -790,7 +790,7 @@
 }
 @media (max-width: 480px) {
   .previewTabs {
-    gap: 4px;
+    gap: var(--space-1);
   }
   .previewTabs button {
     padding: 0 10px;
@@ -821,14 +821,14 @@
 }
 .mkFooter nav {
   flex: 1 1 auto;
-  gap: 4px 14px;
+  gap: var(--space-1) 14px;
 }
 @media (max-width: 480px) {
   .mkHeader nav a {
-    padding: 6px 8px;
+    padding: 6px var(--space-2);
   }
   .mkFooter nav {
-    gap: 4px 12px;
+    gap: var(--space-1) var(--space-3);
   }
 }
 
@@ -838,7 +838,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   padding: 10px 0;
 }
 .mkHeader nav {
@@ -868,12 +868,12 @@
 }
 .mkActions {
   justify-self: end;
-  gap: 4px;
+  gap: var(--space-1);
 }
 @media (max-width: 720px) {
   .mkBar .mkHeader {
     grid-template-columns: auto 1fr;
-    gap: 6px 12px;
+    gap: 6px var(--space-3);
   }
   .mkHeader nav {
     grid-column: 1 / -1;
@@ -889,7 +889,7 @@
 }
 @media (max-width: 480px) {
   .mkHeader nav a {
-    padding: 0 8px;
+    padding: 0 var(--space-2);
   }
 }
 

@@ -108,11 +108,11 @@
   font-weight: 600;
 }
 .linkPage .loginPanel form small {
-  margin-top: -4px;
+  margin-top: calc(var(--space-1) * -1);
   font-weight: 400;
 }
 .linkPage .loginPanel .setupIntro {
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
 }
 
 .appShell .accountPage .directoryIntro {

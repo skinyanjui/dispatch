@@ -218,7 +218,7 @@
   color: var(--accent);
 }
 .appShell .asstWorking {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
 }
 .appShell .asstDots::after {

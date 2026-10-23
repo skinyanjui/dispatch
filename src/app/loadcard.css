@@ -6,7 +6,7 @@
   grid-template-columns: minmax(0, 1fr);
   justify-content: stretch;
   gap: 3px;
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
   align-content: start;
 }
 .appShell .lc .lcHead {
@@ -47,7 +47,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 2px 5px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: 12.5px;
   font-weight: 500;
 }
@@ -58,13 +58,13 @@
 .appShell .lc .lcFacts {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
 }
 .appShell .lc .lcFact {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   max-width: 100%;
   padding: 1px 6px;
   border-radius: 6px;
@@ -84,7 +84,7 @@
   color: var(--error);
 }
 .appShell .lc .lcStep {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-size: 12px;
   font-weight: 600;
 }
