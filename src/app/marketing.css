@@ -189,7 +189,7 @@
 }
 
 .mkBand {
-  padding: 28px clamp(var(--space-5), 4vw, 40px);
+  padding: 28px clamp(var(--space-5), 4vw, var(--space-8));
   margin-block: var(--space-3);
   background: var(--accent-tint);
   border-radius: 16px;
@@ -231,7 +231,7 @@
   color: var(--muted);
 }
 .mkCta {
-  margin-block: 32px;
+  margin-block: var(--space-7);
   padding: clamp(var(--space-6), 5vw, 48px);
   text-align: center;
   background: var(--ink);
@@ -260,7 +260,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-5);
-  padding: var(--space-6) 0 40px;
+  padding: var(--space-6) 0 var(--space-8);
   border-top: 1px solid var(--border);
   font-size: 14px;
 }
@@ -321,31 +321,7 @@
 .mkCenter .mkLead {
   margin-inline: auto;
 }
-.mkPlan {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-2);
-  max-width: 520px;
-  padding: clamp(var(--space-6), 5vw, 40px);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  text-align: center;
-}
-.mkPlan h2 {
-  margin: 0;
-  font-size: 18px;
-}
-.mkPlanPrice {
-  margin: 0;
-  font-size: clamp(32px, 6vw, 44px);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
 
-.mkPlan .mkNote {
-  margin: 0 0 var(--space-3);
-}
 @media (max-width: 720px) {
   .mkBar .mkHeader {
     padding: var(--space-2) 0;
@@ -388,8 +364,7 @@
   color: var(--mk-muted);
 }
 .mkCard,
-.mkFaq details,
-.mkPlan {
+.mkFaq details {
   background: var(--panel);
   border-color: var(--mk-line);
 }
@@ -758,26 +733,10 @@
 }
 .mkFeature {
   align-items: start;
-  padding-block: clamp(var(--space-5), 4vh, 40px);
+  padding-block: clamp(var(--space-5), 4vh, var(--space-8));
 }
 .mkSplit p {
   color: var(--mk-muted);
-}
-/* The plan card is one column of content; its checklist fills the card. */
-.mkPlan {
-  max-width: 640px;
-  margin-inline: auto;
-}
-.mkPlan .listItems {
-  width: 100%;
-  margin-top: var(--space-4);
-  text-align: left;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  border: 0;
-}
-.mkPlan .listItem {
-  border: 0;
 }
 /* Preview tabs stay on one row; they shrink instead of dropping one alone. */
 .previewTabs {
@@ -952,7 +911,4 @@
    plan checklist sits flush inside its card. */
 .mkFooter a {
   margin-left: 0;
-}
-.mkPlan .listItem {
-  padding-inline: 0;
 }

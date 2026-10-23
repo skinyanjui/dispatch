@@ -110,7 +110,7 @@ for (const path of files) {
  */
 const spacingDecl =
   /(?<![\w-])((?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?|gap|row-gap|column-gap)\s*:\s*([^;{}]*)/g;
-const scale = { 4: 1, 8: 2, 12: 3, 16: 4, 20: 5, 24: 6 };
+const scale = { 4: 1, 8: 2, 12: 3, 16: 4, 20: 5, 24: 6, 32: 7, 40: 8 };
 const baselinePath = join(root, "scripts/spacing-baseline.json");
 const baseline = existsSync(baselinePath)
   ? JSON.parse(readFileSync(baselinePath, "utf8"))
@@ -142,7 +142,7 @@ for (const file of new Set([
   const allowed = baseline[file] ?? 0;
   if (found > allowed)
     problems.push(
-      `${file}: ${found} off-scale spacing value(s), ${allowed} allowed; use var(--space-1..6) (lines ${offScale[file].join(", ")})`,
+      `${file}: ${found} off-scale spacing value(s), ${allowed} allowed; use var(--space-1..8) (lines ${offScale[file].join(", ")})`,
     );
   else if (found < allowed)
     problems.push(

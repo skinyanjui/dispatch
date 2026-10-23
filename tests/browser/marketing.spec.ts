@@ -133,9 +133,22 @@ test("marketing on a phone: the footer lines up with the brand and the product p
   const cols = await page.locator(".pvTable thead th:visible").count();
   expect(cols).toBe(3);
   await page.goto("/pricing");
-  const plan = (await page.locator(".mkPlan").boundingBox())!;
-  const item = (await page.locator(".mkPlan .listItem").first().boundingBox())!;
-  expect(item.x - plan.x).toBeLessThan(40);
+  // The plan card holds its price, button and every included item.
+  const plan = (await page.locator(".pricingCard").boundingBox())!;
+  const items = page.locator(".pricingCard .pricingIncludes li");
+  expect(await items.count()).toBe(6);
+  for (const box of await items.evaluateAll((els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect();
+      return { x: r.x, right: r.right };
+    }),
+  )) {
+    expect(box.x).toBeGreaterThanOrEqual(plan.x);
+    expect(box.right).toBeLessThanOrEqual(plan.x + plan.width);
+  }
+  await expect(
+    page.locator(".pricingCard").getByRole("link", { name: "Request access" }),
+  ).toBeVisible();
 });
 
 test("sign-in and request-access heroes use the same short line as the product page", async ({

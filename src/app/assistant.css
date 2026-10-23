@@ -307,7 +307,7 @@
   gap: var(--space-2);
   max-width: 460px;
   margin: auto;
-  padding: var(--space-6, 32px) 0;
+  padding: var(--space-6, var(--space-7)) 0;
   text-align: center;
 }
 .appShell .asstOff p {

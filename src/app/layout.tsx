@@ -29,6 +29,7 @@ import "./loadcard.css";
 import "./legal.css";
 import "./ui.css";
 import "./page-layout.css";
+import "./pricing.css";
 export const metadata: Metadata = {
   title: "Relay · Dispatch workspace",
   description: "Carrier-scoped freight dispatch operations",

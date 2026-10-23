@@ -79,7 +79,7 @@
 }
 .authCard {
   width: min(520px, calc(100% - 32px));
-  margin: var(--space-4) auto 32px;
+  margin: var(--space-4) auto var(--space-7);
   padding: 26px 22px;
   background: var(--panel);
   border: 1px solid var(--login-line);
@@ -269,9 +269,9 @@
   }
   .loginHero {
     justify-content: flex-start;
-    gap: clamp(32px, 9vh, 88px);
+    gap: clamp(var(--space-7), 9vh, 88px);
     /* Content stays above the scene (mountains and water) at the bottom. */
-    padding: clamp(28px, 4vw, 56px) clamp(32px, 6vw, 96px) 36%;
+    padding: clamp(28px, 4vw, 56px) clamp(var(--space-7), 6vw, 96px) 36%;
     min-height: 100dvh;
   }
   .loginHero::before,
@@ -467,7 +467,7 @@
 }
 .authCard {
   margin-block: clamp(var(--space-2), 1.6vh, var(--space-4))
-    clamp(var(--space-3), 2vh, 32px);
+    clamp(var(--space-3), 2vh, var(--space-7));
   padding: clamp(var(--space-4), 2.6vh, 26px) var(--space-5);
 }
 .loginPanel h1 {

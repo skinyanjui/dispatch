@@ -44,24 +44,24 @@ Three layers, all in that one file:
 - `.appShell`: the signed-in app's neutral palette. It overrides the global palette inside the app.
 - `.login`, `.mk`: aliases, public-page colours and the sign-in hero illustration (`--login-glow-*`, `--login-hills-*`, `--login-water-*`).
 
-| Group               | Tokens                                                                                                                                                                       |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text and surfaces   | `--ink`, `--muted`, `--subtle`, `--canvas`, `--panel`, `--soft`, `--panel-soft`, `--border`, `--border-strong`                                                               |
-| Action              | `--accent`, `--action`, `--action-hover`, `--action-ink`, `--focus`, `--accent-soft`, `--accent-tint`                                                                        |
-| Status              | `--error*`, `--success*`, `--warn*` (each with `-bg` and `-border` where used), `--star`                                                                                     |
-| Stages              | `--stage-all`, `-booked`, `-dispatched`, `-transit`, `-delivered`, `-cancelled`, `-contacted`                                                                                |
-| Spacing (4px scale) | `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-5` 20, `-6` 24                                                                                                                    |
-| Page layout         | `--page-gap` 12px between blocks, `--page-section-step` 12px extra above a section heading (ADR 0053)                                                                        |
-| Controls            | `--control-h` 32px (fields, buttons, tabs, search), `--control-h-sm` 28px (toolbars, chips, in-table controls), `--control-min` 24px (smallest target), `--control-pad` 10px |
-| Radii and shadow    | `--radius`, `--control-radius`, `--field-radius`, `--shadow-menu`, `--shadow-sheet`                                                                                          |
-| Loading             | `--skeleton-from`, `--skeleton-to`                                                                                                                                           |
-| Inverse and tints   | `--ink-inverse`, `--faint`, `--surface-cool`, `--accent-tint-soft`, `--action-disabled`, `--link-on-dark`, `--backdrop`                                                      |
-| Time and trend      | `--late`, `--trend-up`, `--trend-down`, `--soon-border`, `--soon-ink`, `--soon-ink-on-dark`, `--caution-ink`                                                                 |
-| Stage badges        | `--stage-dispatched-bg`/`-ink`, `--stage-transit-bg`/`-ink`, `--stage-delivered-bg`/`-ink`                                                                                   |
-| Avatars             | `--avatar-bg`, `--avatar-carrier-bg`/`-ink`, `--avatar-driver-bg`/`-ink`, `--avatar-external-bg`/`-ink`, `--avatar-record-bg`                                                |
-| More shadows        | `--shadow-raised`, `--shadow-card-hover`, `--shadow-inspector`                                                                                                               |
+| Group             | Tokens                                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text and surfaces | `--ink`, `--muted`, `--subtle`, `--canvas`, `--panel`, `--soft`, `--panel-soft`, `--border`, `--border-strong`                                                               |
+| Action            | `--accent`, `--action`, `--action-hover`, `--action-ink`, `--focus`, `--accent-soft`, `--accent-tint`                                                                        |
+| Status            | `--error*`, `--success*`, `--warn*` (each with `-bg` and `-border` where used), `--star`                                                                                     |
+| Stages            | `--stage-all`, `-booked`, `-dispatched`, `-transit`, `-delivered`, `-cancelled`, `-contacted`                                                                                |
+| Spacing           | `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-5` 20, `-6` 24, `-7` 32, `-8` 40                                                                                                  |
+| Page layout       | `--page-gap` 12px between blocks, `--page-section-step` 12px extra above a section heading (ADR 0053)                                                                        |
+| Controls          | `--control-h` 32px (fields, buttons, tabs, search), `--control-h-sm` 28px (toolbars, chips, in-table controls), `--control-min` 24px (smallest target), `--control-pad` 10px |
+| Radii and shadow  | `--radius`, `--control-radius`, `--field-radius`, `--shadow-menu`, `--shadow-sheet`                                                                                          |
+| Loading           | `--skeleton-from`, `--skeleton-to`                                                                                                                                           |
+| Inverse and tints | `--ink-inverse`, `--faint`, `--surface-cool`, `--accent-tint-soft`, `--action-disabled`, `--link-on-dark`, `--backdrop`                                                      |
+| Time and trend    | `--late`, `--trend-up`, `--trend-down`, `--soon-border`, `--soon-ink`, `--soon-ink-on-dark`, `--caution-ink`                                                                 |
+| Stage badges      | `--stage-dispatched-bg`/`-ink`, `--stage-transit-bg`/`-ink`, `--stage-delivered-bg`/`-ink`                                                                                   |
+| Avatars           | `--avatar-bg`, `--avatar-carrier-bg`/`-ink`, `--avatar-driver-bg`/`-ink`, `--avatar-external-bg`/`-ink`, `--avatar-record-bg`                                                |
+| More shadows      | `--shadow-raised`, `--shadow-card-hover`, `--shadow-inspector`                                                                                                               |
 
-Spacing rule: `padding`, `margin` and `gap` use `--space-1` to `--space-6`. A literal `px` value is allowed only as a 1–2px hairline or optical nudge, and a literal that equals a token fails lint. Off-scale literals that predate the rule are counted per file in `scripts/spacing-baseline.json`; the count can only go down, so lint also fails when a file has fewer than its baseline until you lower the number.
+Spacing rule: `padding`, `margin` and `gap` use `--space-1` to `--space-8`. A literal `px` value is allowed only as a 1–2px hairline or optical nudge, and a literal that equals a token fails lint. Off-scale literals that predate the rule are counted per file in `scripts/spacing-baseline.json`; the count can only go down, so lint also fails when a file has fewer than its baseline until you lower the number.
 
 Rules: add a token before using a new colour. `check-design-system.mjs` fails any `#hex` colour in a stylesheet other than `tokens.css`, and any `var(--x)` whose token is not defined. Check the scope too: a token defined only in `.appShell`, `.login` or `.mk` is undefined outside it.
 

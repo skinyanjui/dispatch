@@ -1,26 +1,72 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  BellRingingIcon,
+  CreditCardIcon,
+  SparkleIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { Cta, MarketingShell } from "@/components/marketing";
-import { ListItem, ListItems } from "@/components/ui/list-item";
+import {
+  PricingAssurances,
+  PricingCard,
+  type PricingGroup,
+} from "@/components/ui/pricing-card";
 
 export const metadata: Metadata = {
   title: "Pricing · Relay",
   description: "Relay is in early access and has no charges yet.",
 };
 
-const included = [
-  "Loads, stops, milestones and driver assignment",
-  "Documents with scanning and versioning",
-  "Exceptions, messaging and contacts",
-  "Carrier and dispatch billing records",
-  "Optional AI reading and assistant, off by default",
-  "Every carrier kept separate, with an audit log",
+const groups: PricingGroup[] = [
+  {
+    title: "Operations",
+    items: [
+      "Loads, stops, milestones and driver assignment",
+      "Exceptions, messaging and contacts",
+    ],
+  },
+  {
+    title: "Records and billing",
+    items: [
+      "Documents with scanning and versioning",
+      "Carrier and dispatch billing records",
+    ],
+  },
+  {
+    title: "Control",
+    items: [
+      "Optional AI reading and assistant, off by default",
+      "Every carrier kept separate, with an audit log",
+    ],
+  },
+];
+
+const assurances = [
+  {
+    icon: <CreditCardIcon size={18} />,
+    title: "No payment details",
+    text: "Nothing to enter or cancel during early access.",
+  },
+  {
+    icon: <BellRingingIcon size={18} />,
+    title: "Notice before any charge",
+    text: "Existing organizations hear first, and prices are published here.",
+  },
+  {
+    icon: <SparkleIcon size={18} />,
+    title: "AI is off until you turn it on",
+    text: "Owners and admins decide whether it runs. Model usage is billed to your own account.",
+  },
 ];
 
 const faq = [
   [
     "What will pricing look like?",
     "Not decided. Existing organizations get notice before any charge.",
+  ],
+  [
+    "Who can join?",
+    "Approved dispatch companies. Each request is reviewed, and nothing is created until it is approved.",
   ],
   [
     "Does AI cost extra?",
@@ -41,20 +87,24 @@ export default function Pricing() {
           Prices will be published here before any charge.
         </p>
       </section>
-      <section className="mkPlan" aria-labelledby="plan">
-        <h2 id="plan">Early access</h2>
-        <p className="mkPlanPrice">Free</p>
-        <p className="mkNote">
-          For approved dispatch companies. No payment details taken.
-        </p>
-        <Link className="mkButton" href="/request-access">
-          Request access
-        </Link>
-        <ListItems label="Included">
-          {included.map((i) => (
-            <ListItem key={i}>{i}</ListItem>
-          ))}
-        </ListItems>
+      <section aria-label="Plan">
+        <PricingCard
+          id="plan"
+          name="Early access"
+          badge="Open by request"
+          price="Free"
+          priceNote="while we are in early access"
+          description="For approved dispatch companies. Everything below is included."
+          action={
+            <Link className="mkButton" href="/request-access">
+              Request access
+            </Link>
+          }
+          footnote="No payment details taken."
+          includesLabel="Everything included"
+          groups={groups}
+        />
+        <PricingAssurances items={assurances} />
       </section>
       <section className="mkSection" aria-labelledby="faq">
         <h2 id="faq">Questions</h2>
