@@ -73,7 +73,6 @@ select {
   border-radius: var(--control-radius);
   background: var(--panel);
   color: var(--ink);
-  padding: 10px 11px;
   width: 100%;
   min-width: 0;
 }
@@ -83,10 +82,8 @@ input::placeholder {
 label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   font-size: 12px;
   font-weight: 500;
-  margin-bottom: 18px;
 }
 svg {
   flex-shrink: 0;
@@ -165,7 +162,6 @@ a svg {
   border: 1px solid var(--border);
   background: var(--panel);
   font-size: 12px;
-  padding: 7px 10px;
 }
 
 .count {
@@ -214,7 +210,6 @@ kbd {
 }
 
 .textButton {
-  padding: 5px 7px;
   font-size: 12px;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -338,7 +333,6 @@ footer a {
   color: var(--action-ink);
   font-size: 12px;
   font-weight: 500;
-  padding: 10px 15px;
   border-color: var(--action);
   border-radius: 20px;
 }
@@ -398,14 +392,12 @@ footer a {
   background: var(--panel);
   border-left: 1px solid var(--border);
   overflow: auto;
-  padding: 24px 30px 30px;
   box-shadow: var(--shadow-inspector);
 }
 .inspectorHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 .eyebrow {
   font-size: 9px;
@@ -425,13 +417,11 @@ footer a {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  margin: 10px 0 17px;
 }
 
 .inspector h3 {
   font-size: 12px;
   font-weight: 600;
-  margin: 26px 0 14px;
 }
 .stops {
   border: 1px solid var(--border);
@@ -439,8 +429,6 @@ footer a {
 }
 .stop {
   display: flex;
-  gap: 13px;
-  padding: 16px;
 }
 .stop + .stop {
   border-top: 1px solid var(--border);
@@ -457,7 +445,6 @@ footer a {
 .stop strong {
   display: block;
   font-size: 12px;
-  margin: 7px 0 10px;
   font-weight: 500;
 }
 .stop p {
@@ -608,7 +595,6 @@ fieldset label:last-child {
   font-size: 12px;
 }
 .loginAccess {
-  margin: 6px 0 26px;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.7;

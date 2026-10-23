@@ -93,8 +93,6 @@
 .appShell .segmented {
   background: transparent;
   border: 0;
-  padding: 0;
-  gap: 2px;
 }
 .appShell .segment {
   border-radius: 4px;

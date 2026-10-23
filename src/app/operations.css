@@ -3,17 +3,13 @@
 .docPanel,
 .opsList {
   display: grid;
-  gap: 10px;
-  margin: 12px 0 22px;
 }
 .docSlot,
 .opsCard {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
   background: var(--panel);
   display: grid;
-  gap: 8px;
 }
 .docHeading,
 .opsCardHeading {
@@ -94,7 +90,6 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   border-radius: 999px;
-  padding: 3px 8px;
   border: 1px solid var(--border);
   background: var(--soft);
   color: var(--muted);
