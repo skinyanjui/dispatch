@@ -240,9 +240,10 @@ export default function Workspace({
   );
   const handleError = useCallback((e: unknown) => {
     if (e instanceof ApiError && e.status === 401) {
-      deepLink.current =
-        parsePath(window.location.pathname.split("/").filter(Boolean)) ??
-        undefined;
+      if (active.current)
+        deepLink.current =
+          parsePath(window.location.pathname.split("/").filter(Boolean)) ??
+          undefined;
       active.current = false;
       setContext(null);
       setSelected(null);
@@ -665,6 +666,8 @@ export default function Workspace({
     await act(async () => {
       await api("logout", {});
       active.current = false;
+      deepLink.current = undefined;
+      window.history.replaceState(null, "", "/");
       revision.current++;
       queueRequest.current++;
       setSection("loads");
@@ -673,6 +676,8 @@ export default function Workspace({
       setSelected(null);
       setCreating(false);
       setQ("");
+      setScopes({});
+      setLoadScope({});
       setCarrier("");
       setStatus("");
       setCursor(null);

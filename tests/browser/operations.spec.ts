@@ -488,6 +488,7 @@ test("account: enroll two-step verification and sign in with a code", async ({
       .click();
     await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL("http://localhost:3000/");
 
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);

@@ -57,6 +57,41 @@ async function fillCreateForm(page: Page, reference: string) {
   return modal;
 }
 
+test("closing a dialog never steals focus from the next input", async ({ page }) => {
+  await mockContext(page);
+  await page.route("**/api/loads?*", (route) =>
+    route.fulfill({ json: { loads: [], nextCursor: null } }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "New load", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Create load" })).toBeVisible();
+  await page.evaluate(() => {
+    const qa = window as unknown as {
+      restoreFrame: typeof requestAnimationFrame;
+      pendingFrames: FrameRequestCallback[];
+    };
+    qa.restoreFrame = window.requestAnimationFrame;
+    qa.pendingFrames = [];
+    window.requestAnimationFrame = (callback) => {
+      qa.pendingFrames.push(callback);
+      return qa.pendingFrames.length;
+    };
+  });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Create load" })).toHaveCount(0);
+  const search = page.getByRole("searchbox", { name: "Search loads" });
+  await search.focus();
+  await page.evaluate(() => {
+    const qa = window as unknown as {
+      restoreFrame: typeof requestAnimationFrame;
+      pendingFrames: FrameRequestCallback[];
+    };
+    window.requestAnimationFrame = qa.restoreFrame;
+    for (const callback of qa.pendingFrames) callback(performance.now());
+  });
+  await expect(search).toBeFocused();
+});
+
 test("clearing empty filters and repeating All loads never strand the queue loading", async ({
   page,
 }) => {

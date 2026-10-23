@@ -14,6 +14,8 @@ CSV downloads are complete within explicit bounds: 50,000 rows synchronously, or
 
 Billing and exception APIs use stable server-side keyset pagination. Page summaries are labeled as loaded-record summaries. A linked invoice may be included beyond a normal page without consuming its continuation position.
 
+Explicit sign-out clears the saved return path and URL filters; session expiry alone retains a safe deep link for reauthentication. Late unauthorized responses after sign-out cannot restore the old path. Dialog focus restoration also yields to a field that the person already focused, preserving keyboard entry after closing a record inspector.
+
 ## Verification
 
 `repair-reconciliation.test.ts` exercises cohort reconciliation, current POD, invoice basis, snapshot isolation, 137 exceptions, billing beyond 100, a 5,103-row CSV, export retry/expiry/revocation, concurrent export quota and concurrent invoice payments. `repair-workflows.spec.ts` exercises navigation, stale recovery, download recovery and browser-only demo CSV. See [repair status](../repairs/repair-status.md) for the final run and its limits.

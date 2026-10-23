@@ -31,6 +31,16 @@ export function Modal({
       dialog?.close();
       // Back to where the person was once the page has settled.
       requestAnimationFrame(() => {
+        // A person may already have focused their next control. Do not steal
+        // that focus when the delayed restoration callback runs.
+        const current = document.activeElement;
+        if (
+          current &&
+          current !== document.body &&
+          current !== dialog &&
+          !dialog?.contains(current)
+        )
+          return;
         if (opener?.isConnected && !(opener as HTMLButtonElement).disabled)
           opener.focus();
       });

@@ -898,7 +898,7 @@ test("billing: summary cards filter the invoices, columns sort, long lists page"
   await expect(total).toHaveAttribute("aria-sort", "ascending");
   // A summary card is a filter: Collected shows the paid invoices.
   await region
-    .getByRole("button", { name: /^Collected: .* Show paid/ })
+    .getByRole("button", { name: /^Collected / })
     .click();
   await expect(
     region.getByRole("button", { name: "Paid", exact: false }).first(),
