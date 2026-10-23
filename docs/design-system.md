@@ -61,6 +61,8 @@ Three layers, all in that one file:
 | Avatars             | `--avatar-bg`, `--avatar-carrier-bg`/`-ink`, `--avatar-driver-bg`/`-ink`, `--avatar-external-bg`/`-ink`, `--avatar-record-bg`                                                |
 | More shadows        | `--shadow-raised`, `--shadow-card-hover`, `--shadow-inspector`                                                                                                               |
 
+Spacing rule: `padding`, `margin` and `gap` use `--space-1` to `--space-6`. A literal `px` value is allowed only as a 1–2px hairline or optical nudge, and a literal that equals a token fails lint. Off-scale literals that predate the rule are counted per file in `scripts/spacing-baseline.json`; the count can only go down, so lint also fails when a file has fewer than its baseline until you lower the number.
+
 Rules: add a token before using a new colour. `check-design-system.mjs` fails any `#hex` colour in a stylesheet other than `tokens.css`, and any `var(--x)` whose token is not defined. Check the scope too: a token defined only in `.appShell`, `.login` or `.mk` is undefined outside it.
 
 **Typography.** Signed-in text is 13px (tables 13px, notes 12.5px, captions 11–12px). Weights are 400 and 500 for text and 600 for figures and headings, and the weight of an item never changes with its state. Public pages use their own larger scale (ADR 0041).

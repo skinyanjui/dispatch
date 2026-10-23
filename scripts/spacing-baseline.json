@@ -1,0 +1,17 @@
+{
+  "src/app/assistant.css": 1,
+  "src/app/check-ins.css": 12,
+  "src/app/controls.css": 3,
+  "src/app/density.css": 9,
+  "src/app/globals.css": 39,
+  "src/app/legal.css": 7,
+  "src/app/loadcard.css": 2,
+  "src/app/login.css": 25,
+  "src/app/marketing.css": 18,
+  "src/app/onboarding.css": 12,
+  "src/app/operations.css": 4,
+  "src/app/sidebar.css": 6,
+  "src/app/system.css": 1,
+  "src/app/ui.css": 1,
+  "src/app/workspace-shell.css": 9
+}
