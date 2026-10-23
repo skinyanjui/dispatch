@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 
 async function login(page: Page) {
@@ -19,7 +20,24 @@ const tops = (page: Page, labels: string[]) =>
     ),
   );
 
+/** These specs need a conversation; a fresh database has none, so make one. */
+async function ensureThread(page: Page) {
+  const me = await (await page.request.get("/api/me")).json();
+  const sent = await page.request.post("/api/messages", {
+    headers: { Origin: "http://localhost:3000" },
+    data: {
+      idempotency_key: randomUUID(),
+      subject: "Composer layout " + randomUUID().slice(0, 6),
+      to: ["driver:" + me.drivers[0].id],
+      channel: "in_app",
+      body: "Checking the composer layout.",
+    },
+  });
+  expect(sent.status()).toBe(201);
+}
+
 async function openFirstThread(page: Page) {
+  await ensureThread(page);
   await page.goto("/inbox");
   const first = page.locator(".threadItem").first();
   await expect(first).toBeVisible();
