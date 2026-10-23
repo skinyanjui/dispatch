@@ -44,7 +44,9 @@ export default function Pricing() {
       <section className="mkPlan" aria-labelledby="plan">
         <h2 id="plan">Early access</h2>
         <p className="mkPlanPrice">Free</p>
-        <p className="mkNote">For approved dispatch companies. No payment details taken.</p>
+        <p className="mkNote">
+          For approved dispatch companies. No payment details taken.
+        </p>
         <Link className="mkButton" href="/request-access">
           Request access
         </Link>

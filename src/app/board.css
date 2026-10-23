@@ -18,7 +18,7 @@
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fefefe;
+  background: var(--panel);
   box-shadow: none;
 }
 .appShell .lane.dropping {
@@ -35,7 +35,7 @@
 }
 .appShell .laneHeading > svg {
   flex: none;
-  color: var(--subtle);
+  color: var(--stage-booked);
 }
 .appShell .laneHeading h2 {
   margin: 0;
@@ -51,21 +51,21 @@
 /* Stage dots, matching the queue pills. */
 .appShell .lane.dispatched > .laneHeading > svg,
 .appShell .lane.prospect-qualified > .laneHeading > svg {
-  color: #a78bd0;
+  color: var(--stage-dispatched);
 }
 .appShell .lane.picked-up > .laneHeading > svg,
 .appShell .lane.prospect-proposal > .laneHeading > svg {
-  color: #d7a45b;
+  color: var(--stage-transit);
 }
 .appShell .lane.delivered > .laneHeading > svg,
 .appShell .lane.prospect-won > .laneHeading > svg {
-  color: #78a38b;
+  color: var(--stage-delivered);
 }
 .appShell .lane.prospect-contacted > .laneHeading > svg {
-  color: #7d9be0;
+  color: var(--stage-contacted);
 }
 .appShell .lane.prospect-lost > .laneHeading > svg {
-  color: #d58a8a;
+  color: var(--stage-cancelled);
 }
 
 /* Cards and the empty state. */

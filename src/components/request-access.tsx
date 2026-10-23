@@ -2,9 +2,10 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
-import { ApiError, api, describe } from "@/lib/client-api";
+import { ApiError, api } from "@/lib/client-api";
 import { legalVersion } from "@/lib/legal";
 import { AuthLayout } from "@/components/auth-layout";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 /**
  * The public "Request access" page (ADR 0034). Relay has no open sign-up: this
@@ -156,11 +157,7 @@ export function RequestAccess() {
                   <a href="/privacy">Privacy</a> pages.
                 </span>
               </label>
-              {error && (
-                <p className="alert error" role="alert">
-                  {describe(error)}
-                </p>
-              )}
+              <ErrorAlert error={error} />
               <button className="primary full" disabled={busy}>
                 {busy ? "Sending…" : "Request access"}
                 <ArrowRightIcon size={16} aria-hidden="true" />

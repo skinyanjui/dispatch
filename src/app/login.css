@@ -1,14 +1,7 @@
 /* Sign-in, invitation and password screens: a soft sky hero on the left and a
    floating card on a pale column. The blue belongs to these screens only; the
    app itself keeps its own palette. */
-.login {
-  /* The same palette as the app (see :root in globals.css). */
-  --login-blue: var(--accent);
-  --login-blue-hover: var(--action-hover);
-  --login-ink: var(--ink);
-  --login-muted: var(--muted);
-  --login-line: var(--border-strong);
-}
+
 .authPage {
   min-height: 100dvh;
   display: grid;

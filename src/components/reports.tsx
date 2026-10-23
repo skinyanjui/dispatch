@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  CaretRightIcon,
   DownloadSimpleIcon,
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@/components/ui/toggle-group";
@@ -14,9 +13,10 @@ import {
   StatTiles,
   StatTilesLoading,
 } from "@/components/ui/stat-tile";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import { formatMoney } from "@/lib/entry";
 import type { AttentionKey } from "@/lib/attention";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Timing = {
   measured: number;
@@ -387,14 +387,7 @@ export function Reports({
         Loads are counted by first pickup (UTC dates). On-time uses arrivals
         people reported; stops with no report are shown separately.
       </p>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className="srOnly" role="status">
         {loading ? "Loading report" : "Report loaded"}
       </p>

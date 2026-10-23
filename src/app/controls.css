@@ -1,7 +1,5 @@
 /* Shared by the app and the public demo banner. */
-:root {
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
+
 /* Control sizing and alignment for the signed-in app (ADR 0044). Loaded after
    every other stylesheet so it settles the conflicts between them.
 
@@ -11,12 +9,6 @@
      --control-min    24px  the smallest allowed target (icon buttons)
    Controls that share a row share a size and a centre line. Dropdowns keep
    room between their text, arrow and the border. */
-.appShell {
-  --control-h: 32px;
-  --control-h-sm: 28px;
-  --control-min: 24px;
-  --control-pad: 10px;
-}
 
 /* ---- Fields ---- */
 .appShell

@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import { formatDateTime } from "@/lib/format";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Note = {
   id: string;
@@ -104,18 +105,7 @@ export function LoadNotes({
       <p className="srOnly" aria-live="polite">
         {status}
       </p>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void load()}
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <ul className="noteList" aria-label="Notes">
         {(notes ?? []).map((n) => (
           <li key={n.id}>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ShieldCheckIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
+import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 type Account = {
   name: string;
@@ -73,21 +74,10 @@ export function AccountSettings({
       className="carrierDirectory accountPage"
       aria-label="Account settings"
     >
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Account and security</h2>
-          {account && (
-            <p>
-              {account.name} · {account.email}
-            </p>
-          )}
-        </div>
-      </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-        </div>
-      )}
+      <PageIntro title="Account and security">
+        {account && `${account.name} · ${account.email}`}
+      </PageIntro>
+      <ErrorAlert error={error} />
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice}
       </p>

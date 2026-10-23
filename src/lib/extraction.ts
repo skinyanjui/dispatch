@@ -4,7 +4,6 @@
 // recorded using plain code, and nothing here writes to a load or document.
 import { z } from "zod";
 import { formatMoney } from "./entry";
-import type { DocumentType } from "./compliance";
 
 /** Bump when the instructions or fields change, so old results stay explainable. */
 export const promptVersion = "2026-10-22.1";

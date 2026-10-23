@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import { dollarsToMinor, formatMoney } from "@/lib/entry";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Status = {
   available: boolean;
@@ -106,10 +107,10 @@ export function AiSettings({
         <li>Each reading is billed to this server&apos;s model account.</li>
       </ul>
       {status && !status.available && (
-        <p className="alert error" role="status">
+        <ErrorAlert polite>
           Not set up on this server yet: it has no model account. Ask whoever
           runs Relay to add one.
-        </p>
+        </ErrorAlert>
       )}
       {status && (
         <form className="opsForm" onSubmit={save}>
@@ -169,11 +170,7 @@ export function AiSettings({
           {notice}
         </p>
       )}
-      {error && (
-        <p className="alert error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
     </article>
   );
 }

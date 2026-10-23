@@ -12,9 +12,10 @@ import {
 } from "@phosphor-icons/react";
 import { Modal } from "@/components/modal";
 import { ToggleGroup } from "@/components/ui/toggle-group";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type { DirectoryEntry } from "@/lib/contact-types";
 import { formatDateTime } from "@/lib/format";
+import { EmptyState, ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 export type Compose = {
   to: DirectoryEntry[];
@@ -484,11 +485,7 @@ function Composer({
           {warn}
         </small>
       )}
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-        </div>
-      )}
+      <ErrorAlert error={error} />
       <button
         className="primary"
         disabled={
@@ -543,28 +540,24 @@ function SavedReplies({
   }
   return (
     <section className="savedReplies" aria-label="Saved replies">
-      <div className="directoryIntro">
-        <div>
-          <h2>Saved replies</h2>
-          <p>
-            Use {"{name}"}, {"{load}"} and {"{sender}"} to fill in details when
-            inserted.
-          </p>
-        </div>
-        <div className="actionRow">
-          <button className="secondary" onClick={() => edit("new")}>
-            <PlusIcon {...icon} /> New reply
-          </button>
-          <button className="textButton" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-        </div>
-      )}
+      <PageIntro
+        title="Saved replies"
+        showTitle
+        actions={
+          <div className="actionRow">
+            <button className="secondary" onClick={() => edit("new")}>
+              <PlusIcon {...icon} /> New reply
+            </button>
+            <button className="textButton" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        }
+      >
+        Use {"{name}"}, {"{load}"} and {"{sender}"} to fill in details when
+        inserted.
+      </PageIntro>
+      <ErrorAlert error={error} />
       {editing && (
         <form
           className="composer"
@@ -1051,14 +1044,7 @@ export function Inbox({
               onChange={(e) => setQ(e.target.value)}
             />
           </label>
-          {error && (
-            <div className="alert error" role="alert">
-              {describe(error)}
-              <button className="secondary" onClick={() => void load()}>
-                Retry
-              </button>
-            </div>
-          )}
+          {error && <ErrorAlert error={error} onRetry={() => void load()} />}
           <ul
             className="threadList"
             aria-label="Conversations"
@@ -1146,27 +1132,27 @@ export function Inbox({
           </ul>
           {loading && <p role="status">Loading conversations…</p>}
           {!loading && threads && !threads.length && !error && (
-            <div className="directoryEmpty">
-              <TrayIcon size={36} weight="light" aria-hidden="true" />
-              <h2>
-                {box === "archived"
+            <EmptyState
+              icon={TrayIcon}
+              title={
+                box === "archived"
                   ? "Nothing archived"
                   : box === "trash"
                     ? "Trash is empty"
                     : q || unreadOnly || channel
                       ? "No matching conversations"
-                      : "Nothing here yet. Let's fix that!"}
-              </h2>
-              <p>
-                {box === "archived"
+                      : "Nothing here yet. Let's fix that!"
+              }
+              description={
+                box === "archived"
                   ? "Archived conversations are hidden from your inbox. A new message in one brings it back."
                   : box === "trash"
                     ? "Conversations you move to trash stay here. Messages are never deleted, only hidden from you."
                     : q || unreadOnly || channel
                       ? "Try fewer words or clear the filters."
-                      : "Tap New message to say hello, or open Contacts and choose Message next to anyone."}
-              </p>
-            </div>
+                      : "Tap New message to say hello, or open Contacts and choose Message next to anyone."
+              }
+            />
           )}
           {next && (
             <button
@@ -1299,11 +1285,7 @@ export function Inbox({
               )}
             />
           )}
-          {!newMessage && viewError && (
-            <div className="alert error" role="alert">
-              {describe(viewError)}
-            </div>
-          )}
+          {!newMessage && viewError && <ErrorAlert error={viewError} />}
           {!newMessage && view && (
             <>
               <header className="threadHeader">
@@ -1452,14 +1434,11 @@ export function Inbox({
             </>
           )}
           {!newMessage && !view && !viewError && (
-            <div className="directoryEmpty">
-              <TrayIcon size={36} weight="light" aria-hidden="true" />
-              <h2>Pick a conversation, or start a new one</h2>
-              <p>
-                Replies show up by themselves once inbound delivery is set up;
-                until then, log them by hand so the whole story stays together.
-              </p>
-            </div>
+            <EmptyState
+              icon={TrayIcon}
+              title="Pick a conversation, or start a new one"
+              description="Replies show up by themselves once inbound delivery is set up; until then, log them by hand so the whole story stays together."
+            />
           )}
         </div>
       </div>

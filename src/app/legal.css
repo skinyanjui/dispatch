@@ -72,10 +72,10 @@
 .legalDraft {
   margin: 0 0 8px;
   padding: 12px 14px;
-  border: 1px solid #f0e2b8;
+  border: 1px solid var(--warn-border);
   border-radius: 10px;
-  background: #fff8e6;
-  color: #6b4a00;
+  background: var(--warn-bg);
+  color: var(--warn);
   font-size: 14px;
 }
 .legalBack {

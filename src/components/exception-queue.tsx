@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { WarningIcon } from "@phosphor-icons/react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import {
   exceptionStatusLabels,
   exceptionTypeLabels,
@@ -11,6 +11,7 @@ import {
 import { severityTone, when } from "./load-exceptions";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState, ErrorAlert } from "@/components/ui/feedback";
 
 export function ExceptionQueue({
   onOpenLoad,
@@ -220,14 +221,7 @@ export function ExceptionQueue({
           <span>Overdue only</span>
         </label>
       </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className="srOnly" role="status">
         {loading
           ? "Loading exceptions"
@@ -261,27 +255,28 @@ export function ExceptionQueue({
         </>
       )}
       {items && !items.length && !loading && (
-        <div className="excEmpty">
-          <WarningIcon size={40} weight="light" aria-hidden="true" />
-          <h3>No exceptions match</h3>
-          {needle ? (
-            <>
-              <p>Try a different load, carrier or word.</p>
-              {onClearQuery && (
+        <EmptyState
+          icon={WarningIcon}
+          title="No exceptions match"
+          description={
+            needle
+              ? "Try a different load, carrier or word."
+              : "Exceptions are raised on a load."
+          }
+          action={
+            needle ? (
+              onClearQuery && (
                 <button className="secondary" onClick={onClearQuery}>
                   Clear search
                 </button>
-              )}
-            </>
-          ) : (
-            <>
-              <p>Exceptions are raised on a load.</p>
+              )
+            ) : (
               <button className="secondary" onClick={onShowLoads}>
                 Choose a load
               </button>
-            </>
-          )}
-        </div>
+            )
+          }
+        />
       )}
       {truncated && (
         <p className="helpText">

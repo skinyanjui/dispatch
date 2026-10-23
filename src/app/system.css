@@ -2,16 +2,6 @@
    settles conflicts between the older page stylesheets: one 4px spacing scale,
    one control height and radius, and one page-intro row. Scoped to .appShell
    so sign-in and onboarding pages keep their own layout. */
-.appShell {
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --control-h: 34px;
-  --field-radius: 8px;
-}
 
 /* The header shares the page's side padding so titles and controls line up
    with the content below at every width. */
@@ -185,13 +175,7 @@
   justify-items: stretch;
   text-align: left;
 }
-.appShell .inboxDetail .directoryEmpty {
-  align-self: center;
-  justify-self: center;
-  margin-top: var(--space-6);
-  max-width: 44ch;
-  text-align: center;
-}
+
 @media (max-width: 800px) {
   .appShell .inboxLayout {
     grid-template-columns: 1fr;
@@ -304,9 +288,7 @@
   min-height: 0;
   overflow-y: auto;
 }
-.appShell .inboxDetail > .directoryEmpty {
-  margin: auto;
-}
+
 .appShell .threadHeader {
   display: grid;
   gap: var(--space-1);
@@ -666,11 +648,7 @@ select {
 }
 
 /* Heading variants after the heading-level cleanup (no skipped levels). */
-.appShell .directoryEmpty h2 {
-  font-size: 17px;
-  font-weight: 500;
-  color: var(--muted);
-}
+
 .appShell .inboxDetail .threadHeader h2 {
   font-size: 15px;
   font-weight: 600;
@@ -949,18 +927,6 @@ select {
 
 /* Empty states read from the left, like everything else. */
 
-.appShell .directoryEmpty {
-  align-items: flex-start;
-  justify-content: flex-start;
-  min-height: 0;
-  padding: var(--space-6) 0;
-  gap: var(--space-2);
-  text-align: left;
-}
-.appShell .inboxDetail > .directoryEmpty {
-  align-items: center;
-  text-align: center;
-}
 /* A row header reads like the other cells. */
 .appShell tbody th[scope="row"] {
   font-size: inherit;
@@ -1026,22 +992,22 @@ select {
 }
 /* Queue colours, matching the board's stage dots. */
 .appShell .queueDot.all {
-  background: var(--accent);
+  background: var(--stage-all);
 }
 .appShell .queueDot.booked {
-  background: #5b6b7a;
+  background: var(--stage-booked);
 }
 .appShell .queueDot.dispatched {
-  background: #8b5cf6;
+  background: var(--stage-dispatched);
 }
 .appShell .queueDot.picked-up {
-  background: #f59e0b;
+  background: var(--stage-transit);
 }
 .appShell .queueDot.delivered {
-  background: #10b981;
+  background: var(--stage-delivered);
 }
 .appShell .queueDot.cancelled {
-  background: #ef4444;
+  background: var(--stage-cancelled);
 }
 @media (max-width: 1000px), (pointer: coarse) {
   .appShell .queueTab {

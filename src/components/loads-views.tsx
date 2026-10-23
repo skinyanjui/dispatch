@@ -1,13 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CaretLeftIcon,
-  CaretRightIcon,
-  CaretDownIcon,
-  PlusIcon,
-} from "@phosphor-icons/react";
+import { CaretLeftIcon, CaretRightIcon, PlusIcon } from "@phosphor-icons/react";
 import { formatMoney } from "@/lib/entry";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { stageLabels, type Load } from "@/lib/contracts";

@@ -57,9 +57,49 @@ const rules = [
     use: "Tabs and TabPanel from components/ui/tabs",
     allow: { "src/components/ui/tabs.tsx": "the canonical tabs" },
   },
+  {
+    name: "hand-built error alert",
+    test: /className="alert error"/,
+    in: /\.tsx$/,
+    use: "ErrorAlert from components/ui/feedback",
+    allow: { "src/components/ui/feedback.tsx": "the canonical alert" },
+  },
+  {
+    name: "hand-built empty state or page intro",
+    test: /className="(directoryEmpty|emptyState|directoryIntro)"/,
+    in: /\.tsx$/,
+    use: "EmptyState or PageIntro from components/ui/feedback",
+    allow: { "src/components/ui/feedback.tsx": "the canonical versions" },
+  },
 ];
 
+/**
+ * Raw colours belong in src/app/tokens.css. These older page stylesheets
+ * still hold some; each count may only go down (lower it here when you
+ * replace one with a token). Every other stylesheet must have none.
+ */
+const rawColourAllowance = {
+  "src/app/assistant.css": 12,
+  "src/app/contacts.css": 8,
+  "src/app/globals.css": 9,
+  "src/app/login.css": 23,
+  "src/app/marketing.css": 34,
+  "src/app/system.css": 27,
+  "src/app/workspace-shell.css": 16,
+};
+const hex = /#[0-9a-fA-F]{3,8}\b/g;
+
 const problems = [];
+for (const path of files.filter((f) => f.endsWith(".css"))) {
+  const file = relative(root, path);
+  if (file === "src/app/tokens.css") continue;
+  const found = (readFileSync(path, "utf8").match(hex) ?? []).length;
+  const allowed = rawColourAllowance[file] ?? 0;
+  if (found > allowed)
+    problems.push(
+      `${file}: ${found} raw colours (allowed ${allowed}): use a token from src/app/tokens.css`,
+    );
+}
 for (const path of files) {
   const file = relative(root, path);
   const text = readFileSync(path, "utf8");

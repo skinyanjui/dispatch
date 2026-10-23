@@ -1,13 +1,14 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { EnvelopeSimpleIcon } from "@phosphor-icons/react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import {
   notificationLabels,
   optionalKinds,
   type NotificationLogEntry,
   type OptionalKind,
 } from "@/lib/notification-kinds";
+import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 const transportLabels: Record<string, string> = {
   none: "Not configured — messages are recorded but not emailed",
@@ -94,23 +95,11 @@ export function NotificationCenter({
       className="carrierDirectory notificationPage"
       aria-label="Notifications"
     >
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Notifications</h2>
-          <p>
-            Invitations, assignment updates and reminders are emailed
-            automatically when email delivery is configured.
-          </p>
-        </div>
-      </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      <PageIntro title="Notifications">
+        Invitations, assignment updates and reminders are emailed automatically
+        when email delivery is configured.
+      </PageIntro>
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice || (busy ? "Loading notifications" : "")}
       </p>

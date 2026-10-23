@@ -6,8 +6,8 @@ import { ToggleGroup } from "@/components/ui/toggle-group";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Sheet } from "@/components/modal";
-import { ApiError, describe, useApi } from "@/lib/client-api";
-import { formatDateTime } from "@/lib/format";
+import { ApiError, useApi } from "@/lib/client-api";
+import { EmptyState, ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 type Draft = {
   id: string;
@@ -34,7 +34,6 @@ const statusLabels = {
   approved: "Approved",
   discarded: "Discarded",
 } as const;
-const when = formatDateTime;
 
 /**
  * Templates and the drafts made from them (ADR 0040). A draft is text for a
@@ -185,15 +184,9 @@ export function DocumentsPage({
   }
   return (
     <section className="carrierDirectory documents" aria-label="Documents">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Documents</h2>
-          <p className="dirNote">
-            A draft is text for you to review and copy; nothing is sent from
-            here.
-          </p>
-        </div>
-      </div>
+      <PageIntro title="Documents">
+        A draft is text for you to review and copy; nothing is sent from here.
+      </PageIntro>
       <Tabs
         label="Documents"
         idPrefix="documents"
@@ -208,14 +201,7 @@ export function DocumentsPage({
         value={tab}
         onChange={setTab}
       />
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className="srOnly" aria-live="polite">
         {status}
       </p>
@@ -311,14 +297,17 @@ export function DocumentsPage({
                 ))}
               </ul>
             ) : (
-              <div className="directoryEmpty">
-                <FileTextIcon size={32} weight="light" aria-hidden="true" />
-                <h3>{templates ? "No templates yet" : "Loading…"}</h3>
-                <p>
-                  A template is text like “Hi {"{{carrier.contact}}"}, an update
-                  on {"{{load.reference}}"}…”. Create one to start drafting.
-                </p>
-              </div>
+              <EmptyState
+                icon={FileTextIcon}
+                title={templates ? "No templates yet" : "Loading…"}
+                description={
+                  <>
+                    A template is text like “Hi {"{{carrier.contact}}"}, an
+                    update on {"{{load.reference}}"}…”. Create one to start
+                    drafting.
+                  </>
+                }
+              />
             )}
           </>
         )}
@@ -341,10 +330,10 @@ export function DocumentsPage({
               </p>
             )}
             {current.missing.length > 0 && (
-              <p className="alert error" role="alert">
+              <ErrorAlert>
                 Missing values: {current.missing.join(", ")}. Fill these in
                 before using the text.
-              </p>
+              </ErrorAlert>
             )}
             <pre className="draftBody" tabIndex={0} aria-label="Draft text">
               {current.body}
@@ -524,11 +513,7 @@ function TemplateSheet({
               onChange={(e) => setBody(e.target.value)}
             />
           </label>
-          {error && (
-            <p className="alert error" role="alert">
-              {describe(error)}
-            </p>
-          )}
+          <ErrorAlert error={error} />
           <div className="actionRow">
             <button className="primary" disabled={busy}>
               Save template

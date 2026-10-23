@@ -31,7 +31,6 @@ export type ToolDefinition = {
 };
 export type ToolResult = { data: unknown; sources: Source[] };
 
-const limit = z.number().int().min(1).max(25).default(15);
 const carrierId = z.uuid().optional();
 
 export const toolDefinitions: ToolDefinition[] = [

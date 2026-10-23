@@ -7,9 +7,10 @@ import {
   BuildingsIcon,
   MagnifyingGlassIcon,
 } from "@phosphor-icons/react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type { Context } from "@/lib/contracts";
 import type { CarrierSummary } from "@/lib/carrier-summary";
+import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 const roles: Record<string, string> = {
   dispatcher: "Dispatcher",
@@ -293,42 +294,36 @@ export function CarrierDirectory({
       className="carrierDirectory"
       aria-label="Authorized carrier directory"
     >
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Carrier accounts</h2>
-          <p>Dispatch authorization, activity and access for each carrier.</p>
-        </div>
-        <div className="directoryControls">
-          {(context.organizations?.length ?? 0) > 0 && onAdd && (
-            <button className="primary" disabled={busy} onClick={onAdd}>
-              Add carrier
-            </button>
-          )}
-          <label className="directorySearch" hidden={query !== undefined}>
-            <MagnifyingGlassIcon size={18} aria-hidden="true" />
-            <span className="srOnly">Search carriers</span>
-            <input
-              value={ownQuery}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search carriers…"
-            />
-          </label>
-        </div>
-      </div>
+      <PageIntro
+        title="Carrier accounts"
+        actions={
+          <>
+            <div className="directoryControls">
+              {(context.organizations?.length ?? 0) > 0 && onAdd && (
+                <button className="primary" disabled={busy} onClick={onAdd}>
+                  Add carrier
+                </button>
+              )}
+              <label className="directorySearch" hidden={query !== undefined}>
+                <MagnifyingGlassIcon size={18} aria-hidden="true" />
+                <span className="srOnly">Search carriers</span>
+                <input
+                  value={ownQuery}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search carriers…"
+                />
+              </label>
+            </div>
+          </>
+        }
+      >
+        Dispatch authorization, activity and access for each carrier.
+      </PageIntro>
 
       {manages && (
         <>
           {error && (
-            <div className="alert error" role="alert">
-              {describe(error)}
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void loadSummary()}
-              >
-                Retry
-              </button>
-            </div>
+            <ErrorAlert error={error} onRetry={() => void loadSummary()} />
           )}
           <StatTiles label="Filter carriers">
             {stats.map((s) => (

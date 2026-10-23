@@ -1,0 +1,102 @@
+/* Design tokens: the one place colours, spacing, sizes, radii and type are
+   defined (docs/design-system.md). Stylesheets use these variables; a new
+   raw colour or size belongs here first. Loaded before every stylesheet. */
+
+/* Global palette and type, used by every surface (public pages, sign-in, the app). */
+:root {
+  --canvas: #fff;
+  --panel: #fff;
+  --ink: #0f1b3d;
+  --muted: #4a5578;
+  --subtle: #5f6a8d;
+  --border: #e3e7f3;
+  --border-strong: #c3cae0;
+  --soft: #f6f8fd;
+  --accent: #2f4cf5;
+  --accent-soft: #e8edff;
+  --accent-soft-hover: #d6defd;
+  --action: #2f4cf5;
+  --action-hover: #2440d8;
+  --action-ink: #fff;
+  --focus: #2f4cf5;
+  --error: #9d3b35;
+  --error-bg: #fff3f1;
+  --error-border: #f0d9d5;
+  --success: #2f704f;
+  --success-bg: #eff8f2;
+  --success-border: #dcece1;
+  --warn: #7a5a00;
+  --warn-bg: #fff8e6;
+  --warn-border: #f0e2b8;
+  --star: #c08a00;
+  --sidebar-bg: #f6f8fd;
+  --sidebar-hover: #eceffa;
+  --sidebar-active: #e1e7fb;
+  --radius: 9px;
+  --control-radius: 7px;
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Load and prospect stages: the same colour on queue pills, board lanes
+     and calendar dots. */
+  --stage-all: #2f4cf5;
+  --stage-booked: #5b6b7a;
+  --stage-dispatched: #8b5cf6;
+  --stage-transit: #f59e0b;
+  --stage-delivered: #10b981;
+  --stage-cancelled: #ef4444;
+  --stage-contacted: #6b8de3;
+  /* Selected rows and folders, and loading placeholders. */
+  --accent-tint: #e9edfb;
+  --skeleton-from: #f1f3fb;
+  --skeleton-to: #e6eaf8;
+  /* Raised surfaces: menus, and the navigation sheet on phones. */
+  --shadow-menu: 0 8px 28px #161a271f;
+  --shadow-sheet: 10px 0 40px #12192e20;
+  /* A darker hover over an already highlighted row. */
+  --hover-overlay: #0000000d;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+/* The signed-in app (ADR 0039, 0044): neutral palette, the 4px spacing scale and the control scale. These override the global palette inside the app only. */
+.appShell {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --control-h: 32px;
+  --field-radius: 6px;
+  --canvas: #f3f3f3;
+  --panel: #fff;
+  --ink: #333;
+  --muted: #666;
+  --subtle: #6b6b6b;
+  --border: #ebebeb;
+  --border-strong: #d6d6d6;
+  --soft: #f5f5f5;
+  --panel-soft: #f5f5f5;
+  --sidebar-bg: transparent;
+  --sidebar-hover: #ebebeb;
+  --sidebar-active: #e6e6e6;
+  --radius: 8px;
+  --control-radius: 4px;
+  --accent-soft: #eef1ff;
+  --control-h-sm: 28px;
+  --control-min: 24px;
+  --control-pad: 10px;
+}
+/* Sign-in and account link pages: aliases of the global palette. */
+.login {
+  --login-blue: var(--accent);
+  --login-blue-hover: var(--action-hover);
+  --login-ink: var(--ink);
+  --login-muted: var(--muted);
+  --login-line: var(--border-strong);
+}
+/* Public marketing pages (ADR 0041): neutral, large type. */
+.mk {
+  --mk-ink: #1c1c1c;
+  --mk-muted: #666;
+  --mk-line: #ebebeb;
+  --mk-soft: #f7f7f7;
+}

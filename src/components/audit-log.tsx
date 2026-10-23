@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
+import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 type Entry = {
   id: string;
@@ -176,15 +177,10 @@ export function AuditLog({
   };
   return (
     <section className="carrierDirectory auditPage" aria-label="Audit log">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Audit log</h2>
-          <p>
-            Who did what, and when, across your organization. Entries cannot be
-            edited or removed. Times are shown in your time zone.
-          </p>
-        </div>
-      </div>
+      <PageIntro title="Audit log">
+        Who did what, and when, across your organization. Entries cannot be
+        edited or removed. Times are shown in your time zone.
+      </PageIntro>
       {jobs && jobs.length > 0 && (
         <div className="auditScheduler" role="group" aria-label="Scheduler">
           {jobs.map((j) => {
@@ -268,14 +264,7 @@ export function AuditLog({
           </button>
         )}
       </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className="srOnly" role="status">
         {loading
           ? "Loading the audit log"

@@ -155,25 +155,6 @@
   margin-top: auto;
   max-width: 650px;
 }
-.directoryEmpty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 330px;
-  color: #9fa5b6;
-  text-align: center;
-}
-.directoryEmpty h3 {
-  font-size: 17px;
-  font-weight: 500;
-  color: #555c71;
-}
-.directoryEmpty p {
-  font-size: 12px;
-  color: #838ba2;
-}
 
 @media (min-width: 1800px) {
   .appShell .topbar {

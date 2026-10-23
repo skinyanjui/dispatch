@@ -1,10 +1,11 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AiSettings } from "@/components/ai-settings";
 import { StaffInvites } from "./staff-invites";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import type { Context } from "@/lib/contracts";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Person = {
   user_id: string;
@@ -186,11 +187,7 @@ export function OrganizationSettings({
           You are not an administrator of a dispatch organization.
         </p>
       )}
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-        </div>
-      )}
+      <ErrorAlert error={error} />
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice}
       </p>

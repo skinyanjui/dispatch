@@ -10,7 +10,7 @@
   list-style: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
 }
 .appShell .documents .templateList li {

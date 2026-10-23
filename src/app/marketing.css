@@ -354,10 +354,6 @@
 
 /* ---- Product-page look (ADR 0041): neutral, large type, quiet frames ---- */
 .mk {
-  --mk-ink: #1c1c1c;
-  --mk-muted: #666;
-  --mk-line: #ebebeb;
-  --mk-soft: #f7f7f7;
   background: #fff;
   color: var(--mk-ink);
 }

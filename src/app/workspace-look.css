@@ -4,23 +4,6 @@
    the public pages keep their own style. Colors and sizes are chosen from the
    reference screenshots; no third-party CSS is used. */
 .appShell {
-  --canvas: #f3f3f3;
-  --panel: #fff;
-  --ink: #333;
-  --muted: #666;
-  --subtle: #6b6b6b;
-  --border: #ebebeb;
-  --border-strong: #d6d6d6;
-  --soft: #f5f5f5;
-  --panel-soft: #f5f5f5;
-  --sidebar-bg: transparent;
-  --sidebar-hover: #ebebeb;
-  --sidebar-active: #e6e6e6;
-  --radius: 8px;
-  --control-radius: 4px;
-  --field-radius: 6px;
-  --control-h: 30px;
-  --accent-soft: #eef1ff;
   font-size: 13px;
   color: var(--ink);
 }

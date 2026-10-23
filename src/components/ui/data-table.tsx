@@ -12,6 +12,7 @@ import {
   formatMoney,
   formatNumber,
 } from "@/lib/format";
+import { EmptyState, ErrorAlert } from "./feedback";
 
 /** How a column's values are formatted, aligned and sorted by default. */
 export type ColumnType =
@@ -251,16 +252,7 @@ export function DataTable<T>({
   };
 
   if (error && !total)
-    return (
-      <div className="tableState alert error" role="alert">
-        {error}
-        {onRetry && (
-          <button type="button" className="secondary" onClick={onRetry}>
-            Retry
-          </button>
-        )}
-      </div>
-    );
+    return <ErrorAlert onRetry={onRetry}>{error}</ErrorAlert>;
   if (!total)
     return loading ? (
       <div className="tableState" aria-busy="true">
@@ -270,11 +262,12 @@ export function DataTable<T>({
         </span>
       </div>
     ) : (
-      <div className="tableState tableEmpty" role="status">
-        <h3>{empty.title}</h3>
-        {empty.description && <p>{empty.description}</p>}
-        {empty.action}
-      </div>
+      <EmptyState
+        variant="inline"
+        title={empty.title}
+        description={empty.description}
+        action={empty.action}
+      />
     );
   return (
     <>
@@ -363,16 +356,7 @@ export function DataTable<T>({
           {footer && <tfoot>{footer(columns)}</tfoot>}
         </table>
       </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {error}
-          {onRetry && (
-            <button type="button" className="secondary" onClick={onRetry}>
-              Retry
-            </button>
-          )}
-        </div>
-      )}
+      {error && <ErrorAlert onRetry={onRetry}>{error}</ErrorAlert>}
       {!groups && shown.count && sorted.length > shown.count ? (
         <div className="tableMore">
           <span role="status">

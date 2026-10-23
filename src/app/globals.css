@@ -1,33 +1,3 @@
-:root {
-  --canvas: #fff;
-  --panel: #fff;
-  --ink: #0f1b3d;
-  --muted: #4a5578;
-  --subtle: #5f6a8d;
-  --border: #e3e7f3;
-  --border-strong: #c3cae0;
-  --soft: #f6f8fd;
-  --accent: #2f4cf5;
-  --accent-soft: #e8edff;
-  --accent-soft-hover: #d6defd;
-  --action: #2f4cf5;
-  --action-hover: #2440d8;
-  --action-ink: #fff;
-  --focus: #2f4cf5;
-  --error: #9d3b35;
-  --error-bg: #fff3f1;
-  --error-border: #f0d9d5;
-  --success: #2f704f;
-  --success-bg: #eff8f2;
-  --success-border: #dcece1;
-  --sidebar-bg: #f6f8fd;
-  --sidebar-hover: #eceffa;
-  --sidebar-active: #e1e7fb;
-  --radius: 9px;
-  --control-radius: 7px;
-  --font-sans:
-    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
 * {
   box-sizing: border-box;
 }

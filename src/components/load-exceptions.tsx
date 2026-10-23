@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { WarningIcon, FlagIcon } from "@phosphor-icons/react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type { Load } from "@/lib/contracts";
 import { documentLabels, loadDocumentTypes } from "@/lib/compliance";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/exception-rules";
 import { formatDateTime } from "@/lib/format";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 export const when = formatDateTime;
 export function severityTone(severity: string): StatusTone {
@@ -384,11 +385,7 @@ export function LoadExceptions({
           </div>
         </form>
       )}
-      {error && (
-        <p className="alert error" role="alert">
-          {describe(error)}
-        </p>
-      )}
+      <ErrorAlert error={error} />
       {exceptions.length ? (
         <div className="opsList">
           {exceptions.map((item) => (

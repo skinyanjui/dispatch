@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Invite = {
   id: string;
@@ -92,11 +93,7 @@ export function StaffInvites({
           </button>
         )}
       </div>
-      {error && (
-        <p className="alert error" role="alert">
-          {describe(error)}
-        </p>
-      )}
+      <ErrorAlert error={error} />
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice}
       </p>

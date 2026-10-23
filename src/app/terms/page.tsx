@@ -14,8 +14,14 @@ export default function Terms() {
         { id: "your-information", title: "Your information" },
         { id: "ai-features", title: "AI features" },
         { id: "acceptable-use", title: "Acceptable use" },
-        { id: "changes-suspension-and-ending", title: "Changes, suspension and ending" },
-        { id: "no-warranty-limits-and-law", title: "No warranty, limits and law" },
+        {
+          id: "changes-suspension-and-ending",
+          title: "Changes, suspension and ending",
+        },
+        {
+          id: "no-warranty-limits-and-law",
+          title: "No warranty, limits and law",
+        },
         { id: "who-to-contact", title: "Who to contact" },
       ]}
     >

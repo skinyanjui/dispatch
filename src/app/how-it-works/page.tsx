@@ -47,9 +47,7 @@ export default function HowItWorks() {
       <section className="mkHero compact">
         <p className="mkEyebrow">How it works</p>
         <h1>From rate confirmation to dispatch invoice</h1>
-        <p className="mkLead">
-          Six steps, each recorded with who did it.
-        </p>
+        <p className="mkLead">Six steps, each recorded with who did it.</p>
       </section>
       <section className="mkSection">
         <ListItems label="Steps" ordered>

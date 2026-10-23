@@ -11,6 +11,7 @@ import {
   type StopEventKind,
   type TimedStop,
 } from "@/lib/stop-timing";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 function inZone(value: string, timezone: string, withDate = false) {
   return new Date(value).toLocaleString("en-US", {
@@ -299,11 +300,7 @@ export function StopList({
           </article>
         );
       })}
-      {error && (
-        <p className="alert error" role="alert">
-          {describe(error)}
-        </p>
-      )}
+      <ErrorAlert error={error} />
     </div>
   );
 }

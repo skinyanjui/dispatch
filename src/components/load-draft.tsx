@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Template = { id: string; name: string; target: string };
 
@@ -75,11 +76,7 @@ export function LoadDraft({
           {busy ? "Drafting…" : "Create draft"}
         </button>
       </form>
-      {error && (
-        <p className="alert error" role="alert">
-          {describe(error)}
-        </p>
-      )}
+      <ErrorAlert error={error} />
     </section>
   );
 }

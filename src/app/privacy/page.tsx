@@ -10,9 +10,15 @@ export default function Privacy() {
       sections={[
         { id: "what-relay-stores", title: "What Relay stores" },
         { id: "cookies", title: "Cookies" },
-        { id: "who-else-sees-your-information", title: "Who else sees your information" },
+        {
+          id: "who-else-sees-your-information",
+          title: "Who else sees your information",
+        },
         { id: "security", title: "Security" },
-        { id: "keeping-and-deleting-information", title: "Keeping and deleting information" },
+        {
+          id: "keeping-and-deleting-information",
+          title: "Keeping and deleting information",
+        },
         { id: "contact", title: "Contact" },
       ]}
     >
@@ -48,7 +54,9 @@ export default function Privacy() {
         which case it lasts 30 days. Relay uses no advertising or analytics
         cookies.
       </p>
-      <h2 id="who-else-sees-your-information">Who else sees your information</h2>
+      <h2 id="who-else-sees-your-information">
+        Who else sees your information
+      </h2>
       <ul>
         <li>
           <strong>Your own organization and its carriers</strong>, according to
@@ -86,7 +94,9 @@ export default function Privacy() {
         configured. Sign-in attempts are rate-limited. Significant actions are
         written to an audit log that cannot be edited.
       </p>
-      <h2 id="keeping-and-deleting-information">Keeping and deleting information</h2>
+      <h2 id="keeping-and-deleting-information">
+        Keeping and deleting information
+      </h2>
       <p>
         Original uploaded documents are kept as versions, not overwritten.
         [Retention periods and how to request export or deletion: to be

@@ -17,6 +17,7 @@ import {
 } from "@/lib/extraction";
 import type { DocumentVersion } from "@/lib/compliance";
 import { formatDateTime } from "@/lib/format";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 const shown = (kind: FieldKind, value: string | number | boolean | null) =>
   value === null
@@ -125,10 +126,10 @@ export function DocumentReading({
       )}
       {extraction?.status === "failed" && (
         <div className="aiAsk">
-          <p className="alert error" role="alert">
+          <ErrorAlert>
             {failureText[extraction.error_code ?? ""] ??
               "The file couldn't be read."}
-          </p>
+          </ErrorAlert>
           <button
             className="secondary"
             disabled={disabled || busy}
@@ -225,11 +226,7 @@ export function DocumentReading({
           </div>
         </>
       )}
-      {error && (
-        <p className="alert error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
     </section>
   );
 }

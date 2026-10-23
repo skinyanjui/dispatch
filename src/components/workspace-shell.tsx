@@ -234,9 +234,6 @@ export function WorkspaceShell({
     context.carriers.length > 0 &&
     context.carriers.every((c) => c.role === "driver");
   const isAdmin = (context.organizations || []).some((o) => o.role);
-  // Prospects are the dispatch company's own sales records (ADR 0030).
-  const orgStaff =
-    isAdmin || context.carriers.some((c) => c.role === "dispatcher");
   const initials = context.user.name
     .split(" ")
     .map((s) => s[0])

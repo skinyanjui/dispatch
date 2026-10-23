@@ -25,6 +25,7 @@ import {
   type ProspectStage,
 } from "@/lib/prospect-types";
 import { formatDateTime } from "@/lib/format";
+import { EmptyState, ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 const icon = { size: 15, "aria-hidden": true } as const;
 const followLabels: Record<FollowUp, string> = {
@@ -332,14 +333,14 @@ function Detail({
     <Sheet label="Prospect" eyebrow="Prospect" onClose={onClose}>
       <div className="inspectorBody">
         {error && (
-          <div className="alert error" role="alert">
+          <ErrorAlert>
             {describe(error)}
             {!p && (
               <button className="secondary" onClick={() => void reload()}>
                 Retry
               </button>
             )}
-          </div>
+          </ErrorAlert>
         )}
         {!p && !error && (
           <p className="helpText" role="status">
@@ -636,22 +637,23 @@ export function Prospects({
   }
   return (
     <section className="carrierDirectory" aria-label="Prospects">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Prospects</h2>
-          <p className="dirNote">
-            Starting carrier setup creates the carrier record only.
-          </p>
-        </div>
-        <button
-          className="primary"
-          disabled={offline || !list}
-          onClick={() => setAdding(true)}
-        >
-          <PlusIcon {...icon} weight="bold" />
-          Add prospect
-        </button>
-      </div>
+      <PageIntro
+        title="Prospects"
+        actions={
+          <>
+            <button
+              className="primary"
+              disabled={offline || !list}
+              onClick={() => setAdding(true)}
+            >
+              <PlusIcon {...icon} weight="bold" />
+              Add prospect
+            </button>
+          </>
+        }
+      >
+        Starting carrier setup creates the carrier record only.
+      </PageIntro>
       <div className="contactFilters">
         <label className="directorySearch" hidden={query !== undefined}>
           <MagnifyingGlassIcon size={16} aria-hidden="true" />
@@ -690,14 +692,7 @@ export function Prospects({
           onChange={(key) => setFollow(key ?? "")}
         />
       </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice ||
           (loading
@@ -705,13 +700,11 @@ export function Prospects({
             : `${list?.prospects.length ?? 0} prospects shown`)}
       </p>
       {list && !total && !loading && !error ? (
-        <div className="directoryEmpty">
-          <MagnifyingGlassIcon size={36} weight="light" aria-hidden="true" />
-          <h3>No prospects yet</h3>
-          <p>
-            Add the carriers you are talking to and track each conversation.
-          </p>
-        </div>
+        <EmptyState
+          icon={MagnifyingGlassIcon}
+          title="No prospects yet"
+          description="Add the carriers you are talking to and track each conversation."
+        />
       ) : (
         <Board
           label="Prospect board"
@@ -755,11 +748,7 @@ export function Prospects({
           onClose={() => setAdding(false)}
         >
           <div className="inspectorBody">
-            {error && (
-              <div className="alert error" role="alert">
-                {describe(error)}
-              </div>
-            )}
+            <ErrorAlert error={error} />
             <ProspectForm
               prospect={null}
               list={list}

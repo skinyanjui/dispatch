@@ -1,9 +1,10 @@
 "use client";
 import { useRef, useState } from "react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type { Load } from "@/lib/contracts";
 import { appointmentToInstant, dollarsToMinor } from "@/lib/entry";
 import { Sheet } from "./modal";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 /** `datetime-local` value for an instant, in the stop's own time zone. */
 function localValue(instant: string, timezone: string) {
@@ -91,9 +92,9 @@ export function LoadChanges({
   return (
     <>
       {load.cancelled_at && (
-        <div className="alert error" role="status">
+        <ErrorAlert polite>
           <strong>Cancelled.</strong> {load.cancel_reason}
-        </div>
+        </ErrorAlert>
       )}
       {open && (
         <div className="actionRow">
@@ -267,11 +268,7 @@ export function LoadChanges({
               Reason {reasonRequired ? "(required)" : "(optional)"}
               <input name="reason" maxLength={500} required={reasonRequired} />
             </label>
-            {error && (
-              <div className="alert error" role="alert">
-                {describe(error)}
-              </div>
-            )}
+            <ErrorAlert error={error} />
             <div className="opsActions">
               <button className="primary" disabled={busy}>
                 {busy ? "Saving…" : "Save changes"}
@@ -320,11 +317,7 @@ export function LoadChanges({
               Reason
               <input name="reason" required maxLength={500} />
             </label>
-            {error && (
-              <div className="alert error" role="alert">
-                {describe(error)}
-              </div>
-            )}
+            <ErrorAlert error={error} />
             <div className="opsActions">
               <button className="primary" disabled={busy}>
                 {busy ? "Cancelling…" : "Cancel this load"}

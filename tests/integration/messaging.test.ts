@@ -112,8 +112,6 @@ const msg = (over: Record<string, unknown> = {}) => ({
   body: "Running 20 minutes late",
   ...over,
 });
-const row = async (id: string) =>
-  (await pool.query("SELECT * FROM messages WHERE id=$1", [id])).rows[0];
 
 test("in-app messages create a thread, notify, track unread and clear on read", async () => {
   const first = await sendMessage(t.manager, msg());

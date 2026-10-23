@@ -9,7 +9,7 @@ import {
   ChatTextIcon,
   CopyIcon,
 } from "@phosphor-icons/react";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import {
   contactKindLabels,
   contactKinds,
@@ -19,6 +19,7 @@ import {
   type DirectoryEntry,
   type DirectoryGroup,
 } from "@/lib/contact-types";
+import { EmptyState, ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 type Directory = {
   entries: DirectoryEntry[];
@@ -235,25 +236,26 @@ export function ContactsDirectory({
     !q && !group && !favorites ? entries.filter((e) => e.favorite) : [];
   return (
     <section className="carrierDirectory" aria-label="Contacts">
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Contacts</h2>
-          <p className="dirNote">
-            Tap call, text or email to reach out from this device, or Message to
-            keep it in Relay.
-          </p>
-        </div>
-        {data?.can_add && (
-          <button
-            className="primary"
-            disabled={offline || busy}
-            onClick={() => setEditing("new")}
-          >
-            <PlusIcon {...icon} weight="bold" />
-            Add contact
-          </button>
-        )}
-      </div>
+      <PageIntro
+        title="Contacts"
+        actions={
+          <>
+            {data?.can_add && (
+              <button
+                className="primary"
+                disabled={offline || busy}
+                onClick={() => setEditing("new")}
+              >
+                <PlusIcon {...icon} weight="bold" />
+                Add contact
+              </button>
+            )}
+          </>
+        }
+      >
+        Tap call, text or email to reach out from this device, or Message to
+        keep it in Relay.
+      </PageIntro>
       <div className="contactFilters">
         <label className="directorySearch" hidden={query !== undefined}>
           <MagnifyingGlassIcon size={16} aria-hidden="true" />
@@ -305,14 +307,7 @@ export function ContactsDirectory({
           <span>Favorites</span>
         </label>
       </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p className={notice ? "inlineNotice" : "srOnly"} role="status">
         {notice ||
           (loading ? "Searching contacts" : `${entries.length} contacts shown`)}
@@ -383,29 +378,31 @@ export function ContactsDirectory({
           ))}
       </div>
       {!loading && !entries.length && !error && (
-        <div className="directoryEmpty">
-          <MagnifyingGlassIcon size={36} weight="light" aria-hidden="true" />
-          <h3>
-            {q || group || carrier || favorites
+        <EmptyState
+          icon={MagnifyingGlassIcon}
+          title={
+            q || group || carrier || favorites
               ? "No matching contacts"
-              : "No contacts yet"}
-          </h3>
-          <p>
-            {q || group || carrier || favorites
+              : "No contacts yet"
+          }
+          description={
+            q || group || carrier || favorites
               ? "Try a different name, number or filter."
               : data?.can_add
                 ? "Add the brokers, shippers and receivers you work with."
-                : "People you work with will appear here."}
-          </p>
-          {q && (
-            <button
-              className="secondary"
-              onClick={() => (onClearQuery ?? (() => setQ("")))()}
-            >
-              Clear search
-            </button>
-          )}
-        </div>
+                : "People you work with will appear here."
+          }
+          action={
+            q ? (
+              <button
+                className="secondary"
+                onClick={() => (onClearQuery ?? (() => setQ("")))()}
+              >
+                Clear search
+              </button>
+            ) : undefined
+          }
+        />
       )}
       {data?.truncated && (
         <div className="contactMore">

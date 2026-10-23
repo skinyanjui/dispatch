@@ -25,11 +25,6 @@ async function scan(page: Page, name: string) {
   });
   expect(violations, name).toEqual([]);
 }
-const signedOut = (page: Page) =>
-  page.route("**/api/me", (route) =>
-    route.fulfill({ status: 401, json: { error: "AUTH_REQUIRED" } }),
-  );
-
 const pages: [string, string][] = [
   ["/welcome", "Everything in motion. All in one place."],
   ["/how-it-works", "From rate confirmation to dispatch invoice"],

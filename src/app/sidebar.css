@@ -183,7 +183,7 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 28px #161a271f;
+  box-shadow: var(--shadow-menu);
   padding: 4px;
   display: grid;
   gap: 1px;
@@ -262,7 +262,7 @@
   background: var(--sidebar-bg);
   height: 100%;
   width: min(280px, calc(100vw - 48px));
-  box-shadow: 10px 0 40px #12192e20;
+  box-shadow: var(--shadow-sheet);
 }
 @media (max-width: 1000px) {
   .appShell,
@@ -424,7 +424,7 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--action-ink);
   font-size: 10.5px;
   font-weight: 600;
   line-height: 16px;
@@ -449,5 +449,5 @@
   background: none;
 }
 .sidebarRow:has(> .sidebarItem.active) .sidebarToggle:hover {
-  background: #0000000d;
+  background: var(--hover-overlay);
 }

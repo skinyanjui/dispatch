@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 // Tokens arrive in the URL fragment so they never reach server logs or
 // Referer headers; they are posted in the request body.
@@ -101,11 +102,7 @@ export function ResetPasswordPage() {
                 required
               />
             </label>
-            {error && (
-              <div className="alert error" role="alert">
-                {describe(error)}
-              </div>
-            )}
+            <ErrorAlert error={error} />
             <button className="primary full" disabled={busy}>
               {busy ? "Saving…" : "Update password"}
             </button>

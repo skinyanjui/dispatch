@@ -3,8 +3,6 @@ import { AuthLayout } from "@/components/auth-layout";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import {
-  PlusCircleIcon,
-  MagnifyingGlassIcon,
   ArrowClockwiseIcon,
   ArrowRightIcon,
   PlusIcon,
@@ -21,13 +19,11 @@ import {
   LockSimpleIcon,
   EyeIcon,
   EyeSlashIcon,
-  ClockIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "@/components/modal";
 import {
   WorkspaceShell,
-  Brand,
   queueTitle,
   QueueTabs,
   type WorkspaceSection,
@@ -98,6 +94,7 @@ import { dollarsToMinor, appointmentToInstant, formatMoney } from "@/lib/entry";
 
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { pathFor, parsePath, sectionAllowed, type Route } from "@/lib/routes";
+import { ErrorAlert } from "@/components/ui/feedback";
 const eventLabels: Record<string, string> = {
   "load.created": "Load created",
   "load.assign": "Driver assigned",
@@ -626,7 +623,7 @@ export default function Workspace({
     });
   }
   const errorPanel = error ? (
-    <div className="alert error" role="alert">
+    <ErrorAlert>
       <WarningCircleIcon size={18} aria-hidden="true" />
       <span>{describe(error)}</span>
       {context && !selected && !creating && section === "loads" && (
@@ -638,7 +635,7 @@ export default function Workspace({
           Retry
         </button>
       )}
-    </div>
+    </ErrorAlert>
   ) : null;
   if (!ready)
     return (
@@ -864,11 +861,7 @@ export default function Workspace({
               a person reviews it.
             </p>
           )}
-          {socialNote.error && (
-            <p className="alert error" role="alert">
-              {describe(socialNote.error)}
-            </p>
-          )}
+          <ErrorAlert error={socialNote.error} />
           <details className="loginAccess">
             <summary>How do I get access?</summary>
             <p>
@@ -940,7 +933,6 @@ export default function Workspace({
         </section>
       </AuthLayout>
     );
-  const canWrite = context.carriers.some((c) => c.role !== "driver");
   const driverOnly =
     context.carriers.length > 0 &&
     context.carriers.every((c) => c.role === "driver");
@@ -1093,9 +1085,9 @@ export default function Workspace({
       </header>
       <main id="main" className="workspace">
         {offline && (
-          <div className="alert error" role="alert">
+          <ErrorAlert>
             Offline — this view may be stale. Reconnect, then refresh.
-          </div>
+          </ErrorAlert>
         )}
         {!selected && !creating && errorPanel}
         {!selected && !creating && notice && (

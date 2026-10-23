@@ -6,10 +6,10 @@
   .appShell .queueRow .queueTabs {
     -webkit-mask-image: linear-gradient(
       90deg,
-      #000 calc(100% - 28px),
+      black calc(100% - 28px),
       transparent
     );
-    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
   }
 }
 
@@ -136,7 +136,7 @@
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--panel);
   text-align: left;
 }
 .appShell .agendaItem.level-late {

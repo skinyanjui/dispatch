@@ -117,9 +117,9 @@
 .docStatus.pending_review,
 .docStatus.expiring,
 .opsPill.warn {
-  background: #fff8e6;
-  border-color: #f0e2b8;
-  color: #7a5a00;
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn);
 }
 .setupAgreementFile {
   color: var(--muted);
@@ -266,7 +266,7 @@
   color: var(--ink);
 }
 .iconAction.starred {
-  color: #c08a00;
+  color: var(--star);
 }
 .contactFilters {
   display: flex;
@@ -304,7 +304,7 @@
   color: var(--ink);
 }
 .iconAction.starred {
-  color: #c08a00;
+  color: var(--star);
 }
 .contactMore {
   display: flex;

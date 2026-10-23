@@ -55,9 +55,7 @@ export default function GetStarted() {
       <section className="mkHero compact">
         <p className="mkEyebrow">Get started</p>
         <h1>From request to first load</h1>
-        <p className="mkLead">
-          Six steps. Only the first is yours to start.
-        </p>
+        <p className="mkLead">Six steps. Only the first is yours to start.</p>
       </section>
       <section className="mkSection">
         <ListItems label="Steps" ordered>

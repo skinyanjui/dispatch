@@ -3,6 +3,7 @@ import { AuthLayout } from "@/components/auth-layout";
 import { useEffect, useState } from "react";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
+import { ErrorAlert } from "@/components/ui/feedback";
 type Invitation = {
   name: string;
   email: string;
@@ -219,11 +220,7 @@ export function JoinWorkspace({ demo = false }: { demo?: boolean }) {
                     </label>
                   </details>
                 )}
-                {error && (
-                  <div className="alert error" role="alert">
-                    {describe(error)}
-                  </div>
-                )}
+                <ErrorAlert error={error} />
                 <button className="primary full">
                   {busy
                     ? "Joining…"

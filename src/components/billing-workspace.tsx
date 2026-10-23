@@ -1,19 +1,13 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  FileTextIcon,
-  PlusIcon,
-  ReceiptIcon,
-} from "@phosphor-icons/react";
+import { FileTextIcon, PlusIcon, ReceiptIcon } from "@phosphor-icons/react";
 import { Sheet } from "@/components/modal";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type {
   BillingOverview,
   Context,
@@ -28,6 +22,7 @@ import {
   formatMoney,
   percentToBps,
 } from "@/lib/entry";
+import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
 const paymentLabels: Record<PaymentState, string> = {
   unpaid: "Unpaid",
@@ -958,60 +953,54 @@ export function BillingWorkspace({
       className="carrierDirectory billing"
       aria-label="Billing and payments"
     >
-      <div className="directoryIntro">
-        <div>
-          <h2 className="srOnly">Billing and payments</h2>
-          <p className="billingNote">
-            Nothing here sends an invoice or moves money.
-          </p>
-        </div>
-        <div className="directoryControls opsFilters">
-          {carriers.length > 1 && (
-            <label>
-              <span className="srOnly">Carrier</span>
-              <select
-                value={carrierId}
-                onChange={(e) => {
-                  setCarrierId(e.target.value);
-                  setSelected([]);
-                  setNotice("");
-                  setOpen(null);
-                }}
-              >
-                {carriers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {data?.can_invoice && (
-            <button
-              className="primary"
-              disabled={disabled}
-              onClick={() => {
-                setTab("invoices");
-                setOpen("new");
-              }}
-            >
-              <PlusIcon size={15} weight="bold" aria-hidden="true" />
-              New invoice
-            </button>
-          )}
-        </div>
-      </div>
+      <PageIntro
+        title="Billing and payments"
+        actions={
+          <>
+            <div className="directoryControls opsFilters">
+              {carriers.length > 1 && (
+                <label>
+                  <span className="srOnly">Carrier</span>
+                  <select
+                    value={carrierId}
+                    onChange={(e) => {
+                      setCarrierId(e.target.value);
+                      setSelected([]);
+                      setNotice("");
+                      setOpen(null);
+                    }}
+                  >
+                    {carriers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {data?.can_invoice && (
+                <button
+                  className="primary"
+                  disabled={disabled}
+                  onClick={() => {
+                    setTab("invoices");
+                    setOpen("new");
+                  }}
+                >
+                  <PlusIcon size={15} weight="bold" aria-hidden="true" />
+                  New invoice
+                </button>
+              )}
+            </div>
+          </>
+        }
+      >
+        Nothing here sends an invoice or moves money.
+      </PageIntro>
       {!carriers.length && (
         <p className="helpText">No carrier billing access.</p>
       )}
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p
         className={notice || linkNote ? "inlineNotice" : "srOnly"}
         role="status"

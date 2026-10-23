@@ -12,6 +12,7 @@ import type { CarrierDocuments, CarrierSetup, Context } from "@/lib/contracts";
 import { uploadDocumentFile } from "@/lib/upload-client";
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { Modal } from "./modal";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 export function CarrierOnboarding({
   carrierId,
@@ -256,7 +257,7 @@ export function CarrierOnboarding({
           </div>
         )}
         {error && (
-          <div role="alert" className="alert error">
+          <ErrorAlert>
             <span>
               {error === "VERSION_CONFLICT"
                 ? "This carrier was updated. Reload the saved details before trying again."
@@ -287,7 +288,7 @@ export function CarrierOnboarding({
                 Retry
               </button>
             )}
-          </div>
+          </ErrorAlert>
         )}
         {notice && (
           <p role="status" className="inlineNotice">

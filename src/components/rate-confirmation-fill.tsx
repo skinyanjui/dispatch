@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FileArrowUpIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { RateDraft } from "@/lib/rate-draft";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 export type RateRead = {
   id: string;
@@ -148,18 +149,7 @@ export function RateConfirmationFill({
   }
 
   if (statusError)
-    return (
-      <div className="alert error" role="alert">
-        {describe(statusError)}
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => void loadStatus()}
-        >
-          Retry
-        </button>
-      </div>
-    );
+    return <ErrorAlert error={statusError} onRetry={() => void loadStatus()} />;
   if (!status) return null;
   if (!status.available) return null;
   const message = error ? (failureText[error] ?? describe(error)) : "";
@@ -233,7 +223,7 @@ export function RateConfirmationFill({
         </p>
       )}
       {message && (
-        <div className="alert error" role="alert">
+        <ErrorAlert>
           {message}
           {lastFile && !filled && (
             <button
@@ -245,7 +235,7 @@ export function RateConfirmationFill({
               Try again
             </button>
           )}
-        </div>
+        </ErrorAlert>
       )}
       {filled && filled.draft.notes.length > 0 && (
         <ul className="rateNotes" aria-label="Things to check">

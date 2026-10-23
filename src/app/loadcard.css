@@ -68,7 +68,7 @@
   max-width: 100%;
   padding: 1px 6px;
   border-radius: 6px;
-  background: var(--soft, #f4f5f8);
+  background: var(--soft);
   color: var(--muted);
   font-size: 11.5px;
   line-height: 1.5;
@@ -80,7 +80,7 @@
   flex: none;
 }
 .appShell .lc .lcFact.warn {
-  background: var(--error-bg, #fdecea);
+  background: var(--error-bg);
   color: var(--error);
 }
 .appShell .lc .lcStep {

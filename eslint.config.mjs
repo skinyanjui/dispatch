@@ -9,4 +9,18 @@ export default defineConfig([
     // and asks for <Link> on `/terms`, `/demo` and the like.
     rules: { "@next/next/no-html-link-for-pages": "off" },
   },
+  {
+    // Abandoned imports and helpers fail the build instead of piling up.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrors: "none",
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
 ]);

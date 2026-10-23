@@ -119,8 +119,8 @@
   background: var(--success-bg);
 }
 .setupPending {
-  color: #77531b;
-  background: #faf1e1;
+  color: var(--warn);
+  background: var(--warn-bg);
 }
 .setupSection {
   border-top: 1px solid var(--border);
@@ -262,8 +262,6 @@
 }
 
 .roleLabel,
-.directoryEmpty p,
-.directoryEmpty h3,
 .scopeChip {
   color: var(--muted);
 }

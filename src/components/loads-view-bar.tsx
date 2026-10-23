@@ -9,6 +9,7 @@ import {
   type ViewField,
 } from "@/components/loads-views";
 import { queues } from "@/components/workspace-shell";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Filters = { status: string; carrier_id: string | null };
 type Saved = {
@@ -448,11 +449,7 @@ export function LoadsViewBar({
       <p className="srOnly" role="status">
         {status}
       </p>
-      {error && (
-        <span className="alert error" role="alert">
-          {describe(error)}
-        </span>
-      )}
+      {error && <ErrorAlert>{describe(error)}</ErrorAlert>}
     </div>
   );
 }

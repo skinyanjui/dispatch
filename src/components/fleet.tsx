@@ -5,8 +5,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Sheet } from "@/components/modal";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type { Context } from "@/lib/contracts";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Driver = {
   id: string;
@@ -271,14 +272,7 @@ export function FleetPage({
           <PlusIcon size={14} weight="bold" aria-hidden="true" /> Add vehicle
         </button>
       </div>
-      {error && (
-        <div className="alert error" role="alert">
-          {describe(error)}
-          <button className="secondary" onClick={() => void load()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorAlert error={error} onRetry={() => void load()} />}
       <p
         className={notice ? "inlineNotice" : "srOnly"}
         role="status"
@@ -322,26 +316,20 @@ export function FleetPage({
                 </label>
               )}
             </header>
-            {vehicles.length ? (
-              <DataTable
-                caption="Vehicles"
-                columns={vehicleColumns}
-                data={vehicles}
-                getRowId={(v) => v.id}
-                rowClassName={(v) =>
-                  v.status === "retired" ? "retired" : undefined
-                }
-                empty={{ title: "No vehicles" }}
-              />
-            ) : (
-              <div className="fleetEmpty">
-                <h4>{needle ? "No vehicles match" : "No vehicles yet"}</h4>
-                <p>
-                  {needle
-                    ? "Try another unit, plate or VIN."
-                    : "Add the tractors, trucks, vans and trailers this carrier runs, then choose one when you assign a driver."}
-                </p>
-                {needle ? (
+            <DataTable
+              caption="Vehicles"
+              columns={vehicleColumns}
+              data={vehicles}
+              getRowId={(v) => v.id}
+              rowClassName={(v) =>
+                v.status === "retired" ? "retired" : undefined
+              }
+              empty={{
+                title: needle ? "No vehicles match" : "No vehicles yet",
+                description: needle
+                  ? "Try another unit, plate or VIN."
+                  : "Add the tractors, trucks, vans and trailers this carrier runs, then choose one when you assign a driver.",
+                action: needle ? (
                   <button className="secondary" onClick={onClearQuery}>
                     Clear search
                   </button>
@@ -349,9 +337,9 @@ export function FleetPage({
                   <button className="primary" onClick={() => setForm("new")}>
                     Add vehicle
                   </button>
-                )}
-              </div>
-            )}
+                ),
+              }}
+            />
           </section>
           <section className="fleetPanel" aria-labelledby="fleet-drivers">
             <header>
@@ -366,24 +354,18 @@ export function FleetPage({
                 Invite or remove drivers
               </button>
             </header>
-            {drivers.length ? (
-              <DataTable
-                caption="Drivers"
-                columns={driverColumns}
-                data={drivers}
-                getRowId={(d) => d.id}
-                empty={{ title: "No drivers" }}
-              />
-            ) : (
-              <div className="fleetEmpty">
-                <h4>{needle ? "No drivers match" : "No drivers yet"}</h4>
-                <p>
-                  {needle
-                    ? "Try another name."
-                    : "Invite drivers in carrier setup so loads can be assigned."}
-                </p>
-              </div>
-            )}
+            <DataTable
+              caption="Drivers"
+              columns={driverColumns}
+              data={drivers}
+              getRowId={(d) => d.id}
+              empty={{
+                title: needle ? "No drivers match" : "No drivers yet",
+                description: needle
+                  ? "Try another name."
+                  : "Invite drivers in carrier setup so loads can be assigned.",
+              }}
+            />
           </section>
         </>
       )}
@@ -548,11 +530,7 @@ function VehicleForm({
             />
           </label>
         </div>
-        {error && (
-          <div className="alert error" role="alert">
-            {describe(error)}
-          </div>
-        )}
+        <ErrorAlert error={error} />
         <div className="formActions">
           <button className="primary" disabled={busy}>
             {busy ? "Saving…" : vehicle ? "Save changes" : "Add vehicle"}

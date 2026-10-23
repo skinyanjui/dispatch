@@ -1,12 +1,5 @@
-/* Billing page: summary tiles fill their row, the due date and its aging note
-   read as two clean lines, and on phones each invoice is a compact card. */
-.appShell .billing .directoryIntro {
-  align-items: center;
-}
-.appShell .billingNote {
-  margin: 0;
-  color: var(--muted);
-}
+/* Billing page specifics; the page intro, tiles, tabs and tables are the
+   shared components in ui.css. */
 
 .appShell .billing .agingNote {
   display: block;

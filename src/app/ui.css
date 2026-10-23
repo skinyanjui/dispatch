@@ -134,11 +134,11 @@
   white-space: nowrap;
 }
 .appShell .folder:hover {
-  background: var(--panel-soft, #eef1fb);
+  background: var(--panel-soft);
   color: var(--ink);
 }
 .appShell .folder[aria-pressed="true"] {
-  background: #e9edfb;
+  background: var(--accent-tint);
   color: var(--accent);
 }
 .appShell .folder .toggleCount {
@@ -146,7 +146,7 @@
   padding: 0 6px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--action-ink);
   font-size: 11px;
   font-weight: 600;
   text-align: center;
@@ -209,7 +209,7 @@
 .appShell .countBadge {
   padding: 0 7px;
   border-radius: 999px;
-  background: var(--panel-soft, #eef1fb);
+  background: var(--panel-soft);
   font-size: 11px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -258,7 +258,7 @@
   color: var(--error);
 }
 .appShell .stat.good strong {
-  color: #1f7a4d;
+  color: var(--success);
 }
 .appShell .stat.link {
   cursor: pointer;
@@ -278,7 +278,12 @@
 }
 .appShell .stat.skeleton {
   min-height: 92px;
-  background: linear-gradient(90deg, #f1f3fb, #e6eaf8, #f1f3fb);
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-from),
+    var(--skeleton-to),
+    var(--skeleton-from)
+  );
 }
 @media (max-width: 640px) {
   .appShell .stat {
@@ -433,19 +438,7 @@
 .appShell .tableState.alert {
   border-style: solid;
 }
-.appShell .tableEmpty {
-  flex-direction: column;
-  align-items: flex-start;
-}
-.appShell .tableEmpty h3 {
-  margin: 0;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 500;
-}
-.appShell .tableEmpty p {
-  margin: 0;
-}
+
 .appShell .tableMore {
   display: flex;
   align-items: center;
@@ -546,4 +539,53 @@
 }
 .appShell .dataTable tr.sev-high .excSummary svg {
   color: var(--error);
+}
+
+/* ---- Empty state (components/ui/feedback.tsx) ----
+   Reads from the left like the rest of the page; centred only where it
+   fills an empty pane (the Inbox reading pane). "inline" is the compact box
+   inside a panel or in place of a table. */
+.appShell .emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-6) 0;
+  color: var(--subtle);
+  text-align: left;
+}
+.appShell .emptyState h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+.appShell .emptyState p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.appShell .emptyState.inline {
+  padding: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.appShell .emptyState.inline h3 {
+  font-size: 13px;
+}
+.appShell .inboxDetail > .emptyState {
+  align-items: center;
+  max-width: 44ch;
+  margin: auto;
+  text-align: center;
+}
+
+/* ---- Page intro (components/ui/feedback.tsx): note left, actions right ---- */
+.appShell .directoryIntro {
+  align-items: center;
+}
+.appShell .dirNote {
+  margin: 0;
+  color: var(--muted);
 }

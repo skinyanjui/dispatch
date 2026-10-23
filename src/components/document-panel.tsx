@@ -19,6 +19,7 @@ import {
   type DocumentVersion,
 } from "@/lib/compliance";
 import { formatDateTimeLong } from "@/lib/format";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 function size(bytes: number) {
   return bytes >= 1048576
@@ -276,11 +277,7 @@ function Slot({
           </small>
         </form>
       )}
-      {error && (
-        <p className="alert error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
     </article>
   );
 }

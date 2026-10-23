@@ -9,6 +9,7 @@ import {
   type Conversation,
   type Source,
 } from "@/lib/assistant-types";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 type Pending = { question: string; key: string };
 const failureText: Record<string, string> = {
@@ -207,12 +208,7 @@ export function Assistant({
     <section className="assistant" aria-label="Assistant">
       <h2 className="srOnly">Assistant</h2>
       {loadError && (
-        <div className="alert error" role="alert">
-          {describe(loadError)}
-          <button className="secondary" onClick={() => void loadState()}>
-            Retry
-          </button>
-        </div>
+        <ErrorAlert error={loadError} onRetry={() => void loadState()} />
       )}
       {state && !state.enabled && (
         <div className="asstOff">
@@ -242,11 +238,7 @@ export function Assistant({
           ) : (
             <p>An owner or admin of your organization can turn it on.</p>
           )}
-          {error && (
-            <p className="alert error" role="alert">
-              {describe(error)}
-            </p>
-          )}
+          <ErrorAlert error={error} />
         </div>
       )}
       {state?.enabled && (
@@ -338,10 +330,10 @@ export function Assistant({
                           <Sources sources={t.sources} onOpen={onOpen} />
                         </>
                       ) : (
-                        <p className="alert error">
+                        <ErrorAlert>
                           {failureText[t.error_code ?? ""] ??
                             "That question couldn't be answered."}
-                        </p>
+                        </ErrorAlert>
                       )}
                     </div>
                   </div>
@@ -365,7 +357,7 @@ export function Assistant({
             </div>
             <div className="asstDock">
               {error && (
-                <div className="alert error" role="alert">
+                <ErrorAlert>
                   {describe(error)}
                   <button
                     className="secondary"
@@ -376,7 +368,7 @@ export function Assistant({
                   >
                     Try again
                   </button>
-                </div>
+                </ErrorAlert>
               )}
               <form
                 className="asstComposer"

@@ -3,8 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 import { Modal } from "./modal";
 import { DocumentPanel } from "./document-panel";
-import { ApiError, describe, useApi } from "@/lib/client-api";
+import { ApiError, useApi } from "@/lib/client-api";
 import type { CarrierDocuments } from "@/lib/contracts";
+import { ErrorAlert } from "@/components/ui/feedback";
 
 export function CarrierDocumentsDialog({
   carrierId,
@@ -64,14 +65,7 @@ export function CarrierDocumentsDialog({
             Loading documents…
           </p>
         )}
-        {error && (
-          <div className="alert error" role="alert">
-            {describe(error)}
-            <button className="secondary" onClick={() => void load()}>
-              Retry
-            </button>
-          </div>
-        )}
+        {error && <ErrorAlert error={error} onRetry={() => void load()} />}
         {notice && (
           <p className="inlineNotice" role="status">
             {notice}
