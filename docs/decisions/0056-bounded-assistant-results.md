@@ -8,7 +8,7 @@ The browser regression with a growing fictional database reproduced an invalid â
 
 ## Decision
 
-Keep the existing context bound and trim whole records from top-level result arrays until valid JSON fits. Retain an explicit `truncated` flag, update the shown count, and preserve original source data unchanged. If even one complete record cannot fit, return an explicit lookup error. The sample assistant rejects invalid/error responses instead of presenting empty success, and labels an attention/driver subset. The model instructions likewise require subset disclosure and prohibit interpreting lookup errors as empty results. Prompt version becomes `assistant-3` for auditability; existing historical turns retain their recorded version.
+Keep the existing context bound and trim whole records from top-level result arrays until valid JSON fits. Retain an explicit `truncated` flag, update the shown count, and preserve original source data unchanged. If even one complete record cannot fit, return an explicit lookup error. The sample assistant rejects invalid/error responses instead of presenting empty success, and labels an attention/driver subset. The model instructions likewise require subset disclosure and prohibit interpreting lookup errors as empty results. Prompt version becomes `assistant-3` (and `assistant-4` once tool results were wrapped in an untrusted-data envelope) for auditability; existing historical turns retain their recorded version.
 
 This changes neither tool authorization nor the existing human-reviewed drafting exception. No operational mutation, live model connection or additional token budget is enabled.
 
