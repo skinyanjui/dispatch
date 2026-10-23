@@ -18,21 +18,14 @@ import {
   type DocumentType,
   type DocumentVersion,
 } from "@/lib/compliance";
+import { formatDateTimeLong } from "@/lib/format";
 
 function size(bytes: number) {
   return bytes >= 1048576
     ? (bytes / 1048576).toFixed(1) + " MB"
     : Math.max(1, Math.round(bytes / 1024)) + " KB";
 }
-function when(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+const when = formatDateTimeLong;
 function VersionLine({
   version,
   downloads,

@@ -181,18 +181,12 @@ test("carrier directory reflects membership, supports search and opens carrier-s
     name: "Authorized carrier directory",
   });
   await expect(directory).toBeVisible();
-  await expect(directory.getByRole("article")).toHaveCount(2);
+  await expect(directory.locator("tbody tr")).toHaveCount(2);
   await expect(
-    directory.getByRole("heading", {
-      name: "Alpine QA Transport",
-      exact: true,
-    }),
+    directory.getByRole("rowheader", { name: /^Alpine QA Transport/ }),
   ).toBeVisible();
   await expect(
-    directory.getByRole("heading", {
-      name: "Prairie QA Logistics",
-      exact: true,
-    }),
+    directory.getByRole("rowheader", { name: /^Prairie QA Logistics/ }),
   ).toBeVisible();
   await expect(
     directory.getByText("Dispatcher", { exact: true }),
@@ -203,12 +197,9 @@ test("carrier directory reflects membership, supports search and opens carrier-s
 
   const search = page.getByRole("searchbox", { name: "Search carriers" });
   await search.fill("Prairie");
-  await expect(directory.getByRole("article")).toHaveCount(1);
+  await expect(directory.locator("tbody tr")).toHaveCount(1);
   await expect(
-    directory.getByRole("heading", {
-      name: "Alpine QA Transport",
-      exact: true,
-    }),
+    directory.getByRole("rowheader", { name: /^Alpine QA Transport/ }),
   ).toHaveCount(0);
   await search.fill("Not an authorized carrier");
   await expect(
@@ -221,13 +212,10 @@ test("carrier directory reflects membership, supports search and opens carrier-s
     .getByRole("button", { name: "Clear search", exact: true })
     .click();
   await expect(search).toHaveValue("");
-  await expect(directory.getByRole("article")).toHaveCount(2);
+  await expect(directory.locator("tbody tr")).toHaveCount(2);
 
-  const row = directory.getByRole("article").filter({
-    has: page.getByRole("heading", {
-      name: "Prairie QA Logistics",
-      exact: true,
-    }),
+  const row = directory.locator("tbody tr").filter({
+    has: page.getByRole("rowheader", { name: /^Prairie QA Logistics/ }),
   });
   const requested = page.waitForRequest(queueRequest({ carrier_id: carrierB }));
   await row.getByRole("button", { name: "View loads", exact: true }).click();

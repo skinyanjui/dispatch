@@ -179,8 +179,10 @@ test("dispatcher onboards a carrier, manager invites a driver, and the driver re
     manager.getByRole("button", { name: "Add carrier", exact: true }),
   ).toHaveCount(0);
   await manager
-    .getByRole("article")
-    .filter({ has: manager.getByRole("heading", { name, exact: true }) })
+    .locator("tbody tr")
+    .filter({
+      has: manager.getByRole("rowheader", { name: new RegExp("^" + name) }),
+    })
     .getByRole("button", { name: "Manage setup" })
     .click();
   const setup = manager.getByRole("dialog", { name: "Carrier setup" });
@@ -329,9 +331,9 @@ test("a lost carrier creation response retries with the same key and resumes its
   await dialog.getByRole("button", { name: "Close carrier setup" }).click();
   // The directory is paged, so find the new carrier by name.
   await page.getByRole("searchbox", { name: "Search carriers" }).fill(name);
-  const row = page
-    .getByRole("article")
-    .filter({ has: page.getByRole("heading", { name, exact: true }) });
+  const row = page.locator("tbody tr").filter({
+    has: page.getByRole("rowheader", { name: new RegExp("^" + name) }),
+  });
   await expect(row).toHaveCount(1);
   await row.getByRole("button", { name: "Manage setup" }).click();
   await expect(

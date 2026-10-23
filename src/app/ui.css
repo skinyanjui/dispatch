@@ -36,13 +36,6 @@
   border-bottom-color: var(--accent);
   color: var(--accent);
 }
-.appShell .tabCount {
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--panel-soft, #eef1fb);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
 
 /* ---- Chips: filters with a count ---- */
 .appShell .chips {
@@ -298,4 +291,259 @@
 /* Buttons centre their content by default; a tile reads from the top. */
 .appShell .stat.link {
   justify-content: flex-start;
+}
+
+/* ---- Data table (components/ui/data-table.tsx) ----
+   Headers once, values beneath them. Narrow screens scroll sideways with the
+   row's name held in place; low-priority columns drop out on phones. Rows
+   never turn into cards that repeat the column names. */
+.appShell .dataTable {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.appShell .dataTable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.appShell .dataTable table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.appShell .dataTable th,
+.appShell .dataTable td {
+  height: 32px;
+  padding: 0 10px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.appShell .dataTable th:last-child,
+.appShell .dataTable td:last-child {
+  border-right: 0;
+}
+.appShell .dataTable tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.appShell .dataTable tfoot tr:first-child > * {
+  border-top: 1px solid var(--border);
+}
+.appShell .dataTable thead th {
+  background: transparent;
+  color: var(--muted);
+}
+.appShell .dataTable tbody th {
+  color: var(--ink);
+  font-weight: 500;
+}
+.appShell .dataTable tbody tr:not(.groupRow):hover {
+  background: var(--soft);
+}
+.appShell .dataTable td {
+  font-variant-numeric: tabular-nums;
+}
+.appShell .dataTable .align-right {
+  text-align: right;
+}
+.appShell .dataTable .align-center {
+  text-align: center;
+}
+.appShell .dataTable .w-xs {
+  width: 72px;
+}
+.appShell .dataTable .w-sm {
+  width: 112px;
+}
+.appShell .dataTable .w-md {
+  width: 160px;
+}
+.appShell .dataTable .w-lg {
+  width: 240px;
+}
+/* A long text column (a summary, a description) wraps instead of widening
+   the table. */
+.appShell .dataTable .w-xl {
+  min-width: 240px;
+  white-space: normal;
+}
+.appShell .dataTable .sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--control-h-sm);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.appShell .dataTable .align-right .sortButton {
+  flex-direction: row-reverse;
+}
+.appShell .dataTable .rowOpen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  color: var(--ink);
+  font-weight: 500;
+}
+.appShell .dataTable .rowOpen:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+.appShell .dataTable .clickRow {
+  cursor: pointer;
+}
+.appShell .dataTable .groupRow th {
+  background: var(--soft);
+}
+.appShell .dataTable .groupToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+.appShell .dataTable tfoot th,
+.appShell .dataTable tfoot td {
+  color: var(--muted);
+  font-weight: 500;
+}
+.appShell .tableState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.appShell .tableState.alert {
+  border-style: solid;
+}
+.appShell .tableEmpty {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.appShell .tableEmpty h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.appShell .tableEmpty p {
+  margin: 0;
+}
+.appShell .tableMore {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+@media (max-width: 900px) {
+  .appShell .dataTable thead th:first-child,
+  .appShell .dataTable tbody tr:not(.groupRow) > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--panel);
+    box-shadow: 1px 0 0 var(--border);
+  }
+}
+@media (max-width: 640px) {
+  .appShell .dataTable .lowPriority {
+    display: none;
+  }
+}
+
+/* ---- Bar list (components/ui/bar-list.tsx): label, meter, figure ---- */
+.appShell .barList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  list-style: none;
+}
+.appShell .barList li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 24px;
+}
+.appShell .barLabel,
+.appShell .barValue {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.appShell .barValue {
+  color: var(--ink);
+  text-align: right;
+}
+.appShell .barList meter {
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--soft);
+  appearance: none;
+}
+.appShell .barList meter::-webkit-meter-bar {
+  height: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--soft);
+}
+.appShell .barList meter::-webkit-meter-optimum-value {
+  border-radius: 999px;
+  background: var(--accent);
+}
+.appShell .barList meter::-moz-meter-bar {
+  border-radius: 999px;
+  background: var(--accent);
+}
+/* Buttons at the end of a table row. */
+.appShell .rowActions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.appShell .dataTable tr.retired > * {
+  color: var(--muted);
+}
+/* A figure that needs attention, inside a table cell. */
+.appShell .lateText {
+  color: var(--error);
+}
+.appShell .dataTable .carrierName,
+.appShell .dataTable .excSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appShell .dataTable .carrierName svg,
+.appShell .dataTable .excSummary svg {
+  flex: none;
+  color: var(--subtle);
+}
+.appShell .dataTable tr.sev-high .excSummary svg {
+  color: var(--error);
 }

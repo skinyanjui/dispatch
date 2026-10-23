@@ -12,7 +12,7 @@
     "start": "next start --hostname 0.0.0.0",
     "build": "next build",
     "build:vercel": "tsx scripts/prepare-deployment.ts && next build",
-    "lint": "eslint src scripts/*.ts tests/**/*.ts",
+    "lint": "eslint src scripts/*.ts tests/**/*.ts && node scripts/check-design-system.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && node scripts/check.mjs",
     "test": "node --test tests/smoke.test.mjs && tsx --test tests/integration/*.test.ts",

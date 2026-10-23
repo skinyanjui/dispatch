@@ -16,6 +16,7 @@ import {
   type Recorded,
 } from "@/lib/extraction";
 import type { DocumentVersion } from "@/lib/compliance";
+import { formatDateTime } from "@/lib/format";
 
 const shown = (kind: FieldKind, value: string | number | boolean | null) =>
   value === null
@@ -42,13 +43,7 @@ const failureText: Record<string, string> = {
     "This file couldn't be read. It may be damaged or password-protected.",
   TIMED_OUT: "That reading didn't finish. Try again.",
 };
-const when = (value: string) =>
-  new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const when = formatDateTime;
 
 /**
  * A reading is advice: values the model found, each with a quote from the

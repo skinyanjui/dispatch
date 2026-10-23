@@ -1,27 +1,2 @@
 /* Carriers: filter tiles that share a row and grow to fill it, the sort on its
    own right-aligned line, and action buttons that fill the card on phones. */
-
-.appShell .carrierToolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin: var(--space-3) 0 var(--space-2);
-}
-.appShell .carrierToolbar .carrierSort {
-  margin: 0;
-}
-@media (max-width: 640px) {
-  .appShell .carrierToolbar .carrierSort,
-  .appShell .carrierToolbar select {
-    width: 100%;
-  }
-  .appShell .carrierList .directoryRowActions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-  }
-  .appShell .carrierList .directoryRowActions .secondary {
-    flex: 1 1 90px;
-    justify-content: center;
-    min-height: 40px;
-  }
-}

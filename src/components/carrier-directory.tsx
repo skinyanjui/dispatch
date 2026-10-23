@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import {
   ArrowUpRightIcon,
@@ -21,7 +22,6 @@ type Filter =
   | "expiring"
   | "not-authorized"
   | "exceptions";
-type Sort = "name" | "active" | "expiry";
 const pageSize = 25;
 const day = 86_400_000;
 const date = (iso: string) =>
@@ -75,8 +75,6 @@ export function CarrierDirectory({
   const api = useApi();
   const [ownQuery, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all"),
-    [sort, setSort] = useState<Sort>("name"),
-    [shown, setShown] = useState(pageSize),
     [summary, setSummary] = useState<Map<string, CarrierSummary> | null>(null),
     [error, setError] = useState("");
   const text = (query ?? ownQuery).trim().toLowerCase();
@@ -128,21 +126,149 @@ export function CarrierDirectory({
     const list = context.carriers.filter(
       (c) => c.name.toLowerCase().includes(text) && matches(c.id),
     );
-    const key = (id: string, name: string) => {
-      const s = summary?.get(id);
-      if (sort === "active") return -(s?.loads.active ?? 0);
-      if (sort === "expiry")
-        return s?.authorization.expires_at
-          ? Date.parse(s.authorization.expires_at)
-          : Infinity;
-      return name.toLowerCase();
-    };
-    return [...list].sort((a, b) => {
-      const x = key(a.id, a.name),
-        y = key(b.id, b.name);
-      return x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name);
-    });
-  }, [context.carriers, summary, filter, sort, text]);
+    return list;
+  }, [context.carriers, summary, filter, text]);
+  type Row = Context["carriers"][number];
+  const stat = (id: string) => summary?.get(id);
+  // Figures wait for the summary; a failed summary says so once per cell.
+  const pending = (id: string) =>
+    stat(id) ? null : error ? "Unavailable" : "…";
+  const columns: ColumnDefinition<Row>[] = [
+    {
+      id: "name",
+      header: "Carrier",
+      accessor: "name",
+      sortable: true,
+      render: (_, c) => (
+        <span className="carrierName">
+          <BuildingsIcon size={16} aria-hidden="true" />
+          {c.name}
+          {(mixedRoles || c.role !== "dispatcher") && (
+            <small className="roleLabel">{roles[c.role] || "Member"}</small>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: "authorization",
+      header: "Dispatch authorization",
+      accessor: (c) => stat(c.id)?.authorization.expires_at ?? "",
+      sortable: true,
+      sortValue: (c) => {
+        const at = stat(c.id)?.authorization.expires_at;
+        return at ? Date.parse(at) : Number.MAX_SAFE_INTEGER;
+      },
+      render: (_, c) => {
+        const s = stat(c.id);
+        if (c.role === "driver") return "—";
+        if (!s) return pending(c.id);
+        return (
+          <button
+            type="button"
+            className={"opsPill carrierAuth " + authTone(s.authorization.state)}
+            disabled={busy || !onSetup}
+            onClick={() => onSetup?.(c.id)}
+            aria-label={`${authLabel(s.authorization)}. Open setup for ${c.name}`}
+          >
+            {authLabel(s.authorization)}
+          </button>
+        );
+      },
+    },
+    {
+      id: "active",
+      header: "Active loads",
+      accessor: (c) => stat(c.id)?.loads.active,
+      type: "number",
+      sortable: true,
+      descendingFirst: true,
+      render: (value, c) =>
+        c.role === "driver" ? (
+          "—"
+        ) : value === undefined ? (
+          pending(c.id)
+        ) : (
+          <button
+            type="button"
+            className="textButton"
+            onClick={() => onViewLoads(c.id)}
+            aria-label={`${value} active loads for ${c.name}. Open loads`}
+          >
+            {String(value)}
+          </button>
+        ),
+    },
+    {
+      id: "exceptions",
+      header: "Open exceptions",
+      accessor: (c) => stat(c.id)?.open_exceptions,
+      type: "number",
+      sortable: true,
+      descendingFirst: true,
+      render: (value, c) =>
+        c.role === "driver" ? (
+          "—"
+        ) : value === undefined ? (
+          pending(c.id)
+        ) : (
+          <button
+            type="button"
+            className={"textButton" + (Number(value) ? " lateText" : "")}
+            disabled={!onOpenExceptions}
+            onClick={onOpenExceptions}
+            aria-label={`${value} open exceptions for ${c.name}. Open exceptions`}
+          >
+            {String(value)}
+          </button>
+        ),
+    },
+    {
+      id: "drivers",
+      header: "Drivers",
+      accessor: (c) => stat(c.id)?.drivers,
+      type: "number",
+      priority: "low",
+      render: (value, c) =>
+        c.role === "driver"
+          ? "—"
+          : value === undefined
+            ? pending(c.id)
+            : String(value),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: "id",
+      align: "right",
+      render: (_, c) => (
+        <div className="rowActions">
+          {c.role !== "driver" && onSetup && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => onSetup(c.id)}
+            >
+              Manage setup
+            </button>
+          )}
+          {c.role !== "driver" && onDocuments && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => onDocuments(c.id)}
+              aria-label={`Documents for ${c.name}`}
+            >
+              Documents
+            </button>
+          )}
+          <button className="secondary" onClick={() => onViewLoads(c.id)}>
+            View loads
+            <ArrowUpRightIcon size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   const stats: { id: Filter; label: string; value: number }[] = [
     { id: "authorized", label: "Authorized", value: counts.authorized },
@@ -160,7 +286,6 @@ export function CarrierDirectory({
   ];
   const pick = (f: Filter) => {
     setFilter((old) => (old === f ? "all" : f));
-    setShown(pageSize);
   };
 
   return (
@@ -217,158 +342,39 @@ export function CarrierDirectory({
               />
             ))}
           </StatTiles>
-          <div className="carrierToolbar">
-            <label className="carrierSort">
-              <span className="srOnly">Sort carriers</span>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as Sort)}
-              >
-                <option value="name">Sort: Name</option>
-                <option value="active">Sort: Active loads</option>
-                <option value="expiry">Sort: Agreement expiry</option>
-              </select>
-            </label>
-          </div>
         </>
       )}
 
-      {rows.length ? (
-        <div className="directoryTable carrierList">
-          {rows.slice(0, shown).map((c) => {
-            const s = summary?.get(c.id);
-            return (
-              <article className="directoryRow" key={c.id}>
-                <div className="directoryCarrier">
-                  <span className="carrierMark">
-                    <BuildingsIcon size={22} aria-hidden="true" />
-                  </span>
-                  <div>
-                    <h3>{c.name}</h3>
-                    {(mixedRoles || c.role !== "dispatcher") && (
-                      <small className="roleLabel">
-                        {roles[c.role] || "Member"}
-                      </small>
-                    )}
-                  </div>
-                </div>
-                {c.role !== "driver" && (
-                  <div className="carrierFacts">
-                    {s ? (
-                      <>
-                        <button
-                          type="button"
-                          className={
-                            "opsPill carrierAuth " +
-                            authTone(s.authorization.state)
-                          }
-                          disabled={busy || !onSetup}
-                          onClick={() => onSetup?.(c.id)}
-                          aria-label={`${authLabel(s.authorization)}. Open setup for ${c.name}`}
-                        >
-                          {authLabel(s.authorization)}
-                        </button>
-                        <button
-                          type="button"
-                          className="carrierMetric"
-                          onClick={() => onViewLoads(c.id)}
-                          aria-label={`${s.loads.active} active loads for ${c.name}. Open loads`}
-                        >
-                          <strong>{s.loads.active}</strong>
-                          <small>Active loads</small>
-                        </button>
-                        <button
-                          type="button"
-                          className={
-                            "carrierMetric" +
-                            (s.open_exceptions ? " attention" : "")
-                          }
-                          disabled={!onOpenExceptions}
-                          onClick={onOpenExceptions}
-                          aria-label={`${s.open_exceptions} open exceptions for ${c.name}. Open exceptions`}
-                        >
-                          <strong>{s.open_exceptions}</strong>
-                          <small>Open exceptions</small>
-                        </button>
-                        <span className="carrierMetric">
-                          <strong>{s.drivers}</strong>
-                          <small>Drivers</small>
-                        </span>
-                      </>
-                    ) : error ? (
-                      <small className="helpText">Status unavailable</small>
-                    ) : (
-                      <span className="skeletonLine" aria-hidden="true" />
-                    )}
-                  </div>
-                )}
-                <div className="directoryRowActions">
-                  {c.role !== "driver" && onSetup && (
-                    <button
-                      className="secondary"
-                      disabled={busy}
-                      onClick={() => onSetup(c.id)}
-                    >
-                      Manage setup
-                    </button>
-                  )}
-                  {c.role !== "driver" && onDocuments && (
-                    <button
-                      className="secondary"
-                      disabled={busy}
-                      onClick={() => onDocuments(c.id)}
-                      aria-label={`Documents for ${c.name}`}
-                    >
-                      Documents
-                    </button>
-                  )}
-                  <button
-                    className="secondary"
-                    onClick={() => onViewLoads(c.id)}
-                  >
-                    View loads
-                    <ArrowUpRightIcon size={14} aria-hidden="true" />
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="directoryEmpty">
-          <BuildingsIcon size={40} weight="light" aria-hidden="true" />
-          <h3>
-            {context.carriers.length
-              ? "No matching carriers"
-              : "No carrier access yet"}
-          </h3>
-          <p>
-            {context.carriers.length
-              ? "Try a different carrier name or clear the filter."
-              : "Ask your workspace administrator to grant carrier access."}
-          </p>
-          {(text || filter !== "all") && (
-            <button
-              className="secondary"
-              onClick={() => {
-                setFilter("all");
-                if (text) (onClearQuery ?? (() => setQuery("")))();
-              }}
-            >
-              Clear search
-            </button>
-          )}
-        </div>
-      )}
-      {rows.length > shown && (
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => setShown((n) => n + pageSize)}
-        >
-          Show {Math.min(pageSize, rows.length - shown)} more
-        </button>
-      )}
+      <DataTable
+        caption="Carriers"
+        className="carrierTable"
+        columns={columns}
+        data={rows}
+        getRowId={(c) => c.id}
+        defaultSort={{ column: "name", descending: false }}
+        pageSize={pageSize}
+        pageKey={filter + "|" + text}
+        empty={{
+          title: context.carriers.length
+            ? "No matching carriers"
+            : "No carrier access yet",
+          description: context.carriers.length
+            ? "Try a different carrier name or clear the filter."
+            : "Ask your workspace administrator to grant carrier access.",
+          action:
+            text || filter !== "all" ? (
+              <button
+                className="secondary"
+                onClick={() => {
+                  setFilter("all");
+                  if (text) (onClearQuery ?? (() => setQuery("")))();
+                }}
+              >
+                Clear search
+              </button>
+            ) : undefined,
+        }}
+      />
       <p className="directoryNote">
         Workspace access is separate from dispatch authority. A current verified
         dispatch agreement is checked when booking or assigning a load.

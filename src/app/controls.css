@@ -99,37 +99,27 @@
 }
 /* Inside a table row or a card's action strip, buttons use the small size so
    they sit within the row height. */
-.appShell .reportTable td .primary,
-.appShell .reportTable td .secondary,
-.appShell .reportTable th .secondary,
-.appShell .directoryRowActions .secondary,
+.appShell .dataTable td .primary,
+.appShell .dataTable td .secondary,
+.appShell .dataTable th .secondary,
 .appShell .calcPicker select,
-.appShell .reportTable td select,
-.appShell .reportTable td input:not([type="checkbox"], [type="radio"]) {
+.appShell .dataTable td select,
+.appShell .dataTable td input:not([type="checkbox"], [type="radio"]) {
   min-height: var(--control-h-sm);
 }
-.appShell .reportTable td .primary,
-.appShell .reportTable td .secondary,
-.appShell .directoryRowActions .secondary {
-  padding-left: var(--control-pad);
-  padding-right: var(--control-pad);
-}
-/* Table text buttons line up with their column header. */
-.appShell .reportTable tbody th .textButton,
-.appShell .reportTable td .textButton {
+/* Text buttons in a cell line up with their column header. */
+.appShell .dataTable td .textButton,
+.appShell .dataTable th .textButton {
   padding-left: 0;
   padding-right: 0;
 }
-.appShell .reportTable tbody th .textButton:hover,
-.appShell .reportTable td .textButton:hover {
+.appShell .dataTable td .textButton:hover,
+.appShell .dataTable th .textButton:hover {
   background: transparent;
   text-decoration: underline;
 }
-.appShell .reportTable thead th .sortButton {
-  padding-left: 0;
-  padding-right: 0;
-  min-height: var(--control-h-sm);
-}
+
+/* Table text buttons line up with their column header. */
 
 /* Icon-only buttons: at least 24px square, centred. */
 .appShell .iconAction {
@@ -155,7 +145,6 @@
 .appShell .toolbar label,
 .appShell .directoryIntro label,
 .appShell .orgToolbar label,
-.appShell .carrierSort,
 .appShell .viewPicker {
   margin-bottom: 0;
 }
@@ -206,37 +195,12 @@
 }
 
 /* ---- Carrier directory: metrics line up in columns from row to row ---- */
-@media (min-width: 1101px) {
-  .appShell .carrierFacts {
-    display: grid;
-    grid-template-columns: 188px repeat(3, minmax(72px, auto));
-    justify-content: start;
-    column-gap: var(--space-4);
-  }
-}
 /* Narrower screens: the authorization pill takes its own line and the three
    figures share the next one in equal columns. */
-@media (max-width: 1100px) {
-  .appShell .carrierFacts {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-2) var(--space-3);
-  }
-  .appShell .carrierFacts .carrierAuth {
-    grid-column: 1 / -1;
-  }
-}
-.appShell .directoryCarrier > div {
-  display: grid;
-  justify-items: start;
-  text-align: left;
-}
+
 .appShell .carrierAuth {
   min-height: var(--control-h-sm);
   justify-self: start;
-}
-.appShell .carrierSort {
-  min-width: 140px;
 }
 
 /* ---- Filter rows: label, selects and checkbox on one centre line ---- */
@@ -354,13 +318,6 @@
 }
 
 /* Card-style table cells on phones centre the label and the value together. */
-.appShell .reportTable td,
-.appShell .billingTable td {
-  align-items: center;
-}
-.appShell .directoryCarrier .roleLabel {
-  padding-left: 0;
-}
 
 /* ---- Error and 404 pages ---- */
 .statusPage .statusActions {
@@ -402,14 +359,7 @@
 .appShell .auditDate input {
   width: auto;
 }
-.appShell .auditTable td,
-.appShell .auditTable th {
-  white-space: nowrap;
-}
-.appShell .auditTable td[data-label="What"] {
-  white-space: normal;
-  min-width: 220px;
-}
+
 .appShell .auditRecord {
   display: inline-block;
   max-width: 280px;
@@ -424,21 +374,6 @@
   justify-content: center;
   margin: var(--space-4) 0;
 }
-.appShell .auditTable tbody th {
-  color: var(--ink);
-  font-weight: 400;
-}
 
 /* Visually hidden text inside a scrolling table must be clipped with it, or
    its off-screen position widens the whole page. */
-.appShell .tableScroll {
-  position: relative;
-}
-.appShell .fleetTable tbody th {
-  color: var(--ink);
-  font-weight: 500;
-}
-.appShell .fleetTable tr.retired td,
-.appShell .fleetTable tr.retired th {
-  color: var(--muted);
-}

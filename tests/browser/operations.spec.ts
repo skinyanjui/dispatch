@@ -1252,7 +1252,7 @@ test("friendly wording: wrong password and the show-password option", async ({
   await expect(page.locator(".alert.error")).toContainText("don't match");
 });
 
-test("exceptions page: summary tiles, severity cards, and a phone layout without overflow", async ({
+test("exceptions page: summary tiles, a table with shared headers, and a phone layout without overflow", async ({
   page,
 }) => {
   const origin = { Origin: "http://localhost:3000" };
@@ -1316,9 +1316,13 @@ test("exceptions page: summary tiles, severity cards, and a phone layout without
     await expect(
       region.getByRole("group", { name: "Exception summary" }),
     ).toContainText("High severity");
+    // One row per exception, under shared column headers.
+    const row = region.locator("tbody tr").filter({ hasText: reference });
+    await expect(row).toContainText("Unassigned");
     await expect(
-      region.getByRole("article").filter({ hasText: reference }),
-    ).toContainText("Unassigned");
+      region.getByRole("columnheader", { name: "Owner" }),
+    ).toBeVisible();
+    await expect(row.getByText("Owner")).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

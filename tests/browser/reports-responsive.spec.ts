@@ -62,45 +62,36 @@ test("reports on a desktop: tiles of every group fill their row", async ({
   expect(await noOverflow(page)).toBe(true);
 });
 
-test("by carrier: a table with sortable headers on a desktop, cards with a sort select on a phone", async ({
+test("by carrier: one table with shared, sortable headers on every screen", async ({
   page,
 }) => {
   await login(page);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/reports");
-  const region = page.getByRole("region", { name: "By carrier" });
-  await expect(
-    region.getByRole("columnheader", { name: /^Loads/ }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Sort carriers by")).toBeHidden();
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/reports");
-  await expect(region).toBeVisible();
-  // The header row is clipped to nothing on phones (kept for screen readers).
-  const head = (await region.locator("thead").first().boundingBox())!;
-  expect(head.width).toBeLessThanOrEqual(2);
-  const sort = page.getByLabel("Sort carriers by");
-  await expect(sort).toBeVisible();
-  // Each carrier is a card whose figures carry their labels.
-  const card = region.getByRole("row").nth(1);
-  for (const label of ["Loads", "Freight", "Open exceptions"]) {
-    const cell = card.locator(`td[data-label="${label}"]`);
-    await expect(cell).toHaveCount(1);
+  for (const [width, height] of [
+    [1440, 900],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/reports");
+    const region = page.getByRole("region", { name: "By carrier" });
+    const loads = region.getByRole("columnheader", { name: /^Loads/ });
+    // Headers are shown once, on phones too; cells never repeat them.
+    await expect(loads).toBeVisible();
+    await expect(region.locator("[data-label]")).toHaveCount(0);
+    await expect(loads).toHaveAttribute("aria-sort", "descending");
+    const freight = region.getByRole("columnheader", { name: /^Freight/ });
+    await freight.getByRole("button").click();
+    await expect(freight).toHaveAttribute("aria-sort", "descending");
+    // Money lines up on the right, under its header.
     expect(
-      await cell.evaluate((el) => getComputedStyle(el, "::before").content),
-    ).toContain(label);
+      await region
+        .locator("tbody td")
+        .nth(3)
+        .evaluate((el) => getComputedStyle(el).textAlign),
+    ).toBe("right");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
   }
-  await sort.selectOption("freight");
-  await expect(sort).toHaveValue("freight");
-  const rows = region.getByRole("row");
-  const inside = await rows.evaluateAll((els) =>
-    els.slice(1).every((r) => r.getBoundingClientRect().right <= 391),
-  );
-  expect(inside).toBe(true);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
 });

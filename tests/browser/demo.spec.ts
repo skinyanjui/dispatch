@@ -76,7 +76,7 @@ test("current demo shares app workflows, saves locally and never calls authentic
   await page.getByLabel("Demo role").selectOption("dispatcher");
   await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Demo New Carrier", exact: true }),
+    page.getByRole("rowheader", { name: /^Demo New Carrier/ }),
   ).toBeVisible();
   await page.reload();
   await expect(
@@ -84,12 +84,12 @@ test("current demo shares app workflows, saves locally and never calls authentic
   ).toBeVisible();
   await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Demo New Carrier", exact: true }),
+    page.getByRole("rowheader", { name: /^Demo New Carrier/ }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Reset demo", exact: true }).click();
   await page.getByRole("button", { name: "Carriers", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Demo New Carrier", exact: true }),
+    page.getByRole("rowheader", { name: /^Demo New Carrier/ }),
   ).toHaveCount(0);
   expect(apiRequests).toEqual([]);
 });

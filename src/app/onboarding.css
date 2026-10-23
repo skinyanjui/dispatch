@@ -260,15 +260,7 @@
   flex-wrap: wrap;
   align-items: center;
 }
-.directoryRowActions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-.directoryRow {
-  grid-template-columns: minmax(0, 1fr) 145px 215px;
-}
+
 .roleLabel,
 .directoryEmpty p,
 .directoryEmpty h3,
@@ -290,13 +282,7 @@
   .directoryControls {
     width: 100%;
   }
-  .directoryRow {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .directoryRowActions {
-    grid-column: 1/-1;
-    justify-content: flex-start;
-  }
+
   .setupDriver > .textButton {
     flex-basis: 100%;
     justify-content: flex-start;

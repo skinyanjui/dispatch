@@ -61,7 +61,9 @@ test("typing in the sidebar search filters the open page, and Ctrl+K focuses it"
   const box = dock(page).getByRole("searchbox", { name: "Search carriers" });
   await page.keyboard.press("Control+k");
   await expect(box).toBeFocused();
-  const rows = page.locator(".directoryRow");
+  const rows = page
+    .getByRole("region", { name: "Carriers" })
+    .locator("tbody tr");
   const all = await rows.count();
   expect(all).toBeGreaterThan(1);
   await box.fill("Blue Ridge");

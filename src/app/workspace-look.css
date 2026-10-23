@@ -124,31 +124,7 @@
   box-shadow: none;
 }
 /* Tables: hairline grid, muted headers, comfortable 32px rows. */
-.appShell .reportTable {
-  font-size: 13px;
-}
-.appShell .reportTable th,
-.appShell .reportTable td {
-  padding: 0 10px;
-  height: 32px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.appShell .reportTable th:last-child,
-.appShell .reportTable td:last-child {
-  border-right: 0;
-}
-.appShell .reportTable thead th {
-  color: var(--muted);
-  font-weight: 400;
-  background: transparent;
-}
-.appShell .reportTable tbody tr:hover {
-  background: var(--soft);
-}
-.appShell .reportTable tbody th {
-  font-weight: 400;
-}
+
 .appShell .sortButton {
   color: inherit;
   font-weight: 400;
@@ -179,9 +155,7 @@
 .appShell h3 {
   font-weight: 500;
 }
-.appShell .loadTable tbody th .textButton,
-.appShell .billingTable tbody th .textButton,
-.appShell .reportTable tbody th .textButton {
+.appShell .loadTable tbody th .textButton {
   color: var(--ink);
   font-weight: 500;
 }

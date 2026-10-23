@@ -22,7 +22,10 @@ test("documents: the page opens on a list that has something in it", async ({
   const chips = page.getByRole("group", { name: "Show drafts" });
   await expect(chips).toBeVisible();
   const total = Number(
-    await chips.getByRole("button", { name: /^All/ }).locator(".toggleCount").innerText(),
+    await chips
+      .getByRole("button", { name: /^All/ })
+      .locator(".toggleCount")
+      .innerText(),
   );
   const needs = Number(
     await chips

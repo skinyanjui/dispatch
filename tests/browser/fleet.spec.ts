@@ -233,7 +233,7 @@ test("the fleet page has no accessibility violations and fits a phone", async ({
   ).toBe(true);
 });
 
-test("fleet: summary tiles, and on a phone rows become cards without overflow", async ({
+test("fleet: summary tiles, and on a phone the tables scroll sideways under their headers", async ({
   page,
 }) => {
   await login(page);
@@ -242,18 +242,23 @@ test("fleet: summary tiles, and on a phone rows become cards without overflow", 
   const tiles = page.getByRole("group", { name: "Fleet summary" });
   await expect(tiles).toContainText("Vehicles in service");
   await expect(tiles).toContainText("Drivers active");
-  await expect(page.getByRole("table", { name: "Drivers" })).toBeVisible();
+  const drivers = page.getByRole("table", { name: "Drivers" });
+  await expect(drivers).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  // Table headers are hidden on phones, but each cell keeps its label.
-  const cell = page
-    .getByRole("table", { name: "Drivers" })
-    .locator('td[data-label="Status"]')
-    .first();
+  // Headers stay visible on phones; cells never repeat the field name.
+  await expect(
+    drivers.getByRole("columnheader", { name: "Status" }),
+  ).toBeVisible();
+  await expect(drivers.locator("[data-label]")).toHaveCount(0);
+  // The row's name stays in place while the rest scrolls.
   expect(
-    await cell.evaluate((el) => getComputedStyle(el, "::before").content),
-  ).toContain("Status");
+    await drivers
+      .locator("tbody th")
+      .first()
+      .evaluate((el) => getComputedStyle(el).position),
+  ).toBe("sticky");
 });

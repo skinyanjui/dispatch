@@ -58,35 +58,4 @@
     min-height: 40px;
   }
   /* Drafts: name first, then the facts in two columns. */
-  .appShell .documents .billingTable tr {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-2) var(--space-3);
-    padding: var(--space-3);
-  }
-  .appShell .documents .billingTable tbody th[scope="row"] {
-    grid-column: 1 / -1;
-    padding: 0;
-  }
-  .appShell .documents .billingTable td {
-    display: grid;
-    align-content: start;
-    justify-content: stretch;
-    justify-items: start;
-    gap: 1px;
-    padding: 0;
-    border: 0;
-    text-align: left;
-  }
-  .appShell .documents .billingTable td::before {
-    font-size: 12px;
-  }
-  .appShell .documents .billingTable td > .opsPill {
-    align-self: start;
-    justify-self: start;
-    margin: 0;
-  }
-  .appShell .documents .billingTable td[data-label="Made by"] {
-    grid-column: 1 / -1;
-  }
 }

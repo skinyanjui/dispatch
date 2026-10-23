@@ -11,17 +11,16 @@ import {
   type ExceptionSuggestion,
   type LoadException,
 } from "@/lib/exception-rules";
+import { formatDateTime } from "@/lib/format";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 
-export function when(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-export function severityClass(severity: string) {
-  return severity === "high" ? "bad" : severity === "medium" ? "warn" : "";
+export const when = formatDateTime;
+export function severityTone(severity: string): StatusTone {
+  return severity === "high"
+    ? "bad"
+    : severity === "medium"
+      ? "warn"
+      : "neutral";
 }
 /** `datetime-local` value interpreted in the browser's own time zone. */
 function localToIso(value: string) {
@@ -54,14 +53,12 @@ function ExceptionCard({
       <div className="opsCardHeading">
         <WarningIcon size={16} aria-hidden="true" />
         <h3>{item.summary}</h3>
-        <span className={"opsPill " + severityClass(item.severity)}>
+        <StatusBadge tone={severityTone(item.severity)}>
           {item.severity}
-        </span>
-        <span
-          className={"opsPill " + (item.status === "resolved" ? "good" : "")}
-        >
+        </StatusBadge>
+        <StatusBadge tone={item.status === "resolved" ? "good" : "neutral"}>
           {exceptionStatusLabels[item.status]}
-        </span>
+        </StatusBadge>
       </div>
       <p className="opsMeta">
         {exceptionTypeLabels[item.type]}

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 
 /**
  * A picture of the workspace, drawn in plain markup with made-up sample
@@ -30,25 +31,38 @@ const tabs = [
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 
-const loads = [
-  [
-    "QA-1042",
-    "Blue Ridge Transport",
-    "Chicago, IL → Nashville, TN",
-    "$2,500.00",
-  ],
-  [
-    "QA-1043",
-    "Prairie Line Logistics",
-    "Dallas, TX → Memphis, TN",
-    "$1,850.00",
-  ],
-  [
-    "QA-1044",
-    "Blue Ridge Transport",
-    "Atlanta, GA → Columbus, OH",
-    "$2,100.00",
-  ],
+/** Made-up sample loads for the drawing; never real data. */
+type SampleLoad = {
+  reference: string;
+  carrier: string;
+  route: string;
+  freight: string;
+};
+const loads: SampleLoad[] = [
+  {
+    reference: "QA-1042",
+    carrier: "Blue Ridge Transport",
+    route: "Chicago, IL → Nashville, TN",
+    freight: "$2,500.00",
+  },
+  {
+    reference: "QA-1043",
+    carrier: "Prairie Line Logistics",
+    route: "Dallas, TX → Memphis, TN",
+    freight: "$1,850.00",
+  },
+  {
+    reference: "QA-1044",
+    carrier: "Blue Ridge Transport",
+    route: "Atlanta, GA → Columbus, OH",
+    freight: "$2,100.00",
+  },
+];
+const columns: ColumnDefinition<SampleLoad>[] = [
+  { id: "reference", header: "Load", accessor: "reference" },
+  { id: "carrier", header: "Carrier", accessor: "carrier" },
+  { id: "route", header: "Route", accessor: "route", priority: "low" },
+  { id: "freight", header: "Freight", accessor: "freight", align: "right" },
 ];
 
 export function ProductPreview() {
@@ -92,13 +106,13 @@ export function ProductPreview() {
                   <div key={col}>
                     <b>{col}</b>
                     {loads.slice(0, [3, 2, 1, 1][i]).map((l) => (
-                      <div key={l[0]} className="pvCard">
+                      <div key={l.reference} className="pvCard">
                         <span className="pvHead">
-                          <strong>{l[0]}</strong>
-                          <em>{l[3]}</em>
+                          <strong>{l.reference}</strong>
+                          <em>{l.freight}</em>
                         </span>
-                        <span>{l[1]}</span>
-                        <span className="pvRoute">{l[2]}</span>
+                        <span>{l.carrier}</span>
+                        <span className="pvRoute">{l.route}</span>
                         <span className="pvChip">Docs {i === 3 ? 3 : 0}/3</span>
                       </div>
                     ))}
@@ -108,25 +122,14 @@ export function ProductPreview() {
             </div>
           )}
           {tab === "table" && (
-            <table className="pvTable">
-              <thead>
-                <tr>
-                  <th>Load</th>
-                  <th>Carrier</th>
-                  <th>Route</th>
-                  <th>Freight</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loads.map((l) => (
-                  <tr key={l[0]}>
-                    {l.map((c) => (
-                      <td key={c}>{c}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              caption="Sample loads"
+              className="pvTable"
+              columns={columns}
+              data={loads}
+              getRowId={(l) => l.reference}
+              empty={{ title: "No loads" }}
+            />
           )}
           {tab === "calendar" && (
             <div className="pvCal">

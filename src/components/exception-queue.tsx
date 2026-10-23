@@ -8,7 +8,9 @@ import {
   exceptionTypeLabels,
   type LoadException,
 } from "@/lib/exception-rules";
-import { severityClass, when } from "./load-exceptions";
+import { severityTone, when } from "./load-exceptions";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export function ExceptionQueue({
   onOpenLoad,
@@ -88,6 +90,92 @@ export function ExceptionQueue({
     item.status !== "resolved" &&
     !!item.due_at &&
     Date.parse(item.due_at) < now;
+  const columns: ColumnDefinition<LoadException>[] = [
+    {
+      id: "summary",
+      header: "Exception",
+      accessor: "summary",
+      width: "xl",
+      render: (summary) => (
+        <span className="excSummary">
+          <WarningIcon size={14} aria-hidden="true" />
+          {String(summary)}
+        </span>
+      ),
+    },
+    {
+      id: "severity",
+      header: "Severity",
+      accessor: "severity",
+      sortable: true,
+      sortValue: (x) => ["high", "medium", "low"].indexOf(x.severity),
+      render: (severity) => (
+        <StatusBadge tone={severityTone(String(severity))}>
+          {String(severity)}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (x) => exceptionStatusLabels[x.status],
+      render: (label, x) => (
+        <StatusBadge tone={x.status === "resolved" ? "good" : "neutral"}>
+          {String(label)}
+        </StatusBadge>
+      ),
+    },
+    { id: "load", header: "Load", accessor: "load_reference" },
+    {
+      id: "carrier",
+      header: "Carrier",
+      accessor: "carrier_name",
+      priority: "low",
+    },
+    {
+      id: "type",
+      header: "Type",
+      accessor: (x) => exceptionTypeLabels[x.type],
+      priority: "low",
+    },
+    {
+      id: "owner",
+      header: "Owner",
+      accessor: (x) => x.owner_name || "Unassigned",
+    },
+    {
+      id: "due",
+      header: "Due",
+      accessor: "due_at",
+      sortable: true,
+      sortValue: (x) =>
+        x.due_at ? Date.parse(x.due_at) : Number.MAX_SAFE_INTEGER,
+      render: (_, x) =>
+        x.due_at ? (
+          <span className={overdueNow(x) ? "lateText" : undefined}>
+            {when(x.due_at)}
+            {overdueNow(x) && " (overdue)"}
+          </span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: "id",
+      align: "right",
+      render: (_, x) => (
+        <button
+          className="secondary"
+          onClick={() => onOpenLoad(x.load_id)}
+          aria-label={`Open load ${x.load_reference} for exception ${x.summary}`}
+        >
+          Open load
+        </button>
+      ),
+    },
+  ];
   const tiles: [string, number][] = items
     ? [
         ["Shown", items.length],
@@ -161,60 +249,15 @@ export function ExceptionQueue({
               <StatTile key={label} label={label} value={n} />
             ))}
           </StatTiles>
-          <div className="excList">
-            {items.map((item) => (
-              <article className={"excCard sev-" + item.severity} key={item.id}>
-                <header>
-                  <WarningIcon size={16} aria-hidden="true" />
-                  <h3>{item.summary}</h3>
-                  <span className={"opsPill " + severityClass(item.severity)}>
-                    {item.severity}
-                  </span>
-                  <span
-                    className={
-                      "opsPill " + (item.status === "resolved" ? "good" : "")
-                    }
-                  >
-                    {exceptionStatusLabels[item.status]}
-                  </span>
-                </header>
-                <dl className="excFacts">
-                  <div>
-                    <dt>Load</dt>
-                    <dd>{item.load_reference}</dd>
-                  </div>
-                  <div>
-                    <dt>Carrier</dt>
-                    <dd>{item.carrier_name}</dd>
-                  </div>
-                  <div>
-                    <dt>Type</dt>
-                    <dd>{exceptionTypeLabels[item.type]}</dd>
-                  </div>
-                  <div>
-                    <dt>Owner</dt>
-                    <dd>{item.owner_name || "Unassigned"}</dd>
-                  </div>
-                  {item.due_at && (
-                    <div className={overdueNow(item) ? "late" : undefined}>
-                      <dt>Due</dt>
-                      <dd>
-                        {when(item.due_at)}
-                        {overdueNow(item) && <strong> (overdue)</strong>}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-                <button
-                  className="secondary"
-                  onClick={() => onOpenLoad(item.load_id)}
-                  aria-label={`Open load ${item.load_reference} for exception ${item.summary}`}
-                >
-                  Open load
-                </button>
-              </article>
-            ))}
-          </div>
+          <DataTable
+            caption="Exceptions"
+            columns={columns}
+            data={items}
+            getRowId={(x) => x.id}
+            rowClassName={(x) => "sev-" + x.severity}
+            defaultSort={{ column: "due", descending: false }}
+            empty={{ title: "No exceptions" }}
+          />
         </>
       )}
       {items && !items.length && !loading && (

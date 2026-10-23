@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
+import { formatDateTime } from "@/lib/format";
 
 type Note = {
   id: string;
@@ -8,13 +9,7 @@ type Note = {
   created_at: string;
   author_name: string;
 };
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const when = formatDateTime;
 
 /** Internal notes for the dispatch team on one load; drivers never see them. */
 export function LoadNotes({

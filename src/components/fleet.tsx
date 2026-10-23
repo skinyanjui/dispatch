@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Sheet } from "@/components/modal";
@@ -111,6 +113,96 @@ export function FleetPage({
       (showRetired || v.status === "active") &&
       match(v.label, v.plate, v.vin, vehicleKindLabels[v.kind]),
   );
+  const vehicleColumns: ColumnDefinition<Vehicle>[] = [
+    { id: "unit", header: "Unit", accessor: "label" },
+    {
+      id: "type",
+      header: "Type",
+      accessor: (v) => vehicleKindLabels[v.kind] ?? v.kind,
+    },
+    { id: "plate", header: "Plate", accessor: "plate" },
+    {
+      id: "vin",
+      header: "VIN",
+      accessor: "vin",
+      priority: "low",
+      render: (vin) => (vin ? <code>{String(vin)}</code> : "—"),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: "status",
+      render: (status) => (
+        <StatusBadge tone={status === "active" ? "good" : "neutral"}>
+          {status === "active" ? "In service" : "Retired"}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: "loads",
+      header: "Active loads",
+      accessor: "active_loads",
+      type: "number",
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      accessor: "id",
+      align: "right",
+      render: (_, v) => (
+        <div className="rowActions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={offline}
+            onClick={() => setForm(v)}
+          >
+            Edit<span className="srOnly"> {v.label}</span>
+          </button>
+          {v.status === "active" ? (
+            <button
+              type="button"
+              className="secondary"
+              disabled={offline}
+              onClick={() => setRetiring(v)}
+            >
+              Retire<span className="srOnly"> {v.label}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="secondary"
+              disabled={offline}
+              onClick={() => void setStatus(v, "active")}
+            >
+              Reactivate<span className="srOnly"> {v.label}</span>
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+  const driverColumns: ColumnDefinition<Driver>[] = [
+    { id: "name", header: "Driver", accessor: "name" },
+    {
+      id: "status",
+      header: "Status",
+      accessor: "status",
+      render: (status) => (
+        <StatusBadge tone={status === "ready" ? "good" : "warn"}>
+          {status === "ready" ? "Active" : "Invite pending"}
+        </StatusBadge>
+      ),
+    },
+    { id: "phone", header: "Phone", accessor: "phone" },
+    { id: "email", header: "Email", accessor: "email", priority: "low" },
+    {
+      id: "loads",
+      header: "Active loads",
+      accessor: "active_loads",
+      type: "number",
+    },
+  ];
   async function setStatus(v: Vehicle, status: "active" | "retired") {
     setError("");
     setNotice("");
@@ -231,93 +323,16 @@ export function FleetPage({
               )}
             </header>
             {vehicles.length ? (
-              <div
-                className="tableScroll"
-                role="region"
-                aria-label="Vehicles"
-                tabIndex={0}
-              >
-                <table className="reportTable fleetTable">
-                  <caption className="srOnly">Vehicles</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Unit</th>
-                      <th scope="col">Type</th>
-                      <th scope="col">Plate</th>
-                      <th scope="col">VIN</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Active loads</th>
-                      <th scope="col">
-                        <span className="srOnly">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vehicles.map((v) => (
-                      <tr
-                        key={v.id}
-                        className={
-                          v.status === "retired" ? "retired" : undefined
-                        }
-                      >
-                        <th scope="row" data-label="Unit">
-                          {v.label}
-                        </th>
-                        <td data-label="Type">
-                          {vehicleKindLabels[v.kind] ?? v.kind}
-                        </td>
-                        <td data-label="Plate">{v.plate || "—"}</td>
-                        <td data-label="VIN">
-                          {v.vin ? <code>{v.vin}</code> : "—"}
-                        </td>
-                        <td data-label="Status">
-                          <span
-                            className={
-                              "opsPill " + (v.status === "active" ? "good" : "")
-                            }
-                          >
-                            {v.status === "active" ? "In service" : "Retired"}
-                          </span>
-                        </td>
-                        <td data-label="Active loads">{v.active_loads}</td>
-                        <td data-label="Actions">
-                          <div className="fleetActions">
-                            <button
-                              type="button"
-                              className="secondary"
-                              disabled={offline}
-                              onClick={() => setForm(v)}
-                            >
-                              Edit<span className="srOnly"> {v.label}</span>
-                            </button>
-                            {v.status === "active" ? (
-                              <button
-                                type="button"
-                                className="secondary"
-                                disabled={offline}
-                                onClick={() => setRetiring(v)}
-                              >
-                                Retire
-                                <span className="srOnly"> {v.label}</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className="secondary"
-                                disabled={offline}
-                                onClick={() => void setStatus(v, "active")}
-                              >
-                                Reactivate
-                                <span className="srOnly"> {v.label}</span>
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption="Vehicles"
+                columns={vehicleColumns}
+                data={vehicles}
+                getRowId={(v) => v.id}
+                rowClassName={(v) =>
+                  v.status === "retired" ? "retired" : undefined
+                }
+                empty={{ title: "No vehicles" }}
+              />
             ) : (
               <div className="fleetEmpty">
                 <h4>{needle ? "No vehicles match" : "No vehicles yet"}</h4>
@@ -352,47 +367,13 @@ export function FleetPage({
               </button>
             </header>
             {drivers.length ? (
-              <div
-                className="tableScroll"
-                role="region"
-                aria-label="Drivers"
-                tabIndex={0}
-              >
-                <table className="reportTable fleetTable">
-                  <caption className="srOnly">Drivers</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Driver</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Phone</th>
-                      <th scope="col">Email</th>
-                      <th scope="col">Active loads</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {drivers.map((d) => (
-                      <tr key={d.id}>
-                        <th scope="row" data-label="Driver">
-                          {d.name}
-                        </th>
-                        <td data-label="Status">
-                          <span
-                            className={
-                              "opsPill " +
-                              (d.status === "ready" ? "good" : "warn")
-                            }
-                          >
-                            {d.status === "ready" ? "Active" : "Invite pending"}
-                          </span>
-                        </td>
-                        <td data-label="Phone">{d.phone || "—"}</td>
-                        <td data-label="Email">{d.email || "—"}</td>
-                        <td data-label="Active loads">{d.active_loads}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption="Drivers"
+                columns={driverColumns}
+                data={drivers}
+                getRowId={(d) => d.id}
+                empty={{ title: "No drivers" }}
+              />
             ) : (
               <div className="fleetEmpty">
                 <h4>{needle ? "No drivers match" : "No drivers yet"}</h4>

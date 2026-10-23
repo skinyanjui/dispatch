@@ -15,7 +15,7 @@ for (const [name, width, height] of [
   ["desktop", 1440, 900],
   ["phone", 390, 844],
 ] as const) {
-  test(`carriers on a ${name}: filter tiles fill the row, sort stays reachable, nothing overflows`, async ({
+  test(`carriers on a ${name}: filter tiles fill the row, header sorting stays reachable, nothing overflows`, async ({
     page,
   }) => {
     await login(page);
@@ -35,7 +35,12 @@ for (const [name, width, height] of [
       const right = Math.max(...inRow.map((b) => b.right));
       expect(Math.abs(right - (group.x + group.width))).toBeLessThan(2);
     }
-    await expect(page.getByLabel("Sort carriers")).toBeVisible();
+    // Sorting lives on the column headers, which stay reachable on phones.
+    const table = page.getByRole("region", { name: "Carriers" });
+    const header = table.getByRole("columnheader", { name: /^Active loads/ });
+    await expect(header).toHaveAttribute("aria-sort", "none");
+    await header.getByRole("button").click();
+    await expect(header).toHaveAttribute("aria-sort", "descending");
     // The signed-in person's own role is not repeated on every row.
     await expect(
       page.locator(".roleLabel", { hasText: "Dispatcher" }),

@@ -77,7 +77,9 @@ export function Tabs<K extends string>({
           onKeyDown={(e) => onKey(e, i)}
         >
           {t.label}
-          {t.count !== undefined && <span className="countBadge">{t.count}</span>}
+          {t.count !== undefined && (
+            <span className="countBadge">{t.count}</span>
+          )}
         </button>
       ))}
     </div>

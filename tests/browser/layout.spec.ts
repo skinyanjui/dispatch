@@ -87,7 +87,7 @@ test("controls share two heights; toolbars sit on one centre line", async ({
           continue;
         if (
           c.matches(
-            ".loadCard,.stat,.carrierMetric,.threadItem,.prospectCard,.calendarEvent,.sidebarItem,.queueTab,.chip,.opsPill,.iconAction,.iconButton",
+            ".loadCard,.stat,.threadItem,.prospectCard,.calendarEvent,.sidebarItem,.queueTab,.chip,.opsPill,.iconAction,.iconButton",
           )
         )
           continue;

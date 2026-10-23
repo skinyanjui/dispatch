@@ -619,6 +619,10 @@
   font-weight: 600;
 }
 .pvTable {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.pvTable table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
@@ -633,6 +637,12 @@
 .pvTable th {
   color: var(--mk-muted);
   font-weight: 400;
+}
+.pvTable tbody th {
+  color: inherit;
+}
+.pvTable .align-right {
+  text-align: right;
 }
 .pvCal {
   display: grid;
@@ -930,8 +940,7 @@
 }
 @media (max-width: 640px) {
   /* Table preview keeps Load, Carrier and Freight; Route would be cut off. */
-  .pvTable th:nth-child(3),
-  .pvTable td:nth-child(3) {
+  .pvTable .lowPriority {
     display: none;
   }
   /* Calendar events stay on one line instead of breaking "QA-" from "1043". */

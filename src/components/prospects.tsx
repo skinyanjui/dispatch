@@ -24,6 +24,7 @@ import {
   type ProspectList,
   type ProspectStage,
 } from "@/lib/prospect-types";
+import { formatDateTime } from "@/lib/format";
 
 const icon = { size: 15, "aria-hidden": true } as const;
 const followLabels: Record<FollowUp, string> = {
@@ -31,13 +32,7 @@ const followLabels: Record<FollowUp, string> = {
   today: "Today",
   week: "Next 7 days",
 };
-const when = (value: string) =>
-  new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const when = formatDateTime;
 
 function Card({
   prospect,

@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, PlusIcon } from "@phosphor-icons/react";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { ToggleGroup } from "@/components/ui/toggle-group";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Sheet } from "@/components/modal";
 import { ApiError, describe, useApi } from "@/lib/client-api";
+import { formatDateTime } from "@/lib/format";
 
 type Draft = {
   id: string;
@@ -31,13 +34,7 @@ const statusLabels = {
   approved: "Approved",
   discarded: "Discarded",
 } as const;
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const when = formatDateTime;
 
 /**
  * Templates and the drafts made from them (ADR 0040). A draft is text for a
@@ -116,6 +113,60 @@ export function DocumentsPage({
         ),
     [drafts, filter, needle],
   );
+  const draftColumns: ColumnDefinition<Draft>[] = [
+    {
+      id: "draft",
+      header: "Draft",
+      accessor: "template_name",
+      render: (name) => (
+        <>
+          <FileTextIcon size={14} aria-hidden="true" />
+          {String(name)}
+        </>
+      ),
+    },
+    { id: "for", header: "For", accessor: "target_label" },
+    {
+      id: "status",
+      header: "Status",
+      accessor: "status",
+      render: (_, d) => (
+        <>
+          <StatusBadge
+            tone={
+              d.status === "approved"
+                ? "good"
+                : d.status === "discarded"
+                  ? "neutral"
+                  : "warn"
+            }
+          >
+            {statusLabels[d.status]}
+          </StatusBadge>
+          {d.missing.length > 0 && d.status === "draft" && (
+            <small className="agingNote late">{d.missing.length} missing</small>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "by",
+      header: "Made by",
+      accessor: (d) =>
+        d.source === "assistant"
+          ? "Assistant for " + d.created_by_name
+          : d.created_by_name,
+      priority: "low",
+    },
+    {
+      id: "created",
+      header: "Created",
+      accessor: "created_at",
+      type: "datetime",
+      sortable: true,
+      descendingFirst: true,
+    },
+  ];
   const current = drafts?.find((d) => d.id === open);
   async function run(fn: () => Promise<unknown>, done: string) {
     setBusy(true);
@@ -187,81 +238,22 @@ export function DocumentsPage({
               value={filter}
               onChange={(f) => f && setFilter(f)}
             />
-            {shown.length ? (
-              <div className="tableScroll billingTable">
-                <table className="reportTable">
-                  <caption className="srOnly">Document drafts</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Draft</th>
-                      <th scope="col">For</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Made by</th>
-                      <th scope="col">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shown.map((d) => (
-                      <tr
-                        key={d.id}
-                        className="clickRow"
-                        onClick={(e) => {
-                          if (!(e.target as HTMLElement).closest("button"))
-                            setOpen(d.id);
-                        }}
-                      >
-                        <th scope="row" data-label="Draft">
-                          <button
-                            type="button"
-                            className="textButton"
-                            onClick={() => setOpen(d.id)}
-                            aria-label={`Open draft ${d.template_name} for ${d.target_label}`}
-                          >
-                            <FileTextIcon size={14} aria-hidden="true" />
-                            {d.template_name}
-                          </button>
-                        </th>
-                        <td data-label="For">{d.target_label}</td>
-                        <td data-label="Status">
-                          <span
-                            className={
-                              "opsPill " +
-                              (d.status === "approved"
-                                ? "good"
-                                : d.status === "discarded"
-                                  ? ""
-                                  : "warn")
-                            }
-                          >
-                            {statusLabels[d.status]}
-                          </span>
-                          {d.missing.length > 0 && d.status === "draft" && (
-                            <small className="agingNote late">
-                              {d.missing.length} missing
-                            </small>
-                          )}
-                        </td>
-                        <td data-label="Made by">
-                          {d.source === "assistant"
-                            ? "Assistant for " + d.created_by_name
-                            : d.created_by_name}
-                        </td>
-                        <td data-label="Created">{when(d.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="directoryEmpty">
-                <FileTextIcon size={32} weight="light" aria-hidden="true" />
-                <h3>{drafts ? "No drafts here" : "Loading…"}</h3>
-                <p>
-                  Ask the assistant to draft one, or use Draft document on a
-                  load.
-                </p>
-              </div>
-            )}
+            <DataTable
+              caption="Document drafts"
+              columns={draftColumns}
+              data={shown}
+              getRowId={(d) => d.id}
+              loading={!drafts}
+              onRowOpen={(d) => setOpen(d.id)}
+              openLabel={(d) =>
+                `Open draft ${d.template_name} for ${d.target_label}`
+              }
+              empty={{
+                title: "No drafts here",
+                description:
+                  "Ask the assistant to draft one, or use Draft document on a load.",
+              }}
+            />
           </>
         )}
 

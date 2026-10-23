@@ -9,6 +9,7 @@ import {
   PlusIcon,
 } from "@phosphor-icons/react";
 import { formatMoney } from "@/lib/entry";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { stageLabels, type Load } from "@/lib/contracts";
 import { loadDocumentTypes } from "@/lib/compliance";
 
@@ -231,7 +232,6 @@ export function TableView({
   disabled: boolean;
 }) {
   const [calcs, setCalcs] = useState<Partial<Record<ViewField, Calc>>>({});
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const show = (f: ViewField) => !config.hidden_fields.includes(f);
   const sorted = useMemo(() => sortLoads(loads, config.sort), [loads, config]);
   const groups = useMemo(() => {
@@ -259,10 +259,6 @@ export function TableView({
         )
       : list.sort((a, b) => a.label.localeCompare(b.label));
   }, [sorted, config.group_by]);
-  const columns: { key: ViewConfig["sort"]["key"]; label: string }[] = [
-    { key: "reference", label: "Load" },
-    ...allFields.filter(show).map((f) => ({ key: f, label: fieldLabels[f] })),
-  ];
   const cell = (l: Load, f: ViewField) => {
     switch (f) {
       case "carrier":
@@ -283,119 +279,66 @@ export function TableView({
         return formatCreated(l.created_at);
     }
   };
+  // One definition per field drives the header, the cells and the sort.
+  const columns: ColumnDefinition<Load>[] = [
+    {
+      id: "reference",
+      header: "Load",
+      accessor: "reference",
+      sortable: true,
+      sortValue: (l) => sortValue(l, "reference"),
+    },
+    ...allFields.filter(show).map(
+      (f): ColumnDefinition<Load> => ({
+        id: f,
+        header: fieldLabels[f],
+        accessor: (l) => cell(l, f),
+        align: f === "freight" ? "right" : "left",
+        sortable: true,
+        sortValue: (l) => sortValue(l, f),
+        descendingFirst: f === "freight" || f === "created",
+      }),
+    ),
+  ];
   return (
-    <div
-      className="tableScroll loadTable"
-      role="region"
-      aria-label="Load table"
-      tabIndex={0}
-    >
-      <table className="reportTable">
-        <caption className="srOnly">Loads</caption>
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th
-                key={c.key}
-                scope="col"
-                aria-sort={
-                  config.sort.key === c.key
-                    ? config.sort.desc
-                      ? "descending"
-                      : "ascending"
-                    : "none"
-                }
-              >
-                <button
-                  type="button"
-                  className="sortButton"
-                  onClick={() =>
-                    onConfig({
-                      sort: {
-                        key: c.key,
-                        desc:
-                          config.sort.key === c.key
-                            ? !config.sort.desc
-                            : c.key === "freight" || c.key === "created",
-                      },
-                    })
-                  }
-                >
-                  {c.label}
-                  {config.sort.key === c.key &&
-                    (config.sort.desc ? (
-                      <ArrowDownIcon size={11} aria-hidden="true" />
-                    ) : (
-                      <ArrowUpIcon size={11} aria-hidden="true" />
-                    ))}
-                </button>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        {groups.map((g) => {
-          const closed = collapsed.has(g.key);
-          return (
-            <tbody key={g.key || "all"}>
-              {config.group_by !== "none" && (
-                <tr className="groupRow">
-                  <th colSpan={columns.length} scope="colgroup">
-                    <button
-                      type="button"
-                      className="groupToggle"
-                      aria-expanded={!closed}
-                      onClick={() =>
-                        setCollapsed((old) => {
-                          const next = new Set(old);
-                          if (!next.delete(g.key)) next.add(g.key);
-                          return next;
-                        })
-                      }
-                    >
-                      {closed ? (
-                        <CaretRightIcon size={12} aria-hidden="true" />
-                      ) : (
-                        <CaretDownIcon size={12} aria-hidden="true" />
-                      )}
-                      <strong>{g.label}</strong>
-                      <Totals loads={g.items} />
-                    </button>
-                  </th>
-                </tr>
-              )}
-              {!closed &&
-                g.items.map((l) => (
-                  <tr key={l.id}>
-                    <th scope="row">
-                      <button
-                        type="button"
-                        className="textButton"
-                        disabled={disabled}
-                        onClick={() => onOpen(l.id)}
-                        aria-label={`Open ${l.reference}`}
-                      >
-                        {l.reference}
-                      </button>
-                    </th>
-                    {allFields.filter(show).map((f) => (
-                      <td key={f}>{cell(l, f)}</td>
-                    ))}
-                  </tr>
-                ))}
-            </tbody>
-          );
-        })}
-        {!loads.length && (
-          <tbody>
-            <tr>
-              <td colSpan={columns.length}>No loads match.</td>
-            </tr>
-          </tbody>
-        )}
-        <tfoot>
+    <DataTable
+      caption="Load table"
+      className="loadTable"
+      columns={columns}
+      data={sorted}
+      getRowId={(l) => l.id}
+      sort={{ column: config.sort.key, descending: config.sort.desc }}
+      onSortChange={(next) =>
+        onConfig({
+          sort: {
+            key: next.column as ViewConfig["sort"]["key"],
+            desc: next.descending,
+          },
+        })
+      }
+      groups={
+        config.group_by === "none"
+          ? undefined
+          : groups.map((g) => ({
+              key: g.key,
+              rows: g.items,
+              label: (
+                <>
+                  <strong>{g.label}</strong>
+                  <Totals loads={g.items} />
+                </>
+              ),
+            }))
+      }
+      disabled={disabled}
+      onRowOpen={(l) => onOpen(l.id)}
+      openLabel={(l) => `Open ${l.reference}`}
+      empty={{ title: "No loads match." }}
+      footer={(cols) => (
+        <>
           {onAdd && (
             <tr className="addRow">
-              <td colSpan={columns.length}>
+              <td colSpan={cols.length}>
                 <button
                   type="button"
                   className="textButton"
@@ -442,9 +385,9 @@ export function TableView({
               );
             })}
           </tr>
-        </tfoot>
-      </table>
-    </div>
+        </>
+      )}
+    />
   );
 }
 

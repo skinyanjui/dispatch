@@ -135,7 +135,7 @@ test("marketing on a phone: the footer lines up with the brand and the product p
     ).toBe(true);
   }
   await page.getByRole("tab", { name: "Table" }).click();
-  const cols = await page.locator(".pvTable th:visible").count();
+  const cols = await page.locator(".pvTable thead th:visible").count();
   expect(cols).toBe(3);
   await page.goto("/pricing");
   const plan = (await page.locator(".mkPlan").boundingBox())!;

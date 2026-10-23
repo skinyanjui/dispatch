@@ -11,6 +11,8 @@ import { Sheet } from "@/components/modal";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type {
   BillingOverview,
@@ -542,7 +544,6 @@ const invoiceFilters: [InvoiceFilter, string][] = [
 /** What a person calls an invoice's state, from its status, balance and due date. */
 const pageSize = 25;
 const DAY = 86_400_000;
-type InvoiceSort = "number" | "due" | "total" | "balance";
 type FreightFilter = "all" | "needs-packet" | "submitted" | "paid";
 const freightFilters: [FreightFilter, string][] = [
   ["all", "All"],
@@ -558,9 +559,12 @@ function aging(due: string, now: string, settled: boolean) {
   if (days === 0) return "Due today";
   return `Due in ${days} day${days === 1 ? "" : "s"}`;
 }
-function shownStatus(i: DispatchInvoice, now: string) {
+function shownStatus(
+  i: DispatchInvoice,
+  now: string,
+): { key: string; label: string; tone: StatusTone } {
   if (i.status === "draft")
-    return { key: "draft" as const, label: "Draft", tone: "" };
+    return { key: "draft" as const, label: "Draft", tone: "neutral" };
   if (i.status === "void")
     return { key: "void" as const, label: "Void", tone: "bad" };
   const balance = BigInt(i.total_minor) - BigInt(i.paid_minor);
@@ -606,12 +610,6 @@ export function BillingWorkspace({
     [tab, setTab] = useState<"invoices" | "freight">("invoices"),
     [filter, setFilter] = useState<InvoiceFilter>("all"),
     [freightFilter, setFreightFilter] = useState<FreightFilter>("all"),
-    [sort, setSort] = useState<{ key: InvoiceSort; desc: boolean }>({
-      key: "number",
-      desc: true,
-    }),
-    [shownInvoices, setShownInvoices] = useState(pageSize),
-    [shownFreight, setShownFreight] = useState(pageSize),
     [open, setOpenState] = useState<
       { kind: "invoice" | "packet"; id: string } | "new" | null
     >(null),
@@ -800,25 +798,6 @@ export function BillingWorkspace({
     );
   const balanceOf = (i: DispatchInvoice) =>
     i.status === "issued" ? BigInt(i.total_minor) - BigInt(i.paid_minor) : 0n;
-  const sorted = (() => {
-    const value = (i: DispatchInvoice): bigint | string =>
-      sort.key === "number"
-        ? // Newest first; drafts have no number yet and count as the newest.
-          BigInt(/(\d+)\s*$/.exec(i.number ?? "")?.[1] ?? "999999999999")
-        : sort.key === "due"
-          ? i.due_on
-          : sort.key === "total"
-            ? BigInt(i.total_minor)
-            : i.status === "issued"
-              ? BigInt(i.total_minor) - BigInt(i.paid_minor)
-              : 0n;
-    return [...shown].sort((a, b) => {
-      const x = value(a),
-        y = value(b);
-      const order = x < y ? -1 : x > y ? 1 : 0;
-      return sort.desc ? -order : order;
-    });
-  })();
   const freightKind = (l: (typeof billable)[number]): FreightFilter =>
     l.packet?.payment_state === "paid"
       ? "paid"
@@ -828,13 +807,140 @@ export function BillingWorkspace({
   const freightShown = billable.filter(
     (l) => freightFilter === "all" || freightKind(l) === freightFilter,
   );
-  const sortBy = (key: InvoiceSort) => {
-    setSort((old) => ({
-      key,
-      desc: old.key === key ? !old.desc : key !== "due",
-    }));
-    setShownInvoices(pageSize);
-  };
+  const invoiceColumns: ColumnDefinition<DispatchInvoice>[] = [
+    {
+      id: "number",
+      header: "Invoice",
+      accessor: "number",
+      sortable: true,
+      descendingFirst: true,
+      // Newest first; drafts have no number yet and count as the newest.
+      sortValue: (i) =>
+        Number(
+          /(\d+)\s*$/.exec(i.number ?? "")?.[1] ?? Number.MAX_SAFE_INTEGER,
+        ),
+      render: (_, i) => (
+        <>
+          <ReceiptIcon size={15} aria-hidden="true" />
+          {i.number ?? "Draft"}
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (i) => shownStatus(i, now).label,
+      render: (_, i) => {
+        const st = shownStatus(i, now);
+        return <StatusBadge tone={st.tone}>{st.label}</StatusBadge>;
+      },
+    },
+    {
+      id: "due",
+      header: "Due",
+      accessor: "due_on",
+      sortable: true,
+      render: (_, i) => {
+        const st = shownStatus(i, now);
+        const settled =
+          st.key !== "open" && st.key !== "overdue" && st.key !== "partial";
+        return (
+          <>
+            {i.due_on}
+            {aging(i.due_on, now, settled) && (
+              <small
+                className={"agingNote" + (st.key === "overdue" ? " late" : "")}
+              >
+                {aging(i.due_on, now, false)}
+              </small>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      id: "total",
+      header: "Total",
+      accessor: "total_minor",
+      type: "money",
+      sortable: true,
+      descendingFirst: true,
+    },
+    {
+      id: "paid",
+      header: "Paid",
+      accessor: "paid_minor",
+      type: "money",
+      priority: "low",
+    },
+    {
+      id: "balance",
+      header: "Balance",
+      accessor: (i) => balanceOf(i).toString(),
+      type: "money",
+      sortable: true,
+      descendingFirst: true,
+      render: (value) => <strong>{money(BigInt(String(value)))}</strong>,
+    },
+  ];
+  const freightColumns: ColumnDefinition<(typeof billable)[number]>[] = [
+    {
+      id: "load",
+      header: "Load",
+      accessor: "reference",
+      render: (_, l) => (
+        <>
+          <FileTextIcon size={15} aria-hidden="true" />
+          {l.reference}
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: "stage",
+      render: (_, l) => {
+        const pk = l.packet;
+        return (
+          <StatusBadge
+            tone={
+              pk?.payment_state === "paid"
+                ? "good"
+                : pk?.status === "submitted"
+                  ? "warn"
+                  : "neutral"
+            }
+          >
+            {pk
+              ? pk.status === "submitted"
+                ? paymentLabels[pk.payment_state]
+                : "Draft packet"
+              : l.stage === "delivered"
+                ? "Needs packet"
+                : stageLabels[l.stage]}
+          </StatusBadge>
+        );
+      },
+    },
+    {
+      id: "rate",
+      header: "Agreed rate",
+      accessor: "amount_minor",
+      type: "money",
+    },
+    {
+      id: "invoiced",
+      header: "Invoiced",
+      accessor: (l) => l.packet?.amount_minor,
+      type: "money",
+    },
+    {
+      id: "received",
+      header: "Received",
+      accessor: (l) => l.packet?.paid_minor,
+      type: "money",
+    },
+  ];
   const counts = (key: InvoiceFilter) =>
     key === "all"
       ? invoices.length
@@ -924,7 +1030,6 @@ export function BillingWorkspace({
               onSelect={() => {
                 setTab("invoices");
                 setFilter("open");
-                setShownInvoices(pageSize);
               }}
             />
             <StatTile
@@ -937,7 +1042,6 @@ export function BillingWorkspace({
               onSelect={() => {
                 setTab("invoices");
                 setFilter("overdue");
-                setShownInvoices(pageSize);
               }}
             />
             <StatTile
@@ -950,7 +1054,6 @@ export function BillingWorkspace({
               onSelect={() => {
                 setTab("invoices");
                 setFilter("paid");
-                setShownInvoices(pageSize);
               }}
             />
             <StatTile
@@ -1004,162 +1107,35 @@ export function BillingWorkspace({
                   onChange={(key) => {
                     if (!key) return;
                     setFilter(key);
-                    setShownInvoices(pageSize);
                   }}
                 />
-                {sorted.length > shownInvoices && (
-                  <p className="helpText" role="status">
-                    Showing {shownInvoices} of {sorted.length}
-                  </p>
-                )}
-                {shown.length ? (
-                  <div className="tableScroll billingTable">
-                    <table className="reportTable">
-                      <caption className="srOnly">Dispatch invoices</caption>
-                      <thead>
-                        <tr>
-                          {(
-                            [
-                              ["number", "Invoice"],
-                              [null, "Status"],
-                              ["due", "Due"],
-                              ["total", "Total"],
-                              [null, "Paid"],
-                              ["balance", "Balance"],
-                            ] as [InvoiceSort | null, string][]
-                          ).map(([key, label]) => (
-                            <th
-                              key={label}
-                              scope="col"
-                              aria-sort={
-                                key && sort.key === key
-                                  ? sort.desc
-                                    ? "descending"
-                                    : "ascending"
-                                  : key
-                                    ? "none"
-                                    : undefined
-                              }
-                            >
-                              {key ? (
-                                <button
-                                  type="button"
-                                  className="sortButton"
-                                  onClick={() => sortBy(key)}
-                                >
-                                  {label}
-                                  {sort.key === key &&
-                                    (sort.desc ? (
-                                      <ArrowDownIcon
-                                        size={11}
-                                        aria-hidden="true"
-                                      />
-                                    ) : (
-                                      <ArrowUpIcon
-                                        size={11}
-                                        aria-hidden="true"
-                                      />
-                                    ))}
-                                </button>
-                              ) : (
-                                label
-                              )}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sorted.slice(0, shownInvoices).map((i) => {
-                          const st = shownStatus(i, now);
-                          const balance =
-                            i.status === "issued"
-                              ? BigInt(i.total_minor) - BigInt(i.paid_minor)
-                              : 0n;
-                          return (
-                            <tr
-                              key={i.id}
-                              className="clickRow"
-                              onClick={(e) => {
-                                if (
-                                  !(e.target as HTMLElement).closest("button")
-                                )
-                                  setOpen({ kind: "invoice", id: i.id });
-                              }}
-                            >
-                              <th scope="row" data-label="Invoice">
-                                <button
-                                  className="textButton"
-                                  onClick={() =>
-                                    setOpen({ kind: "invoice", id: i.id })
-                                  }
-                                  aria-label={`Open invoice ${i.number ?? "draft"}`}
-                                >
-                                  <ReceiptIcon size={15} aria-hidden="true" />
-                                  {i.number ?? "Draft"}
-                                </button>
-                              </th>
-                              <td data-label="Status">
-                                <span className={"opsPill " + st.tone}>
-                                  {st.label}
-                                </span>
-                              </td>
-                              <td data-label="Due">
-                                {i.due_on}
-                                {aging(
-                                  i.due_on,
-                                  now,
-                                  st.key !== "open" &&
-                                    st.key !== "overdue" &&
-                                    st.key !== "partial",
-                                ) && (
-                                  <small
-                                    className={
-                                      "agingNote" +
-                                      (st.key === "overdue" ? " late" : "")
-                                    }
-                                  >
-                                    {aging(i.due_on, now, false)}
-                                  </small>
-                                )}
-                              </td>
-                              <td data-label="Total">
-                                {formatMoney(i.total_minor)}
-                              </td>
-                              <td data-label="Paid">
-                                {formatMoney(i.paid_minor)}
-                              </td>
-                              <td data-label="Balance">
-                                <strong>{money(balance)}</strong>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="directoryEmpty">
-                    <ReceiptIcon size={32} weight="light" aria-hidden="true" />
-                    <h3>
-                      {invoices.length
-                        ? "No invoices match"
-                        : "No dispatch invoices yet"}
-                    </h3>
-                    <p>
-                      {invoices.length
-                        ? "Choose another filter."
-                        : eligible.length && data.can_invoice
-                          ? `${eligible.length} delivered ${eligible.length === 1 ? "load is" : "loads are"} ready to invoice.`
-                          : "Invoices appear here once delivered loads are billed."}
-                    </p>
-                    {invoices.length > 0 && needle && onClearQuery && (
-                      <button className="secondary" onClick={onClearQuery}>
-                        Clear search
-                      </button>
-                    )}
-                    {!invoices.length &&
-                      eligible.length > 0 &&
-                      data.can_invoice && (
+                <DataTable
+                  caption="Dispatch invoices"
+                  columns={invoiceColumns}
+                  data={shown}
+                  getRowId={(i) => i.id}
+                  defaultSort={{ column: "number", descending: true }}
+                  pageSize={pageSize}
+                  pageKey={filter + "|" + needle}
+                  onRowOpen={(i) => setOpen({ kind: "invoice", id: i.id })}
+                  openLabel={(i) => `Open invoice ${i.number ?? "draft"}`}
+                  empty={{
+                    title: invoices.length
+                      ? "No invoices match"
+                      : "No dispatch invoices yet",
+                    description: invoices.length
+                      ? "Choose another filter."
+                      : eligible.length && data.can_invoice
+                        ? `${eligible.length} delivered ${eligible.length === 1 ? "load is" : "loads are"} ready to invoice.`
+                        : "Invoices appear here once delivered loads are billed.",
+                    action:
+                      invoices.length > 0 && needle && onClearQuery ? (
+                        <button className="secondary" onClick={onClearQuery}>
+                          Clear search
+                        </button>
+                      ) : !invoices.length &&
+                        eligible.length > 0 &&
+                        data.can_invoice ? (
                         <button
                           className="primary"
                           disabled={disabled}
@@ -1167,19 +1143,9 @@ export function BillingWorkspace({
                         >
                           New invoice
                         </button>
-                      )}
-                  </div>
-                )}
-                {sorted.length > shownInvoices && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => setShownInvoices((n) => n + pageSize)}
-                  >
-                    Show {Math.min(pageSize, sorted.length - shownInvoices)}{" "}
-                    more
-                  </button>
-                )}
+                      ) : undefined,
+                  }}
+                />
               </>
             ) : (
               <>
@@ -1201,7 +1167,6 @@ export function BillingWorkspace({
                   onChange={(key) => {
                     if (!key) return;
                     setFreightFilter(key);
-                    setShownFreight(pageSize);
                   }}
                 />
                 <label className="setupCheckbox">
@@ -1212,94 +1177,21 @@ export function BillingWorkspace({
                   />
                   <span>Show loads not yet delivered</span>
                 </label>
-                {freightShown.length ? (
-                  <div className="tableScroll billingTable">
-                    <table className="reportTable">
-                      <caption className="srOnly">
-                        Carrier freight billing
-                      </caption>
-                      <thead>
-                        <tr>
-                          <th scope="col">Load</th>
-                          <th scope="col">Status</th>
-                          <th scope="col">Agreed rate</th>
-                          <th scope="col">Invoiced</th>
-                          <th scope="col">Received</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {freightShown.slice(0, shownFreight).map((l) => {
-                          const pk = l.packet;
-                          return (
-                            <tr key={l.id}>
-                              <th scope="row" data-label="Load">
-                                <button
-                                  className="textButton"
-                                  onClick={() =>
-                                    setOpen({ kind: "packet", id: l.id })
-                                  }
-                                  aria-label={`Open freight billing for ${l.reference}`}
-                                >
-                                  <FileTextIcon size={15} aria-hidden="true" />
-                                  {l.reference}
-                                </button>
-                              </th>
-                              <td data-label="Status">
-                                <span
-                                  className={
-                                    "opsPill " +
-                                    (pk?.payment_state === "paid"
-                                      ? "good"
-                                      : pk?.status === "submitted"
-                                        ? "warn"
-                                        : "")
-                                  }
-                                >
-                                  {pk
-                                    ? pk.status === "submitted"
-                                      ? paymentLabels[pk.payment_state]
-                                      : "Draft packet"
-                                    : l.stage === "delivered"
-                                      ? "Needs packet"
-                                      : stageLabels[l.stage]}
-                                </span>
-                              </td>
-                              <td data-label="Agreed rate">
-                                {formatMoney(l.amount_minor)}
-                              </td>
-                              <td data-label="Invoiced">
-                                {pk ? formatMoney(pk.amount_minor) : "—"}
-                              </td>
-                              <td data-label="Received">
-                                {pk ? formatMoney(pk.paid_minor) : "—"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="directoryEmpty">
-                    <FileTextIcon size={32} weight="light" aria-hidden="true" />
-                    <h3>
-                      {allLoads
-                        ? "No loads for this carrier yet"
-                        : "No delivered loads or packets yet"}
-                    </h3>
-                  </div>
-                )}
-                {freightShown.length > shownFreight && (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => setShownFreight((n) => n + pageSize)}
-                  >
-                    Show{" "}
-                    {Math.min(pageSize, freightShown.length - shownFreight)}{" "}
-                    more
-                  </button>
-                )}
+                <DataTable
+                  caption="Carrier freight billing"
+                  columns={freightColumns}
+                  data={freightShown}
+                  getRowId={(l) => l.id}
+                  pageSize={pageSize}
+                  pageKey={freightFilter + "|" + allLoads}
+                  onRowOpen={(l) => setOpen({ kind: "packet", id: l.id })}
+                  openLabel={(l) => `Open freight billing for ${l.reference}`}
+                  empty={{
+                    title: allLoads
+                      ? "No loads for this carrier yet"
+                      : "No delivered loads or packets yet",
+                  }}
+                />
               </>
             )}
           </TabPanel>

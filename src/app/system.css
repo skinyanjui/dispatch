@@ -152,18 +152,6 @@
 }
 
 /* Carrier directory rows: actions stay on one line and the row stays compact. */
-.appShell .directoryRow {
-  padding: var(--space-4) var(--space-4);
-}
-.appShell .directoryRowActions {
-  flex-wrap: nowrap;
-  gap: var(--space-2);
-}
-@media (min-width: 1001px) {
-  .appShell .directoryRow {
-    grid-template-columns: minmax(0, 1fr) 120px 330px;
-  }
-}
 
 /* Inbox: one toolbar row, then two panes that fill the page and scroll alone. */
 .appShell .inbox {
@@ -872,23 +860,7 @@ select {
 .appShell .loadCard.level-soon {
   border-left: 3px solid #c08a00;
 }
-.appShell .cardFacts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px var(--space-3);
-  margin-top: var(--space-2);
-  color: var(--muted);
-  font-size: 11.5px;
-}
-.appShell .cardFact {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  white-space: nowrap;
-}
-.appShell .cardFact.warn {
-  color: var(--error);
-}
+
 .appShell .cardStep {
   display: block;
   margin-top: var(--space-2);
@@ -974,14 +946,7 @@ select {
   }
 }
 /* Card facts stack, one per line. */
-.appShell .cardFacts {
-  flex-direction: column;
-  gap: 3px;
-  align-items: flex-start;
-}
-.appShell .cardFact {
-  white-space: normal;
-}
+
 /* Empty states read from the left, like everything else. */
 
 .appShell .directoryEmpty {
@@ -1009,61 +974,6 @@ select {
 }
 
 /* Billing: summary, tabs, a plain invoice table that stacks on phones. */
-
-.appShell .billingTable {
-  margin-top: var(--space-3);
-}
-.appShell .billingTable th,
-.appShell .billingTable td {
-  text-align: left;
-  vertical-align: middle;
-}
-.appShell .billingTable td {
-  font-variant-numeric: tabular-nums;
-}
-.appShell .billingTable tbody th .textButton {
-  gap: var(--space-2);
-  padding-inline: 0;
-  font-weight: 600;
-}
-@media (max-width: 640px) {
-  .appShell .billingTable table,
-  .appShell .billingTable tbody,
-  .appShell .billingTable tr,
-  .appShell .billingTable th,
-  .appShell .billingTable td {
-    display: block;
-  }
-  .appShell .billingTable thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-  }
-  .appShell .billingTable tr {
-    padding: var(--space-3);
-    margin-bottom: var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-  }
-  .appShell .billingTable td {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: 2px 0;
-    border: 0;
-  }
-  .appShell .billingTable td::before {
-    content: attr(data-label);
-    color: var(--muted);
-    font-weight: 400;
-  }
-  .appShell .billingTable th[scope="row"] {
-    padding: 0 0 var(--space-2);
-    border: 0;
-  }
-}
 
 /* Hierarchy: the name first, then what it is, then how to reach it. */
 
@@ -1445,36 +1355,6 @@ select {
   transition: opacity 0.15s;
 }
 
-.appShell .columnChart {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-2);
-  height: 150px;
-  margin: 0;
-  padding: var(--space-3);
-  list-style: none;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow-x: auto;
-}
-.appShell .columnChart li {
-  flex: 1 0 34px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.appShell .columnChart .column {
-  flex: 1;
-  width: 100%;
-  max-width: 36px;
-  fill: var(--accent);
-}
-.appShell .columnChart small {
-  color: var(--muted);
-  font-size: 11px;
-}
 .appShell .sortButton {
   display: inline-flex;
   align-items: center;
@@ -1487,7 +1367,6 @@ select {
   color: inherit;
 }
 @media (max-width: 640px) {
-  
   .appShell .reportExport {
     margin-left: 0;
   }
@@ -1526,81 +1405,18 @@ select {
 
 /* ---- Carriers ---- */
 
-.appShell .carrierSort {
-  margin-left: auto;
-  align-self: center;
-  width: auto;
-}
-.appShell .carrierList .directoryRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: center;
-}
-@media (min-width: 1101px) {
-  .appShell .carrierList .directoryRow {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 2.2fr) auto;
-  }
-}
-.appShell .carrierFacts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-4);
-}
 .appShell .carrierAuth {
   cursor: pointer;
   font-size: 12px;
   padding: 4px 10px;
 }
-.appShell .carrierMetric {
-  display: grid;
-  gap: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  font: inherit;
-}
-.appShell button.carrierMetric:not(:disabled):hover strong {
-  color: var(--accent);
-}
-.appShell .carrierMetric strong {
-  font-size: 16px;
-}
-.appShell .carrierMetric small {
-  color: var(--muted);
-}
-.appShell .carrierMetric.attention strong {
-  color: #b42318;
-}
+
 .appShell .skeletonLine {
   display: block;
   width: 220px;
   height: 18px;
   border-radius: 6px;
   background: linear-gradient(90deg, #f1f3fb, #e6eaf8, #f1f3fb);
-}
-.appShell .directoryRowActions {
-  flex-wrap: wrap;
-}
-.appShell .carrierMetric {
-  justify-items: start;
-  text-align: left;
-}
-.appShell .directoryCarrier .roleLabel {
-  display: block;
-  text-align: left;
-  color: var(--muted);
-}
-.appShell .directoryCarrier > div {
-  text-align: left;
-}
-@media (max-width: 700px) {
-  .appShell .carrierList .directoryRowActions .secondary {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
 }
 
 /* Inbox rail: New message on top, filters stacked like tabs beneath it. */
@@ -1669,12 +1485,6 @@ select {
 
 /* ---- Billing ---- */
 
-.appShell .billingTable .clickRow {
-  cursor: pointer;
-}
-.appShell .billingTable .clickRow:hover {
-  background: var(--panel-soft, #f6f8fd);
-}
 .appShell .agingNote {
   display: block;
   color: var(--muted);
@@ -1682,9 +1492,6 @@ select {
 .appShell .agingNote.late {
   color: #b42318;
   font-weight: 600;
-}
-.appShell .billingTable .sortButton {
-  font-size: inherit;
 }
 
 /* ---- Command menu ---- */

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 
 type Entry = {
@@ -52,6 +53,37 @@ const stateCopy: Record<Job["state"], [string, string]> = {
 
 /** Who did what, and when, for organization owners and admins (ADR 0047), with
  *  the state of the scheduled job beside it. Read-only. */
+/** Newest first, as the server returns them; the person is the row's name. */
+const auditColumns: ColumnDefinition<Entry>[] = [
+  {
+    id: "when",
+    header: "When",
+    accessor: "at",
+    render: (_, e) => <time dateTime={e.at}>{stamp(e.at)}</time>,
+  },
+  {
+    id: "who",
+    header: "Who",
+    accessor: (e) => e.actor?.name ?? "The system",
+    rowHeader: true,
+  },
+  { id: "what", header: "What", accessor: "label", width: "xl" },
+  {
+    id: "record",
+    header: "Record",
+    accessor: "resource_id",
+    priority: "low",
+    render: (id) =>
+      id ? (
+        <code className="auditRecord" title={String(id)}>
+          {String(id)}
+        </code>
+      ) : (
+        "—"
+      ),
+  },
+];
+
 export function AuditLog({
   query = "",
   onClearQuery,
@@ -251,66 +283,25 @@ export function AuditLog({
             ? `${entries.length} entries shown${cursor ? ", more available" : ""}`
             : ""}
       </p>
-      {entries?.length ? (
-        <div
-          className="tableScroll"
-          role="region"
-          aria-label="Audit entries"
-          tabIndex={0}
-        >
-          <table className="reportTable auditTable">
-            <caption className="srOnly">Audit log, newest first</caption>
-            <thead>
-              <tr>
-                <th scope="col">When</th>
-                <th scope="col">Who</th>
-                <th scope="col">What</th>
-                <th scope="col">Record</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => (
-                <tr key={e.id}>
-                  <td data-label="When">
-                    <time dateTime={e.at}>{stamp(e.at)}</time>
-                  </td>
-                  <th scope="row" data-label="Who">
-                    {e.actor?.name ?? "The system"}
-                  </th>
-                  <td data-label="What" title={e.action}>
-                    {e.label}
-                  </td>
-                  <td data-label="Record">
-                    {e.resource_id ? (
-                      <code className="auditRecord" title={e.resource_id}>
-                        {e.resource_id}
-                      </code>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        !loading &&
-        !error && (
-          <div className="directoryEmpty">
-            <h2>{filtered ? "No entries match" : "Nothing recorded yet"}</h2>
-            <p className="helpText">
-              {filtered
-                ? "Try another action, person or date range."
-                : "Entries appear here as people use Relay."}
-            </p>
-            {filtered && (
+      {entries && (
+        <DataTable
+          caption="Audit log, newest first"
+          columns={auditColumns}
+          data={entries}
+          getRowId={(e) => e.id}
+          loading={loading}
+          empty={{
+            title: filtered ? "No entries match" : "Nothing recorded yet",
+            description: filtered
+              ? "Try another action, person or date range."
+              : "Entries appear here as people use Relay.",
+            action: filtered ? (
               <button className="secondary" onClick={clear}>
                 Clear filters
               </button>
-            )}
-          </div>
-        )
+            ) : undefined,
+          }}
+        />
       )}
       {cursor && (
         <div className="directoryMore">

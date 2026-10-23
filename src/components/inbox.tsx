@@ -14,6 +14,7 @@ import { Modal } from "@/components/modal";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { ApiError, describe, useApi } from "@/lib/client-api";
 import type { DirectoryEntry } from "@/lib/contact-types";
+import { formatDateTime } from "@/lib/format";
 
 export type Compose = {
   to: DirectoryEntry[];
@@ -187,13 +188,7 @@ export function folderCount(folder: string, counts: InboxCounts | null) {
   if (folder === "trash") return counts.trash;
   return counts.by_channel[folder as Channel] ?? 0;
 }
-const when = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const when = formatDateTime;
 
 function Composer({
   recipients,

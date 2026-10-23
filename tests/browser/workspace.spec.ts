@@ -829,17 +829,21 @@ test("carriers: authorization, activity and one-click paths", async ({
   await expect(
     filters.getByRole("button", { name: /Authorized/ }),
   ).toBeEnabled();
-  const row = directory.getByRole("article").filter({
-    has: page.getByRole("heading", { name: "Blue Ridge Transport" }),
+  const row = directory.locator("tbody tr").filter({
+    has: page.getByRole("rowheader", { name: /^Blue Ridge Transport/ }),
   });
   await expect(
     row.getByRole("button", { name: /Authorized until/ }),
   ).toBeVisible();
-  await expect(row.getByText("Active loads")).toBeVisible();
+  // "Active loads" is a column header, said once, not a label in each row.
+  await expect(
+    directory.getByRole("columnheader", { name: /^Active loads/ }),
+  ).toBeVisible();
+  await expect(row.getByText("Active loads")).toHaveCount(0);
   // Paged: the QA workspace has far more than one page of carriers.
-  expect(await directory.getByRole("article").count()).toBeLessThanOrEqual(25);
-  await directory.getByRole("button", { name: /Show \d+ more/ }).click();
-  expect(await directory.getByRole("article").count()).toBeGreaterThan(25);
+  expect(await directory.locator("tbody tr").count()).toBeLessThanOrEqual(25);
+  await page.getByRole("button", { name: "Show more", exact: true }).click();
+  expect(await directory.locator("tbody tr").count()).toBeGreaterThan(25);
   // The filter narrows, and pressing it again clears it.
   await filters.getByRole("button", { name: /With open exceptions/ }).click();
   await expect(
@@ -847,12 +851,15 @@ test("carriers: authorization, activity and one-click paths", async ({
   ).toHaveAttribute("aria-pressed", "true");
   await filters.getByRole("button", { name: /With open exceptions/ }).click();
   // Sorting by active loads puts the busiest carrier first.
-  await directory.getByLabel("Sort carriers").selectOption("active");
+  await directory
+    .getByRole("columnheader", { name: /^Active loads/ })
+    .getByRole("button")
+    .click();
   const active = async (n: number) =>
     Number(
       (
         await directory
-          .getByRole("article")
+          .locator("tbody tr")
           .nth(n)
           .getByRole("button", { name: /active loads for .* Open loads/ })
           .getAttribute("aria-label")
@@ -861,7 +868,7 @@ test("carriers: authorization, activity and one-click paths", async ({
   expect(await active(0)).toBeGreaterThanOrEqual(await active(1));
   // Active loads opens that carrier's loads in one click.
   await directory
-    .getByRole("article")
+    .locator("tbody tr")
     .first()
     .getByRole("button", { name: /active loads for .* Open loads/ })
     .click();
@@ -881,7 +888,7 @@ test("billing: summary cards filter the invoices, columns sort, long lists page"
   // The QA carrier has more than one page of invoices.
   const rows = table.locator("tbody tr");
   expect(await rows.count()).toBeLessThanOrEqual(25);
-  await region.getByRole("button", { name: /^Show \d+ more/ }).click();
+  await region.getByRole("button", { name: "Show more", exact: true }).click();
   expect(await rows.count()).toBeGreaterThan(25);
   // Sort by total, announced on the header.
   const total = table.getByRole("columnheader", { name: "Total" });

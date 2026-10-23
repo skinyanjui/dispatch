@@ -7,7 +7,8 @@ import {
   DownloadSimpleIcon,
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@/components/ui/toggle-group";
-import { ColumnChart } from "@/components/ui/column-chart";
+import { BarList } from "@/components/ui/bar-list";
+import { DataTable, type ColumnDefinition } from "@/components/ui/data-table";
 import {
   StatTile,
   StatTiles,
@@ -140,20 +141,104 @@ const timingHint = (t: Timing) =>
   `${t.on_time} of ${t.measured} reported on time` +
   (t.not_reported ? ` · ${t.not_reported} not reported` : "");
 
-type SortKey =
-  | "name"
-  | "loads"
-  | "delivered"
-  | "cancelled"
-  | "freight"
-  | "open";
-const sortColumns: { key: SortKey; label: string; numeric: boolean }[] = [
-  { key: "name", label: "Carrier", numeric: false },
-  { key: "loads", label: "Loads", numeric: true },
-  { key: "delivered", label: "Delivered", numeric: true },
-  { key: "cancelled", label: "Cancelled", numeric: true },
-  { key: "freight", label: "Freight", numeric: true },
-  { key: "open", label: "Open exceptions", numeric: true },
+type CarrierRow = Report["carriers"][number];
+type ExceptionRow = Report["exceptions"]["by_type"][number];
+
+/** The by-carrier table; the carrier cell opens that carrier's loads. */
+const carrierColumns = (
+  openLoads?: (scope: OpenLoads) => void,
+): ColumnDefinition<CarrierRow>[] => [
+  {
+    id: "name",
+    header: "Carrier",
+    accessor: "name",
+    sortable: true,
+    render: (_, c) =>
+      openLoads ? (
+        <button
+          type="button"
+          className="textButton rowOpen"
+          onClick={() => openLoads({ carrier: c.id })}
+          aria-label={`Open loads for ${c.name}`}
+        >
+          {c.name}
+        </button>
+      ) : (
+        c.name
+      ),
+  },
+  {
+    id: "loads",
+    header: "Loads",
+    accessor: "loads",
+    type: "number",
+    sortable: true,
+    descendingFirst: true,
+  },
+  {
+    id: "delivered",
+    header: "Delivered",
+    accessor: "delivered",
+    type: "number",
+    sortable: true,
+    descendingFirst: true,
+  },
+  {
+    id: "cancelled",
+    header: "Cancelled",
+    accessor: "cancelled",
+    type: "number",
+    sortable: true,
+    descendingFirst: true,
+    priority: "low",
+  },
+  {
+    id: "freight",
+    header: "Freight",
+    accessor: "freight_minor",
+    type: "money",
+    sortable: true,
+    descendingFirst: true,
+  },
+  {
+    id: "open",
+    header: "Open exceptions",
+    accessor: "open_exceptions",
+    type: "number",
+    sortable: true,
+    descendingFirst: true,
+  },
+];
+
+const exceptionColumns = (
+  onOpenExceptions?: () => void,
+): ColumnDefinition<ExceptionRow>[] => [
+  {
+    id: "type",
+    header: "Type",
+    accessor: (x) => typeLabels[x.type] ?? x.type,
+    render: (label) =>
+      onOpenExceptions ? (
+        <button
+          type="button"
+          className="textButton rowOpen"
+          onClick={onOpenExceptions}
+        >
+          {String(label)}
+        </button>
+      ) : (
+        String(label)
+      ),
+  },
+  { id: "opened", header: "Opened", accessor: "opened", type: "number" },
+  { id: "open_now", header: "Open now", accessor: "open_now", type: "number" },
+  { id: "overdue", header: "Overdue", accessor: "overdue", type: "number" },
+  {
+    id: "avg",
+    header: "Avg. hours to resolve",
+    accessor: "avg_hours",
+    type: "number",
+  },
 ];
 
 export function Reports({
@@ -181,12 +266,7 @@ export function Reports({
     [data, setData] = useState<Report | null>(null),
     [before, setBefore] = useState<Report | null>(null),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({
-      key: "loads",
-      desc: true,
-    }),
-    [shown, setShown] = useState(pageSize);
+    [error, setError] = useState("");
   const request = useRef(0);
   const query = new URLSearchParams({
     from,
@@ -231,24 +311,10 @@ export function Reports({
     : presets.find((n) => from === daysAgo(n - 1) && to === iso(new Date()));
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    const list = (data?.carriers ?? []).filter((c) =>
+    return (data?.carriers ?? []).filter((c) =>
       c.name.toLowerCase().includes(needle),
     );
-    const value = (c: Report["carriers"][number]) =>
-      sort.key === "name"
-        ? c.name.toLowerCase()
-        : sort.key === "freight"
-          ? Number(c.freight_minor)
-          : sort.key === "open"
-            ? c.open_exceptions
-            : c[sort.key];
-    return [...list].sort((a, b) => {
-      const x = value(a),
-        y = value(b);
-      const order = x < y ? -1 : x > y ? 1 : 0;
-      return (sort.desc ? -order : order) || a.name.localeCompare(b.name);
-    });
-  }, [data, search, sort]);
+  }, [data, search]);
   const openLoads = onOpenLoads;
   return (
     <section className="reports" aria-label="Reports">
@@ -267,7 +333,6 @@ export function Reports({
             setCustom(false);
             setFrom(daysAgo(Number(id) - 1));
             setTo(iso(new Date()));
-            setShown(pageSize);
           }}
         />
         {custom && (
@@ -299,7 +364,6 @@ export function Reports({
               value={carrier}
               onChange={(e) => {
                 setCarrier(e.target.value);
-                setShown(pageSize);
               }}
             >
               <option value="">All carriers</option>
@@ -434,12 +498,13 @@ export function Reports({
           {data.weekly.length > 0 && (
             <>
               <h3>Loads by pickup week</h3>
-              <ColumnChart
+              <BarList
                 label="Loads by pickup week"
-                columns={data.weekly.map((w) => ({
+                bars={data.weekly.map((w) => ({
                   key: w.week,
-                  value: w.loads,
                   label: w.week.slice(5),
+                  value: w.loads,
+                  display: `${w.loads} · ${formatMoney(w.freight_minor)}`,
                   description: `Week of ${w.week}: ${w.loads} loads, ${formatMoney(w.freight_minor)}`,
                 }))}
               />
@@ -447,158 +512,34 @@ export function Reports({
           )}
 
           <h3>By carrier</h3>
-          {/* Phones show cards without column headers, so sorting is a select. */}
-          <label className="reportSort">
-            <span className="srOnly">Sort carriers by</span>
-            <select
-              value={sort.key}
-              onChange={(e) => {
-                const col = sortColumns.find((c) => c.key === e.target.value)!;
-                setSort({ key: col.key, desc: col.numeric });
-              }}
-            >
-              {sortColumns.map((c) => (
-                <option key={c.key} value={c.key}>
-                  Sort: {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div
-            className="tableScroll reportCards"
-            role="region"
-            aria-label="By carrier"
-            tabIndex={0}
-          >
-            <table className="reportTable">
-              <thead>
-                <tr>
-                  {sortColumns.map((c) => (
-                    <th
-                      key={c.key}
-                      scope="col"
-                      aria-sort={
-                        sort.key === c.key
-                          ? sort.desc
-                            ? "descending"
-                            : "ascending"
-                          : "none"
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="sortButton"
-                        onClick={() =>
-                          setSort((old) => ({
-                            key: c.key,
-                            desc: old.key === c.key ? !old.desc : c.numeric,
-                          }))
-                        }
-                      >
-                        {c.label}
-                        {sort.key === c.key &&
-                          (sort.desc ? (
-                            <ArrowDownIcon size={11} aria-hidden="true" />
-                          ) : (
-                            <ArrowUpIcon size={11} aria-hidden="true" />
-                          ))}
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, shown).map((c) => (
-                  <tr key={c.id}>
-                    <th scope="row">
-                      {openLoads ? (
-                        <button
-                          type="button"
-                          className="textButton"
-                          onClick={() => openLoads({ carrier: c.id })}
-                          aria-label={`Open loads for ${c.name}`}
-                        >
-                          {c.name}
-                        </button>
-                      ) : (
-                        c.name
-                      )}
-                    </th>
-                    <td data-label="Loads">{c.loads}</td>
-                    <td data-label="Delivered">{c.delivered}</td>
-                    <td data-label="Cancelled">{c.cancelled}</td>
-                    <td data-label="Freight">{formatMoney(c.freight_minor)}</td>
-                    <td data-label="Open exceptions">{c.open_exceptions}</td>
-                  </tr>
-                ))}
-                {!rows.length && (
-                  <tr>
-                    <td colSpan={6}>
-                      {data.carriers.length
-                        ? "No carrier matches your search."
-                        : "No loads in this range. Try a longer range."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {rows.length > shown && (
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setShown((n) => n + pageSize)}
-            >
-              Show {Math.min(pageSize, rows.length - shown)} more
-            </button>
-          )}
+          <DataTable
+            caption="By carrier"
+            columns={carrierColumns(openLoads)}
+            data={rows}
+            getRowId={(c) => c.id}
+            defaultSort={{ column: "loads", descending: true }}
+            pageSize={pageSize}
+            pageKey={[search, from, to, carrier].join("|")}
+            empty={{
+              title: data.carriers.length
+                ? "No carrier matches your search."
+                : "No loads in this range.",
+              description: data.carriers.length
+                ? undefined
+                : "Try a longer range.",
+            }}
+          />
 
           {data.exceptions.by_type.length > 0 && (
             <>
               <h3>Exceptions</h3>
-              <div
-                className="tableScroll reportCards"
-                role="region"
-                aria-label="Exceptions"
-                tabIndex={0}
-              >
-                <table className="reportTable">
-                  <thead>
-                    <tr>
-                      <th scope="col">Type</th>
-                      <th scope="col">Opened</th>
-                      <th scope="col">Open now</th>
-                      <th scope="col">Overdue</th>
-                      <th scope="col">Avg. hours to resolve</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.exceptions.by_type.map((x) => (
-                      <tr key={x.type}>
-                        <th scope="row">
-                          {onOpenExceptions ? (
-                            <button
-                              type="button"
-                              className="textButton"
-                              onClick={onOpenExceptions}
-                            >
-                              {typeLabels[x.type] ?? x.type}
-                            </button>
-                          ) : (
-                            (typeLabels[x.type] ?? x.type)
-                          )}
-                        </th>
-                        <td data-label="Opened">{x.opened}</td>
-                        <td data-label="Open now">{x.open_now}</td>
-                        <td data-label="Overdue">{x.overdue}</td>
-                        <td data-label="Avg. hours to resolve">
-                          {x.avg_hours}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption="Exceptions"
+                columns={exceptionColumns(onOpenExceptions)}
+                data={data.exceptions.by_type}
+                getRowId={(x) => x.type}
+                empty={{ title: "No exceptions in this range." }}
+              />
             </>
           )}
 
