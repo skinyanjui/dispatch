@@ -14,6 +14,7 @@ import {
   seedProspects,
   type DemoProspects,
 } from "./demo-prospects";
+import { fleetRequest, seedVehicles, type DemoVehicle } from "./demo-fleet";
 import {
   stopTimeError,
   type StopEvent,
@@ -101,6 +102,7 @@ type State = {
   savedReplies: { id: string; title: string; body: string; shared: boolean }[];
   contacts: DirectoryEntry[];
   prospects?: DemoProspects;
+  vehicles?: DemoVehicle[];
   favorites: string[];
   notifications: NotificationLogEntry[];
   preferences: Record<OptionalKind, boolean>;
@@ -1214,6 +1216,25 @@ export function createDemoApi() {
       }
       return fail("NOT_FOUND", 404);
     }
+    if (p[0] === "fleet")
+      return fleetRequest(
+        (state.vehicles ||= seedVehicles([carrier, other])),
+        {
+          fail,
+          canView: state.viewer.role !== "driver",
+          carrier: setup,
+          activeLoads: (id, kind) =>
+            state.loads.filter(
+              (l) =>
+                l.assignment?.[
+                  kind === "driver" ? "driver_id" : "vehicle_id"
+                ] === id && l.stage !== "delivered",
+            ).length,
+        },
+        p,
+        data,
+        url,
+      );
     if (p[0] === "prospects")
       return prospectsRequest(
         (state.prospects ||= seedProspects()),
@@ -1734,7 +1755,28 @@ export function createDemoApi() {
             c.drivers.find(
               (d) => d.id === data.driverId && d.onboarding_status === "ready",
             ) || fail("DRIVER_CARRIER_MISMATCH");
-          l.assignment = { name: d.name, driver_id: d.id };
+          // undefined keeps the current vehicle; null clears it; a vehicle must
+          // be this carrier's and in service (as in src/lib/loads.ts).
+          let vehicle_id = l.assignment?.vehicle_id ?? null;
+          if (data.vehicleId !== undefined) {
+            const v = data.vehicleId
+              ? (state.vehicles ||= seedVehicles([carrier, other])).find(
+                  (x) =>
+                    x.id === data.vehicleId &&
+                    x.carrier_id === l.carrier_id &&
+                    x.status === "active",
+                )
+              : null;
+            if (data.vehicleId && !v) fail("VEHICLE_CARRIER_MISMATCH");
+            vehicle_id = v?.id ?? null;
+          }
+          l.assignment = {
+            name: d.name,
+            driver_id: d.id,
+            vehicle_id,
+            vehicle_label:
+              state.vehicles?.find((x) => x.id === vehicle_id)?.label ?? null,
+          };
           event(l, "load.assign");
         } else if (p[2] === "milestones") {
           if (!l.assignment) fail("ASSIGN_DRIVER_FIRST");
