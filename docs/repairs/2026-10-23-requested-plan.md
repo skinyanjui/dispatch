@@ -58,23 +58,23 @@ Preserve these implementations where sound.
 
 ### 2.1 Confirmed repair items
 
-| ID | Priority | Defect | Required result |
-|---|---|---|---|
-| R-01 | P1 | Reports drill-downs discard date filters | Open precisely the records represented by the selected metric |
-| R-02 | P1 | Carrier exception aggregates use a different scope from report totals | Reconcile all totals and subtotals |
-| R-03 | P1 | Failed report refreshes retain old data without a persistent stale-state distinction | Never misrepresent old results as current |
-| R-04 | P1 | Missing-accepted-POD reporting can count an accepted historical version | Use the current effective document version |
-| R-05 | P1 | Inbox can display “Message sent” when an email is only recorded, queued, or suppressed | Show the actual processing state |
-| R-06 | P1 | SMS action acknowledgment does not communicate the final recorded provider outcome | Distinguish accepted, failed, and unknown outcomes |
-| R-07 | P1 | The missing-POD shortcut uses a general paperwork filter | Open exactly the missing-POD population |
-| R-08 | P2 | CSV export caps results at 5,000 without visible completeness feedback | Provide complete export or explicit partial-export handling |
-| R-09 | P2 | Billing loads only the latest 100 records without full pagination | Make every authorized eligible load discoverable |
-| R-10 | P2 | Exceptions returns a truncated 100-record set without continuation | Implement server-side pagination |
-| R-11 | P2 | Report navigation permissions do not entirely match API membership requirements | Align navigation and server authorization |
-| R-12 | P2 | Current-state receivables and period-based reporting are not clearly distinguished | Define the accounting basis of every financial metric |
-| R-13 | P2 | Separate report queries do not guarantee a common read snapshot | Prevent inconsistent point-in-time aggregates |
-| R-14 | P2 | The 15-minute scheduled job is implemented but not established by the daily Vercel cron | Enable and verify an appropriate sub-hourly trigger |
-| R-15 | P3 | PostgreSQL connection configuration emits SSL-mode warnings | Correct and validate connection security settings |
+| ID   | Priority | Defect                                                                                  | Required result                                               |
+| ---- | -------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| R-01 | P1       | Reports drill-downs discard date filters                                                | Open precisely the records represented by the selected metric |
+| R-02 | P1       | Carrier exception aggregates use a different scope from report totals                   | Reconcile all totals and subtotals                            |
+| R-03 | P1       | Failed report refreshes retain old data without a persistent stale-state distinction    | Never misrepresent old results as current                     |
+| R-04 | P1       | Missing-accepted-POD reporting can count an accepted historical version                 | Use the current effective document version                    |
+| R-05 | P1       | Inbox can display “Message sent” when an email is only recorded, queued, or suppressed  | Show the actual processing state                              |
+| R-06 | P1       | SMS action acknowledgment does not communicate the final recorded provider outcome      | Distinguish accepted, failed, and unknown outcomes            |
+| R-07 | P1       | The missing-POD shortcut uses a general paperwork filter                                | Open exactly the missing-POD population                       |
+| R-08 | P2       | CSV export caps results at 5,000 without visible completeness feedback                  | Provide complete export or explicit partial-export handling   |
+| R-09 | P2       | Billing loads only the latest 100 records without full pagination                       | Make every authorized eligible load discoverable              |
+| R-10 | P2       | Exceptions returns a truncated 100-record set without continuation                      | Implement server-side pagination                              |
+| R-11 | P2       | Report navigation permissions do not entirely match API membership requirements         | Align navigation and server authorization                     |
+| R-12 | P2       | Current-state receivables and period-based reporting are not clearly distinguished      | Define the accounting basis of every financial metric         |
+| R-13 | P2       | Separate report queries do not guarantee a common read snapshot                         | Prevent inconsistent point-in-time aggregates                 |
+| R-14 | P2       | The 15-minute scheduled job is implemented but not established by the daily Vercel cron | Enable and verify an appropriate sub-hourly trigger           |
+| R-15 | P3       | PostgreSQL connection configuration emits SSL-mode warnings                             | Correct and validate connection security settings             |
 
 These are based on the inspected application and deployed-source implementation, not on a complete manual click-through of every authenticated page.
 
@@ -101,17 +101,17 @@ Do not close these items based on reading source code alone.
 
 Preserve a modular monolith with the following responsibilities.
 
-| Layer | Responsibility | Repair requirement |
-|---|---|---|
-| Presentation | Pages, record inspectors, navigation, forms | Consistent actions and states |
-| Client state | Drafts, filters, selection, pending requests | Context preservation, request cancellation, synchronization |
-| API contracts | Input/output validation | Typed contracts, stable errors, predictable responses |
-| Authorization | Organization, carrier, role, record scope | Server-side, least-privilege enforcement |
-| Domain services | Load, document, billing, messaging rules | One authoritative implementation per business rule |
-| Data access | PostgreSQL transactions, queries, locking | Consistent records, constraints, efficient pagination |
-| Domain events | Audit, notifications, integrations | Durable events associated with committed transactions |
-| Integrations | Email, SMS, AI, storage, provider observations | Observable delivery and failure handling |
-| Operations | Scheduler, monitoring, support, recovery | Retries, reconciliation, alerts, health and runbooks |
+| Layer           | Responsibility                                 | Repair requirement                                          |
+| --------------- | ---------------------------------------------- | ----------------------------------------------------------- |
+| Presentation    | Pages, record inspectors, navigation, forms    | Consistent actions and states                               |
+| Client state    | Drafts, filters, selection, pending requests   | Context preservation, request cancellation, synchronization |
+| API contracts   | Input/output validation                        | Typed contracts, stable errors, predictable responses       |
+| Authorization   | Organization, carrier, role, record scope      | Server-side, least-privilege enforcement                    |
+| Domain services | Load, document, billing, messaging rules       | One authoritative implementation per business rule          |
+| Data access     | PostgreSQL transactions, queries, locking      | Consistent records, constraints, efficient pagination       |
+| Domain events   | Audit, notifications, integrations             | Durable events associated with committed transactions       |
+| Integrations    | Email, SMS, AI, storage, provider observations | Observable delivery and failure handling                    |
+| Operations      | Scheduler, monitoring, support, recovery       | Retries, reconciliation, alerts, health and runbooks        |
 
 Shared UI components stay in `src/components/ui`. Domain-specific code stays in its corresponding component and `src/lib` modules.
 
@@ -179,15 +179,15 @@ Adopt a typed action response pattern for consequential operations.
 
 Required information, as applicable:
 
-| Property | Purpose |
-|---|---|
-| `id` | Stable affected record ID |
-| `status` | Actual resulting domain state |
-| `version` | Updated optimistic-concurrency version |
-| `operationId` | Traceable mutation identifier |
+| Property          | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| `id`              | Stable affected record ID                            |
+| `status`          | Actual resulting domain state                        |
+| `version`         | Updated optimistic-concurrency version               |
+| `operationId`     | Traceable mutation identifier                        |
 | `processingState` | Whether downstream processing is pending or complete |
-| `warnings` | Nonblocking issues requiring attention |
-| `requestId` | Support and diagnostic correlation |
+| `warnings`        | Nonblocking issues requiring attention               |
+| `requestId`       | Support and diagnostic correlation                   |
 
 Not every endpoint needs every field. Use domain-specific DTOs and a shared error convention.
 
@@ -197,17 +197,17 @@ Never return a success message that implies external completion when the API onl
 
 Implement consistent error codes and recovery behavior:
 
-| Error condition | Expected client behavior |
-|---|---|
-| Invalid input | Field-level explanation and preserved form entries |
-| Authentication expired | Reauthenticate while preserving safe return context |
-| Permission denied | Explain lack of permission without disclosing unauthorized records |
-| Record not found | Clear unavailable state and return navigation |
-| Version conflict | Refresh the affected record and reconcile unsaved edits |
-| Unavailable provider | Explain what was saved and what was not delivered |
-| Network failure | Retry safely without duplicating a completed operation |
-| Rate limit | Respect `Retry-After` where supplied; avoid repeated automatic submissions |
-| Unknown operation result | Reconcile by idempotency key or operation ID before retrying |
+| Error condition          | Expected client behavior                                                   |
+| ------------------------ | -------------------------------------------------------------------------- |
+| Invalid input            | Field-level explanation and preserved form entries                         |
+| Authentication expired   | Reauthenticate while preserving safe return context                        |
+| Permission denied        | Explain lack of permission without disclosing unauthorized records         |
+| Record not found         | Clear unavailable state and return navigation                              |
+| Version conflict         | Refresh the affected record and reconcile unsaved edits                    |
+| Unavailable provider     | Explain what was saved and what was not delivered                          |
+| Network failure          | Retry safely without duplicating a completed operation                     |
+| Rate limit               | Respect `Retry-After` where supplied; avoid repeated automatic submissions |
+| Unknown operation result | Reconcile by idempotency key or operation ID before retrying               |
 
 Review `src/lib/client-api.ts` and `src/app/api/[...path]/route.ts`.
 
@@ -254,20 +254,20 @@ Every authorization decision is enforced server-side. Each mutation has a predic
 
 Create a reporting specification for each metric.
 
-| Metric | Canonical definition |
-|---|---|
-| Loads | Noncancelled loads with first pickup in the selected UTC range |
-| Cancelled | Loads cancelled within the defined pickup cohort; explicitly separate from noncancelled total |
-| Freight value | Sum of eligible agreed load rates, in minor units |
-| Pickups on time | Latest effective recorded pickup arrivals within appointment windows |
-| Deliveries on time | Latest effective recorded delivery arrivals within appointment windows |
-| Not reported | Eligible past-due stops without an effective arrival report |
-| Open exceptions | Unresolved exceptions associated with the specified load cohort, as labeled |
-| Missing accepted POD | Delivered loads without a currently accepted effective POD version |
-| Dispatch invoices issued | Issued invoices within the specified issue-date range |
-| Outstanding dispatch fees | Unpaid issued invoice balances, with an explicitly labeled date/cohort basis |
-| Carrier freight billed | Submitted carrier billing packets under the defined load scope |
-| Carrier freight outstanding | Reported unpaid packet amounts, clearly distinguished from Relay-held money |
+| Metric                      | Canonical definition                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------- |
+| Loads                       | Noncancelled loads with first pickup in the selected UTC range                                |
+| Cancelled                   | Loads cancelled within the defined pickup cohort; explicitly separate from noncancelled total |
+| Freight value               | Sum of eligible agreed load rates, in minor units                                             |
+| Pickups on time             | Latest effective recorded pickup arrivals within appointment windows                          |
+| Deliveries on time          | Latest effective recorded delivery arrivals within appointment windows                        |
+| Not reported                | Eligible past-due stops without an effective arrival report                                   |
+| Open exceptions             | Unresolved exceptions associated with the specified load cohort, as labeled                   |
+| Missing accepted POD        | Delivered loads without a currently accepted effective POD version                            |
+| Dispatch invoices issued    | Issued invoices within the specified issue-date range                                         |
+| Outstanding dispatch fees   | Unpaid issued invoice balances, with an explicitly labeled date/cohort basis                  |
+| Carrier freight billed      | Submitted carrier billing packets under the defined load scope                                |
+| Carrier freight outstanding | Reported unpaid packet amounts, clearly distinguished from Relay-held money                   |
 
 For multi-stop loads, distinguish stop-level rates from load-level rates and report their denominators.
 
@@ -587,23 +587,23 @@ Preserve the existing Relay visual language, the shared design system, and compa
 
 ### Page-level repair matrix
 
-| Page | Required UX outcome |
-|---|---|
-| Loads | Clear operational priorities, stage controls, responsive list/board/calendar, and direct record actions |
-| Exceptions | Owner, severity, deadline, next action, and resolution readily accessible |
-| Inbox | Delivery-aware message states, stable conversation selection, reliable compose and reply |
-| Contacts | Contextual communication actions with correct channel availability |
-| Carriers | Visible authorization/compliance status and direct paths to required actions |
-| Fleet | Driver/vehicle status and eligible assignments immediately understandable |
-| Prospects | Clear pipeline, owner, next follow-up, and conversion flow |
-| Assistant | Focused chat, source records, provider status, and transparent limitations |
-| Documents | Templates, drafts, and load paperwork clearly distinguished |
-| Billing | Separate carrier and dispatch billing, actionable balances, consistent payment states |
-| Reports | Filterable, reconcilable metrics with exact drill-downs |
-| Notifications | Distinct notification status, preferences, retries, and delivery history |
-| Account | Clear profile/security settings and recovery |
-| Organization | Role permissions, memberships, invitations, and destructive confirmations |
-| Audit log | Searchable events, useful filters, and operational failure visibility |
+| Page          | Required UX outcome                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------- |
+| Loads         | Clear operational priorities, stage controls, responsive list/board/calendar, and direct record actions |
+| Exceptions    | Owner, severity, deadline, next action, and resolution readily accessible                               |
+| Inbox         | Delivery-aware message states, stable conversation selection, reliable compose and reply                |
+| Contacts      | Contextual communication actions with correct channel availability                                      |
+| Carriers      | Visible authorization/compliance status and direct paths to required actions                            |
+| Fleet         | Driver/vehicle status and eligible assignments immediately understandable                               |
+| Prospects     | Clear pipeline, owner, next follow-up, and conversion flow                                              |
+| Assistant     | Focused chat, source records, provider status, and transparent limitations                              |
+| Documents     | Templates, drafts, and load paperwork clearly distinguished                                             |
+| Billing       | Separate carrier and dispatch billing, actionable balances, consistent payment states                   |
+| Reports       | Filterable, reconcilable metrics with exact drill-downs                                                 |
+| Notifications | Distinct notification status, preferences, retries, and delivery history                                |
+| Account       | Clear profile/security settings and recovery                                                            |
+| Organization  | Role permissions, memberships, invitations, and destructive confirmations                               |
+| Audit log     | Searchable events, useful filters, and operational failure visibility                                   |
 
 Public authentication, onboarding, marketing, pricing, and legal pages also require validation of their navigation, forms, accessible states, claims, and actual availability of advertised capabilities.
 
@@ -701,16 +701,16 @@ An authorized operator can identify a failure, understand its effects, and recov
 
 Prefer code/query repairs where no schema change is required.
 
-| Change | Expected data impact |
-|---|---|
-| Correct report scopes and filters | Usually query/API change; add indexes if query plans require |
-| Latest-effective document readiness | Query/domain correction; potential indexes |
-| Accurate message delivery states | Reuse existing delivery tables first; migrate only for missing metadata/states |
-| Pagination | Stable ordering, indexes, and opaque cursors |
-| Action idempotency | Reuse existing keys and unique constraints; add storage only where missing |
-| Session management | Extend existing session model if required |
-| Observability | Operational metadata, not unnecessary duplicated business records |
-| External provider adapters | Provider IDs, attempt records, webhook deduplication, and consent records where needed |
+| Change                              | Expected data impact                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| Correct report scopes and filters   | Usually query/API change; add indexes if query plans require                           |
+| Latest-effective document readiness | Query/domain correction; potential indexes                                             |
+| Accurate message delivery states    | Reuse existing delivery tables first; migrate only for missing metadata/states         |
+| Pagination                          | Stable ordering, indexes, and opaque cursors                                           |
+| Action idempotency                  | Reuse existing keys and unique constraints; add storage only where missing             |
+| Session management                  | Extend existing session model if required                                              |
+| Observability                       | Operational metadata, not unnecessary duplicated business records                      |
+| External provider adapters          | Provider IDs, attempt records, webhook deduplication, and consent records where needed |
 
 Any required schema migration follows:
 
@@ -798,30 +798,30 @@ Do not assume historical successful tests still pass after these changes. Re-run
 
 Each work package should be independently testable and include affected UI, API, domain, data, and documentation changes.
 
-| Order | Package | Priority | Depends on |
-|---|---|---|---|
-| 01 | Release baseline and full action inventory | P0 | — |
-| 02 | Shared API error/action contracts | P1 | 01 |
-| 03 | Effective permissions and role reconciliation | P1 | 01 |
-| 04 | Canonical reporting definitions | P1 | 02–03 |
-| 05 | Current document-version readiness | P1 | 04 |
-| 06 | Reporting scope and aggregate reconciliation | P1 | 04–05 |
-| 07 | Date-aware Loads and Exceptions APIs | P1 | 04 |
-| 08 | Exact metric drill-down navigation | P1 | 06–07 |
-| 09 | Report stale/error-state repair | P1 | 02, 06 |
-| 10 | Complete and auditable CSV exports | P2 | 04, 07 |
-| 11 | Accurate message delivery states | P1 | 02 |
-| 12 | Provider readiness, retries, and reconciliation | P1 | 11 |
-| 13 | Communication workflow browser tests | P1 | 11–12 |
-| 14 | Billing and Exceptions server-side pagination | P2 | 02 |
-| 15 | Dispatch, carrier, fleet, and document flow reconciliation | P1 | 03, 05 |
-| 16 | Billing invariants and performance | P1 | 05, 14–15 |
-| 17 | Prospects and CRM conversion verification | P2 | 03, 15 |
-| 18 | Assistant and administration verification | P2 | 03 |
-| 19 | Shared navigation, UX states, and accessibility | P2 | 08–18 |
-| 20 | Scheduler/provider reliability and observability | P1 | 11–18 |
-| 21 | Security, backup, restore, and operational runbooks | P1 | 02–20 |
-| 22 | Full cross-module regression and release validation | P0 gate | All |
+| Order | Package                                                    | Priority | Depends on |
+| ----- | ---------------------------------------------------------- | -------- | ---------- |
+| 01    | Release baseline and full action inventory                 | P0       | —          |
+| 02    | Shared API error/action contracts                          | P1       | 01         |
+| 03    | Effective permissions and role reconciliation              | P1       | 01         |
+| 04    | Canonical reporting definitions                            | P1       | 02–03      |
+| 05    | Current document-version readiness                         | P1       | 04         |
+| 06    | Reporting scope and aggregate reconciliation               | P1       | 04–05      |
+| 07    | Date-aware Loads and Exceptions APIs                       | P1       | 04         |
+| 08    | Exact metric drill-down navigation                         | P1       | 06–07      |
+| 09    | Report stale/error-state repair                            | P1       | 02, 06     |
+| 10    | Complete and auditable CSV exports                         | P2       | 04, 07     |
+| 11    | Accurate message delivery states                           | P1       | 02         |
+| 12    | Provider readiness, retries, and reconciliation            | P1       | 11         |
+| 13    | Communication workflow browser tests                       | P1       | 11–12      |
+| 14    | Billing and Exceptions server-side pagination              | P2       | 02         |
+| 15    | Dispatch, carrier, fleet, and document flow reconciliation | P1       | 03, 05     |
+| 16    | Billing invariants and performance                         | P1       | 05, 14–15  |
+| 17    | Prospects and CRM conversion verification                  | P2       | 03, 15     |
+| 18    | Assistant and administration verification                  | P2       | 03         |
+| 19    | Shared navigation, UX states, and accessibility            | P2       | 08–18      |
+| 20    | Scheduler/provider reliability and observability           | P1       | 11–18      |
+| 21    | Security, backup, restore, and operational runbooks        | P1       | 02–20      |
+| 22    | Full cross-module regression and release validation        | P0 gate  | All        |
 
 Do not combine unrelated packages into one oversized change. Validate each package before building dependent work on top of it.
 

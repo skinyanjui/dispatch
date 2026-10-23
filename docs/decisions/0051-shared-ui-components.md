@@ -12,15 +12,15 @@ Pages built their own tab strips, filter chips, option pickers and summary tiles
 
 Pages use components from `src/components/ui`, styled once in `src/app/ui.css` (loaded last) on the control scale of ADR 0044:
 
-| Component | Use | Pages |
-| --- | --- | --- |
-| `Tabs`, `TabPanel` | Switch the panel below (WAI-ARIA tabs: one tab stop, arrow keys, Home, End) | Account, Organization, Documents, Billing, load record, marketing preview |
-| `ToggleGroup` variant `chips` | Filters with a count | Loads attention, Billing invoice and freight filters, Documents drafts, Prospects follow-ups |
-| `ToggleGroup` variant `segmented` | Pick one option | Loads layout, Reports date range, Inbox send-via |
-| `ToggleGroup` variant `folders` | The Inbox rail where the sidebar does not list folders | Inbox |
-| `StatTiles`, `StatTile` | Summary figures, optionally a filter (`pressed`) or a link (`actionLabel`) | Billing, Reports (KPIs, pipeline, billing), Carriers, Exceptions, Fleet |
-| `BarList` (replaced `ColumnChart`, ADR 0052) | Values compared as bars, a native `meter` per row | Reports |
-| `.countBadge` | A count beside a tab, heading or menu label | everywhere |
+| Component                                    | Use                                                                         | Pages                                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `Tabs`, `TabPanel`                           | Switch the panel below (WAI-ARIA tabs: one tab stop, arrow keys, Home, End) | Account, Organization, Documents, Billing, load record, marketing preview                    |
+| `ToggleGroup` variant `chips`                | Filters with a count                                                        | Loads attention, Billing invoice and freight filters, Documents drafts, Prospects follow-ups |
+| `ToggleGroup` variant `segmented`            | Pick one option                                                             | Loads layout, Reports date range, Inbox send-via                                             |
+| `ToggleGroup` variant `folders`              | The Inbox rail where the sidebar does not list folders                      | Inbox                                                                                        |
+| `StatTiles`, `StatTile`                      | Summary figures, optionally a filter (`pressed`) or a link (`actionLabel`)  | Billing, Reports (KPIs, pipeline, billing), Carriers, Exceptions, Fleet                      |
+| `BarList` (replaced `ColumnChart`, ADR 0052) | Values compared as bars, a native `meter` per row                           | Reports                                                                                      |
+| `.countBadge`                                | A count beside a tab, heading or menu label                                 | everywhere                                                                                   |
 
 Rules that go with them:
 
@@ -34,6 +34,7 @@ Rules that go with them:
 Presentation and markup only: no API, schema or permission change. About 100 old selectors were removed (`orgTab`, `billingTab`, `attentionChip`, `inboxTab`, `reportTile`, `carrierStat`, `excTile`, `fleetTile`, `pipelineStep`, `weekChart`). Summary tiles now read label first everywhere. The load record's tabs use arrow keys instead of Tab, as the tabs pattern requires.
 
 Also fixed in this pass:
+
 - The load record's left column was sized to its widest child, so the driver row and the next-step button ran out of the panel. The next-step button now names the stage only once a driver is assigned.
 - The Reports custom range kept the row at control height.
 

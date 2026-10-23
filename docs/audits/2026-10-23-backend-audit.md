@@ -22,7 +22,7 @@ Earlier this session (same theme): alerts, key rotation, role split, required MF
 
 ## Still missing (not fixed here, with reasons)
 
-- **Validation runs before authorization** on some writes, so an unauthorized caller can learn payload field names from validation errors. Low value to an attacker; a fix touches every handler and belongs in the central authorization layer (threat assessment item 4).
+- **Validation ran before authorization** on some writes (document templates, drafts, prospects answered a malformed body with field errors to carrier managers and drivers). Fixed by ADR 0059: every API family now has a declared audience, checked before the body is read; outsiders get 404. The families marked `any` still rely on their handlers.
 - **Session UI:** added on Account > Security (list, sign out one, sign out everywhere else), browser-tested.
 - **Outbox has no consumer** (ADR 0049); rows accumulate. Nothing reads them, so a backlog count would be meaningless until an integration exists.
 - **Retention and deletion policy** for documents, messages and audit logs needs legal review.

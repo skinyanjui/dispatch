@@ -98,6 +98,7 @@ import { carrierSummaries } from "@/lib/carrier-summary";
 import { loadsCsv, reportOverview } from "@/lib/reports";
 import { receiveEmail, receiveSms } from "@/lib/inbound";
 import { appOrigin } from "@/lib/notifications";
+import { enforceAudience } from "@/lib/policy";
 import { attachmentContent, uploadAttachment } from "@/lib/message-attachments";
 import {
   accountSummary,
@@ -521,6 +522,7 @@ async function handle(req: NextRequest) {
     const mustEnrollMfa = await mfaRequired(user.id);
     if (mustEnrollMfa && !["logout", "me", "account"].includes(path[0]))
       throw new HttpError(403, "MFA_REQUIRED");
+    await enforceAudience(user.id, path[0]);
     if (path[0] === "fleet") {
       if (path.length === 1 && req.method === "GET")
         return NextResponse.json(

@@ -128,7 +128,7 @@ Rating is residual risk after current controls (L low, M medium, H high).
 
 ### Progress since this assessment
 
-- Item 4 (partly): `tests/integration/public-surface.test.ts` fails if any API family not on an explicit public list answers a caller without a session. It does not yet test roles or foreign IDs per endpoint.
+- Item 4 (partly): `src/lib/policy.ts` declares an audience per API family, enforced before any handler (ADR 0059) and tested for coverage and for outsider 404s; `tests/integration/public-surface.test.ts` fails if any API family not on an explicit public list answers a caller without a session. It does not yet test roles or foreign IDs per endpoint.
 - Item 9: Dependabot is enabled for npm and Actions (`.github/dependabot.yml`); Actions are not yet pinned by commit.
 - Item 10 (partly): production builds print named warnings for missing `RELAY_DATA_KEY`, `CRON_SECRET`, `APP_ORIGIN` and malware scanning, and fail when `RELAY_STRICT_CONFIG=true`; the operations status lists the same warnings. It is opt-in so an existing deployment is not broken by an upgrade.
 - The stray `undefined/` screenshots were removed.

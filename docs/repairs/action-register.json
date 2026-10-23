@@ -6144,9 +6144,7 @@
       "file": "src/app/api/[...path]/route.ts",
       "line": 213,
       "domainFunction": "reader.cancel",
-      "conditions": [
-        "size > limit"
-      ],
+      "conditions": ["size > limit"],
       "contract": "reader.cancel()"
     },
     {
@@ -6170,9 +6168,7 @@
       "file": "src/app/api/[...path]/route.ts",
       "line": 280,
       "domainFunction": "beginOidc",
-      "conditions": [
-        "path[3] === \"start\" && req.method === \"GET\""
-      ],
+      "conditions": ["path[3] === \"start\" && req.method === \"GET\""],
       "contract": "beginOidc(provider, remember, origin)"
     },
     {
@@ -6247,9 +6243,7 @@
       "file": "src/app/api/[...path]/route.ts",
       "line": 400,
       "domainFunction": "authRoutes",
-      "conditions": [
-        "path[0] === \"auth\""
-      ],
+      "conditions": ["path[0] === \"auth\""],
       "contract": "authRoutes(req, path)"
     },
     {
@@ -6373,9 +6367,7 @@
       "file": "src/app/api/[...path]/route.ts",
       "line": 501,
       "domainFunction": "consumeAttempt",
-      "conditions": [
-        "req.method !== \"GET\" && req.method !== \"HEAD\""
-      ],
+      "conditions": ["req.method !== \"GET\" && req.method !== \"HEAD\""],
       "contract": "consumeAttempt(\"write:\" + user.id, 240)"
     },
     {
@@ -7711,10 +7703,7 @@
       "file": "src/app/api/[...path]/route.ts",
       "line": 1332,
       "domainFunction": "auditDenied(actor, req.nextUrl.pathname).catch",
-      "conditions": [
-        "e instanceof HttpError",
-        "e.status === 404 && actor"
-      ],
+      "conditions": ["e instanceof HttpError", "e.status === 404 && actor"],
       "contract": "auditDenied(actor, req.nextUrl.pathname).catch(() => console.error(\"audit.denied.unavailable\"), )"
     },
     {
