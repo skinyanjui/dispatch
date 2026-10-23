@@ -32,6 +32,10 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -eu
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Set the Actions secret CRON_SECRET to the app's cron secret before relying on reminders. No job was called."
+            exit 1
+          fi
           code=$(curl -sS --max-time 90 -o response.json -w '%{http_code}' \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             "${RELAY_JOBS_URL}/api/jobs/notifications?scope=tick")

@@ -9,13 +9,13 @@ jobs:
         env:
           POSTGRES_USER: relay
           POSTGRES_PASSWORD: relay_local
-          POSTGRES_DB: relay
+          POSTGRES_DB: relay_qa
         ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U relay"
           --health-interval 2s --health-timeout 5s --health-retries 20
     env:
-      DATABASE_URL: postgresql://relay:relay_local@127.0.0.1:5432/relay
+      DATABASE_URL: postgresql://relay:relay_local@127.0.0.1:5432/relay_qa
       SEED_PASSWORD: FictionalCIOnly2026
       COOKIE_SECURE: 'false'
     steps:
@@ -29,6 +29,9 @@ jobs:
       - run: echo "RELAY_DATA_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: npm run db:migrate && npm run db:migrate && npm run db:seed
       - run: npm run lint && npm run typecheck && npm test
+      - run: npm run verify:restore
+        env:
+          RELAY_TEST_PG_CONTAINER: ${{ job.services.postgres.id }}
       # The upload test fakes a bucket host; the CSP must allow it.
       - run: VERCEL_ENV=production RELAY_CSP_CONNECT_EXTRA=https://bucket.example.test npm run build:vercel
       - run: npx playwright install --with-deps chromium
