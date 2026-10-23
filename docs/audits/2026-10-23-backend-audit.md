@@ -23,7 +23,7 @@ Earlier this session (same theme): alerts, key rotation, role split, required MF
 ## Still missing (not fixed here, with reasons)
 
 - **Validation runs before authorization** on some writes, so an unauthorized caller can learn payload field names from validation errors. Low value to an attacker; a fix touches every handler and belongs in the central authorization layer (threat assessment item 4).
-- **Session UI:** the session list and revoke endpoints have no screen yet.
+- **Session UI:** added on Account > Security (list, sign out one, sign out everywhere else), browser-tested.
 - **Outbox has no consumer** (ADR 0049); rows accumulate. Nothing reads them, so a backlog count would be meaningless until an integration exists.
 - **Retention and deletion policy** for documents, messages and audit logs needs legal review.
 - **Live-provider verification, tracking observations, metrics and tracing** are unchanged; alerting now covers failures but there is no latency or error-rate metric.

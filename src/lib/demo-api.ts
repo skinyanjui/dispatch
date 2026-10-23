@@ -1440,6 +1440,19 @@ export function createDemoApi() {
     if (p[0] === "message-attachments" || p[0] === "message-deliveries")
       fail("DEMO_UNAVAILABLE", 409);
     if (p[0] === "account") {
+      // The demo has one browser-only session.
+      if (!body && p[1] === "sessions")
+        return {
+          sessions: [
+            {
+              id: "00000000-0000-4000-8000-000000000001",
+              created_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 12 * 3600000).toISOString(),
+              remember: false,
+              current: true,
+            },
+          ],
+        };
       if (!body && p.length === 1)
         return {
           name: state.viewer.name,

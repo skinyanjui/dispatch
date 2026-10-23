@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ShieldCheckIcon } from "@phosphor-icons/react";
 import { ApiError, describe, useApi } from "@/lib/client-api";
+import { AccountSessions } from "@/components/account-sessions";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 
@@ -253,174 +254,181 @@ export function AccountSettings({
                 </article>
               )}
               {tab === "security" && (
-                <article className="opsCard">
-                  <div className="opsCardHeading">
-                    <ShieldCheckIcon size={16} aria-hidden="true" />
-                    <h3>Two-step verification</h3>
-                    <span
-                      className={
-                        "opsPill " + (account.mfa_enabled ? "good" : "")
-                      }
-                    >
-                      {account.mfa_enabled ? "On" : "Off"}
-                    </span>
-                  </div>
-                  {codes ? (
-                    <>
-                      <p className="opsMeta">
-                        Save these recovery codes somewhere safe. Each works
-                        once if you lose your authenticator. They won&apos;t be
-                        shown again.
-                      </p>
-                      <ul className="recoveryCodes" aria-label="Recovery codes">
-                        {codes.map((c) => (
-                          <li key={c}>
-                            <code>{c}</code>
-                          </li>
-                        ))}
-                      </ul>
-                      <button
-                        className="primary"
-                        onClick={() => setCodes(null)}
-                      >
-                        I saved my recovery codes
-                      </button>
-                    </>
-                  ) : account.mfa_enabled ? (
-                    <>
-                      <p className="opsMeta">
-                        Sign-in asks for a code from your authenticator app.{" "}
-                        {account.recovery_codes_remaining} recovery codes
-                        remain.
-                      </p>
-                      {disabling ? (
-                        <form
-                          className="opsForm"
-                          onSubmit={async (e) => {
-                            e.preventDefault();
-                            const f = new FormData(e.currentTarget);
-                            const ok = await act(async () => {
-                              await api("account/mfa/disable", {
-                                password: String(f.get("password")),
-                                code: String(f.get("code")).trim(),
-                              });
-                              return "Two-step verification turned off.";
-                            });
-                            if (ok) setDisabling(false);
-                          }}
-                        >
-                          <label>
-                            Password
-                            <input
-                              name="password"
-                              type="password"
-                              autoComplete="current-password"
-                              required
-                            />
-                          </label>
-                          <label>
-                            Authentication or recovery code
-                            <input
-                              name="code"
-                              autoComplete="one-time-code"
-                              required
-                              maxLength={40}
-                            />
-                          </label>
-                          <div className="opsActions">
-                            <button className="primary" disabled={busy}>
-                              Turn off
-                            </button>
-                            <button
-                              type="button"
-                              className="textButton"
-                              onClick={() => setDisabling(false)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <button
-                          className="textButton"
-                          onClick={() => setDisabling(true)}
-                        >
-                          Turn off two-step verification
-                        </button>
-                      )}
-                    </>
-                  ) : !account.mfa_available ? (
-                    <p className="opsMeta">{describe("MFA_UNAVAILABLE")}</p>
-                  ) : setup ? (
-                    <form
-                      className="opsForm"
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        const code = String(
-                          new FormData(e.currentTarget).get("code"),
-                        ).trim();
-                        await act(async () => {
-                          const r = await api<{ recovery_codes: string[] }>(
-                            "account/mfa/enable",
-                            { code },
-                          );
-                          setSetup(null);
-                          setCodes(r.recovery_codes);
-                          onMfaEnabled?.();
-                          return "Two-step verification is on.";
-                        });
-                      }}
-                    >
-                      <p className="opsMeta">
-                        Add Relay to an authenticator app with this setup key,
-                        or{" "}
-                        <a href={setup.otpauth_uri}>open it on this device</a>.
-                      </p>
-                      <p>
-                        <code className="mfaSecret" aria-label="Setup key">
-                          {setup.secret.match(/.{1,4}/g)?.join(" ")}
-                        </code>
-                      </p>
-                      <label>
-                        6-digit code from the app
-                        <input
-                          name="code"
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          pattern="\d{6}"
-                          required
-                          maxLength={6}
-                        />
-                      </label>
-                      <button className="primary" disabled={busy}>
-                        Turn on
-                      </button>
-                    </form>
-                  ) : (
-                    <>
-                      <p className="opsMeta">
-                        Protect your account with a code from an authenticator
-                        app at sign-in.
-                      </p>
-                      <button
-                        className="secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          void act(async () => {
-                            setSetup(
-                              await api<{
-                                secret: string;
-                                otpauth_uri: string;
-                              }>("account/mfa/setup", {}),
-                            );
-                          })
+                <>
+                  <article className="opsCard">
+                    <div className="opsCardHeading">
+                      <ShieldCheckIcon size={16} aria-hidden="true" />
+                      <h3>Two-step verification</h3>
+                      <span
+                        className={
+                          "opsPill " + (account.mfa_enabled ? "good" : "")
                         }
                       >
-                        Set up two-step verification
-                      </button>
-                    </>
-                  )}
-                </article>
+                        {account.mfa_enabled ? "On" : "Off"}
+                      </span>
+                    </div>
+                    {codes ? (
+                      <>
+                        <p className="opsMeta">
+                          Save these recovery codes somewhere safe. Each works
+                          once if you lose your authenticator. They won&apos;t
+                          be shown again.
+                        </p>
+                        <ul
+                          className="recoveryCodes"
+                          aria-label="Recovery codes"
+                        >
+                          {codes.map((c) => (
+                            <li key={c}>
+                              <code>{c}</code>
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          className="primary"
+                          onClick={() => setCodes(null)}
+                        >
+                          I saved my recovery codes
+                        </button>
+                      </>
+                    ) : account.mfa_enabled ? (
+                      <>
+                        <p className="opsMeta">
+                          Sign-in asks for a code from your authenticator app.{" "}
+                          {account.recovery_codes_remaining} recovery codes
+                          remain.
+                        </p>
+                        {disabling ? (
+                          <form
+                            className="opsForm"
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              const f = new FormData(e.currentTarget);
+                              const ok = await act(async () => {
+                                await api("account/mfa/disable", {
+                                  password: String(f.get("password")),
+                                  code: String(f.get("code")).trim(),
+                                });
+                                return "Two-step verification turned off.";
+                              });
+                              if (ok) setDisabling(false);
+                            }}
+                          >
+                            <label>
+                              Password
+                              <input
+                                name="password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                              />
+                            </label>
+                            <label>
+                              Authentication or recovery code
+                              <input
+                                name="code"
+                                autoComplete="one-time-code"
+                                required
+                                maxLength={40}
+                              />
+                            </label>
+                            <div className="opsActions">
+                              <button className="primary" disabled={busy}>
+                                Turn off
+                              </button>
+                              <button
+                                type="button"
+                                className="textButton"
+                                onClick={() => setDisabling(false)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <button
+                            className="textButton"
+                            onClick={() => setDisabling(true)}
+                          >
+                            Turn off two-step verification
+                          </button>
+                        )}
+                      </>
+                    ) : !account.mfa_available ? (
+                      <p className="opsMeta">{describe("MFA_UNAVAILABLE")}</p>
+                    ) : setup ? (
+                      <form
+                        className="opsForm"
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const code = String(
+                            new FormData(e.currentTarget).get("code"),
+                          ).trim();
+                          await act(async () => {
+                            const r = await api<{ recovery_codes: string[] }>(
+                              "account/mfa/enable",
+                              { code },
+                            );
+                            setSetup(null);
+                            setCodes(r.recovery_codes);
+                            onMfaEnabled?.();
+                            return "Two-step verification is on.";
+                          });
+                        }}
+                      >
+                        <p className="opsMeta">
+                          Add Relay to an authenticator app with this setup key,
+                          or{" "}
+                          <a href={setup.otpauth_uri}>open it on this device</a>
+                          .
+                        </p>
+                        <p>
+                          <code className="mfaSecret" aria-label="Setup key">
+                            {setup.secret.match(/.{1,4}/g)?.join(" ")}
+                          </code>
+                        </p>
+                        <label>
+                          6-digit code from the app
+                          <input
+                            name="code"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            pattern="\d{6}"
+                            required
+                            maxLength={6}
+                          />
+                        </label>
+                        <button className="primary" disabled={busy}>
+                          Turn on
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <p className="opsMeta">
+                          Protect your account with a code from an authenticator
+                          app at sign-in.
+                        </p>
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            void act(async () => {
+                              setSetup(
+                                await api<{
+                                  secret: string;
+                                  otpauth_uri: string;
+                                }>("account/mfa/setup", {}),
+                              );
+                            })
+                          }
+                        >
+                          Set up two-step verification
+                        </button>
+                      </>
+                    )}
+                  </article>
+                  <AccountSessions onAuthError={onAuthError} />
+                </>
               )}
             </div>
           </TabPanel>
