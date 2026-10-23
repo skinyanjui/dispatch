@@ -28,3 +28,16 @@
   > :is(h2, h3):not(.srOnly) {
   margin-top: var(--page-section-step);
 }
+
+/* Forms and settings read badly stretched across a wide screen (a name field
+   800px wide, five checkboxes in a 1674px card). Those blocks stop at
+   --readable-width and stay left-aligned; the page, its intro and its tab strip
+   still fill the screen. Tables, boards and lists are never capped. */
+.appShell
+  :is(
+    .accountPage .billingColumns,
+    .notificationPage > :not(.directoryIntro),
+    .orgPage .orgPanel
+  ) {
+  max-width: var(--readable-width);
+}

@@ -16,6 +16,7 @@ A spacing audit of the demo's eleven pages (computed styles in a browser at 1280
 - Direct children of a page root have no outer margin. `.stats`, `.tabs` and `.directoryIntro` no longer carry margins in their own rules.
 - Every page fills the workspace width, with no maximum width, so all eleven pages share the same left and right edges at any screen size. The per-page caps (Fleet 1100, Organization 1040, Contacts and Documents lists 1000, Account 960, Notifications 900) are removed, and a single shared cap was tried (1100px) and rejected: on a wide screen the pages should use the screen.
 - A section heading (`h2`/`h3`) directly in a page root adds one `--page-section-step` (12px) above itself, so it is 24px below the previous block and 12px above its content.
+- Forms and settings blocks are the exception to "fills the width": Account's two-column grid, the Notifications blocks and Organization's panel stop at `--readable-width` (960px) and stay left-aligned, because a name field 800px wide or five checkboxes in a 1674px card are hard to read. The page, its intro and its tab strip still fill the screen. Tables, boards and lists are never capped.
 - A new page uses one of these roots, or adds its class to the list in `page-layout.css`. Do not add vertical margins to blocks.
 - Inbox, Assistant and the Loads board are full-height layouts with their own columns and are not page stacks, but they fill the same width.
 

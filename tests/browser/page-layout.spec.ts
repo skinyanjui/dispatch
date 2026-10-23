@@ -143,3 +143,40 @@ test("no page scrolls sideways at laptop width", async ({ page }) => {
     expect(over, `${name} overflows the page`).toBeLessThanOrEqual(1);
   }
 });
+
+test("settings forms stop at a readable width while their page fills the screen", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await page.setViewportSize({ width: 1920, height: 1000 });
+  await page.goto("/demo");
+  for (const name of ["Account", "Notifications"]) {
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("button", { name, exact: true }).click();
+    const m = await page.evaluate(() => {
+      const root = document.querySelector(
+        ".workspace > section, .workspace > div",
+      )!;
+      const readable = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          "--readable-width",
+        ),
+      );
+      const block = (c: Element) =>
+        c.getBoundingClientRect().height > 8 &&
+        !c.classList.contains("directoryIntro") &&
+        !c.classList.contains("tabs");
+      return {
+        readable,
+        root: Math.round(root.getBoundingClientRect().width),
+        widths: [...root.children]
+          .filter(block)
+          .map((c) => Math.round(c.getBoundingClientRect().width)),
+      };
+    });
+    expect(m.readable, `${name} token`).toBe(960);
+    expect(m.root, `${name} page`).toBeGreaterThan(1600);
+    for (const w of m.widths)
+      expect(w, `${name} block`).toBeLessThanOrEqual(960);
+  }
+});

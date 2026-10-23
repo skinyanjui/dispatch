@@ -50,6 +50,8 @@
   --space-12: 96px;
   /* Page layout: blocks on a page are this far apart, and a section heading
      adds one --page-section-step above itself (src/app/page-layout.css). */
+  /* Forms and settings blocks stop here on a wide screen; their page does not. */
+  --readable-width: 960px;
   --page-gap: var(--space-3);
   --page-section-step: var(--space-3);
   --control-h: 32px;
