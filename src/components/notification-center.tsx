@@ -19,7 +19,8 @@ const transportLabels: Record<string, string> = {
 };
 const statusLabels: Record<NotificationLogEntry["status"], string> = {
   pending: "Queued",
-  sent: "Delivered to provider",
+  sent: "Accepted by provider",
+  delivered: "Delivery confirmed",
   failed: "Failed",
   suppressed: "Not sent",
 };
@@ -151,7 +152,7 @@ export function NotificationCenter({
                     <span
                       className={
                         "opsPill " +
-                        (n.status === "sent"
+                        (n.status === "sent" || n.status === "delivered"
                           ? "good"
                           : n.status === "failed"
                             ? "bad"

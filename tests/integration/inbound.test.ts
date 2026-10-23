@@ -274,7 +274,17 @@ test("email replies route through the signed reply address and must come from a 
     { status: "rejected" },
   );
   assert.deepEqual(
-    await (await emailHook(msg({ to: [replyTo.replace(/.@/, "0@")] }))).json(),
+    await (
+      await emailHook(
+        msg({
+          to: [
+            replyTo.replace(/([0-9a-f])@/, (_, last: string) =>
+              last === "0" ? "1@" : "0@",
+            ),
+          ],
+        }),
+      )
+    ).json(),
     { status: "unmatched" },
   );
   assert.equal((await emailHook(msg(), true, "wrong")).status, 403);

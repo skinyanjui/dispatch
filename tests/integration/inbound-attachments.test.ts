@@ -98,6 +98,7 @@ after(async () => {
 });
 
 const emailThread = async (subject: string) => {
+  setTransport({ name: "inbound-fixture", send: async () => "fixture-only" });
   const sent = await sendMessage(t.dispatcher, {
     idempotency_key: randomUUID(),
     subject,

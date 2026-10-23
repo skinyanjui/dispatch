@@ -210,6 +210,82 @@ test("demo report download uses fictional browser data without authenticated API
   expect(calls).toEqual([]);
 });
 
+test("Inbox reports failed, unknown and confirmed text outcomes without claiming a Relay delivery", async ({
+  page,
+}) => {
+  await login(page);
+  const me = await (await page.request.get("/api/me")).json();
+  const name = "Receipt-" + randomUUID().slice(0, 8);
+  const created = await page.request.post("/api/contacts", {
+    headers: { Origin: origin },
+    data: {
+      idempotency_key: randomUUID(),
+      organization_id: me.organizations[0].id,
+      kind: "broker",
+      name,
+      phone: "+12145550114",
+      sms_consent: true,
+      sms_consent_note: "Fictional UI fixture consent",
+    },
+  });
+  expect(created.status()).toBe(201);
+  const contact = await created.json();
+  const logged = await page.request.post("/api/messages", {
+    headers: { Origin: origin },
+    data: {
+      idempotency_key: randomUUID(),
+      to: ["contact:" + contact.id],
+      mode: "log",
+      channel: "sms",
+      direction: "out",
+      body: "Fictional conversation setup",
+      subject: name,
+    },
+  });
+  expect(logged.status()).toBe(201);
+  const saved = await logged.json();
+  await page.route("**/api/messaging/capabilities", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { in_app: true, email: false, sms: true },
+    }),
+  );
+  let state = "unknown";
+  await page.route("**/api/messages", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    return route.fulfill({
+      status: 201,
+      json: {
+        thread_id: saved.thread_id,
+        message_id: randomUUID(),
+        processingState: state,
+        deliveries: [{ channel: "sms", status: state }],
+      },
+    });
+  });
+  await page.goto("/inbox");
+  const inbox = page.getByRole("region", { name: "Inbox" });
+  await inbox
+    .getByRole("button", { name: new RegExp(name) })
+    .first()
+    .click();
+  for (const [outcome, notice] of [
+    ["unknown", "provider outcome is unknown"],
+    ["failed", "delivery failed"],
+    ["delivered", "Provider delivery confirmed."],
+  ]) {
+    state = outcome;
+    const composer = inbox.getByRole("form", { name: "Write a message" });
+    await composer.getByRole("button", { name: "Text", exact: true }).click();
+    await composer.locator("textarea").fill("Fictional " + outcome);
+    await composer.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(inbox.getByText(new RegExp(notice))).toBeVisible();
+    await expect(
+      inbox.getByText("Message available in Relay.", { exact: true }),
+    ).toHaveCount(0);
+  }
+});
+
 test("repaired reports support keyboard use, narrow reflow and automated accessibility checks", async ({
   page,
 }) => {

@@ -1,3 +1,4 @@
+import { twilioSignature } from "./twilio-signature";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { pool, transaction } from "./db";
@@ -242,15 +243,7 @@ async function store(
  * Twilio signs `url + sorted(name + value)` with the account auth token
  * (HMAC-SHA1, base64). `url` must be the public address Twilio was given.
  */
-export function twilioSignature(
-  token: string,
-  url: string,
-  params: URLSearchParams,
-) {
-  const keys = [...new Set([...params.keys()])].sort();
-  const data = keys.reduce((s, k) => s + k + params.getAll(k).join(""), url);
-  return createHmac("sha1", token).update(data).digest("base64");
-}
+export { twilioSignature } from "./twilio-signature";
 const stopWords = new Set([
   "stop",
   "stopall",

@@ -7,7 +7,11 @@ export type SmsResult =
   | { ok: false; definite: boolean; error: string };
 export type SmsTransport = {
   name: string;
-  send(to: string, body: string): Promise<SmsResult>;
+  send(
+    to: string,
+    body: string,
+    reference?: { id: string; attempt: number },
+  ): Promise<SmsResult>;
 };
 
 /** E.164 for US/Canada numbers, or null when the number is not dialable. */
@@ -23,7 +27,7 @@ export function toE164(phone: string): string | null {
 function twilio(sid: string, token: string, from: string): SmsTransport {
   return {
     name: "twilio",
-    async send(to, body) {
+    async send(to, body, reference) {
       try {
         const response = await fetch(
           `${process.env.TWILIO_API_BASE || "https://api.twilio.com"}/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`,
@@ -34,7 +38,25 @@ function twilio(sid: string, token: string, from: string): SmsTransport {
                 "Basic " + Buffer.from(`${sid}:${token}`).toString("base64"),
               "Content-Type": "application/x-www-form-urlencoded",
             },
-            body: new URLSearchParams({ To: to, From: from, Body: body }),
+            body: new URLSearchParams({
+              To: to,
+              From: from,
+              Body: body,
+              ...(process.env.APP_ORIGIN?.startsWith("https://")
+                ? {
+                    StatusCallback: new URL(
+                      "/api/webhooks/sms-status" +
+                        (reference
+                          ? "?delivery_id=" +
+                            encodeURIComponent(reference.id) +
+                            "&attempt=" +
+                            reference.attempt
+                          : ""),
+                      process.env.APP_ORIGIN,
+                    ).toString(),
+                  }
+                : {}),
+            }),
             signal: AbortSignal.timeout(10000),
           },
         );

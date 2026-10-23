@@ -33,7 +33,7 @@ export type NotificationLogEntry = {
   kind: NotificationKind;
   recipient_email: string;
   subject: string;
-  status: "pending" | "sent" | "failed" | "suppressed";
+  status: "pending" | "sent" | "delivered" | "failed" | "suppressed";
   attempts: number;
   last_error: string | null;
   provider: string | null;

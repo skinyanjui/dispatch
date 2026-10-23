@@ -1235,7 +1235,7 @@ test("friction: message a load's driver in two clicks, no subject needed, Ctrl+E
   await expect(
     inbox.getByRole("heading", { name: "About " + load.reference }),
   ).toBeVisible();
-  await expect(inbox.getByText("Message sent.")).toBeAttached();
+  await expect(inbox.getByText("Message available in Relay.")).toBeAttached();
 });
 
 test("friendly wording: wrong password and the show-password option", async ({

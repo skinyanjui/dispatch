@@ -1,12 +1,20 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { pool, databaseConnectionString, transaction } from "../../src/lib/db";
 import { reportOverview, loadsCsv } from "../../src/lib/reports";
 import { listLoads, mutate } from "../../src/lib/loads";
 import { listExceptions, openException } from "../../src/lib/exceptions";
 import { billingOverview } from "../../src/lib/billing";
 import { reviewDocument, uploadDocument } from "../../src/lib/documents";
+import {
+  messageCapabilities,
+  messageResult,
+  sendMessage,
+} from "../../src/lib/messaging";
+import { setTransport } from "../../src/lib/notifications";
+import { setSmsTransport } from "../../src/lib/sms";
+import { operationsStatus } from "../../src/lib/operations";
 import { GET } from "../../src/app/api/[...path]/route";
 import {
   sectionAllowed,
@@ -196,6 +204,87 @@ test("exports include all 5103 records and disclose the actual complete row coun
   assert.equal(res.headers.get("x-relay-export-complete"), "true");
 });
 
+test("delivery results distinguish queued, provider accepted, failed and unknown; retries never resend", async () => {
+  const t = await tenant("RepairMessage");
+  process.env.RELAY_DATA_KEY = randomBytes(32).toString("base64");
+  setTransport({ name: "fixture", send: async () => "Fictional-provider" });
+  const email = await sendMessage(t.manager, {
+    mode: "send",
+    channel: "email",
+    to: ["user:" + t.dispatcher],
+    subject: "Fictional repair",
+    body: "QA only",
+    idempotency_key: randomUUID(),
+  });
+  assert.equal(email.processingState, "queued");
+  assert.equal(email.deliveries[0].status, "queued");
+  setTransport(null);
+  delete process.env.RELAY_EMAIL_TRANSPORT;
+  assert.equal(messageCapabilities().email, false);
+  await assert.rejects(
+    sendMessage(t.manager, {
+      mode: "send",
+      channel: "email",
+      to: ["user:" + t.dispatcher],
+      subject: "Fictional unavailable",
+      body: "QA only",
+      idempotency_key: randomUUID(),
+    }),
+    { code: "EMAIL_UNAVAILABLE" },
+  );
+  await assert.rejects(messageResult(t.foreignManager, email.message_id), {
+    code: "NOT_FOUND",
+  });
+  // SMS requires consent; exercise the existing driver contact identity via a fixture contact.
+  const { createContact } = await import("../../src/lib/contacts");
+  await pool.query(
+    "INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'owner')",
+    [t.organization, t.dispatcher],
+  );
+  const contact = await createContact(t.dispatcher, {
+    idempotency_key: randomUUID(),
+    organization_id: t.organization,
+    kind: "broker",
+    name: "Fictional receiver",
+    company: "QA",
+    email: "",
+    phone: "+12145550111",
+    notes: "",
+    sms_consent: true,
+    sms_consent_note: "Fictional fixture consent",
+  });
+  let attempts = 0;
+  for (const state of ["sent", "failed", "unknown"] as const) {
+    setSmsTransport({
+      name: "fixture",
+      send: async () => {
+        attempts++;
+        return state === "sent"
+          ? { ok: true, providerId: "fixture" }
+          : {
+              ok: false,
+              definite: state === "failed",
+              error: "Fictional provider response",
+            };
+      },
+    });
+    const input = {
+      mode: "send",
+      channel: "sms",
+      to: ["contact:" + contact.id],
+      subject: "QA",
+      body: "Fictional",
+      idempotency_key: randomUUID(),
+    };
+    const receipt = await sendMessage(t.dispatcher, input);
+    assert.equal(receipt.processingState, state);
+    const replay = await sendMessage(t.dispatcher, input);
+    assert.equal(replay.processingState, state);
+  }
+  assert.equal(attempts, 3);
+  setSmsTransport(undefined);
+});
+
 test("membership revocation applies to an active session, exports and message reconciliation", async () => {
   const t = await tenant("RepairRevocation");
   const token = await sessionFor(t.manager);
@@ -273,6 +362,18 @@ test("URL state is whitelisted and remote PostgreSQL requires validated certific
     ).searchParams.get("sslmode"),
     null,
   );
+});
+
+test("operations metadata is limited to administrators and never returns secret values", async () => {
+  const t = await tenant("RepairOperations");
+  await assert.rejects(operationsStatus(t.manager), { code: "NOT_FOUND" });
+  await pool.query(
+    "INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'owner')",
+    [t.organization, t.dispatcher],
+  );
+  const metadata = await operationsStatus(t.dispatcher);
+  assert.equal(metadata.release.schema.at(-1), "039");
+  assert.ok(!JSON.stringify(metadata).includes(process.env.DATABASE_URL!));
 });
 
 test("durable exports survive retries, expire, and refuse downloads after membership revocation", async () => {

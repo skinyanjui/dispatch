@@ -92,6 +92,10 @@ export type InboxCounts = {
   archived: number;
   trash: number;
 };
+type SendReceipt = {
+  processingState?: string;
+  deliveries?: { status: string; channel?: string }[];
+};
 type ThreadAction = "unread" | "archive" | "unarchive" | "trash" | "restore";
 type Mode =
   | "in_app"
@@ -214,7 +218,7 @@ function Composer({
   disabled: boolean;
   /** Drivers can only message in Relay; email, text and logging are staff tools. */
   staff: boolean;
-  onSent: (threadId: string, logged: boolean) => void;
+  onSent: (threadId: string, logged: boolean, receipt: SendReceipt) => void;
   onAuthError: (e: unknown) => void;
   onChooseRecipients?: () => React.ReactNode;
   onManageReplies: () => void;
@@ -233,6 +237,26 @@ function Composer({
     [error, setError] = useState("");
   // One key per composed message so a retry after a dropped response cannot duplicate it.
   const key = useRef(crypto.randomUUID());
+  const [capabilities, setCapabilities] = useState<{
+    email: boolean;
+    sms: boolean;
+  } | null>(null);
+  useEffect(() => {
+    let active = true;
+    api<{ email: boolean; sms: boolean }>("messaging/capabilities")
+      .then((c) => {
+        if (active) setCapabilities(c);
+      })
+      .catch(() => {
+        if (active) setCapabilities({ email: false, sms: false });
+      });
+    return () => {
+      active = false;
+    };
+  }, [api]);
+  const unavailable =
+    (mode === "email" && !capabilities?.email) ||
+    (mode === "sms" && !capabilities?.sms);
   const log = isLog(mode);
   // Files stay inside Relay: texts and outgoing email cannot carry them.
   const canAttach = mode === "in_app" || log;
@@ -263,11 +287,11 @@ function Composer({
   const first = recipients[0];
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || unavailable) return;
     setBusy(true);
     setError("");
     try {
-      const sent = await api<{ thread_id: string }>("messages", {
+      const sent = await api<{ thread_id: string } & SendReceipt>("messages", {
         idempotency_key: key.current,
         ...(threadId
           ? { thread_id: threadId }
@@ -297,7 +321,7 @@ function Composer({
       setBody("");
       setOccurred("");
       setFiles([]);
-      onSent(sent.thread_id, log);
+      onSent(sent.thread_id, log, sent);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) onAuthError(err);
       setError(err instanceof Error ? err.message : "SERVICE_UNAVAILABLE");
@@ -314,6 +338,13 @@ function Composer({
   return (
     <form className="composer" onSubmit={submit} aria-label="Write a message">
       {onChooseRecipients?.()}
+      {unavailable && (
+        <p className="helpText" role="status">
+          {capabilities
+            ? "This delivery channel is unavailable. Use Relay messages, or Log activity for communication sent elsewhere."
+            : "Checking delivery availability…"}
+        </p>
+      )}
       {!threadId && (
         <label>
           Subject <small>(optional, we&apos;ll add one if you skip it)</small>
@@ -489,7 +520,12 @@ function Composer({
       <button
         className="primary"
         disabled={
-          busy || disabled || !recipients.length || !body.trim() || !first
+          unavailable ||
+          busy ||
+          disabled ||
+          !recipients.length ||
+          !body.trim() ||
+          !first
         }
       >
         {busy ? "Working…" : log ? "Save to log" : "Send"}
@@ -883,11 +919,20 @@ export function Inbox({
     setViewError("");
     let failure = "";
     try {
-      await api(`message-deliveries/${d.id}/resend`, {
-        attempt: d.attempts,
-        confirm_unknown: d.status === "unknown",
-      });
-      setStatus("Text sent again.");
+      const outcome = await api<{ status: string }>(
+        `message-deliveries/${d.id}/resend`,
+        {
+          attempt: d.attempts,
+          confirm_unknown: d.status === "unknown",
+        },
+      );
+      setStatus(
+        outcome.status === "sent"
+          ? "Text accepted by the provider; delivery is not confirmed."
+          : outcome.status === "failed"
+            ? "Text was not accepted by the provider. Review the failure below."
+            : "Text outcome is unknown. Confirm whether it arrived before resending.",
+      );
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
       failure = e instanceof Error ? e.message : "SERVICE_UNAVAILABLE";
@@ -896,8 +941,33 @@ export function Inbox({
     setResending(null);
     if (failure) setViewError(failure);
   }
-  const finish = async (threadId: string, logged = false) => {
-    setStatus(logged ? "Saved to the conversation log." : "Message sent.");
+  const finish = async (
+    threadId: string,
+    logged = false,
+    receipt: SendReceipt = {},
+  ) => {
+    const status = receipt.processingState;
+    setStatus(
+      logged
+        ? "Saved to the conversation log."
+        : status === "delivered"
+          ? receipt.deliveries?.every((d) => d.channel === "in_app")
+            ? "Message available in Relay."
+            : "Provider delivery confirmed."
+          : status === "sent"
+            ? "Provider accepted the message; recipient delivery is not confirmed."
+            : status === "queued"
+              ? "Message queued for delivery; it has not been sent yet."
+              : status === "failed"
+                ? "Message saved, but delivery failed. Review each recipient below."
+                : status === "unknown"
+                  ? "Message saved; provider outcome is unknown. Confirm before resending."
+                  : status === "not_sent"
+                    ? "Message saved but not sent. Review the delivery configuration."
+                    : status === "partial"
+                      ? "Message saved with different recipient outcomes. Review each recipient below."
+                      : "Message recorded. Check each recipient’s delivery status below.",
+    );
     onComposeDone();
     await load();
     await openThread(threadId);
@@ -1185,7 +1255,7 @@ export function Inbox({
               disabled={offline}
               staff={staff}
               onAuthError={onAuthError}
-              onSent={(id, logged) => void finish(id, logged)}
+              onSent={(id, logged, receipt) => void finish(id, logged, receipt)}
               onManageReplies={() => setManaging(true)}
               onChooseRecipients={() => (
                 <fieldset className="recipientPicker">
@@ -1395,7 +1465,9 @@ export function Inbox({
                             className={"delivery " + d.status}
                           >
                             {d.name ?? d.key}:{" "}
-                            {deliveryLabels[d.status] ?? d.status}
+                            {d.status === "delivered" && d.channel !== "in_app"
+                              ? "Delivery confirmed"
+                              : (deliveryLabels[d.status] ?? d.status)}
                             {d.error && ` (${d.error})`}
                             {staff &&
                               d.channel === "sms" &&
@@ -1428,7 +1500,9 @@ export function Inbox({
                 disabled={offline}
                 staff={staff}
                 onAuthError={onAuthError}
-                onSent={(id, logged) => void finish(id, logged)}
+                onSent={(id, logged, receipt) =>
+                  void finish(id, logged, receipt)
+                }
                 onManageReplies={() => setManaging(true)}
               />
             </>

@@ -1,3 +1,4 @@
+import { receiveSmsStatus, receiveEmailStatus } from "@/lib/provider-receipts";
 import {
   createExport,
   exportStatus,
@@ -6,6 +7,8 @@ import {
 import { createGunzip } from "node:zlib";
 import { Readable } from "node:stream";
 import { reportInvoices } from "@/lib/report-invoices";
+import { operationsStatus } from "@/lib/operations";
+import { messageCapabilities, messageResult } from "@/lib/messaging";
 import { after, NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -362,6 +365,18 @@ async function handle(req: NextRequest) {
       const raw = (
         await readBody(req, path[1] === "email" ? 32 * 1024 * 1024 : 262144)
       ).toString("utf8");
+      if (path[1] === "sms-status") {
+        await receiveSmsStatus(
+          raw,
+          req.headers.get("x-twilio-signature"),
+          appOrigin(new URL(req.url).origin) +
+            "/api/webhooks/sms-status" +
+            req.nextUrl.search,
+        );
+        return new NextResponse(null, { status: 204 });
+      }
+      if (path[1] === "email-status")
+        return NextResponse.json(await receiveEmailStatus(raw, req.headers));
       if (path[1] === "sms") {
         await receiveSms(
           raw,
@@ -547,6 +562,8 @@ async function handle(req: NextRequest) {
       res.cookies.delete("relay_session");
       return res;
     }
+    if (path.join("/") === "operations/status" && req.method === "GET")
+      return NextResponse.json(await operationsStatus(user.id));
     if (path.length === 1 && path[0] === "me" && req.method === "GET") {
       const carriers = await pool.query(
         "SELECT c.*,m.role FROM carriers c JOIN memberships m ON m.carrier_id=c.id WHERE m.user_id=$1",
@@ -931,6 +948,17 @@ async function handle(req: NextRequest) {
     )
       return NextResponse.json(
         await resendText(user.id, z.uuid().parse(path[1]), await readJson(req)),
+      );
+    if (path.join("/") === "messaging/capabilities" && req.method === "GET")
+      return NextResponse.json(messageCapabilities());
+    if (
+      path[0] === "messages" &&
+      path.length === 3 &&
+      path[2] === "result" &&
+      req.method === "GET"
+    )
+      return NextResponse.json(
+        await messageResult(user.id, z.uuid().parse(path[1])),
       );
     if (path.join("/") === "reports/exports" && req.method === "POST")
       return NextResponse.json(

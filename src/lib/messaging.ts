@@ -1,3 +1,5 @@
+import { receiptStatus } from "./provider-receipts";
+import { encryptionAvailable } from "./secrets";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
@@ -5,7 +7,12 @@ import { pool, transaction } from "./db";
 import { digest, HttpError } from "./auth";
 import { access, collect } from "./contacts";
 import { scoped } from "./loads";
-import { appOrigin, enqueueForEmail, enqueueForUser } from "./notifications";
+import {
+  appOrigin,
+  enqueueForEmail,
+  enqueueForUser,
+  configuredTransport,
+} from "./notifications";
 import { smsTransport, toE164 } from "./sms";
 import { replyAddress } from "./inbound";
 import {
@@ -158,7 +165,7 @@ export async function sendMessage(
   const hash = digest(JSON.stringify({ ...rest, to: [...rest.to].sort() }));
   const sms = data.mode === "send" && data.channel === "sms";
   const transport = sms ? smsTransport() : null;
-  if (sms && !transport) throw new HttpError(409, "SMS_UNAVAILABLE");
+
   const result = await transaction(async (c) => {
     const a = await access(c, user);
     const staff =
@@ -348,6 +355,13 @@ export async function sendMessage(
       data.channel !== "in_app"
     )
       throw new HttpError(422, "ATTACHMENTS_NOT_SUPPORTED");
+    if (sms && !transport) throw new HttpError(409, "SMS_UNAVAILABLE");
+    if (
+      data.mode === "send" &&
+      data.channel === "email" &&
+      !messageCapabilities().email
+    )
+      throw new HttpError(409, "EMAIL_UNAVAILABLE");
     await linkAttachments(c, user, data.attachment_ids, messageId);
     const deliveries: { id: string; key: string; address: string }[] = [];
     if (data.mode === "send") {
@@ -419,9 +433,15 @@ export async function sendMessage(
   // Texts leave only after the record is committed; each is attempted once.
   if (!result.replay && transport) {
     for (const d of result.deliveries) {
-      const outcome = await transport.send(d.address, data.body);
+      const outcome = await transport
+        .send(d.address, data.body, { id: d.id, attempt: 1 })
+        .catch(() => ({
+          ok: false as const,
+          definite: false,
+          error: "Provider outcome unknown",
+        }));
       await pool.query(
-        "UPDATE message_deliveries SET status=$2,provider_message_id=$3,last_error=$4,updated_at=now() WHERE id=$1",
+        "UPDATE message_deliveries SET status=$2,provider_message_id=COALESCE($3,provider_message_id),last_error=$4,updated_at=now() WHERE id=$1",
         [
           d.id,
           outcome.ok ? "sent" : outcome.definite ? "failed" : "unknown",
@@ -431,7 +451,7 @@ export async function sendMessage(
       );
     }
   }
-  return { thread_id: result.thread_id, message_id: result.message_id };
+  return messageResult(user, result.message_id);
 }
 
 export const resendSchema = z
@@ -475,17 +495,17 @@ export async function resendText(
       throw new HttpError(403, "ROLE_NOT_PERMITTED");
     const locked = (
       await c.query(
-        "SELECT attempts,status FROM message_deliveries WHERE id=$1 FOR UPDATE",
+        `SELECT d.attempts,d.status,CASE WHEN d.status='pending' AND d.updated_at<now()-interval '5 minutes' THEN 'unknown' ELSE ${receiptStatus("delivery", "d")} END shown FROM message_deliveries d WHERE id=$1 FOR UPDATE`,
         [deliveryId],
       )
     ).rows[0];
     if (locked.attempts !== data.attempt)
       throw new HttpError(409, "DELIVERY_CHANGED");
-    if (found.shown === "sent" || found.shown === "delivered")
+    if (locked.shown === "sent" || locked.shown === "delivered")
       throw new HttpError(409, "ALREADY_SENT");
-    if (found.shown === "pending")
+    if (locked.shown === "pending")
       throw new HttpError(409, "DELIVERY_IN_PROGRESS");
-    if (found.shown === "unknown" && !data.confirm_unknown)
+    if (locked.shown === "unknown" && !data.confirm_unknown)
       throw new HttpError(409, "CONFIRM_UNKNOWN_REQUIRED");
     const [recipient] = await resolveRecipients(c, user, [
       found.participant_key,
@@ -493,22 +513,31 @@ export async function resendText(
     const number = recipient.smsOk ? toE164(recipient.phone) : null;
     if (!number) throw new HttpError(422, "RECIPIENT_CHANNEL_UNAVAILABLE");
     await c.query(
-      "UPDATE message_deliveries SET status='pending',attempts=attempts+1,address=$2,last_error=NULL,updated_at=now() WHERE id=$1",
+      "UPDATE message_deliveries SET status='pending',attempts=attempts+1,address=$2,last_error=NULL,provider_message_id=NULL,updated_at=now() WHERE id=$1",
       [deliveryId, number],
     );
     await c.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
       randomUUID(),
       user,
-      found.shown === "unknown"
+      locked.shown === "unknown"
         ? "message.sms_resent_unconfirmed"
         : "message.sms_resent",
       deliveryId,
     ]);
     return { number, body: found.body as string, attempts: data.attempt + 1 };
   });
-  const outcome = await transport.send(prepared.number, prepared.body);
+  const outcome = await transport
+    .send(prepared.number, prepared.body, {
+      id: deliveryId,
+      attempt: prepared.attempts,
+    })
+    .catch(() => ({
+      ok: false as const,
+      definite: false,
+      error: "Provider outcome unknown",
+    }));
   await pool.query(
-    "UPDATE message_deliveries SET status=$2,provider_message_id=$3,last_error=$4,updated_at=now() WHERE id=$1",
+    "UPDATE message_deliveries SET status=$2,provider_message_id=COALESCE($3,provider_message_id),last_error=$4,updated_at=now() WHERE id=$1",
     [
       deliveryId,
       outcome.ok ? "sent" : outcome.definite ? "failed" : "unknown",
@@ -526,8 +555,8 @@ export async function resendText(
 // ---------- Reading ----------
 
 const deliveryStatus = `CASE d.channel
-  WHEN 'email' THEN CASE n.status WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'suppressed' THEN 'not_sent' ELSE 'queued' END
-  WHEN 'sms' THEN CASE d.status WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'unknown' THEN 'unknown'
+  WHEN 'email' THEN CASE (${receiptStatus("notification", "n")}) WHEN 'delivered' THEN 'delivered' WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'suppressed' THEN 'not_sent' ELSE 'queued' END
+  WHEN 'sms' THEN CASE (${receiptStatus("delivery", "d")}) WHEN 'delivered' THEN 'delivered' WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' WHEN 'unknown' THEN 'unknown'
     ELSE CASE WHEN d.updated_at<now()-interval '5 minutes' THEN 'unknown' ELSE 'queued' END END
   ELSE 'delivered' END`;
 
@@ -822,4 +851,46 @@ export async function deleteSavedReply(user: string, id: string) {
   await ownReply(user, id);
   await pool.query("DELETE FROM saved_replies WHERE id=$1", [id]);
   return { ok: true };
+}
+
+/** Capability metadata contains availability only, never credentials. */
+export function messageCapabilities() {
+  const email = configuredTransport();
+  return {
+    in_app: true,
+    email: !!email && email.name !== "log" && encryptionAvailable(),
+    sms: !!smsTransport(),
+  };
+}
+/** Reconciles a lost response without another provider attempt. */
+export async function messageResult(user: string, messageId: string) {
+  return transaction(async (c) => {
+    const message = (
+      await c.query("SELECT id,thread_id,source FROM messages WHERE id=$1", [
+        messageId,
+      ])
+    ).rows[0];
+    if (!message) throw new HttpError(404, "NOT_FOUND");
+    await lockThread(c, user, message.thread_id);
+    const deliveries = (
+      await c.query(
+        `SELECT d.id,d.participant_key key,d.channel,${deliveryStatus} status FROM message_deliveries d LEFT JOIN notifications n ON n.id=d.notification_id WHERE d.message_id=$1 ORDER BY d.participant_key`,
+        [messageId],
+      )
+    ).rows;
+    const states = [...new Set(deliveries.map((d) => d.status as string))];
+    const processingState =
+      message.source === "logged"
+        ? "recorded"
+        : states.length > 1
+          ? "partial"
+          : (states[0] ?? "recorded");
+    return {
+      thread_id: message.thread_id as string,
+      message_id: messageId,
+      operationId: messageId,
+      processingState,
+      deliveries,
+    };
+  });
 }

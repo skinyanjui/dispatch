@@ -1,3 +1,4 @@
+import { receiptStatus } from "./provider-receipts";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
@@ -376,7 +377,7 @@ export async function scheduleReminders() {
 
 export async function notificationLog(user: string) {
   const { rows } = await pool.query(
-    `SELECT n.id,n.kind,n.recipient_email,n.subject,n.status,n.attempts,n.last_error,n.provider,
+    `SELECT n.id,n.kind,n.recipient_email,n.subject,${receiptStatus("notification", "n")} status,n.attempts,n.last_error,n.provider,
       n.created_at,n.sent_at,n.next_attempt_at,(n.status='failed' AND n.body_ciphertext IS NOT NULL) retryable
     FROM notifications n
     WHERE n.organization_id IN (SELECT c.organization_id FROM carriers c JOIN memberships m ON m.carrier_id=c.id
