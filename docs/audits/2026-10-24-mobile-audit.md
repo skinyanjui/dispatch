@@ -29,3 +29,7 @@ Viewport meta (Next.js default), no sideways page scroll after the fixes at any 
 - Tables still scroll sideways on phones instead of becoming cards (a deliberate earlier decision: ADR on the data table). The edge fade now signals it; the Status column of Fleet and the Dispatch authorization column of Carriers are still off-screen until scrolled.
 - No `viewport-fit=cover` or safe-area padding, so on notched phones in landscape content can sit under the notch edge only if the browser extends the page there; it does not by default.
 - The touch targets are 40px, under the 44px that Apple's guidance recommends; they meet WCAG 2.2's 24px minimum.
+
+## Follow-up: menus (2026-10-24, ADR 0063)
+
+The public header's four wrapping links are now a mega menu from 900px and a modal sheet below it (menu button, accordion groups, Request access and Sign in at the foot); every menu link is checked against a real page and section. The logo goes to the public home on public pages and sign-in, and to the person's most used page inside the app (Loads until there is a habit; counted in this browser only). Tests: `tests/browser/navigation.spec.ts` (7), `tests/integration/most-used.test.ts` (4).

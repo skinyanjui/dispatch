@@ -1,327 +1,229 @@
-import { test, expect, type Page, type Request } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { menu } from "../../src/lib/marketing-menu";
 
-// Navigation is tested against an explicit fictional membership/queue contract,
-// independent of local accounts, secrets, seed data or database availability.
-test.use({ viewport: { width: 1440, height: 1000 } });
-
-const carrierA = "11111111-1111-4111-8111-111111111111";
-const carrierB = "33333333-3333-4333-8333-333333333333";
-const context = {
-  user: { name: "Navigation QA" },
-  carriers: [
-    { id: carrierA, name: "Alpine QA Transport", role: "dispatcher" },
-    { id: carrierB, name: "Prairie QA Logistics", role: "carrier-manager" },
-  ],
-  drivers: [],
+/**
+ * The public mega menu and phone menu, and where the logo goes: the public
+ * home from public pages and sign-in, and the page a person uses most inside
+ * the app.
+ */
+const desktop = { width: 1440, height: 900 };
+const phone = { width: 390, height: 844 };
+const trigger = (page: Page, name: string) =>
+  page.getByRole("navigation", { name: "Main" }).getByRole("button", { name });
+const login = async (page: Page, email: string) => {
+  const r = await page.request.post("/api/login", {
+    headers: { Origin: "http://localhost:3000" },
+    data: { email, password: process.env.SEED_PASSWORD },
+  });
+  expect(r.status()).toBe(200);
 };
-const loads = [
-  {
-    id: "22222222-2222-4222-8222-222222222222",
-    carrier_id: carrierA,
-    carrier_name: "Alpine QA Transport",
-    reference: "NAV-A-BOOKED",
-    stage: "booked",
-  },
-  {
-    id: "44444444-4444-4444-8444-444444444444",
-    carrier_id: carrierA,
-    carrier_name: "Alpine QA Transport",
-    reference: "NAV-A-DELIVERED",
-    stage: "delivered",
-  },
-  {
-    id: "55555555-5555-4555-8555-555555555555",
-    carrier_id: carrierB,
-    carrier_name: "Prairie QA Logistics",
-    reference: "NAV-B-DISPATCHED",
-    stage: "dispatched",
-  },
-  {
-    id: "66666666-6666-4666-8666-666666666666",
-    carrier_id: carrierB,
-    carrier_name: "Prairie QA Logistics",
-    reference: "NAV-B-TRANSIT",
-    stage: "picked-up",
-  },
-].map((load) => ({
-  ...load,
-  amount_minor: "250000",
-  pickup: "Chicago, IL",
-  delivery: "Nashville, TN",
-  created_at: "2026-10-20T10:00:00Z",
-  source: "Fictional navigation test",
-  version: 1,
-}));
 
-async function mockWorkspace(page: Page) {
-  await page.route("**/api/carriers/summary", (route) =>
-    route.fulfill({
-      json: {
-        generated_at: new Date().toISOString(),
-        carriers: context.carriers.map((c) => ({
-          id: c.id,
-          name: c.name,
-          role: c.role,
-          authorization: {
-            state: "current",
-            expires_at: "2027-10-21T00:00:00.000Z",
-            agreement_ref: "QA",
-          },
-          loads: { active: 1, total: 1, delivered: 0, cancelled: 0 },
-          open_exceptions: 0,
-          drivers: 0,
-        })),
-      },
-    }),
-  );
-  await page.route("**/api/me", (route) => route.fulfill({ json: context }));
-  await page.route("**/api/loads?*", (route) => {
-    const params = new URL(route.request().url()).searchParams;
-    const selected = loads.filter(
-      (load) =>
-        (!params.get("status") || load.stage === params.get("status")) &&
-        (!params.get("carrier_id") ||
-          load.carrier_id === params.get("carrier_id")) &&
-        (!params.get("q") ||
-          load.reference
-            .toLowerCase()
-            .includes(params.get("q")!.toLowerCase())),
-    );
-    return route.fulfill({ json: { loads: selected, nextCursor: null } });
-  });
-}
-
-function queueRequest(params: Record<string, string>) {
-  return (request: Request) => {
-    const url = new URL(request.url());
-    return (
-      request.method() === "GET" &&
-      url.pathname === "/api/loads" &&
-      Object.entries(params).every(
-        ([key, value]) => url.searchParams.get(key) === value,
-      )
-    );
-  };
-}
-
-async function expectReady(page: Page) {
-  await expect(
-    page.getByRole("region", { name: "Load workspace" }),
-  ).toHaveAttribute("aria-busy", "false");
-  await expect(
-    page.getByRole("button", { name: "Refresh loads" }),
-  ).toBeEnabled();
-}
-
-test("desktop queues send their stage filters and repeated All loads stays ready", async ({
+test("the mega menu opens by click, hover and keyboard, and closes with Escape, outside click and navigation", async ({
   page,
 }) => {
-  await mockWorkspace(page);
-  await page.goto("/");
-  await expectReady(page);
-  const queues = page.getByRole("navigation", { name: "Dispatch queues" });
-
-  for (const selection of [
-    { label: "Ready to dispatch", status: "booked", reference: "NAV-A-BOOKED" },
-    { label: "In transit", status: "picked-up", reference: "NAV-B-TRANSIT" },
-  ]) {
-    const requested = page.waitForRequest(
-      queueRequest({ status: selection.status }),
-    );
-    await queues
-      .getByRole("button", { name: selection.label, exact: true })
-      .click();
-    await requested;
-    await expect(
-      page.getByRole("heading", {
-        name: selection.label,
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible();
-    await expectReady(page);
-    await expect(
-      page.getByRole("button", { name: new RegExp(selection.reference) }),
-    ).toBeVisible();
-    await expect(
-      queues.getByRole("button", { name: selection.label, exact: true }),
-    ).toHaveAttribute("aria-current", "page");
-  }
-
-  await queues.getByRole("button", { name: "All loads", exact: true }).click();
+  await page.setViewportSize(desktop);
+  await page.goto("/welcome");
+  const product = trigger(page, "Product");
+  await expect(product).toHaveAttribute("aria-expanded", "false");
+  await product.click();
+  const panel = page.getByRole("region", { name: "Product menu" });
+  await expect(product).toHaveAttribute("aria-expanded", "true");
   await expect(
-    page.getByRole("heading", { name: "All loads", exact: true }),
-  ).toBeVisible();
-  await expectReady(page);
-  for (let i = 0; i < 2; i++) {
-    await queues
-      .getByRole("button", { name: "All loads", exact: true })
-      .click();
-    await expectReady(page);
-  }
-  await expect(
-    page.getByRole("button", { name: /NAV-A-BOOKED/ }),
+    panel.getByRole("link", { name: /Board, table and calendar/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /NAV-B-TRANSIT/ }),
+    panel.getByRole("link", { name: "Open the interactive demo" }),
   ).toBeVisible();
-});
-
-test("carrier directory reflects membership, supports search and opens carrier-scoped loads", async ({
-  page,
-}) => {
-  await mockWorkspace(page);
-  await page.goto("/");
-  await expectReady(page);
-  await page
-    .getByRole("navigation", { name: "Workspace navigation" })
-    .getByRole("button", { name: "Carriers", exact: true })
-    .click();
-  const directory = page.getByRole("region", {
-    name: "Authorized carrier directory",
-  });
-  await expect(directory).toBeVisible();
-  await expect(directory.locator("tbody tr")).toHaveCount(2);
-  await expect(
-    directory.getByRole("rowheader", { name: /^Alpine QA Transport/ }),
-  ).toBeVisible();
-  await expect(
-    directory.getByRole("rowheader", { name: /^Prairie QA Logistics/ }),
-  ).toBeVisible();
-  await expect(
-    directory.getByText("Dispatcher", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    directory.getByText("Carrier manager", { exact: true }),
-  ).toBeVisible();
-
-  const search = page.getByRole("searchbox", { name: "Search carriers" });
-  await search.fill("Prairie");
-  await expect(directory.locator("tbody tr")).toHaveCount(1);
-  await expect(
-    directory.getByRole("rowheader", { name: /^Alpine QA Transport/ }),
-  ).toHaveCount(0);
-  await search.fill("Not an authorized carrier");
-  await expect(
-    directory.getByRole("heading", {
-      name: "No matching carriers",
-      exact: true,
-    }),
-  ).toBeVisible();
-  await directory
-    .getByRole("button", { name: "Clear search", exact: true })
-    .click();
-  await expect(search).toHaveValue("");
-  await expect(directory.locator("tbody tr")).toHaveCount(2);
-
-  const row = directory.locator("tbody tr").filter({
-    has: page.getByRole("rowheader", { name: /^Prairie QA Logistics/ }),
-  });
-  const requested = page.waitForRequest(queueRequest({ carrier_id: carrierB }));
-  await row.getByRole("button", { name: "View loads", exact: true }).click();
-  const request = await requested;
-  const params = new URL(request.url()).searchParams;
-  expect(params.has("status")).toBe(false);
-  expect(params.has("q")).toBe(false);
-  await expectReady(page);
-  await expect(
-    page.getByRole("heading", { name: "All loads", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /NAV-B-DISPATCHED/ }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /NAV-B-TRANSIT/ }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: /NAV-A-BOOKED/ })).toHaveCount(
-    0,
-  );
-  await expect(
-    page
-      .getByRole("navigation", { name: "Carrier scope" })
-      .getByRole("button", { name: "Prairie QA Logistics", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-});
-
-test("desktop sidebar collapses to icons without duplicating pages and expands again", async ({
-  page,
-}) => {
-  await mockWorkspace(page);
-  await page.goto("/");
-  await expectReady(page);
-  const queues = page.getByRole("navigation", { name: "Dispatch queues" });
-  await expect(queues).toBeVisible();
-  await page
-    .getByRole("button", { name: "Collapse sidebar", exact: true })
-    .click();
-  // The queues live above the board, so collapsing the sidebar keeps them.
-  await expect(queues).toBeVisible();
-  await expect(
-    page.getByRole("navigation", { name: "Dispatch queues" }),
-  ).toHaveCount(1);
-  // Collapsed, each page is still reachable exactly once by its name.
-  const pages = page.getByRole("navigation", { name: "Workspace navigation" });
-  for (const name of ["Loads", "Exceptions", "Carriers", "Billing"])
-    await expect(pages.getByRole("button", { name, exact: true })).toHaveCount(
-      1,
-    );
-  await page
-    .getByRole("button", { name: "Expand sidebar", exact: true })
-    .click();
-  await expect(queues).toBeVisible();
-  for (const name of ["Loads", "Exceptions", "Carriers", "Billing"])
-    await expect(page.getByRole("button", { name, exact: true })).toHaveCount(
-      1,
-    );
-  await expect(
-    page.getByRole("button", { name: "Collapse sidebar", exact: true }),
-  ).toBeVisible();
-  await expectReady(page);
-});
-
-test("mobile drawer selects a stage, closes and keeps the document within the viewport", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await mockWorkspace(page);
-  await page.goto("/");
-  await expectReady(page);
-  await page
-    .getByRole("button", { name: "Open navigation", exact: true })
-    .click();
-  const drawer = page.getByRole("dialog", { name: "Workspace navigation" });
-  await expect(drawer).toBeVisible();
-  // The drawer lists pages only; queues are chips above the board.
-  await expect(
-    drawer.getByRole("navigation", { name: "Dispatch queues" }),
-  ).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await expect(drawer).not.toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-
-  const requested = page.waitForRequest(queueRequest({ status: "picked-up" }));
+  await expect(panel).toHaveCount(0);
+  await expect(product).toBeFocused();
+  // Keyboard: ArrowDown opens and lands on the first link.
+  await page.keyboard.press("ArrowDown");
+  await expect(panel.getByRole("link").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  // Hover opens one menu and moving to another swaps it; leaving closes it.
+  await trigger(page, "How it works").hover();
+  await expect(
+    page.getByRole("region", { name: "How it works menu" }),
+  ).toBeVisible();
+  await trigger(page, "Resources").hover();
+  await expect(
+    page.getByRole("region", { name: "How it works menu" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Resources menu" }),
+  ).toBeVisible();
+  await page.mouse.move(700, 800);
+  await expect(
+    page.getByRole("region", { name: "Resources menu" }),
+  ).toHaveCount(0);
+  // Outside click closes.
+  await product.click();
+  await page.mouse.click(700, 700);
+  await expect(panel).toHaveCount(0);
+  // A link navigates to its section and closes the menu.
+  await product.click();
   await page
-    .getByRole("navigation", { name: "Dispatch queues" })
-    .getByRole("button", { name: "In transit", exact: true })
+    .getByRole("region", { name: "Product menu" })
+    .getByRole("link", { name: /Assign and dispatch/ })
     .click();
-  await requested;
-  await expect(
-    page.getByRole("heading", { name: "In transit", exact: true, level: 1 }),
-  ).toBeVisible();
-  await expectReady(page);
-  await expect(
-    page.getByRole("button", { name: /NAV-B-TRANSIT/ }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: /NAV-A-BOOKED/ })).toHaveCount(
+  await expect(page).toHaveURL(/\/welcome#assign$/);
+  await expect(page.getByRole("region", { name: "Product menu" })).toHaveCount(
     0,
   );
+  await expect(page.locator("#assign")).toBeInViewport();
+});
+
+test("every menu link reaches a real page and a real section", async ({
+  page,
+}) => {
+  await page.setViewportSize(desktop);
+  const links = menu.flatMap((e) =>
+    e.kind === "link"
+      ? [e.href]
+      : [
+          ...e.groups.flatMap((g) => g.items.map((i) => i.href)),
+          e.feature.href,
+        ],
+  );
+  for (const href of new Set(links)) {
+    const [path, hash] = href.split("#");
+    const response = await page.goto(path);
+    expect(response?.status(), href).toBeLessThan(400);
+    if (hash) await expect(page.locator("#" + hash), href).toHaveCount(1);
+  }
+});
+
+test("on a phone the header shows a menu button and the sheet works", async ({
+  page,
+}) => {
+  await page.setViewportSize(phone);
+  await page.goto("/welcome");
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  const sheet = page.getByRole("dialog", { name: "Menu" });
+  await expect(sheet).toBeVisible();
+  await sheet.getByText("Product", { exact: true }).click();
+  await expect(
+    sheet.getByRole("link", { name: "Assign and dispatch" }),
+  ).toBeVisible();
+  await expect(
+    sheet.getByRole("link", { name: "Request access" }),
+  ).toBeVisible();
+  await expect(sheet.getByRole("link", { name: "Sign in" })).toBeVisible();
+  await sheet.getByRole("link", { name: "Assign and dispatch" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(/#assign$/);
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
+      () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("the menu switches at 900px: mega menu above, sheet below", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.goto("/pricing");
+  await expect(trigger(page, "Product")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open menu" })).toBeHidden();
+  await page.setViewportSize({ width: 899, height: 800 });
+  await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+  await expect(trigger(page, "Product")).toBeHidden();
+});
+
+test("the logo takes people to the public home from every public page and from sign-in", async ({
+  page,
+}) => {
+  await page.setViewportSize(desktop);
+  for (const path of [
+    "/pricing",
+    "/how-it-works",
+    "/get-started",
+    "/terms",
+    "/privacy",
+    "/",
+  ]) {
+    await page.goto(path);
+    await expect(
+      page.getByRole("link", { name: "Relay home" }).first(),
+      path,
+    ).toHaveAttribute("href", "/welcome");
+  }
+  await page.goto("/get-started");
+  await page.getByRole("link", { name: "Relay home" }).first().click();
+  await expect(page).toHaveURL(/\/welcome$/);
+});
+
+test("in the app the logo goes to Loads at first, then to the page used most", async ({
+  page,
+}) => {
+  await page.setViewportSize(desktop);
+  await login(page, "dispatcher@relay.test");
+  const me = await (await page.request.get("/api/me")).json();
+  const visits = () =>
+    page.evaluate(
+      (id) =>
+        JSON.parse(localStorage.getItem(`relay-page-visits:${id}`) || "{}")
+          .visits ?? 0,
+      me.user.id,
+    );
+  const logo = page
+    .locator(".sidebarTop")
+    .getByRole("button", { name: /^Relay, go to/ });
+  // The visit is counted once the page knows who is signed in.
+  const visit = async (path: string) => {
+    await page.goto(path);
+    const before = await visits();
+    await expect(logo).toBeVisible();
+    await expect.poll(visits).toBeGreaterThan(before);
+  };
+  await page.goto("/exceptions");
+  await expect(logo).toHaveAccessibleName("Relay, go to Loads");
+  await logo.click();
+  await expect(page).toHaveURL(/localhost:3000\/$/);
+  // Build a habit: Inbox is opened most.
+  for (const path of [
+    "/inbox",
+    "/contacts",
+    "/inbox",
+    "/inbox",
+    "/exceptions",
+    "/inbox",
+  ])
+    await visit(path);
+  await visit("/contacts");
+  await page.reload();
+  await expect(logo).toHaveAccessibleName("Relay, go to Inbox");
+  await logo.click();
+  await expect(page).toHaveURL(/\/inbox$/);
+});
+
+test("on a phone the app's logo does the same, and a driver is never sent to a page they cannot open", async ({
+  page,
+}) => {
+  await page.setViewportSize(phone);
+  await login(page, "driver@relay.test");
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  const user = await (await page.request.get("/api/me")).json();
+  // A habit for a page drivers may not open (set directly: they cannot visit it).
+  await page.evaluate((id) => {
+    localStorage.setItem(
+      `relay-page-visits:${id}`,
+      JSON.stringify({ scores: { billing: 9 }, visits: 9 }),
+    );
+  }, user.user.id);
+  // Account is a utility: opening it counts for nothing.
+  await page.goto("/account");
+  const bar = page
+    .locator(".mobileBar")
+    .getByRole("button", { name: /^Relay, go to/ });
+  await expect(bar).toHaveAccessibleName("Relay, go to Loads");
+  await bar.click();
+  await expect(page).toHaveURL(/localhost:3000\/$/);
 });

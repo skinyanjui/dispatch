@@ -38,6 +38,7 @@ import { Modal } from "./modal";
 import { folderCount, inboxFolders, type InboxCounts } from "./inbox";
 import { stageLabels, type Context } from "@/lib/contracts";
 import { sectionAllowed, type WorkspaceSection } from "@/lib/routes";
+import { browserStore, mostUsedSection } from "@/lib/most-used";
 export type { WorkspaceSection };
 export const sectionTitles: Record<
   Exclude<WorkspaceSection, "loads">,
@@ -272,6 +273,32 @@ export function WorkspaceShell({
     Icon,
     show: sectionAllowed(key, context),
   }));
+  // The logo goes to the page this person uses most (counted in this browser),
+  // Loads until there is a habit to follow.
+  const homeSection = mostUsedSection(
+    browserStore(),
+    context.user.id ?? context.user.email ?? "demo",
+    (k) => sectionAllowed(k, context),
+  );
+  const homeLabel =
+    homeSection === "loads" ? "Loads" : sectionTitles[homeSection];
+  const brandHome = (after?: () => void) => (
+    <button
+      type="button"
+      className="brandHome"
+      aria-label={`Relay, go to ${homeLabel}`}
+      title={`Go to ${homeLabel}`}
+      disabled={busy}
+      onClick={() => {
+        after?.();
+        go(() =>
+          homeSection === "loads" ? onQueue("") : onSection(homeSection),
+        );
+      }}
+    >
+      <Brand />
+    </button>
+  );
   const commands: Command[] = [
     ...pages
       .filter((p) => p.show)
@@ -436,7 +463,7 @@ export function WorkspaceShell({
             </button>
           ) : (
             <>
-              <Brand />
+              {brandHome()}
               <button
                 className="sidebarIcon"
                 aria-label={sheet ? "Close navigation" : "Collapse sidebar"}
@@ -689,7 +716,7 @@ export function WorkspaceShell({
         >
           <ListIcon size={18} aria-hidden="true" />
         </button>
-        <Brand />
+        {brandHome()}
         {!driverOnly && (
           <button
             className="sidebarIcon mobileCreate"

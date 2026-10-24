@@ -189,6 +189,7 @@ test("Terms and Privacy pages exist, say they are drafts, and are accessible", a
       await scan(page, path + " " + size.width);
     }
   }
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/privacy");
   await page.getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);

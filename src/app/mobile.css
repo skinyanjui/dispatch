@@ -166,10 +166,9 @@
     white-space: normal;
   }
   /* Public pages: header, footer and "On this page" links. */
-  .mk .mkHeader nav a,
-  .mk .mkHeader > a,
-  .mk .mkActions > a,
-  .mk .mkHeader a.mkButton,
+  .mk .mkNavLink,
+  .mk .mkLogo,
+  .mk .mkNavActions .mkButton,
   .crumbs a,
   .mk .mkFooter nav a,
   .mk .legalToc a,
@@ -179,20 +178,15 @@
   .mk .legalToc a,
   .mk .mkFooter nav a,
   .crumbs a,
-  .mk .mkHeader > a {
+  .mk .mkLogo {
     display: inline-flex;
     align-items: center;
   }
 }
 
-/* The header's four links and the preview's four tabs do not fit one row on a
-   320px screen. */
+/* The preview's four tabs do not fit one row on a 320px screen. */
 @media (max-width: 360px) {
   .mk .previewTabs button {
     padding-inline: var(--space-2);
-  }
-  .mk .mkHeader nav {
-    flex-wrap: wrap;
-    justify-content: flex-start;
   }
 }

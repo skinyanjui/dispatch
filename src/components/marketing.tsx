@@ -1,14 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Brand } from "@/components/workspace-shell";
+import { MarketingNav } from "@/components/marketing-nav";
 import { Breadcrumb, type Crumb } from "@/components/ui/breadcrumb";
-
-const nav = [
-  { href: "/welcome", label: "Product" },
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/get-started", label: "Get started" },
-  { href: "/pricing", label: "Pricing" },
-];
 
 /** Shared frame for the public pages: header, content, footer. */
 export function MarketingShell({
@@ -28,26 +22,10 @@ export function MarketingShell({
       </a>
       <div className="mkBar">
         <header className="mkHeader">
-          <Link href="/welcome" aria-label="Relay home">
+          <Link href="/welcome" aria-label="Relay home" className="mkLogo">
             <Brand />
           </Link>
-          <nav aria-label="Main">
-            {nav.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                aria-current={n.href === current ? "page" : undefined}
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mkActions">
-            <Link href="/">Sign in</Link>
-            <Link className="mkButton" href="/request-access">
-              Request access
-            </Link>
-          </div>
+          <MarketingNav current={current} />
         </header>
       </div>
       <main id="content">
@@ -60,7 +38,9 @@ export function MarketingShell({
       </main>
       <footer className="mkFooter">
         <div>
-          <Brand />
+          <Link href="/welcome" aria-label="Relay home" className="mkLogo">
+            <Brand />
+          </Link>
           <p>Dispatch operations for non-asset freight teams.</p>
         </div>
         <nav aria-label="Footer">

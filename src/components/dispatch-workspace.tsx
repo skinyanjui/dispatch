@@ -102,6 +102,7 @@ import { dollarsToMinor, appointmentToInstant, formatMoney } from "@/lib/entry";
 
 import { useApi, ApiError, describe } from "@/lib/client-api";
 import { pathFor, parsePath, sectionAllowed, type Route } from "@/lib/routes";
+import { browserStore, recordVisit } from "@/lib/most-used";
 import { ErrorAlert } from "@/components/ui/feedback";
 import { formatDate, formatDateTimeLong, formatTime } from "@/lib/format";
 const eventLabels: Record<string, string> = {
@@ -258,6 +259,13 @@ export default function Workspace({
   useEffect(() => {
     sectionRef.current = section;
   }, [section]);
+  // What the logo learns from: one visit per page opened, counted here only.
+  const visitor = context
+    ? (context.user.id ?? context.user.email ?? "demo")
+    : null;
+  useEffect(() => {
+    if (visitor) recordVisit(browserStore(), visitor, section);
+  }, [section, visitor]);
   const refreshUnread = useCallback(() => {
     api<{ unread: number }>("inbox/unread")
       .then((r) => setUnread(r.unread))

@@ -38,7 +38,7 @@ export default function Welcome() {
         </div>
       </section>
 
-      <section className="mkWide" aria-label="The workspace">
+      <section className="mkWide" id="board" aria-label="The workspace">
         <ProductPreview />
       </section>
 
@@ -47,15 +47,21 @@ export default function Welcome() {
           Try it
         </h2>
         <div className="mkMiniGrid">
-          <MiniAssign />
-          <MiniCheckIn />
-          <MiniBilling />
+          <div id="assign">
+            <MiniAssign />
+          </div>
+          <div id="checkin">
+            <MiniCheckIn />
+          </div>
+          <div id="billing">
+            <MiniBilling />
+          </div>
         </div>
       </section>
 
       <MiniNote wide />
 
-      <section className="mkFeature" aria-labelledby="assist">
+      <section className="mkFeature" id="drafts" aria-labelledby="assist">
         <MiniDraft />
         <div>
           <h2 id="assist">Drafts in seconds, reviewed by a person</h2>

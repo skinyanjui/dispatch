@@ -1,0 +1,274 @@
+/* Public navigation (components/marketing-nav.tsx): a mega menu from 900px, a
+   full-height sheet below. The panels are positioned against .mkBar so they
+   span the page width under the header. */
+.mkHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-3) 0;
+}
+.mkLogo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--mk-ink);
+  text-decoration: none;
+}
+.mkNavWrap {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.mkNav {
+  display: flex;
+  margin-inline: auto;
+  gap: 2px;
+}
+.mk .mkNavLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--control-radius, 7px);
+  background: transparent;
+  color: var(--mk-ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mkNavLink:hover,
+.mkNavTrigger[aria-expanded="true"],
+.mkNavLink[aria-current="page"],
+.mkNavTrigger[data-current="true"] {
+  background: var(--mk-soft);
+}
+.mkNavTrigger svg {
+  transition: transform 0.15s;
+}
+.mkNavTrigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.mkNavActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.mkNavActions .mkButton {
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  border-radius: var(--control-radius, 7px);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.mkMenuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--control-radius, 7px);
+  background: transparent;
+  color: var(--mk-ink);
+}
+.mkMenuButton:hover {
+  background: var(--mk-soft);
+}
+
+/* Mega panel */
+.mkMega {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-8);
+  padding: var(--space-6) max(20px, calc((100% - 1080px) / 2));
+  background: var(--panel);
+  border-bottom: 1px solid var(--mk-line);
+  box-shadow: 0 24px 40px -28px rgb(0 0 0 / 0.3);
+}
+.mkMegaGroups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+.mkMegaTitle {
+  margin: 0 0 var(--space-2);
+  color: var(--mk-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mkMega ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mkMega li a {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 8px;
+  color: var(--mk-ink);
+  text-decoration: none;
+}
+.mkMega li a:hover,
+.mkMega li a:focus-visible {
+  background: var(--mk-soft);
+}
+.mkMega li a strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.mkMega li a span {
+  color: var(--mk-muted);
+  font-size: 13px;
+}
+.mkMegaFeature {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: 12px;
+  background: var(--mk-soft);
+}
+.mkMegaFeature p:not(.mkMegaTitle) {
+  margin: 0;
+  color: var(--mk-muted);
+}
+.mkMegaFeature .miniRow {
+  flex-wrap: wrap;
+}
+.mkMegaFeature .miniRowName {
+  flex: 1 1 100%;
+}
+.mkMegaFeature .stepVisual {
+  padding: var(--space-3);
+  background: var(--panel);
+}
+.mkMegaFeature .mkGhost {
+  justify-self: start;
+}
+
+/* Phone sheet */
+.mkSheet {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-5) var(--space-6);
+  border: 0;
+  background: var(--panel);
+  color: var(--mk-ink);
+  overflow-y: auto;
+}
+.mkSheet[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.mkSheet::backdrop {
+  background: var(--ink);
+  opacity: 0.4;
+}
+.mkSheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mkSheetNav {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+}
+.mk .mkSheetLink,
+.mkSheetGroup summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  border-bottom: 1px solid var(--mk-line);
+  color: var(--mk-ink);
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  list-style: none;
+}
+.mkSheetGroup summary::-webkit-details-marker {
+  display: none;
+}
+.mkSheetGroup summary::after {
+  content: "+";
+  color: var(--mk-muted);
+  font-weight: 400;
+}
+.mkSheetGroup[open] summary::after {
+  content: "–";
+}
+.mk .mkSheetLink[aria-current="page"] {
+  color: var(--accent);
+}
+.mkSheetGroup p {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--mk-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mkSheetGroup ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mkSheetGroup li a {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  color: var(--mk-ink);
+  text-decoration: none;
+}
+.mkSheetActions {
+  display: grid;
+  gap: var(--space-2);
+}
+.mkSheetActions a {
+  justify-content: center;
+  min-height: 48px;
+}
+
+@media (max-width: 899px) {
+  .mkNav,
+  .mkNavActions,
+  .mkMega {
+    display: none;
+  }
+  .mkMenuButton {
+    display: inline-flex;
+  }
+}
+@media (min-width: 900px) {
+  .mkSheet {
+    display: none !important;
+  }
+}
+
+/* Anchors land below the sticky bar. */
+.mk [id] {
+  scroll-margin-top: 88px;
+}

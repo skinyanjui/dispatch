@@ -454,3 +454,18 @@
 .sidebarRow:has(> .sidebarItem.active) .sidebarToggle:hover {
   background: var(--hover-overlay);
 }
+
+/* The logo is a button that goes to the page this person uses most. */
+.brandHome {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+}
+.brandHome:hover:not(:disabled) {
+  background: var(--sidebar-hover);
+}

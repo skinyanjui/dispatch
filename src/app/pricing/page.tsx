@@ -60,7 +60,7 @@ export default function Pricing() {
           includesLabel="Everything included"
           groups={groups}
         />
-        <div className="pricingMini">
+        <div className="pricingMini" id="ai">
           <MiniAiSwitch />
           <MiniNote />
         </div>
