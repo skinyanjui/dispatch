@@ -38,3 +38,7 @@ ADR 0060. The preview is built from the real components and the demo's data; the
 - **Terms and Privacy** ended with "Back to sign in", duplicating the header's Sign in. Removed.
 - **Request received** no longer says "Thanks. Relay is invitation-only" before explaining the review; it opens with what happens next.
 - Guarded by `tests/browser/public-pages.spec.ts`.
+
+## Copy fills its row before wrapping (2026-10-24)
+
+Narrow measure caps (`max-width` of 14-20ch on headlines, 54ch on the lead, 70ch on the status band, 36ch on the footer tagline, 30ch on the sign-in lead) made short copy wrap while its row had room: the lead broke after "with" under a headline spanning the page, the footer tagline wrapped in a 260px box, and the sign-in lead stopped at 300px. Removed; headlines keep balanced wrapping only when they truly need two lines. The home-page preview's cards wrapped "Chicago, IL → / Nashville, TN" and "Pickup Sun, Oct 25, / 11:46 AM" because the drawing was laid out at 1080px; it is now laid out as a 1280px window and scaled to fit (below 900px wide it is laid out naturally, as on a phone), so its cards are as wide as in the app. Guarded by a test that checks the hero headline, lead, footer tagline and the preview's route and fact lines each sit on one row at 1440px. Legal pages keep their 70ch reading column.

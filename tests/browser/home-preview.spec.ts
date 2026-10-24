@@ -231,3 +231,26 @@ test("the home page does not repeat itself: one request-access button in the pag
   const headings = await main.getByRole("heading").allInnerTexts();
   expect(new Set(headings).size).toBe(headings.length);
 });
+
+test("copy fills its row before wrapping: hero line, preview cards, footer tagline", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/welcome");
+  await expect(frame(page).locator(".loadCard").first()).toBeVisible();
+  // One line each (a wrapped line is at least twice the line height).
+  const oneLine = (selector: string) =>
+    page.locator(selector).evaluateAll((els) =>
+      els.every((e) => {
+        const r = e.getBoundingClientRect(),
+          line = parseFloat(getComputedStyle(e).lineHeight) || r.height;
+        return r.height < line * 1.6;
+      }),
+    );
+  expect(await oneLine(".mkLead")).toBe(true);
+  expect(await oneLine(".mkFooter p")).toBe(true);
+  expect(await oneLine(".previewShell .lcRoute")).toBe(true);
+  expect(await oneLine(".previewShell .lcFact")).toBe(true);
+  // The headline too: it has room for a single row at this width.
+  expect(await oneLine(".mkHero h1")).toBe(true);
+});

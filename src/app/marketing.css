@@ -116,17 +116,14 @@
 }
 .mkHero h1 {
   margin: 0;
-  max-width: 16ch;
   font-size: clamp(34px, 6vw, 60px);
   line-height: 1.05;
   letter-spacing: -0.03em;
 }
 .mkHero.compact h1 {
-  max-width: 24ch;
   font-size: clamp(28px, 4.4vw, 42px);
 }
 .mkLead {
-  max-width: 54ch;
   margin: var(--space-5) 0 var(--space-6);
   font-size: clamp(16px, 2vw, 19px);
   color: var(--muted);
@@ -195,7 +192,6 @@
   border-radius: 16px;
 }
 .mkBand p {
-  max-width: 70ch;
   margin: 0;
 }
 
@@ -240,7 +236,6 @@
   font-size: 14px;
 }
 .mkFooter p {
-  max-width: 36ch;
   margin: var(--space-2) 0 0;
   color: var(--muted);
 }
@@ -321,7 +316,6 @@
   color: var(--mk-ink);
 }
 .mkHero h1 {
-  max-width: 14ch;
   font-weight: 600;
   letter-spacing: -0.035em;
 }
@@ -466,7 +460,7 @@
 }
 /* Product preview */
 .mkWide {
-  width: min(1080px, calc(100% - 40px));
+  width: min(1240px, calc(100% - 40px));
   margin: 0 auto var(--space-6);
 }
 .preview {
@@ -506,12 +500,31 @@
   box-shadow: 0 30px 60px -40px rgb(0 0 0 / 0.35);
   overflow: hidden;
 }
+/* The drawing is a fixed-size stage scaled to the frame (product-preview.tsx),
+   or laid out naturally when the frame is narrow. */
+.previewViewport {
+  overflow: hidden;
+}
+.previewStage {
+  transform-origin: top left;
+}
+.previewViewport[data-scaled] {
+  height: calc(620px * var(--pv-scale));
+}
+.previewViewport[data-scaled] .previewStage {
+  width: 1280px;
+  height: 620px;
+  transform: scale(var(--pv-scale));
+}
 /* The real app shell, sized to a window instead of the whole screen. */
 .previewShell.appShell {
   min-height: 0;
   height: min(620px, 78vh);
   pointer-events: none;
   user-select: none;
+}
+.previewStage .previewShell.appShell {
+  height: 100%;
 }
 .previewShell .sidebarDock {
   position: static;
@@ -564,9 +577,6 @@
     order: 2;
   }
 }
-.mkHero h1 {
-  max-width: 18ch;
-}
 .mkFooter a,
 .mk .mkFooter nav a {
   color: var(--mk-muted);
@@ -590,12 +600,6 @@
 .mkBand p,
 .listItemDesc {
   text-wrap: pretty;
-}
-.mkHero h1 {
-  max-width: 20ch;
-}
-.mkHero.compact h1 {
-  max-width: 28ch;
 }
 .mkGrid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
@@ -645,7 +649,7 @@
   }
 }
 .mkFooter > div {
-  flex: 0 1 260px;
+  flex: 0 1 auto;
 }
 .mkFooter nav {
   flex: 1 1 auto;

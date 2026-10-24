@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PlusIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { Board } from "@/components/board";
@@ -157,7 +157,36 @@ function PreviewSidebar({
   );
 }
 
+/** The drawing is laid out as a 1280px-wide window and shrunk to fit (the
+ *  stage sizes are in marketing.css), so its cards are as wide as they are in
+ *  the app and their text fills a line before wrapping. Below 900px wide it is
+ *  laid out naturally, as on a phone. */
+const stageWidth = 1280,
+  scaleFrom = 900;
+function useStageScale() {
+  return useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const update = () => {
+      if (el.clientWidth >= scaleFrom) {
+        el.style.setProperty(
+          "--pv-scale",
+          String(Math.min(1, el.clientWidth / stageWidth)),
+        );
+        el.dataset.scaled = "true";
+      } else {
+        el.style.removeProperty("--pv-scale");
+        delete el.dataset.scaled;
+      }
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+}
+
 export function ProductPreview() {
+  const watch = useStageScale();
   const [tab, setTab] = useState<Tab>("board");
   const [adapter] = useState(() => createDemoApi({ persist: false }));
   const [data, setData] = useState<{
@@ -211,97 +240,105 @@ export function ProductPreview() {
           // Decorative: the real screens, but nothing in the drawing can be
           // focused or used (inert), and it is hidden from assistive tech.
           <ApiContext.Provider value={adapter.api}>
-            <div
-              className="shell appShell previewShell"
-              inert
-              aria-hidden="true"
-            >
-              <PreviewSidebar context={data.context} section={section} />
-              <div className="mainPane">
-                <div className="workspace">
-                  {tab === "documents" ? (
-                    <DocumentsPage offline={false} demo onAuthError={nothing} />
-                  ) : (
-                    <>
-                      <QueueTabs
-                        status=""
-                        driverOnly={false}
-                        busy={false}
-                        onQueue={nothing}
-                        trailing={
-                          <div className="toolbar">
-                            <div className="toolbarLeft">
-                              <span className="toolbarMeta">
-                                {data.loads.length} loads
-                              </span>
-                            </div>
-                          </div>
-                        }
-                      />
-                      <LoadsViewBar
-                        config={view}
-                        onConfig={nothing}
-                        filters={{ status: "", carrier_id: null }}
-                        carriers={data.context.carriers}
-                        onFilters={nothing}
-                        onApply={nothing}
-                        onAuthError={nothing}
-                      />
-                      <AttentionStrip
-                        counts={data.attention.counts}
-                        total={data.attention.total}
-                        truncated={data.attention.truncated}
-                        active={null}
-                        onToggle={nothing}
-                      />
-                      <section
-                        className="loadSurface"
-                        aria-label="Load workspace"
-                      >
-                        {tab === "table" ? (
-                          <TableView
-                            loads={data.loads}
+            <div className="previewViewport" ref={watch}>
+              <div className="previewStage">
+                <div
+                  className="shell appShell previewShell"
+                  inert
+                  aria-hidden="true"
+                >
+                  <PreviewSidebar context={data.context} section={section} />
+                  <div className="mainPane">
+                    <div className="workspace">
+                      {tab === "documents" ? (
+                        <DocumentsPage
+                          offline={false}
+                          demo
+                          onAuthError={nothing}
+                        />
+                      ) : (
+                        <>
+                          <QueueTabs
+                            status=""
+                            driverOnly={false}
+                            busy={false}
+                            onQueue={nothing}
+                            trailing={
+                              <div className="toolbar">
+                                <div className="toolbarLeft">
+                                  <span className="toolbarMeta">
+                                    {data.loads.length} loads
+                                  </span>
+                                </div>
+                              </div>
+                            }
+                          />
+                          <LoadsViewBar
                             config={view}
                             onConfig={nothing}
-                            onOpen={nothing}
-                            disabled={false}
+                            filters={{ status: "", carrier_id: null }}
+                            carriers={data.context.carriers}
+                            onFilters={nothing}
+                            onApply={nothing}
+                            onAuthError={nothing}
                           />
-                        ) : tab === "calendar" ? (
-                          <CalendarView
-                            loads={data.loads}
-                            config={view}
-                            onOpen={nothing}
-                            disabled={false}
+                          <AttentionStrip
+                            counts={data.attention.counts}
+                            total={data.attention.total}
+                            truncated={data.attention.truncated}
+                            active={null}
+                            onToggle={nothing}
                           />
-                        ) : (
-                          <Board
-                            label="Load board"
-                            noun="loads"
-                            lanes={stages.map((stage) => {
-                              const items = data.loads.filter(
-                                (l) => l.stage === stage,
-                              );
-                              return {
-                                id: stage,
-                                label: stageLabels[stage],
-                                items,
-                                count: <Totals loads={items} />,
-                              };
-                            })}
-                            itemKey={(load) => load.id}
-                            renderCard={(load) => (
-                              <LoadCard
-                                load={load}
-                                disabled={false}
+                          <section
+                            className="loadSurface"
+                            aria-label="Load workspace"
+                          >
+                            {tab === "table" ? (
+                              <TableView
+                                loads={data.loads}
+                                config={view}
+                                onConfig={nothing}
                                 onOpen={nothing}
+                                disabled={false}
+                              />
+                            ) : tab === "calendar" ? (
+                              <CalendarView
+                                loads={data.loads}
+                                config={view}
+                                onOpen={nothing}
+                                disabled={false}
+                              />
+                            ) : (
+                              <Board
+                                label="Load board"
+                                noun="loads"
+                                lanes={stages.map((stage) => {
+                                  const items = data.loads.filter(
+                                    (l) => l.stage === stage,
+                                  );
+                                  return {
+                                    id: stage,
+                                    label: stageLabels[stage],
+                                    items,
+                                    count: <Totals loads={items} />,
+                                  };
+                                })}
+                                itemKey={(load) => load.id}
+                                renderCard={(load) => (
+                                  <LoadCard
+                                    load={load}
+                                    disabled={false}
+                                    onOpen={nothing}
+                                  />
+                                )}
+                                empty="No loads here"
                               />
                             )}
-                            empty="No loads here"
-                          />
-                        )}
-                      </section>
-                    </>
-                  )}
+                          </section>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

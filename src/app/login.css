@@ -320,7 +320,6 @@
   }
   .heroLead {
     display: block;
-    max-width: 30ch;
     margin: var(--space-6) 0 var(--space-7);
     font-size: 19px;
     line-height: 1.5;
