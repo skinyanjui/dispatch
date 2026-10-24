@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Cta, MarketingShell } from "@/components/marketing";
+import { MarketingShell } from "@/components/marketing";
 import { ListItem, ListItems } from "@/components/ui/list-item";
 
 export const metadata: Metadata = {
@@ -53,7 +53,6 @@ export default function GetStarted() {
       ]}
     >
       <section className="mkHero compact">
-        <p className="mkEyebrow">Get started</p>
         <h1>From request to first load</h1>
         <p className="mkLead">Six steps. Only the first is yours to start.</p>
       </section>
@@ -90,7 +89,6 @@ export default function GetStarted() {
           ))}
         </ListItems>
       </section>
-      <Cta title="Ready when you are" />
     </MarketingShell>
   );
 }

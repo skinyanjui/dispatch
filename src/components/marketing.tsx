@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { Brand } from "@/components/workspace-shell";
 import { Breadcrumb, type Crumb } from "@/components/ui/breadcrumb";
 
@@ -71,23 +70,5 @@ export function MarketingShell({
         </nav>
       </footer>
     </div>
-  );
-}
-
-export function Cta({ title, text }: { title: string; text?: string }) {
-  return (
-    <section className="mkCta">
-      <h2>{title}</h2>
-      {text && <p>{text}</p>}
-      <div className="mkRow">
-        <Link className="mkButton" href="/request-access">
-          Request access
-          <ArrowRightIcon size={16} aria-hidden="true" />
-        </Link>
-        <Link className="mkGhost" href="/demo">
-          Try the interactive demo
-        </Link>
-      </div>
-    </section>
   );
 }

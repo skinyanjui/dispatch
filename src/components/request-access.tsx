@@ -37,9 +37,9 @@ export function RequestAccess() {
             />
             <h1>Request received</h1>
             <p className="loginDescription keep">
-              Thanks. Relay is invitation-only, so a person reviews each
-              request. If it is approved, a private link to set your password is
-              sent to <strong>{sent}</strong>. Nothing has been created yet.
+              A person reviews each request. If it is approved, a private link
+              to set your password is sent to <strong>{sent}</strong>. Nothing
+              has been created yet.
             </p>
             <Link className="primary full" href="/">
               Back to sign in

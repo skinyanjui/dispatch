@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { MarketingShell } from "@/components/marketing";
 import { legalUpdated, legalVersion } from "@/lib/legal";
 
@@ -47,9 +46,6 @@ export function LegalPage({
             Version {legalVersion} · Updated {legalUpdated}
           </p>
           {children}
-          <p className="legalBack">
-            <Link href="/">Back to sign in</Link>
-          </p>
         </article>
       </section>
     </MarketingShell>

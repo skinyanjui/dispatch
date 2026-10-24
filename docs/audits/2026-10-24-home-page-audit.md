@@ -30,3 +30,11 @@ ADR 0060. The preview is built from the real components and the demo's data; the
 - **Vacuous sentence removed** under "Boundaries enforced in the product" ("Relay enforces the limits of dispatching other people's freight" restated its heading), along with the guardrail "Tracking is never presented as live", which defended a feature Relay does not have and repeated the "Follow and resolve" card ("check-ins show their source and time"). The remaining two guardrails use different icons instead of three identical shields.
 - **Duplicate wording trimmed:** "fictional sample data" was in the preview note and again in the status band; "Nothing is sent" in the Documents caption and again in the assistant section.
 - Guarded by `tests/browser/home-preview.spec.ts` (one Request access in the page, no closing banner, no footer copy of the header links, no repeated section headings).
+
+## Same pass on the other public pages (2026-10-24)
+
+- **All three inner pages (How it works, Get started, Pricing):** the eyebrow above the title repeated the active nav tab and the breadcrumb, and each ended with a banner repeating Request access and the demo. Both removed; the banner component and its CSS are deleted. How it works keeps one demo link in its opening line; Get started keeps its single "Open the request form" step; Pricing keeps the card's button.
+- **Pricing said each thing two or three times.** "Free" and "early access" appeared in the title, the card name, the price and its note; "no payment details" in the footnote and an assurance; "before any charge" in the lead, an assurance and the FAQ; "AI off by default" in the feature list, an assurance and the FAQ; "who can join" in the card and the FAQ. Now: title, one lead promise, the card (no badge, no price note, no "everything below" sentence, since the column is labelled "Everything included"), one footnote, and one assurance carrying the unique fact (AI is billed to your own account, with a monthly limit). The FAQ is gone.
+- **Terms and Privacy** ended with "Back to sign in", duplicating the header's Sign in. Removed.
+- **Request received** no longer says "Thanks. Relay is invitation-only" before explaining the review; it opens with what happens next.
+- Guarded by `tests/browser/public-pages.spec.ts`.

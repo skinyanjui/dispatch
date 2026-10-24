@@ -144,8 +144,7 @@
 }
 .mkSection > h2,
 .mkSplit h2,
-.mkBand h2,
-.mkCta h2 {
+.mkBand h2 {
   margin: 0 0 var(--space-4);
   font-size: clamp(22px, 3vw, 30px);
   letter-spacing: -0.02em;
@@ -230,31 +229,6 @@
 .mkFaq p {
   margin: var(--space-2) 0 0;
   color: var(--muted);
-}
-.mkCta {
-  margin-block: var(--space-7);
-  padding: clamp(var(--space-6), 5vw, var(--space-9));
-  text-align: center;
-  background: var(--ink);
-  color: var(--ink-inverse);
-  border-radius: 20px;
-}
-.mkCta p {
-  margin: 0 auto var(--space-5);
-  max-width: 52ch;
-  color: var(--mk-cta-muted);
-}
-.mkCta .mkRow {
-  justify-content: center;
-}
-.mkCta .mkButton {
-  background: var(--panel);
-  color: var(--ink);
-}
-.mkCta .mkGhost {
-  background: transparent;
-  color: var(--ink-inverse);
-  border-color: var(--mk-cta-line);
 }
 .mkFooter {
   display: flex;
@@ -372,9 +346,6 @@
 .mkBand {
   background: var(--mk-soft);
   border: 1px solid var(--mk-line);
-}
-.mkCta {
-  background: var(--mk-ink);
 }
 .mkFooter {
   border-top-color: var(--mk-line);
@@ -611,8 +582,7 @@
 .mkFeature h2,
 .mkSection > h2,
 .mkSplit h2,
-.mkBand h2,
-.mkCta h2 {
+.mkBand h2 {
   text-wrap: balance;
 }
 .mkLead,

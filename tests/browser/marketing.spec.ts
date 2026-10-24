@@ -84,7 +84,6 @@ test("public pages render, are accessible, fit phones and link to real destinati
   await expect(page).toHaveURL(/\/get-started$/);
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(page).toHaveURL(/\/pricing$/);
-  await page.getByText("Does AI cost extra?").click();
   await expect(page.getByText("monthly limit")).toBeVisible();
 });
 

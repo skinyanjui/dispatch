@@ -78,9 +78,6 @@
   color: var(--warn);
   font-size: 14px;
 }
-.legalBack {
-  margin-top: var(--space-7);
-}
 @media (min-width: 960px) {
   .mk .legalLayout {
     grid-template-columns: 220px minmax(0, 70ch);

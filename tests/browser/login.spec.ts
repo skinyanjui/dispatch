@@ -190,7 +190,7 @@ test("Terms and Privacy pages exist, say they are drafts, and are accessible", a
     }
   }
   await page.goto("/privacy");
-  await page.getByRole("link", { name: "Back to sign in" }).click();
+  await page.getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 

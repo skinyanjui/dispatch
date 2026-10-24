@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Cta, MarketingShell } from "@/components/marketing";
+import Link from "next/link";
+import { MarketingShell } from "@/components/marketing";
 import { ListItem, ListItems } from "@/components/ui/list-item";
 
 export const metadata: Metadata = {
@@ -45,9 +46,11 @@ export default function HowItWorks() {
       ]}
     >
       <section className="mkHero compact">
-        <p className="mkEyebrow">How it works</p>
         <h1>From rate confirmation to dispatch invoice</h1>
-        <p className="mkLead">Six steps, each recorded with who did it.</p>
+        <p className="mkLead">
+          Six steps, each recorded with who did it.{" "}
+          <Link href="/demo">See it in the interactive demo.</Link>
+        </p>
       </section>
       <section className="mkSection">
         <ListItems label="Steps" ordered>
@@ -70,7 +73,6 @@ export default function HowItWorks() {
           payments are records you keep.
         </p>
       </section>
-      <Cta title="Walk through it yourself" />
     </MarketingShell>
   );
 }
