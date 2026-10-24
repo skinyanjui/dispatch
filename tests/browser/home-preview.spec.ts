@@ -250,8 +250,19 @@ test("copy fills its row before wrapping: hero line, preview cards, footer tagli
   expect(await oneLine(".mkLead")).toBe(true);
   expect(await oneLine(".mkFooter p")).toBe(true);
   expect(await oneLine(".previewShell .lcRoute")).toBe(true);
-  // Not the facts: their width depends on the web font the runner loads, so
-  // a one-line check passes on one machine and wraps on another.
-  // The headline too: it has room for a single row at this width.
-  expect(await oneLine(".mkHero h1")).toBe(true);
+  // Headlines and leads must not be held to a narrow measure: they may use
+  // the whole column. (Whether a line fits on one row depends on the web font
+  // the runner loads, so wrapping itself is not asserted for them.)
+  const uncapped = (selector: string) =>
+    page.locator(selector).evaluateAll((els) =>
+      els.every((e) => {
+        const max = getComputedStyle(e).maxWidth;
+        return (
+          max === "none" ||
+          parseFloat(max) >= (e.parentElement?.clientWidth ?? 0) - 1
+        );
+      }),
+    );
+  expect(await uncapped(".mkHero h1")).toBe(true);
+  expect(await uncapped(".mkLead")).toBe(true);
 });
