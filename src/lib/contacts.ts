@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool, transaction } from "./db";
 import { digest, HttpError } from "./auth";
+import { requestContactChange } from "./change-control";
 import {
   contactKinds,
   type ContactKind,
@@ -435,13 +436,36 @@ async function lockContact(c: PoolClient, user: string, id: string) {
 
 export async function updateContact(user: string, id: string, input: unknown) {
   const data = contactFields
-    .extend({ version: z.number().int().positive() })
+    .extend({
+      version: z.number().int().positive(),
+      // Why a carrier contact's phone or email is changing (ADR 0064).
+      change_reason: z.string().trim().max(500).default(""),
+    })
     .parse(input);
-  const { version, ...fields } = data;
+  const { version, change_reason, ...fields } = data;
   return transaction(async (c) => {
     const current = await lockContact(c, user, id);
     if (current.version !== version)
       throw new HttpError(409, "VERSION_CONFLICT");
+    // A carrier contact's phone or email is where impostors redirect calls and
+    // paperwork, so changing it waits for a second person. Other fields apply now.
+    let held: string | null = null;
+    if (
+      current.carrier_id &&
+      fields.carrier_id === current.carrier_id &&
+      (fields.email !== current.email || fields.phone !== current.phone)
+    ) {
+      if (!change_reason) throw new HttpError(422, "REASON_REQUIRED");
+      held = await requestContactChange(
+        c,
+        user,
+        current,
+        { email: fields.email, phone: fields.phone },
+        change_reason,
+      );
+      fields.email = current.email;
+      fields.phone = current.phone;
+    }
     // Moving a contact to another carrier needs access to that carrier too.
     if (fields.carrier_id !== current.carrier_id)
       await writeScope(c, user, fields.carrier_id, current.organization_id);
@@ -471,7 +495,14 @@ export async function updateContact(user: string, id: string, input: unknown) {
       "INSERT INTO audit_logs VALUES($1,$2,'contact.updated',$3,now())",
       [randomUUID(), user, id],
     );
-    return { id, version: version + 1 };
+    return held
+      ? {
+          id,
+          version: version + 1,
+          pending_approval: true as const,
+          change_id: held,
+        }
+      : { id, version: version + 1 };
   });
 }
 

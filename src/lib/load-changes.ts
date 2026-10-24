@@ -5,6 +5,7 @@ import { transaction } from "./db";
 import { digest, HttpError } from "./auth";
 import { event, scoped } from "./loads";
 import { enqueueForUser } from "./notifications";
+import { requestChange } from "./change-control";
 
 // Edits and cancellation (ADR 0019). Every change names the actor, keeps the
 // old value and, once a load is past booking, a reason.
@@ -147,7 +148,32 @@ export async function editLoad(
   key?: string,
 ) {
   const data = editSchema.parse(input);
-  return transaction(async (c) => {
+  return transaction((c) => editLoadIn(c, user, id, data, key, false));
+}
+
+type EditResult = {
+  id: string;
+  version: number;
+  change_group?: string;
+  /** Set when a reroute waits for a second person (ADR 0064). */
+  pending_approval?: true;
+  change_id?: string;
+};
+
+/**
+ * The edit itself, inside the caller's transaction. A change of stop address
+ * on a load that has left "booked" is a reroute: unless `approved`, it is
+ * parked as a sensitive change for a second person instead of being applied.
+ */
+export async function editLoadIn(
+  c: PoolClient,
+  user: string,
+  id: string,
+  data: z.infer<typeof editSchema>,
+  key: string | undefined,
+  approved: boolean,
+): Promise<EditResult> {
+  {
     // A replayed request must not trip over its own cancellation or version.
     const load = await scoped(c, user, id, true, false, true);
     const again = await replay(c, user, load, "edit", key, data);
@@ -207,6 +233,32 @@ export async function editLoad(
         });
     }
     if (!changes.length) throw new HttpError(422, "NO_CHANGES");
+    if (
+      !approved &&
+      load.stage !== "booked" &&
+      changes.some((x) => x.field === "address")
+    ) {
+      const moved = changes.filter((x) => x.field === "address");
+      const change = await requestChange(c, user, {
+        carrierId: load.carrier_id,
+        kind: "reroute",
+        subjectId: id,
+        summary:
+          `Reroute load ${load.reference}: ${moved.map((x) => `${x.old} to ${x.next}`).join("; ")}`.slice(
+            0,
+            300,
+          ),
+        current: { stops: moved.map((x) => ({ id: x.stop, address: x.old })) },
+        proposed: data,
+        reason: data.reason,
+      });
+      return {
+        id,
+        version: load.version,
+        pending_approval: true,
+        change_id: change,
+      };
+    }
     for (const [i, s] of merged.entries()) {
       if (Date.parse(s.window_end) < Date.parse(s.window_start))
         throw new HttpError(422, "INVALID_STOP_WINDOWS");
@@ -273,7 +325,7 @@ export async function editLoad(
     const result = { id, version, change_group: group };
     await remember(c, user, load, "edit", key, data, result);
     return result;
-  });
+  }
 }
 
 export async function cancelLoad(

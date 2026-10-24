@@ -372,14 +372,18 @@ test("operations metadata is limited to administrators and never returns secret 
     [t.organization, t.dispatcher],
   );
   const metadata = await operationsStatus(t.dispatcher);
-  assert.equal(metadata.release.schema.at(-1), "041");
+  // The newest migration the runner knows, so adding one does not break this.
+  const { readFileSync } = await import("node:fs");
+  const known = [
+    ...readFileSync("scripts/migrate.ts", "utf8").matchAll(/\["(\d{3})",/g),
+  ].map((m) => m[1]);
+  assert.equal(metadata.release.schema.at(-1), known.at(-1));
   assert.ok(!JSON.stringify(metadata).includes(process.env.DATABASE_URL!));
 });
 
 test("durable exports survive retries, expire, and refuse downloads after membership revocation", async () => {
-  const { createExport, exportStatus, runPendingExports } = await import(
-    "../../src/lib/report-exports"
-  );
+  const { createExport, exportStatus, runPendingExports } =
+    await import("../../src/lib/report-exports");
   const t = await tenant("RepairDurableExport");
   await bookedLoad(t.dispatcher, t.carrier, { pickupHoursFromNow: -48 });
   const day = new Date().toISOString().slice(0, 10),

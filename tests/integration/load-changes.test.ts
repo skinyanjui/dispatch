@@ -9,6 +9,7 @@ import {
   mutate,
   recordStopEvent,
 } from "../../src/lib/loads";
+import { decideChange } from "../../src/lib/change-control";
 import { cancelLoad, editLoad } from "../../src/lib/load-changes";
 import { openException } from "../../src/lib/exceptions";
 import { bookedLoad, request, sessionFor, tenant } from "./fixtures";
@@ -119,10 +120,18 @@ test("edits keep stops in order, references unique, and need a reason once dispa
     { code: "REASON_REQUIRED" },
   );
   const before = await queued("Load % was updated");
-  await editLoad(t.dispatcher, load.id, {
+  // A new address after dispatch is a reroute: it waits for a second person
+  // (ADR 0064), and the driver is told only once it is approved.
+  const held = (await editLoad(t.dispatcher, load.id, {
     version: stage.version,
     reason: "Shipper moved the dock",
     stops: [{ id: d.stops[0].id, address: "Chicago, IL (Dock 4)" }],
+  })) as { pending_approval?: boolean; change_id?: string };
+  assert.equal(held.pending_approval, true);
+  assert.equal((await queued("Load % was updated")) - before, 0);
+  await decideChange(t.manager, held.change_id!, {
+    decision: "approve",
+    verification: "callback",
   });
   assert.equal((await queued("Load % was updated")) - before, 1);
   // Money-only edits do not page the driver.

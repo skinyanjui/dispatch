@@ -213,8 +213,14 @@ test("external contacts are organization-wide for dispatchers and carrier-scoped
       phone: "999-555-0100",
     }),
     version: 1,
+    change_reason: "Receiver moved offices",
   });
   assert.equal(edited.version, 2);
+  // The new number waits for a second person (ADR 0064); the rest applied now.
+  assert.equal(
+    (edited as { pending_approval?: boolean }).pending_approval,
+    true,
+  );
   await assert.rejects(
     updateContact(t.manager, linked.id, {
       ...fields({ carrier_id: t.carrier }),

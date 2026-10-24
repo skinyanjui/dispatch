@@ -48,6 +48,13 @@ import {
   olderEvents,
 } from "@/lib/loads";
 import { cancelLoad, editLoad } from "@/lib/load-changes";
+import {
+  cancelChange,
+  decideChange,
+  listChanges,
+  pendingCount,
+  requestPayoutChange,
+} from "@/lib/change-control";
 import { auditFilters, auditLog } from "@/lib/audit";
 import {
   createVehicle,
@@ -546,6 +553,35 @@ async function handle(req: NextRequest) {
           return NextResponse.json(
             await setVehicleStatus(user.id, vehicleId, await readJson(req)),
           );
+      }
+    }
+    if (path[0] === "change-control") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await listChanges(
+            user.id,
+            z.uuid().parse(req.nextUrl.searchParams.get("carrier_id")),
+          ),
+        );
+      if (path.length === 2 && path[1] === "pending" && req.method === "GET")
+        return NextResponse.json(await pendingCount(user.id));
+      if (
+        path.length === 2 &&
+        path[1] === "payout-details" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await requestPayoutChange(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      if (path.length === 3 && req.method === "POST") {
+        const id = z.uuid().parse(path[1]);
+        if (path[2] === "decision")
+          return NextResponse.json(
+            await decideChange(user.id, id, await readJson(req)),
+          );
+        if (path[2] === "cancel")
+          return NextResponse.json(await cancelChange(user.id, id));
       }
     }
     if (path[0] === "audit" && req.method === "GET") {

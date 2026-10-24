@@ -1,0 +1,430 @@
+import { randomUUID } from "node:crypto";
+import type { PoolClient } from "pg";
+import { z } from "zod";
+import { pool, transaction } from "./db";
+import { HttpError } from "./auth";
+import { carrierAccess, emit, once } from "./onboarding";
+import { editLoadIn, editSchema } from "./load-changes";
+
+/**
+ * Change control (ADR 0064). Payout instructions, a carrier contact's phone or
+ * email, and a stop address after dispatch are the details impostors change.
+ * Each such change is requested by one person and takes effect only when a
+ * different person who works for the carrier, or administers the organization,
+ * approves it after confirming it another way (a call to a number already on
+ * record, a document, or in person). Payout changes then wait out a cooling-off
+ * period before they count. The database refuses an approval by the requester.
+ */
+export const changeKinds = [
+  "payout_details",
+  "contact_details",
+  "reroute",
+] as const;
+export type ChangeKind = (typeof changeKinds)[number];
+export const verificationMethods = [
+  "callback",
+  "document",
+  "in_person",
+] as const;
+
+/** Hours before approved payout details count; RELAY_PAYOUT_COOLING_HOURS, 0 to 168. */
+export function coolingHours(): number {
+  const n = Number(process.env.RELAY_PAYOUT_COOLING_HOURS ?? 24);
+  return Number.isInteger(n) && n >= 0 && n <= 168 ? n : 24;
+}
+
+const key = z.uuid();
+export const payoutSchema = z
+  .object({
+    carrier_id: z.uuid(),
+    payee_name: z.string().trim().min(1).max(160),
+    method: z.enum(["ach", "wire", "check", "factor"]),
+    account_last4: z
+      .string()
+      .trim()
+      .regex(
+        /^([0-9]{4})?$/,
+        "Use the last four digits only, or leave it empty",
+      ),
+    reason: z.string().trim().min(1).max(500),
+    key,
+  })
+  .strict();
+const decisionSchema = z
+  .object({
+    decision: z.enum(["approve", "reject"]),
+    verification: z.enum(verificationMethods).optional(),
+    note: z.string().trim().max(500).default(""),
+  })
+  .strict();
+
+/** Parks a change for a second person. Returns the change id. */
+export async function requestChange(
+  c: PoolClient,
+  user: string,
+  input: {
+    carrierId: string;
+    kind: ChangeKind;
+    subjectId: string | null;
+    summary: string;
+    current: unknown;
+    proposed: unknown;
+    reason: string;
+  },
+): Promise<string> {
+  const id = randomUUID();
+  try {
+    await c.query(
+      `INSERT INTO sensitive_changes(id,carrier_id,kind,subject_id,summary,current_value,proposed_value,reason,requested_by)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        id,
+        input.carrierId,
+        input.kind,
+        input.subjectId,
+        input.summary,
+        JSON.stringify(input.current),
+        JSON.stringify(input.proposed),
+        input.reason || "No reason given",
+        user,
+      ],
+    );
+  } catch (e) {
+    if ((e as { code?: string }).code === "23505")
+      throw new HttpError(409, "CHANGE_PENDING");
+    throw e;
+  }
+  await emit(c, user, input.carrierId, "change.requested", {
+    change_id: id,
+    kind: input.kind,
+  });
+  return id;
+}
+
+/** The payout instructions that count today, and whether they are still cooling. */
+export async function payoutDetails(
+  c: PoolClient | typeof pool,
+  carrierId: string,
+) {
+  const { rows } = await c.query(
+    `SELECT payee_name,method,account_last4,effective_at,effective_at>now() cooling
+     FROM carrier_payout_details WHERE carrier_id=$1`,
+    [carrierId],
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    payee_name: r.payee_name as string,
+    method: r.method as string,
+    account_last4: r.account_last4 as string,
+    effective_at: new Date(r.effective_at).toISOString(),
+    cooling_off: r.cooling as boolean,
+  };
+}
+
+/** Asks to change a carrier's payout details. Nothing changes until approved. */
+export async function requestPayoutChange(user: string, input: unknown) {
+  const data = payoutSchema.parse(input);
+  return transaction(async (c) => {
+    await carrierAccess(c, user, data.carrier_id);
+    return once(c, user, data.key, "change.payout", data, async () => {
+      const current = await payoutDetails(c, data.carrier_id);
+      const id = await requestChange(c, user, {
+        carrierId: data.carrier_id,
+        kind: "payout_details",
+        subjectId: null,
+        summary: `Payout to ${data.payee_name} by ${data.method}${data.account_last4 ? ` ending ${data.account_last4}` : ""}`,
+        current: current ?? {},
+        proposed: {
+          payee_name: data.payee_name,
+          method: data.method,
+          account_last4: data.account_last4,
+        },
+        reason: data.reason,
+      });
+      return { id, status: "pending" };
+    });
+  });
+}
+
+/** May this person decide changes for the carrier (not counting separation of duties)? */
+async function mayDecide(c: PoolClient, user: string, carrierId: string) {
+  const r = await c.query(
+    `SELECT 1 FROM carriers car
+     WHERE car.id=$2 AND (
+       EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=$1 AND m.role='carrier-manager')
+       OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=$1))`,
+    [user, carrierId],
+  );
+  return r.rowCount === 1;
+}
+
+/** Anyone who works for the carrier may see its changes. */
+async function mayRead(
+  c: PoolClient | typeof pool,
+  user: string,
+  carrierId: string,
+) {
+  const r = await c.query(
+    `SELECT 1 FROM carriers car
+     WHERE car.id=$2 AND (
+       EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=$1 AND m.role IN ('dispatcher','carrier-manager'))
+       OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=$1))`,
+    [user, carrierId],
+  );
+  return r.rowCount === 1;
+}
+
+const view = (r: Record<string, unknown>, user: string, decide: boolean) => ({
+  id: r.id as string,
+  kind: r.kind as ChangeKind,
+  summary: r.summary as string,
+  reason: r.reason as string,
+  status: r.status as string,
+  current: r.current_value,
+  proposed: r.proposed_value,
+  requested_by_name: r.requester_name as string,
+  requested_at: new Date(r.requested_at as string).toISOString(),
+  decided_by_name: (r.decider_name as string | null) ?? null,
+  decided_at: r.decided_at
+    ? new Date(r.decided_at as string).toISOString()
+    : null,
+  decision_note: r.decision_note as string,
+  verification: (r.verification as string | null) ?? null,
+  effective_at: r.effective_at
+    ? new Date(r.effective_at as string).toISOString()
+    : null,
+  // The requester cannot approve their own change; the screen hides the button.
+  can_decide: decide && r.status === "pending" && r.requested_by !== user,
+  can_cancel: r.status === "pending" && r.requested_by === user,
+});
+
+/** Pending and recent changes for one carrier, with the payout details in force. */
+export async function listChanges(user: string, carrierId: string) {
+  if (!(await mayRead(pool, user, carrierId)))
+    throw new HttpError(404, "NOT_FOUND");
+  const decide = await transaction((c) => mayDecide(c, user, carrierId));
+  const rows = await pool.query(
+    `SELECT s.*,ru.name requester_name,du.name decider_name
+     FROM sensitive_changes s JOIN users ru ON ru.id=s.requested_by LEFT JOIN users du ON du.id=s.decided_by
+     WHERE s.carrier_id=$1 ORDER BY (s.status='pending') DESC,s.requested_at DESC,s.id LIMIT 50`,
+    [carrierId],
+  );
+  return {
+    cooling_hours: coolingHours(),
+    payout_details: await payoutDetails(pool, carrierId),
+    can_decide: decide,
+    changes: rows.rows.map((r) => view(r, user, decide)),
+  };
+}
+
+/** Pending changes across the carriers a person can decide for (a count for the home screen). */
+export async function pendingCount(user: string) {
+  const r = await pool.query(
+    `SELECT count(*)::int n FROM sensitive_changes s JOIN carriers car ON car.id=s.carrier_id
+     WHERE s.status='pending' AND s.requested_by<>$1 AND (
+       EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=$1 AND m.role='carrier-manager')
+       OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=$1))`,
+    [user],
+  );
+  return { pending: r.rows[0].n as number };
+}
+
+async function lockChange(c: PoolClient, user: string, id: string) {
+  const r = await c.query(
+    "SELECT * FROM sensitive_changes WHERE id=$1 FOR UPDATE",
+    [id],
+  );
+  const row = r.rows[0];
+  // A change for a carrier the person has nothing to do with does not exist.
+  if (!row || !(await mayRead(c, user, row.carrier_id)))
+    throw new HttpError(404, "NOT_FOUND");
+  return row;
+}
+
+/** The requester withdraws their own pending change. */
+export async function cancelChange(user: string, id: string) {
+  return transaction(async (c) => {
+    const row = await lockChange(c, user, id);
+    if (row.requested_by !== user) throw new HttpError(404, "NOT_FOUND");
+    if (row.status !== "pending") throw new HttpError(409, "CHANGE_DECIDED");
+    await c.query(
+      "UPDATE sensitive_changes SET status='cancelled',decided_by=$2,decided_at=now() WHERE id=$1",
+      [id, user],
+    );
+    await emit(c, user, row.carrier_id, "change.cancelled", { change_id: id });
+    return { id, status: "cancelled" };
+  });
+}
+
+/** Approves or rejects a change. Never the requester; approval needs a verification method. */
+export async function decideChange(user: string, id: string, input: unknown) {
+  const data = decisionSchema.parse(input);
+  return transaction(async (c) => {
+    const row = await lockChange(c, user, id);
+    if (!(await mayDecide(c, user, row.carrier_id)))
+      throw new HttpError(404, "NOT_FOUND");
+    if (row.status !== "pending") throw new HttpError(409, "CHANGE_DECIDED");
+    if (row.requested_by === user) throw new HttpError(409, "SAME_PERSON");
+    if (data.decision === "reject") {
+      await c.query(
+        "UPDATE sensitive_changes SET status='rejected',decided_by=$2,decided_at=now(),decision_note=$3 WHERE id=$1",
+        [id, user, data.note],
+      );
+      await emit(c, user, row.carrier_id, "change.rejected", {
+        change_id: id,
+        kind: row.kind,
+      });
+      return { id, status: "rejected" };
+    }
+    if (!data.verification) throw new HttpError(422, "VERIFICATION_REQUIRED");
+    const outcome = await apply(c, row);
+    if (outcome === "stale") {
+      await c.query(
+        "UPDATE sensitive_changes SET status='stale',decided_by=$2,decided_at=now(),decision_note=$3 WHERE id=$1",
+        [id, user, "The record changed after this was requested; ask again."],
+      );
+      await emit(c, user, row.carrier_id, "change.stale", {
+        change_id: id,
+        kind: row.kind,
+      });
+      return { id, status: "stale" };
+    }
+    await c.query(
+      `UPDATE sensitive_changes SET status='approved',decided_by=$2,decided_at=now(),decision_note=$3,
+        verification=$4,effective_at=$5 WHERE id=$1`,
+      [id, user, data.note, data.verification, outcome.effective_at],
+    );
+    await emit(c, user, row.carrier_id, "change.approved", {
+      change_id: id,
+      kind: row.kind,
+      verification: data.verification,
+    });
+    return {
+      id,
+      status: "approved",
+      effective_at: outcome.effective_at.toISOString(),
+    };
+  });
+}
+
+type Row = {
+  id: string;
+  carrier_id: string;
+  kind: ChangeKind;
+  subject_id: string | null;
+  requested_by: string;
+  proposed_value: Record<string, unknown>;
+  current_value: Record<string, unknown>;
+};
+
+/** Applies an approved change. "stale" when the record moved on since the request. */
+async function apply(
+  c: PoolClient,
+  row: Row,
+): Promise<"stale" | { effective_at: Date }> {
+  if (row.kind === "payout_details") {
+    const p = row.proposed_value as {
+      payee_name: string;
+      method: string;
+      account_last4: string;
+    };
+    const effective = new Date(Date.now() + coolingHours() * 3600_000);
+    await c.query(
+      `INSERT INTO carrier_payout_details(carrier_id,payee_name,method,account_last4,effective_at,change_id)
+       VALUES($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (carrier_id) DO UPDATE SET payee_name=$2,method=$3,account_last4=$4,effective_at=$5,change_id=$6,updated_at=now()`,
+      [
+        row.carrier_id,
+        p.payee_name,
+        p.method,
+        p.account_last4,
+        effective,
+        row.id,
+      ],
+    );
+    return { effective_at: effective };
+  }
+  if (row.kind === "contact_details") {
+    const p = row.proposed_value as { email: string; phone: string };
+    const cur = row.current_value as { email: string; phone: string };
+    const now = await c.query(
+      "SELECT email,phone FROM contacts WHERE id=$1 AND carrier_id=$2 FOR UPDATE",
+      [row.subject_id, row.carrier_id],
+    );
+    if (
+      !now.rows[0] ||
+      now.rows[0].email !== cur.email ||
+      now.rows[0].phone !== cur.phone
+    )
+      return "stale";
+    // Consent belongs to a phone number; a new number needs consent recorded again.
+    await c.query(
+      `UPDATE contacts SET email=$2,phone=$3,
+        sms_consent_at=CASE WHEN phone=$3 THEN sms_consent_at END,
+        sms_consent_by=CASE WHEN phone=$3 THEN sms_consent_by END,
+        sms_consent_note=CASE WHEN phone=$3 THEN sms_consent_note ELSE '' END,
+        version=version+1,updated_at=now() WHERE id=$1`,
+      [row.subject_id, p.email, p.phone],
+    );
+    return { effective_at: new Date() };
+  }
+  // reroute: the stored edit, applied as the person who asked, if no stop moved meanwhile.
+  const cur = row.current_value as { stops: { id: string; address: string }[] };
+  const stops = await c.query(
+    "SELECT id,address FROM load_stops WHERE load_id=$1",
+    [row.subject_id],
+  );
+  for (const s of cur.stops) {
+    if (stops.rows.find((x) => x.id === s.id)?.address !== s.address)
+      return "stale";
+  }
+  const load = await c.query(
+    "SELECT version,cancelled_at,stage FROM loads WHERE id=$1",
+    [row.subject_id],
+  );
+  if (
+    !load.rows[0] ||
+    load.rows[0].cancelled_at ||
+    load.rows[0].stage === "delivered"
+  )
+    return "stale";
+  const edit = editSchema.parse({
+    ...row.proposed_value,
+    version: load.rows[0].version,
+  });
+  await editLoadIn(
+    c,
+    row.requested_by,
+    row.subject_id as string,
+    edit,
+    undefined,
+    true,
+  );
+  return { effective_at: new Date() };
+}
+
+/** Used by contact updates: parks a phone or email change on a carrier's contact. */
+export async function requestContactChange(
+  c: PoolClient,
+  user: string,
+  contact: {
+    id: string;
+    carrier_id: string;
+    name: string;
+    email: string;
+    phone: string;
+  },
+  next: { email: string; phone: string },
+  reason: string,
+) {
+  return requestChange(c, user, {
+    carrierId: contact.carrier_id,
+    kind: "contact_details",
+    subjectId: contact.id,
+    summary: `New phone or email for ${contact.name}`,
+    current: { email: contact.email, phone: contact.phone },
+    proposed: next,
+    reason,
+  });
+}
