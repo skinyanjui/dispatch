@@ -1513,6 +1513,7 @@ export default function Workspace({
             />
           ) : section === "documents" ? (
             <DocumentsPage
+              demo={demo}
               key={draftToOpen ?? "documents"}
               query={pageQ.documents ?? ""}
               offline={offline}

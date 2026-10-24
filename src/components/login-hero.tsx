@@ -17,8 +17,8 @@ export function LoginHero() {
           All in one place.
         </h2>
         <p className="heroLead">
-          Book, track and bill freight for your carriers, with each
-          carrier&apos;s data kept separate.
+          Book freight, record every step and bill separately for your carriers,
+          with each carrier&apos;s data kept apart.
         </p>
         <ul>
           <li>

@@ -118,10 +118,8 @@ test("marketing on a phone: the footer lines up with the brand and the product p
   const brand = await page.locator(".mkFooter .brand").boundingBox();
   const link = await page.locator(".mkFooter nav a").first().boundingBox();
   expect(Math.abs(brand!.x - link!.x)).toBeLessThan(2);
-  // Two stages are drawn (the rest would be squeezed), and nothing overflows.
-  const lanes = page.locator(".pvBoard > div:visible");
-  await expect(lanes).toHaveCount(2);
-  for (const tab of ["Table", "Calendar", "Documents"]) {
+  // The drawing is the real screens in a window: nothing overflows the page.
+  for (const tab of ["Board", "Table", "Calendar", "Documents"]) {
     await page.getByRole("tab", { name: tab }).click();
     expect(
       await page.evaluate(
@@ -129,9 +127,6 @@ test("marketing on a phone: the footer lines up with the brand and the product p
       ),
     ).toBe(true);
   }
-  await page.getByRole("tab", { name: "Table" }).click();
-  const cols = await page.locator(".pvTable thead th:visible").count();
-  expect(cols).toBe(3);
   await page.goto("/pricing");
   // The plan card holds its price, button and every included item.
   const plan = (await page.locator(".pricingCard").boundingBox())!;
@@ -158,7 +153,9 @@ test("sign-in and request-access heroes use the same short line as the product p
   for (const path of ["/", "/request-access"]) {
     await page.goto(path);
     await expect(
-      page.getByText("Book, track and bill freight for your carriers"),
+      page.getByText(
+        "Book freight, record every step and bill separately for your carriers",
+      ),
     ).toBeVisible();
   }
 });

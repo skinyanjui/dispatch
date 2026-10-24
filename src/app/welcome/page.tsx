@@ -17,18 +17,18 @@ import { ListItem, ListItems } from "@/components/ui/list-item";
 export const metadata: Metadata = {
   title: "Relay · Dispatch operations for carrier agents",
   description:
-    "Book, track and bill freight for your carriers in one place, with every carrier's data kept separate.",
+    "Book freight, record every step and bill separately for your carriers, with every carrier's data kept apart.",
 };
 
 const cards = [
   {
     icon: TruckIcon,
     title: "Book and dispatch",
-    text: "One board for every load, with stops, a driver on each and a record of every step.",
+    text: "One board for every load, with stops, the driver it is assigned to and a record of every step.",
   },
   {
     icon: WarningCircleIcon,
-    title: "Track and resolve",
+    title: "Follow and resolve",
     text: "Check-ins show their source and time. Exceptions get an owner and a trail to resolution.",
   },
   {
@@ -45,8 +45,8 @@ export default function Welcome() {
         <p className="mkEyebrow">For dispatch companies working for carriers</p>
         <h1>Everything in motion. All in one place.</h1>
         <p className="mkLead">
-          Book, track and bill freight for your carriers, with each
-          carrier&apos;s data kept separate.
+          Book freight, record every step and bill separately for your carriers,
+          with each carrier&apos;s data kept apart.
         </p>
         <div className="mkRow mkRowCenter">
           <Link className="mkButton" href="/request-access">

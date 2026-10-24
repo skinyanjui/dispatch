@@ -44,9 +44,12 @@ export function DocumentsPage({
   offline,
   query = "",
   openDraft,
+  demo = false,
   onAuthError,
 }: {
   offline: boolean;
+  /** The interactive demo has no server, so there is no PDF to download. */
+  demo?: boolean;
   query?: string;
   /** Open this draft on arrival (from an assistant answer). */
   openDraft?: string | null;
@@ -349,13 +352,15 @@ export function DocumentsPage({
               >
                 Copy text
               </button>
-              <a
-                className="secondary"
-                href={`/api/drafts/${current.id}/pdf`}
-                download
-              >
-                Download PDF
-              </a>
+              {!demo && (
+                <a
+                  className="secondary"
+                  href={`/api/drafts/${current.id}/pdf`}
+                  download
+                >
+                  Download PDF
+                </a>
+              )}
               {current.status === "draft" && (
                 <>
                   <button

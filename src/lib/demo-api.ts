@@ -1,3 +1,8 @@
+import {
+  seedDocuments,
+  templateFields,
+  type DemoDocuments,
+} from "./demo-documents";
 import { csvCell } from "./csv";
 import type {
   BillingPacket,
@@ -104,6 +109,7 @@ type State = {
   contacts: DirectoryEntry[];
   prospects?: DemoProspects;
   vehicles?: DemoVehicle[];
+  documentDrafts?: DemoDocuments;
   favorites: string[];
   notifications: NotificationLogEntry[];
   preferences: Record<OptionalKind, boolean>;
@@ -315,15 +321,21 @@ function fixtures(): State {
     viewer: { role: "dispatcher", name: "Alex Morgan" },
   };
 }
-export function createDemoApi() {
+/**
+ * `persist: false` keeps everything in memory and never touches the demo's
+ * saved state, for read-only drawings such as the home-page preview.
+ */
+export function createDemoApi({ persist: keep = true } = {}) {
   let state: State;
   try {
-    state =
-      JSON.parse(localStorage.getItem(storageKey) || "null") || fixtures();
+    state = keep
+      ? JSON.parse(localStorage.getItem(storageKey) || "null") || fixtures()
+      : fixtures();
   } catch {
     state = fixtures();
   }
   const persist = () => {
+    if (!keep) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(state));
     } catch {
@@ -1436,6 +1448,27 @@ export function createDemoApi() {
           outstanding_minor: "0",
         },
       };
+    }
+    if (p[0] === "drafts" || p[0] === "document-templates") {
+      if (state.viewer.role !== "dispatcher") fail("NOT_FOUND", 404);
+      const docs = (state.documentDrafts ??= seedDocuments(state.loads));
+      if (!body && p[0] === "drafts" && p.length === 1)
+        return { drafts: docs.drafts };
+      if (!body && p[0] === "document-templates" && p.length === 1)
+        return { templates: docs.templates, fields: templateFields() };
+      if (
+        body &&
+        p[0] === "drafts" &&
+        p.length === 3 &&
+        (p[2] === "approve" || p[2] === "discard")
+      ) {
+        const draft =
+          docs.drafts.find((d) => d.id === p[1]) || fail("NOT_FOUND", 404);
+        if (draft.status !== "draft") fail("NOT_FOUND", 404);
+        draft.status = p[2] === "approve" ? "approved" : "discarded";
+        return { ok: true };
+      }
+      fail("DEMO_UNAVAILABLE", 409);
     }
     if (p[0] === "message-attachments" || p[0] === "message-deliveries")
       fail("DEMO_UNAVAILABLE", 409);

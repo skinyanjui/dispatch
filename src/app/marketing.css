@@ -528,144 +528,42 @@
   color: var(--mk-muted);
 }
 .previewFrame {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  min-height: 340px;
-  padding: var(--space-2);
-  background: var(--mk-app-canvas);
+  min-width: 0;
+  background: var(--canvas);
   border: 1px solid var(--mk-line);
   border-radius: 16px;
   box-shadow: 0 30px 60px -40px rgb(0 0 0 / 0.35);
-}
-.previewSide {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  padding: var(--space-2);
-  font-size: 13px;
-}
-.previewSide span {
-  padding: var(--space-2) var(--space-2);
-  border-radius: 6px;
-  color: var(--mk-app-ink);
-}
-.previewSide span.on {
-  background: var(--mk-app-active);
-  font-weight: 500;
-}
-.previewMain {
-  padding: var(--space-4);
-  background: var(--panel);
-  border: 1px solid var(--mk-line);
-  border-radius: 10px;
   overflow: hidden;
 }
-.pvBoard {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
+/* The real app shell, sized to a window instead of the whole screen. */
+.previewShell.appShell {
+  min-height: 0;
+  height: min(620px, 78vh);
+  pointer-events: none;
+  user-select: none;
 }
-.pvBoard > div {
-  display: grid;
-  align-content: start;
-  gap: var(--space-2);
+.previewShell .sidebarDock {
+  position: static;
+  height: 100%;
+  overflow: hidden;
 }
-.pvBoard b {
-  font-size: 12px;
-  color: var(--mk-muted);
-  font-weight: 500;
+.previewShell .mainPane {
+  min-height: 0;
+  height: calc(100% - var(--space-4));
+  overflow: hidden;
 }
-.pvCard {
-  display: grid;
-  gap: 2px;
-  padding: var(--space-3);
-  border: 1px solid var(--mk-line);
-  border-radius: 8px;
-  font-size: 12px;
+.previewShell .loadSurface {
+  overflow: hidden;
 }
-.pvCard span {
-  color: var(--mk-muted);
-}
-.pvCard em {
-  font-style: normal;
-  font-weight: 600;
-}
-.pvTable {
-  max-width: 100%;
-  overflow-x: auto;
-}
-.pvTable table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.pvTable th,
-.pvTable td {
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  border-bottom: 1px solid var(--mk-line);
-  white-space: nowrap;
-}
-.pvTable th {
-  color: var(--mk-muted);
-  font-weight: 400;
-}
-.pvTable tbody th {
-  color: inherit;
-}
-.pvTable .align-right {
-  text-align: right;
-}
-.pvCal {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-}
-.pvCal > div {
-  min-height: 56px;
-  padding: var(--space-1);
-  border-right: 1px solid var(--mk-line);
-  border-bottom: 1px solid var(--mk-line);
-  font-size: 11px;
-}
-.pvCal span {
-  display: block;
-  margin-top: 2px;
-  padding: 1px var(--space-1);
-  border-left: 3px solid var(--mk-app-ink);
-  background: var(--mk-app-canvas);
-  border-radius: 3px;
-}
-.pvDoc {
-  display: grid;
-  gap: var(--space-3);
-  max-width: 460px;
-  font-size: 14px;
-}
-.pvDoc p {
+.previewLoading {
   margin: 0;
-  padding: var(--space-3);
-  background: var(--mk-soft);
-  border-radius: 8px;
-}
-.pvDoc span {
-  justify-self: start;
-  padding: 2px var(--space-2);
-  border-radius: 999px;
-  background: var(--warn-bg);
-  color: var(--warn);
-  font-size: 12px;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--mk-muted);
 }
 .previewNote {
   text-align: center;
   color: var(--mk-muted);
-}
-@media (max-width: 640px) {
-  .previewFrame {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .previewSide {
-    display: none;
-  }
 }
 /* Feature rows */
 .mkFeature {

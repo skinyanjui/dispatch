@@ -125,6 +125,26 @@ export function QueueTabs({
     </div>
   );
 }
+/** Every page in the sidebar, in order. The home-page preview draws its sidebar
+ *  from this list, so the two cannot disagree about which pages exist. */
+export const workspacePages = [
+  // Prospects are the dispatch company's own sales records (ADR 0030).
+  { key: "loads", label: "Loads", Icon: TruckIcon },
+  { key: "exceptions", label: "Exceptions", Icon: WarningIcon },
+  { key: "inbox", label: "Inbox", Icon: TrayIcon },
+  { key: "contacts", label: "Contacts", Icon: AddressBookIcon },
+  { key: "carriers", label: "Carriers", Icon: BuildingsIcon },
+  { key: "fleet", label: "Fleet", Icon: SteeringWheelIcon },
+  { key: "prospects", label: "Prospects", Icon: HandshakeIcon },
+  { key: "assistant", label: "Assistant", Icon: SparkleIcon },
+  { key: "documents", label: "Documents", Icon: FileTextIcon },
+  { key: "billing", label: "Billing", Icon: ReceiptIcon },
+  { key: "reports", label: "Reports", Icon: ChartBarIcon },
+] as const satisfies readonly {
+  key: WorkspaceSection;
+  label: string;
+  Icon: typeof TruckIcon;
+}[];
 const icon = { size: 16, "aria-hidden": true } as const;
 const collapseKey = "relay-sidebar-collapsed";
 
@@ -246,27 +266,7 @@ export function WorkspaceShell({
     .map((s) => s[0])
     .slice(0, 2)
     .join("");
-  const pages: {
-    key: WorkspaceSection;
-    label: string;
-    Icon: typeof TruckIcon;
-    show: boolean;
-  }[] = (
-    [
-      ["loads", "Loads", TruckIcon],
-      ["exceptions", "Exceptions", WarningIcon],
-      ["inbox", "Inbox", TrayIcon],
-      ["contacts", "Contacts", AddressBookIcon],
-      ["carriers", "Carriers", BuildingsIcon],
-      ["fleet", "Fleet", SteeringWheelIcon],
-      // Prospects are the dispatch company's own sales records (ADR 0030).
-      ["prospects", "Prospects", HandshakeIcon],
-      ["assistant", "Assistant", SparkleIcon],
-      ["documents", "Documents", FileTextIcon],
-      ["billing", "Billing", ReceiptIcon],
-      ["reports", "Reports", ChartBarIcon],
-    ] as const
-  ).map(([key, label, Icon]) => ({
+  const pages = workspacePages.map(({ key, label, Icon }) => ({
     key,
     label,
     Icon,
