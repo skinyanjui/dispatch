@@ -101,6 +101,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
   assert.deepEqual(Object.keys(daily).sort(), [
     "alerts",
     "appointments",
+    "authority",
     "cleanup",
     "credentials",
     "delivery",

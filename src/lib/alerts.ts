@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { pool } from "./db";
 import { configWarnings } from "./config-check";
 import type { JobStatus } from "./jobs";
+import { authorityAttention } from "./authority";
 
 /**
  * Pushes operational problems to a chat or paging webhook so they are not only
@@ -43,6 +44,12 @@ export async function collectAlerts(jobs: JobStatus[]): Promise<Alert[]> {
     alerts.push({
       key: "exports.stalled",
       text: `${r.stalled_exports} report export(s) never started in the last 24 hours.`,
+    });
+  const authority = await authorityAttention();
+  if (authority)
+    alerts.push({
+      key: "authority.attention",
+      text: `${authority} carrier(s) have a registration finding that needs a person (authority, insurance, out of service or a USDOT mismatch).`,
     });
   if (process.env.NODE_ENV === "production") {
     const warnings = configWarnings();

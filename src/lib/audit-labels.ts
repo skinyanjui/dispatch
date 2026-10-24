@@ -22,6 +22,7 @@ const labels: Record<string, string> = {
   "ai.rate_read.used": "Used a rate confirmation reading",
   "audit.viewed": "Opened the audit log",
   "auth.identity_linked": "Linked a Google or Apple sign-in",
+  "authority.checked": "Checked a carrier's registration",
   "billing.carrier_receipt_recorded": "Recorded a carrier payment receipt",
   "billing.packet_saved": "Saved a freight billing packet",
   "billing.packet_submitted": "Submitted a freight billing packet",

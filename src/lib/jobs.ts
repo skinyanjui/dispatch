@@ -9,6 +9,7 @@ import {
 } from "@/lib/notifications";
 import { pruneExpiredCredentials } from "./account";
 import { sendAlerts } from "./alerts";
+import { runAuthorityChecks } from "./authority";
 import { cleanupAbandoned } from "@/lib/message-attachments";
 
 /**
@@ -52,6 +53,7 @@ const defaultSteps = (scope: JobScope): Steps => ({
         cleanup: () => cleanupAbandoned(),
         pruned: pruneJobRuns,
         credentials: pruneExpiredCredentials,
+        authority: () => runAuthorityChecks(),
       }
     : {}),
 });

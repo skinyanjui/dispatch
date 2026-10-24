@@ -56,6 +56,7 @@ import {
   requestPayoutChange,
 } from "@/lib/change-control";
 import { auditFilters, auditLog } from "@/lib/audit";
+import { authorityStatus, checkAuthority } from "@/lib/authority";
 import {
   createVehicle,
   fleetOverview,
@@ -554,6 +555,19 @@ async function handle(req: NextRequest) {
             await setVehicleStatus(user.id, vehicleId, await readJson(req)),
           );
       }
+    }
+    if (path[0] === "authority") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await authorityStatus(
+            user.id,
+            z.uuid().parse(req.nextUrl.searchParams.get("carrier_id")),
+          ),
+        );
+      if (path.length === 2 && path[1] === "check" && req.method === "POST")
+        return NextResponse.json(
+          await checkAuthority(user.id, await readJson(req)),
+        );
     }
     if (path[0] === "change-control") {
       if (path.length === 1 && req.method === "GET")
