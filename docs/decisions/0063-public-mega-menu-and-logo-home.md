@@ -16,3 +16,14 @@ The public header was four links in a row that wrapped awkwardly on phones, and 
 ## Consequences
 
 The most-used page is per browser, not per person across devices; a server-side tally would need a table and a privacy decision. The public header is client code. Rollback: restore the previous `marketing.tsx` header and `Brand` usages; `most-used.ts` is independent.
+
+## Follow-up (CI)
+
+A menu opened by hover is pinned by the click that follows it; before, that
+click toggled it shut, because the pointer is already over the trigger. Only a
+click on a pinned menu closes it.
+
+CI start-up: the Content-Security-Policy is built per request (ADR 0058), so the
+browser job passes `RELAY_CSP_CONNECT_EXTRA` to `npm start`, not to the build.
+The Scheduler workflow now runs and prints a notice when `RELAY_JOBS_URL` is
+unset instead of being silently skipped.

@@ -4,7 +4,7 @@ name: Scheduler
 # tier) and delivery of queued messages. Vercel's own cron on the Hobby plan
 # can only run daily, so this calls the same endpoint more often.
 #
-# It does nothing until you opt in (ADR 0046):
+# It does nothing, and says so in the run, until you opt in (ADR 0046):
 #   Settings -> Secrets and variables -> Actions
 #     Variable  RELAY_JOBS_URL  https://your-domain.example   (no trailing slash)
 #     Secret    CRON_SECRET     the same value the app has
@@ -22,7 +22,6 @@ concurrency:
 
 jobs:
   tick:
-    if: ${{ vars.RELAY_JOBS_URL != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -32,6 +31,10 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -eu
+          if [ -z "$RELAY_JOBS_URL" ]; then
+            echo "::notice::Scheduler is off: the Actions variable RELAY_JOBS_URL is not set, so no reminders, deliveries or exports are being run from here. See ADR 0046."
+            exit 0
+          fi
           if [ -z "$CRON_SECRET" ]; then
             echo "::error::Set the Actions secret CRON_SECRET to the app's cron secret before relying on reminders. No job was called."
             exit 1

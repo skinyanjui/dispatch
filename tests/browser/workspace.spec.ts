@@ -741,9 +741,7 @@ test("reports: pressed range, KPIs that open their loads, sortable table", async
     page.getByRole("region", { name: "Exception queue" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Reports", exact: true }).click();
-  await region
-    .getByRole("button", { name: /^POD not accepted/ })
-    .click();
+  await region.getByRole("button", { name: /^POD not accepted/ }).click();
   await expect(page.locator(".loadSurface")).toBeVisible();
   await page.getByRole("button", { name: "Reports", exact: true }).click();
   await region.getByRole("button", { name: /^Booked / }).click();
@@ -897,9 +895,7 @@ test("billing: summary cards filter the invoices, columns sort, long lists page"
   await total.getByRole("button").click();
   await expect(total).toHaveAttribute("aria-sort", "ascending");
   // A summary card is a filter: Collected shows the paid invoices.
-  await region
-    .getByRole("button", { name: /^Collected / })
-    .click();
+  await region.getByRole("button", { name: /^Collected / }).click();
   await expect(
     region.getByRole("button", { name: "Paid", exact: false }).first(),
   ).toHaveAttribute("aria-pressed", "true");

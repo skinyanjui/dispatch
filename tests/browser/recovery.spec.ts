@@ -57,7 +57,9 @@ async function fillCreateForm(page: Page, reference: string) {
   return modal;
 }
 
-test("closing a dialog never steals focus from the next input", async ({ page }) => {
+test("closing a dialog never steals focus from the next input", async ({
+  page,
+}) => {
   await mockContext(page);
   await page.route("**/api/loads?*", (route) =>
     route.fulfill({ json: { loads: [], nextCursor: null } }),
@@ -78,7 +80,9 @@ test("closing a dialog never steals focus from the next input", async ({ page })
     };
   });
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Create load" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Create load" })).toHaveCount(
+    0,
+  );
   const search = page.getByRole("searchbox", { name: "Search loads" });
   await search.focus();
   await page.evaluate(() => {

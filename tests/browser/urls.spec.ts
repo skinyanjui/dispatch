@@ -65,11 +65,11 @@ test("each page has its address and the sidebar follows it", async ({
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Workspace navigation" });
   await nav.getByRole("button", { name: "Billing", exact: true }).click();
-  expect(path(page)).toBe("/billing");
+  await expect.poll(() => path(page)).toBe("/billing");
   await nav.getByRole("button", { name: "Carriers", exact: true }).click();
-  expect(path(page)).toBe("/carriers");
+  await expect.poll(() => path(page)).toBe("/carriers");
   await page.goBack();
-  expect(path(page)).toBe("/billing");
+  await expect.poll(() => path(page)).toBe("/billing");
   await expect(
     page.getByRole("region", { name: "Billing and payments" }),
   ).toBeVisible();

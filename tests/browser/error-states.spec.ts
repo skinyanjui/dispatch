@@ -58,7 +58,11 @@ test("a failed read on Exceptions can be retried and leaves no stale banner", as
   await expect(visibleAlerts(page)).toHaveCount(1);
   await retryAll(page);
   await expect(visibleAlerts(page)).toHaveCount(0);
-  await expect(page.getByRole("table")).toBeVisible();
+  // Recovered: the list when there are exceptions, the empty state when a
+  // fresh database has none (as in CI).
+  await expect(
+    page.getByRole("table").or(page.getByText("No exceptions match")),
+  ).toBeVisible();
 });
 
 for (const [name, path, ready] of [

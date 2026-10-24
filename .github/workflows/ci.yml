@@ -32,11 +32,12 @@ jobs:
       - run: npm run verify:restore
         env:
           RELAY_TEST_PG_CONTAINER: ${{ job.services.postgres.id }}
-      # The upload test fakes a bucket host; the CSP must allow it.
-      - run: VERCEL_ENV=production RELAY_CSP_CONNECT_EXTRA=https://bucket.example.test npm run build:vercel
+      - run: VERCEL_ENV=production npm run build:vercel
       - run: npx playwright install --with-deps chromium
+      # The upload test fakes a bucket host. The CSP is built per request, so
+      # the server (not the build) must be told to allow it.
       - run: |
-          RELAY_AI_PROVIDER=fixture npm start > /tmp/relay-server.log 2>&1 &
+          RELAY_AI_PROVIDER=fixture RELAY_CSP_CONNECT_EXTRA=https://bucket.example.test npm start > /tmp/relay-server.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3000/ > /dev/null && break; sleep 1; done
           npm run test:browser
       - uses: actions/upload-artifact@v5

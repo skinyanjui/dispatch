@@ -15,6 +15,9 @@ type Menu = Extract<MenuEntry, { kind: "menu" }>;
  */
 export function MarketingNav({ current }: { current: string }) {
   const [open, setOpen] = useState<string | null>(null);
+  // A menu opened by hover is pinned by the click that follows it (the pointer
+  // is already over the trigger); only a click on a pinned menu closes it.
+  const pinned = useRef(false);
   const bar = useRef<HTMLDivElement>(null);
   const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
   const sheet = useRef<HTMLDialogElement>(null);
@@ -25,6 +28,7 @@ export function MarketingNav({ current }: { current: string }) {
       if (was && returnFocus) triggers.current[was]?.focus();
       return null;
     });
+    pinned.current = false;
   }, []);
   useEffect(() => {
     if (!open) return;
@@ -42,7 +46,7 @@ export function MarketingNav({ current }: { current: string }) {
 
   const isCurrent = (href: string) => href.split("#")[0] === current;
   return (
-    <div className="mkNavWrap" ref={bar} onMouseLeave={() => setOpen(null)}>
+    <div className="mkNavWrap" ref={bar} onMouseLeave={() => close()}>
       <nav aria-label="Main" className="mkNav">
         {menu.map((entry) =>
           entry.kind === "link" ? (
@@ -51,7 +55,7 @@ export function MarketingNav({ current }: { current: string }) {
               href={entry.href}
               className="mkNavLink"
               aria-current={entry.href === current ? "page" : undefined}
-              onMouseEnter={() => setOpen(null)}
+              onMouseEnter={() => close()}
             >
               {entry.label}
             </Link>
@@ -66,12 +70,22 @@ export function MarketingNav({ current }: { current: string }) {
               aria-expanded={open === entry.id}
               aria-controls={`${base}-${entry.id}`}
               data-current={entry.page === current ? "true" : undefined}
-              onClick={() => setOpen(open === entry.id ? null : entry.id)}
-              onMouseEnter={() => setOpen(entry.id)}
+              onClick={() => {
+                if (open === entry.id && pinned.current) close();
+                else {
+                  setOpen(entry.id);
+                  pinned.current = true;
+                }
+              }}
+              onMouseEnter={() => {
+                if (open !== entry.id) pinned.current = false;
+                setOpen(entry.id);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown") {
                   e.preventDefault();
                   setOpen(entry.id);
+                  pinned.current = true;
                   requestAnimationFrame(() =>
                     document
                       .querySelector<HTMLElement>(

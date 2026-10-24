@@ -307,9 +307,11 @@ test("repaired reports support keyboard use, narrow reflow and automated accessi
     ),
   ).toBe(true);
   expect(
-    await region.locator(".stat small").evaluateAll((labels) =>
-      labels.every((label) => label.scrollWidth <= label.clientWidth + 1),
-    ),
+    await region
+      .locator(".stat small")
+      .evaluateAll((labels) =>
+        labels.every((label) => label.scrollWidth <= label.clientWidth + 1),
+      ),
   ).toBe(true);
   await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
   const violations = await page.evaluate(async () => {
