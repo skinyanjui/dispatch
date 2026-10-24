@@ -57,6 +57,8 @@
   --control-h: 32px;
   --control-h-sm: 28px;
   --control-min: 24px;
+  /* Smallest tap target on a phone or touch screen (src/app/mobile.css). */
+  --touch-min: 40px;
   --control-pad: 10px;
   /* Separators and other marks that should recede (breadcrumb slashes). */
   --faint: #b0b0b0;

@@ -1,0 +1,198 @@
+/* Phone layer: loaded last, so these rules win over the desktop density. It
+   exists because the app's compact type (8-11px in places) and 28-32px controls
+   are fine with a mouse and wrong on a phone:
+   1. Type floor: secondary text is at least 12px, chips and counters 11px.
+   2. Form controls are 16px, or iOS Safari zooms the page when one is focused.
+   3. Touch targets are at least 40px (var(--touch-min)).
+   Applies at phone and tablet widths and on any touch-first device. */
+@media (max-width: 800px), (pointer: coarse) {
+  .accountMenuEmail,
+  .accountName small,
+  .appShell .aiConfidence,
+  .appShell .aiQuote,
+  .appShell .laneEmpty,
+  .appShell .lc .lcFact,
+  .appShell .lc .lcSub,
+  .appShell .toolbarMeta,
+  .appShell .workspace > footer,
+  .appShell footer,
+  .checkInAge,
+  .checkInForm .optionalLabel,
+  .checkInHeading button,
+  .checkInHelp,
+  .checkInHistory summary,
+  .checkInProvenance,
+  .checkInStale,
+  .deliveries,
+  .demoBanner span,
+  .detailFoot,
+  .directoryIntro p:not(.eyebrow),
+  .directoryNote,
+  .docForm small,
+  .docHistory summary,
+  .docVersion small,
+  .event small,
+  .eyebrow,
+  .helpText,
+  .joinPassword button,
+  .linkPage .loginPanel .eyebrow,
+  .loginAccess,
+  .messageMeta,
+  .opsForm small,
+  .opsMeta,
+  .opsTeamName small,
+  .pvCal span,
+  .pvCard .pvChip,
+  .roleLabel,
+  .setupAgreementFile,
+  .setupDriver,
+  .setupOptional,
+  .setupPending,
+  .setupProgress,
+  .setupReady,
+  .setupSaveHint,
+  .setupStepCount,
+  .setupSummary .textButton,
+  .sidebarLabel,
+  .stop p,
+  .stop small,
+  .stopIndex,
+  .stopZone,
+  .threadTop time,
+  .toolbarMeta,
+  .userName,
+  footer,
+  legend > span,
+  small,
+  td small,
+  th {
+    font-size: 12px;
+  }
+  .accountInitial,
+  .appShell .avatar,
+  .appShell .avatar.small,
+  .appShell .countBadge,
+  .appShell .folder .toggleCount,
+  .appShell .laneCount,
+  .badge,
+  .count,
+  .docStatus,
+  .navBadge,
+  .opsPill,
+  .scopeChip,
+  .subCount,
+  kbd {
+    font-size: 11px;
+  }
+
+  /* 2. Form controls: 16px stops iOS Safari zooming the page on focus. The
+     !important is deliberate: desktop density sets 11-15px on many selectors
+     of differing specificity. */
+  input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="range"],
+    [type="file"],
+    [type="color"],
+    [type="hidden"]
+  ),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* 3. Touch targets. The :not() chain raises specificity above the desktop
+     control sizes (28-32px) without !important. Inline text buttons keep
+     their own sizing; cards are already large. */
+  .appShell button:not(.textButton, .cardDrag, .loadCard, .sidebarToggle),
+  .appShell summary,
+  .appShell select,
+  .appShell
+    input:not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="color"],
+      [type="hidden"]
+    ),
+  .appShell a.secondary,
+  .appShell a.primary,
+  .appShell [role="tab"],
+  .demoBanner button,
+  .demoBanner select {
+    min-height: var(--touch-min);
+  }
+  .appShell .mobileBar button {
+    min-width: var(--touch-min);
+  }
+  /* Sort buttons in table headers and the carrier count buttons are narrow. */
+  .appShell .sortButton,
+  .appShell td .textButton {
+    min-width: var(--touch-min);
+  }
+  /* A table wider than the screen fades the edge that has more beyond it. */
+  .appShell .dataTable[data-more="end"] {
+    mask-image: linear-gradient(
+      to right,
+      var(--ink) calc(100% - 28px),
+      transparent
+    );
+  }
+  .appShell .dataTable[data-more="start"] {
+    mask-image: linear-gradient(
+      to left,
+      var(--ink) calc(100% - 28px),
+      transparent
+    );
+  }
+  .appShell .dataTable[data-more="both"] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--ink) 28px,
+      var(--ink) calc(100% - 28px),
+      transparent
+    );
+  }
+  /* A hidden "show all" button takes no row of its own on a phone. */
+  .appShell .attentionReset.idle {
+    display: none;
+  }
+  /* Long button labels wrap instead of running out of their box. */
+  .appShell button.secondary,
+  .appShell button.primary {
+    max-width: 100%;
+    white-space: normal;
+  }
+  /* Public pages: header, footer and "On this page" links. */
+  .mk .mkHeader nav a,
+  .mk .mkHeader > a,
+  .mk .mkActions > a,
+  .mk .mkHeader a.mkButton,
+  .crumbs a,
+  .mk .mkFooter nav a,
+  .mk .legalToc a,
+  .mk button {
+    min-height: var(--touch-min);
+  }
+  .mk .legalToc a,
+  .mk .mkFooter nav a,
+  .crumbs a,
+  .mk .mkHeader > a {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* The header's four links and the preview's four tabs do not fit one row on a
+   320px screen. */
+@media (max-width: 360px) {
+  .mk .previewTabs button {
+    padding-inline: var(--space-2);
+  }
+  .mk .mkHeader nav {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}

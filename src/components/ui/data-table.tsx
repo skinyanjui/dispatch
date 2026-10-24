@@ -5,7 +5,7 @@ import {
   CaretDownIcon,
   CaretRightIcon,
 } from "@phosphor-icons/react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   formatDate,
   formatDateTime,
@@ -116,6 +116,31 @@ const cellClass = <T,>(c: ColumnDefinition<T>) =>
     .filter(Boolean)
     .join(" ");
 
+type ScrollEdges = "none" | "start" | "end" | "both";
+/** Which sides of a sideways-scrolling box still have content beyond them, so
+ *  the box can fade that edge and show it scrolls (src/app/mobile.css). */
+function useScrollEdges() {
+  const [edges, setEdges] = useState<ScrollEdges>("none");
+  const watch = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const update = () => {
+      const start = el.scrollLeft > 1,
+        end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges(start && end ? "both" : end ? "end" : start ? "start" : "none");
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, []);
+  return { edges, watch };
+}
+
 /**
  * The one table for records: headers once, a row per record, values under
  * their headers. It handles sorting, grouping, client-side paging, row
@@ -173,6 +198,7 @@ export function DataTable<T>({
   footer?: (columns: readonly ColumnDefinition<T>[]) => ReactNode;
   className?: string;
 }) {
+  const { edges, watch } = useScrollEdges();
   const [ownSort, setOwnSort] = useState<SortState | null>(defaultSort);
   const sort = controlledSort !== undefined ? controlledSort : ownSort;
   const [shown, setShown] = useState({ key: pageKey, count: pageSize });
@@ -277,6 +303,8 @@ export function DataTable<T>({
         aria-label={caption}
         aria-busy={loading || undefined}
         tabIndex={0}
+        ref={watch}
+        data-more={edges}
       >
         <table>
           <caption className="srOnly">{caption}</caption>
