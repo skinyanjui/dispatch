@@ -1,0 +1,261 @@
+/* Mini interactions and step pictures on the public pages
+   (components/mini-demos.tsx, components/step-visuals.tsx). They sit in the
+   app's own look: the real components render inside .appShell, here reset to
+   a small framed box instead of a full-screen layout. */
+.miniFrame {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  min-width: 0;
+}
+.miniFrame figcaption {
+  display: grid;
+  gap: var(--space-1);
+}
+.miniFrame figcaption strong {
+  font-size: 15px;
+}
+.miniFrame figcaption span {
+  color: var(--mk-muted);
+  font-size: 14px;
+}
+.miniNote {
+  margin: var(--space-4) 0 0;
+  color: var(--mk-muted);
+  font-size: 13px;
+}
+.miniNote.wide {
+  width: min(1240px, calc(100% - 40px));
+  margin-inline: auto;
+}
+.miniShell.appShell {
+  display: block;
+  min-height: 0;
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--panel);
+  border: 1px solid var(--mk-line);
+  border-radius: 12px;
+  font-size: 13px;
+}
+.miniLoading {
+  margin: 0;
+  color: var(--mk-muted);
+}
+.miniStack {
+  display: grid;
+  gap: var(--space-3);
+}
+.miniForm {
+  display: grid;
+  gap: var(--space-2);
+}
+.miniActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.miniMessage {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 8px;
+  background: var(--soft);
+}
+.miniMessage.good {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.miniMessage.bad {
+  background: var(--error-bg);
+  color: var(--error);
+}
+.miniCaption {
+  margin: 0;
+  color: var(--mk-muted);
+}
+.miniTrack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--mk-line);
+  border-radius: 10px;
+}
+.miniTrack > :nth-child(3) {
+  grid-column: 1;
+  justify-self: start;
+}
+.miniTrack > :nth-child(4) {
+  grid-column: 2;
+  justify-self: end;
+}
+.miniTrack small {
+  display: block;
+  color: var(--mk-muted);
+}
+.miniAmount {
+  font-weight: 600;
+  text-align: right;
+}
+.miniDraft {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.miniDraft mark {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-radius: 4px;
+  padding: 0 var(--space-1);
+}
+.miniSwitch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--mk-line);
+  border-radius: 999px;
+  background: var(--soft);
+}
+.miniSwitch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: var(--shadow-card-hover);
+  transition: transform 0.15s;
+}
+.miniSwitch.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.miniSwitch.on::after {
+  transform: translateX(18px);
+}
+/* Step pictures */
+.stepVisual {
+  display: grid;
+  gap: var(--space-2);
+}
+.miniRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+.miniRow + .miniRow {
+  border-top: 1px solid var(--mk-line);
+}
+.miniRowName {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 500;
+}
+.miniFields {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.miniFields div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.miniFields dt {
+  color: var(--mk-muted);
+}
+.miniFields dd {
+  margin: 0;
+  font-weight: 500;
+}
+.miniInput {
+  flex: 1 1 55%;
+  min-height: 28px;
+  border: 1px solid var(--mk-line);
+  border-radius: 6px;
+}
+.miniFakeButton {
+  justify-self: start;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--ink-inverse);
+  font-weight: 600;
+}
+
+/* Home: three interactions side by side, stacked on narrow screens. */
+.mkMiniGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  width: min(1240px, calc(100% - 40px));
+  margin: 0 auto;
+}
+@media (min-width: 1000px) {
+  .mkMiniGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+/* Explainer pages: the words on one side, the picture or interaction beside it. */
+.stepShow {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stepShow > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.stepText {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+}
+.stepText h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.stepText p {
+  grid-column: 2;
+  margin: 0;
+  color: var(--mk-muted);
+}
+.stepMedia {
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .stepShow > li {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--space-8);
+  }
+  .stepText {
+    position: sticky;
+    top: 88px;
+  }
+}
+.pricingMini {
+  width: min(920px, 100%);
+  margin: var(--space-5) auto 0;
+}
+
+/* The request form picture: labels in one column, fields in another. */
+.miniFields.form > div {
+  display: grid;
+  grid-template-columns: 9em minmax(0, 1fr);
+  align-items: center;
+}
+.miniFakeButton {
+  margin-top: var(--space-2);
+}

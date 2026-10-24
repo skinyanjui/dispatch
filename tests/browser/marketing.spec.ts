@@ -69,7 +69,7 @@ test("public pages render, are accessible, fit phones and link to real destinati
   const copy = await page.evaluate(() => {
     const clone = document.body.cloneNode(true) as HTMLElement;
     clone
-      .querySelectorAll(".preview, script, style")
+      .querySelectorAll(".preview, .miniFrame, script, style")
       .forEach((e) => e.remove());
     return clone.innerText ?? clone.textContent ?? "";
   });
@@ -84,7 +84,6 @@ test("public pages render, are accessible, fit phones and link to real destinati
   await expect(page).toHaveURL(/\/get-started$/);
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByText("monthly limit")).toBeVisible();
 });
 
 test("tabs and header links share one row on a phone instead of stranding one", async ({

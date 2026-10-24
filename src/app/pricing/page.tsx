@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SparkleIcon } from "@phosphor-icons/react/dist/ssr";
 import { MarketingShell } from "@/components/marketing";
-import {
-  PricingAssurances,
-  PricingCard,
-  type PricingGroup,
-} from "@/components/ui/pricing-card";
+import { MiniAiSwitch, MiniNote } from "@/components/mini-demos";
+import { PricingCard, type PricingGroup } from "@/components/ui/pricing-card";
 
 export const metadata: Metadata = {
   title: "Pricing · Relay",
@@ -31,17 +27,9 @@ const groups: PricingGroup[] = [
   {
     title: "Control",
     items: [
-      "Optional AI reading and assistant, off by default",
+      "Optional AI reading and assistant",
       "Every carrier kept separate, with an audit log",
     ],
-  },
-];
-
-const assurances = [
-  {
-    icon: <SparkleIcon size={18} />,
-    title: "AI costs are yours, and off until you turn it on",
-    text: "Owners and admins decide whether it runs, with a monthly limit they set. Model usage is billed to your own account, not through Relay.",
   },
 ];
 
@@ -72,7 +60,10 @@ export default function Pricing() {
           includesLabel="Everything included"
           groups={groups}
         />
-        <PricingAssurances items={assurances} />
+        <div className="pricingMini">
+          <MiniAiSwitch />
+          <MiniNote />
+        </div>
       </section>
     </MarketingShell>
   );

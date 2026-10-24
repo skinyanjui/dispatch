@@ -65,22 +65,31 @@ const templates: Omit<DemoTemplate, "id">[] = [
   },
 ];
 
+/** Fills a template from a sample load with the server's own plain lookup. */
+export function fillFromLoad(load: SampleLoad, body: string) {
+  return render(body, {
+    "load.reference": load.reference,
+    "load.carrier": load.carrier_name ?? "",
+    "load.driver": load.assignment?.name ?? "",
+    "load.stage": stageNames[load.stage] ?? load.stage,
+    "load.pickup": load.pickup,
+    "load.delivery": load.delivery,
+    "sender.name": "Alex Morgan",
+  });
+}
+export const demoTemplates = () =>
+  templates.map((t, i) => ({
+    ...t,
+    id: `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${i}`,
+  }));
+
 export function seedDocuments(loads: SampleLoad[]): DemoDocuments {
   const made = templates.map((t, i) => ({
     ...t,
     id: `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${i}`,
   }));
   const minutes = (n: number) => new Date(Date.now() - n * 60000).toISOString();
-  const fill = (load: SampleLoad, body: string) =>
-    render(body, {
-      "load.reference": load.reference,
-      "load.carrier": load.carrier_name ?? "",
-      "load.driver": load.assignment?.name ?? "",
-      "load.stage": stageNames[load.stage] ?? load.stage,
-      "load.pickup": load.pickup,
-      "load.delivery": load.delivery,
-      "sender.name": "Alex Morgan",
-    });
+  const fill = fillFromLoad;
   const drafts: DemoDraft[] = loads.slice(0, 3).map((load, i) => {
     const template = made[i % 2];
     const filled = fill(load, template.body);

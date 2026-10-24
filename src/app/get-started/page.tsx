@@ -1,38 +1,58 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing";
+import type { ReactNode } from "react";
 import { ListItem, ListItems } from "@/components/ui/list-item";
+import { MiniNote, MiniAssign } from "@/components/mini-demos";
+import {
+  CarriersVisual,
+  InviteVisual,
+  PasswordVisual,
+  RequestVisual,
+  ReviewVisual,
+} from "@/components/step-visuals";
 
 export const metadata: Metadata = {
   title: "Get started · Relay",
   description: "What happens after you request access, and what to have ready.",
 };
 
-const steps = [
+const steps: {
+  title: string;
+  text: string;
+  show: ReactNode;
+  link?: { href: string; label: string };
+}[] = [
   {
     title: "Request access",
     text: "Tell us who you are and which dispatch company you run.",
+    show: <RequestVisual />,
     link: { href: "/request-access", label: "Open the request form" },
   },
   {
     title: "A person reviews it",
-    text: "A person reviews every request. If approved, your organization is set up with you as owner.",
+    text: "Nothing is created until a person approves it.",
+    show: <ReviewVisual />,
   },
   {
     title: "Set your password",
-    text: "A private, single-use link lets you choose your password. Then turn on two-step verification.",
+    text: "A private, single-use link, then two-step verification.",
+    show: <PasswordVisual />,
   },
   {
     title: "Add your carriers",
-    text: "Add each carrier and its written dispatch agreement. Loads can be booked once it is verified.",
+    text: "Each carrier and its written agreement.",
+    show: <CarriersVisual />,
   },
   {
     title: "Invite your team and drivers",
-    text: "Invite staff, carrier managers and drivers. Each person sees only the carriers they are given.",
+    text: "Each person sees only the carriers they are given.",
+    show: <InviteVisual />,
   },
   {
     title: "Create your first load",
-    text: "Enter a load or start from a rate confirmation, assign a driver, and dispatch.",
+    text: "Assign a driver and dispatch.",
+    show: <MiniAssign bare />,
   },
 ];
 
@@ -57,27 +77,27 @@ export default function GetStarted() {
         <p className="mkLead">Six steps. Only the first is yours to start.</p>
       </section>
       <section className="mkSection">
-        <ListItems label="Steps" ordered>
-          {steps.map((s, i) => (
-            <ListItem
-              key={s.title}
-              start={<span className="mkNum">{i + 1}</span>}
-              description={
-                <>
-                  {s.text}
-                  {s.link && (
+        <ol className="stepShow" aria-label="Steps">
+          {steps.map((step, i) => (
+            <li key={step.title}>
+              <div className="stepText">
+                <span className="mkNum">{i + 1}</span>
+                <h2>{step.title}</h2>
+                <p>
+                  {step.text}
+                  {step.link && (
                     <>
                       {" "}
-                      <Link href={s.link.href}>{s.link.label}</Link>
+                      <Link href={step.link.href}>{step.link.label}</Link>
                     </>
                   )}
-                </>
-              }
-            >
-              {s.title}
-            </ListItem>
+                </p>
+              </div>
+              <div className="stepMedia">{step.show}</div>
+            </li>
           ))}
-        </ListItems>
+        </ol>
+        <MiniNote />
       </section>
       <section className="mkSection mkSplit" aria-labelledby="ready">
         <div>

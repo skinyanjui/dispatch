@@ -1,7 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing";
-import { ListItem, ListItems } from "@/components/ui/list-item";
+import type { ReactNode } from "react";
+import {
+  MiniNote,
+  MiniAssign,
+  MiniBilling,
+  MiniCheckIn,
+} from "@/components/mini-demos";
+import {
+  AuthorizeVisual,
+  CreateVisual,
+  PaperworkVisual,
+} from "@/components/step-visuals";
 
 export const metadata: Metadata = {
   title: "How Relay works · Relay",
@@ -9,30 +20,36 @@ export const metadata: Metadata = {
     "From a rate confirmation to a paid dispatch invoice, step by step.",
 };
 
-const steps = [
+const steps: { title: string; text: string; show: ReactNode }[] = [
   {
     title: "Authorize the carrier",
-    text: "Add the carrier and its written dispatch agreement. A load cannot be booked or assigned until the agreement is verified and current.",
+    text: "No booking without a verified, current dispatch agreement.",
+    show: <AuthorizeVisual />,
   },
   {
     title: "Create the load",
-    text: "Enter it by hand, or choose a broker's rate confirmation and let the form be filled in for you to check. The AI suggests; you create the load.",
+    text: "By hand, or from a rate confirmation that a person checks.",
+    show: <CreateVisual />,
   },
   {
     title: "Assign a driver and dispatch",
-    text: "Pick a driver from that carrier only. Dispatching is a deliberate step with a record of who did it.",
+    text: "Only that carrier's drivers, with a record of who dispatched.",
+    show: <MiniAssign bare />,
   },
   {
     title: "Follow it to delivery",
-    text: "Drivers and staff add check-ins and milestones. Each shows where it came from and when it was observed, so stale information is obvious.",
+    text: "Check-ins keep their source and the time they were observed.",
+    show: <MiniCheckIn bare />,
   },
   {
     title: "Collect the paperwork",
-    text: "Documents are scanned and versioned. Each load shows what is received, accepted or missing.",
+    text: "Scanned, versioned, and shown per load.",
+    show: <PaperworkVisual />,
   },
   {
     title: "Bill, separately",
-    text: "The carrier's packet to the broker and your dispatch invoice to the carrier are tracked on their own, so one never hides the other.",
+    text: "The carrier's packet and your invoice never share a status.",
+    show: <MiniBilling bare />,
   },
 ];
 
@@ -53,17 +70,19 @@ export default function HowItWorks() {
         </p>
       </section>
       <section className="mkSection">
-        <ListItems label="Steps" ordered>
-          {steps.map((s, i) => (
-            <ListItem
-              key={s.title}
-              start={<span className="mkNum">{i + 1}</span>}
-              description={s.text}
-            >
-              {s.title}
-            </ListItem>
+        <ol className="stepShow" aria-label="Steps">
+          {steps.map((step, i) => (
+            <li key={step.title}>
+              <div className="stepText">
+                <span className="mkNum">{i + 1}</span>
+                <h2>{step.title}</h2>
+                <p>{step.text}</p>
+              </div>
+              <div className="stepMedia">{step.show}</div>
+            </li>
           ))}
-        </ListItems>
+        </ol>
+        <MiniNote />
       </section>
       <section className="mkBand">
         <h2>What it does not do</h2>

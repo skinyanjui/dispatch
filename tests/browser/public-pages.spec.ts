@@ -51,7 +51,8 @@ test("pricing states each promise once", async ({ page }) => {
   const times = (re: RegExp) => (text.match(re) ?? []).length;
   expect(times(/payment details/gi)).toBe(1);
   expect(times(/before any charge/gi)).toBe(1);
-  expect(times(/monthly limit/gi)).toBe(1);
+  // The limit is said when AI is switched on (see mini-demos.spec.ts), not twice.
+  expect(times(/monthly limit/gi)).toBeLessThanOrEqual(1);
   expect(times(/off (by default|until)/gi)).toBeLessThanOrEqual(2);
   await expect(main.locator("details")).toHaveCount(0);
 });

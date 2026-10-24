@@ -1,42 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRightIcon,
-  ClipboardTextIcon,
-  FileTextIcon,
-  ReceiptIcon,
-  ShieldCheckIcon,
-  SparkleIcon,
-  TruckIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react/dist/ssr";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { MarketingShell } from "@/components/marketing";
+import {
+  MiniAssign,
+  MiniBilling,
+  MiniCheckIn,
+  MiniDraft,
+  MiniNote,
+} from "@/components/mini-demos";
 import { ProductPreview } from "@/components/product-preview";
-import { ListItem, ListItems } from "@/components/ui/list-item";
 
 export const metadata: Metadata = {
   title: "Relay · Dispatch operations for carrier agents",
   description:
     "Book freight, record every step and bill separately for your carriers, with every carrier's data kept apart.",
 };
-
-const cards = [
-  {
-    icon: TruckIcon,
-    title: "Book and dispatch",
-    text: "One board for every load, with stops, the driver it is assigned to and a record of every step.",
-  },
-  {
-    icon: WarningCircleIcon,
-    title: "Follow and resolve",
-    text: "Check-ins show their source and time. Exceptions get an owner and a trail to resolution.",
-  },
-  {
-    icon: ReceiptIcon,
-    title: "Bill, separately",
-    text: "What a carrier bills the broker and what you bill the carrier are two records, never one.",
-  },
-];
 
 export default function Welcome() {
   return (
@@ -65,63 +44,26 @@ export default function Welcome() {
 
       <section className="mkSection" aria-labelledby="three">
         <h2 id="three" className="srOnly">
-          What Relay covers
+          Try it
         </h2>
-        <div className="mkGrid">
-          {cards.map(({ icon: Icon, title, text }) => (
-            <article key={title} className="mkCard">
-              <Icon size={22} aria-hidden="true" />
-              <h3>{title}</h3>
-              <p>{text}</p>
-            </article>
-          ))}
+        <div className="mkMiniGrid">
+          <MiniAssign />
+          <MiniCheckIn />
+          <MiniBilling />
         </div>
       </section>
 
-      <section className="mkFeature flip" aria-labelledby="assist">
+      <MiniNote wide />
+
+      <section className="mkFeature" aria-labelledby="assist">
+        <MiniDraft />
         <div>
-          <p className="mkEyebrow">Documents and the assistant</p>
           <h2 id="assist">Drafts in seconds, reviewed by a person</h2>
           <p>
-            Write a template once, fill it from a load, carrier or contact, or
-            ask the assistant. Nothing is sent, booked or invoiced for you.
+            Fill a template from a load, carrier or contact, or ask the
+            assistant. Nothing is sent, booked or invoiced for you.
           </p>
         </div>
-        <ListItems label="Assistant">
-          <ListItem
-            start={<SparkleIcon size={18} />}
-            description="Optional, off by default, with a monthly limit."
-          >
-            Ask about your records
-          </ListItem>
-          <ListItem
-            start={<FileTextIcon size={18} />}
-            description="Missing values are flagged, not guessed."
-          >
-            Draft from a template
-          </ListItem>
-        </ListItems>
-      </section>
-
-      <section className="mkFeature" aria-labelledby="rules">
-        <div>
-          <p className="mkEyebrow">Guardrails</p>
-          <h2 id="rules">Boundaries enforced in the product</h2>
-        </div>
-        <ListItems label="Guardrails">
-          <ListItem
-            start={<ShieldCheckIcon size={18} />}
-            description="Booked freight is never moved to another carrier."
-          >
-            A verified agreement before any booking
-          </ListItem>
-          <ListItem
-            start={<ClipboardTextIcon size={18} />}
-            description="Every important change is written down."
-          >
-            An audit log
-          </ListItem>
-        </ListItems>
       </section>
 
       <section className="mkBand" aria-labelledby="status">
