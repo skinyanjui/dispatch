@@ -65,11 +65,6 @@ export function MarketingShell({
           <p>Dispatch operations for non-asset freight teams.</p>
         </div>
         <nav aria-label="Footer">
-          {nav.map((n) => (
-            <Link key={n.href} href={n.href}>
-              {n.label}
-            </Link>
-          ))}
           <Link href="/demo">Interactive demo</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>

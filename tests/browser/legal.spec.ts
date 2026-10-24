@@ -46,7 +46,7 @@ for (const [path, title] of [
     const toc = page.getByRole("navigation", { name: "On this page" });
     await expect(toc).toBeVisible();
     const box = (await toc.boundingBox())!;
-    expect(box.height).toBeLessThan(240);
+    expect(box.height).toBeLessThan(300); // links are 40px tall touch targets
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

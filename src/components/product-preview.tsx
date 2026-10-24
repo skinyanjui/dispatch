@@ -37,7 +37,7 @@ const tabs = [
   {
     id: "table",
     label: "Table",
-    text: "Sort, group and hide columns, then save the view.",
+    text: "Sort, group and hide columns, then save the view for yourself or your organization.",
   },
   {
     id: "calendar",
@@ -47,7 +47,7 @@ const tabs = [
   {
     id: "documents",
     label: "Documents",
-    text: "Templates fill into drafts a person reviews. Nothing is sent.",
+    text: "Templates fill into drafts a person reviews.",
   },
 ] as const;
 type Tab = (typeof tabs)[number]["id"];

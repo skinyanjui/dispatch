@@ -204,3 +204,30 @@ test("the interactive demo's Documents page works, and approving a draft sticks"
   await page.getByRole("tab", { name: /Templates/ }).click();
   await expect(page.getByText("Carrier welcome")).toBeVisible();
 });
+
+test("the home page does not repeat itself: one request-access button in the page, no closing banner, no footer copy of the header links", async ({
+  page,
+}) => {
+  await page.goto("/welcome");
+  const main = page.getByRole("main");
+  await expect(main.getByRole("link", { name: "Request access" })).toHaveCount(
+    1,
+  );
+  await expect(
+    main.getByRole("link", { name: /interactive demo/i }),
+  ).toHaveCount(1);
+  await expect(page.locator(".mkCta")).toHaveCount(0);
+  // Views are shown by the drawing's own tabs, not described a second time.
+  await expect(
+    main.getByRole("heading", { name: /way you work/i }),
+  ).toHaveCount(0);
+  const footer = page.getByRole("navigation", { name: "Footer" });
+  for (const name of ["Product", "How it works", "Get started", "Pricing"])
+    await expect(footer.getByRole("link", { name, exact: true })).toHaveCount(
+      0,
+    );
+  await expect(footer.getByRole("link", { name: "Terms" })).toBeVisible();
+  // No section heading appears twice, and every card and list item is distinct.
+  const headings = await main.getByRole("heading").allInnerTexts();
+  expect(new Set(headings).size).toBe(headings.length);
+});

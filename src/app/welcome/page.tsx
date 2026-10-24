@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRightIcon,
-  ChartBarIcon,
+  ClipboardTextIcon,
   FileTextIcon,
   ReceiptIcon,
   ShieldCheckIcon,
@@ -10,7 +10,7 @@ import {
   TruckIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { Cta, MarketingShell } from "@/components/marketing";
+import { MarketingShell } from "@/components/marketing";
 import { ProductPreview } from "@/components/product-preview";
 import { ListItem, ListItems } from "@/components/ui/list-item";
 
@@ -78,37 +78,6 @@ export default function Welcome() {
         </div>
       </section>
 
-      <section className="mkFeature" aria-labelledby="views">
-        <div>
-          <p className="mkEyebrow">Views</p>
-          <h2 id="views">Look at your loads the way you work</h2>
-          <p>
-            Switch between board, table and calendar, then save the result as a
-            view for yourself or your whole organization.
-          </p>
-        </div>
-        <ListItems label="Views">
-          <ListItem
-            start={<TruckIcon size={18} />}
-            description="Drag a card one step; the rules still apply."
-          >
-            Board
-          </ListItem>
-          <ListItem
-            start={<ChartBarIcon size={18} />}
-            description="Sort, group by stage or carrier, show totals."
-          >
-            Table
-          </ListItem>
-          <ListItem
-            start={<FileTextIcon size={18} />}
-            description="Appointments across the month."
-          >
-            Calendar
-          </ListItem>
-        </ListItems>
-      </section>
-
       <section className="mkFeature flip" aria-labelledby="assist">
         <div>
           <p className="mkEyebrow">Documents and the assistant</p>
@@ -138,10 +107,6 @@ export default function Welcome() {
         <div>
           <p className="mkEyebrow">Guardrails</p>
           <h2 id="rules">Boundaries enforced in the product</h2>
-          <p>
-            Relay enforces the limits of dispatching other people&apos;s
-            freight.
-          </p>
         </div>
         <ListItems label="Guardrails">
           <ListItem
@@ -151,13 +116,7 @@ export default function Welcome() {
             A verified agreement before any booking
           </ListItem>
           <ListItem
-            start={<ShieldCheckIcon size={18} />}
-            description="Source and time are always shown."
-          >
-            Tracking is never presented as live
-          </ListItem>
-          <ListItem
-            start={<ShieldCheckIcon size={18} />}
+            start={<ClipboardTextIcon size={18} />}
             description="Every important change is written down."
           >
             An audit log
@@ -168,13 +127,11 @@ export default function Welcome() {
       <section className="mkBand" aria-labelledby="status">
         <h2 id="status">Where Relay is today</h2>
         <p>
-          Early software with fictional sample data and access by approval. No
-          live connections to carriers, load boards, tracking or payment
-          systems, and it does not move money.
+          Early software, with access by approval. No live connections to
+          carriers, load boards, tracking or payment systems, and it does not
+          move money.
         </p>
       </section>
-
-      <Cta title="Try it with sample data" />
     </MarketingShell>
   );
 }

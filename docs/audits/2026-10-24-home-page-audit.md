@@ -21,3 +21,12 @@ ADR 0060. The preview is built from the real components and the demo's data; the
 - The preview shows the demo's four sample loads (one per stage), so lanes are short; a richer dataset would also change the demo.
 - The preview's window cuts off at a fixed height (the real board scrolls), and its table is wider than the window on small screens.
 - The "Everything in motion" headline is unchanged; it is a tagline, not a feature claim.
+
+## Follow-up: removing what did not earn its place (2026-10-24)
+
+- **Closing banner removed.** "Try it with sample data" repeated the hero's two buttons and the header's Request access. The page now has one Request access in the page body (hero), one demo link, and the sticky header's button.
+- **"Look at your loads the way you work" removed.** It described Board, Table and Calendar a second time, directly under a drawing that shows them with their own tabs. The one fact it added (views can be saved for yourself or your organization) is now in the Table caption.
+- **Footer no longer repeats the header's four links** (Product, How it works, Get started, Pricing). It keeps what the header lacks: the interactive demo, Terms and Privacy.
+- **Vacuous sentence removed** under "Boundaries enforced in the product" ("Relay enforces the limits of dispatching other people's freight" restated its heading), along with the guardrail "Tracking is never presented as live", which defended a feature Relay does not have and repeated the "Follow and resolve" card ("check-ins show their source and time"). The remaining two guardrails use different icons instead of three identical shields.
+- **Duplicate wording trimmed:** "fictional sample data" was in the preview note and again in the status band; "Nothing is sent" in the Documents caption and again in the assistant section.
+- Guarded by `tests/browser/home-preview.spec.ts` (one Request access in the page, no closing banner, no footer copy of the header links, no repeated section headings).
