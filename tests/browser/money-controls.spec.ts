@@ -81,11 +81,17 @@ test("Billing has Cash and Factoring tabs: figures, a fee preview that refuses n
   await page.goto("/billing");
   await page.getByRole("tab", { name: /^Cash/ }).click();
   await expect(page.getByRole("group", { name: "Cash summary" })).toBeVisible();
+  // Each list is a table when it has rows and an explained empty state when not
+  // (a fresh database has no delivered loads).
   await expect(
-    page.getByRole("table", { name: /Delivered loads: what each earned/ }),
+    page
+      .getByRole("table", { name: /Delivered loads: what each earned/ })
+      .or(page.getByText("No delivered loads yet")),
   ).toBeVisible();
   await expect(
-    page.getByRole("table", { name: /paperwork still to do/ }),
+    page
+      .getByRole("table", { name: /paperwork still to do/ })
+      .or(page.getByText("Nothing is waiting on paperwork")),
   ).toBeVisible();
   // A fee preview is checked before it is sent.
   await page.getByLabel("Preview a dispatch fee (%)").fill("abc");

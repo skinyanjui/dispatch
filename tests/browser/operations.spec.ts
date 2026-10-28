@@ -1182,14 +1182,41 @@ test("reports: KPIs for a carrier, range presets and CSV export link", async ({
   page,
 }) => {
   await login(page);
+  // The default range is the last 30 days by pickup, so the carrier table needs
+  // a load picked up today; do not rely on what earlier specs happened to leave.
+  const { carrier } = await blueRidge(page);
+  const now = Date.now();
+  const today = await page.request.post("/api/loads", {
+    headers: { ...origin, "Idempotency-Key": randomUUID() },
+    data: {
+      carrierId: carrier,
+      reference: "REP-" + randomUUID().slice(0, 8),
+      source: "Fictional reports browser QA",
+      amountMinor: 120000,
+      stops: [
+        {
+          kind: "pickup",
+          address: "Chicago, IL",
+          timezone: "America/Chicago",
+          windowStart: new Date(now - 7200000).toISOString(),
+          windowEnd: new Date(now - 3600000).toISOString(),
+        },
+        {
+          kind: "delivery",
+          address: "Nashville, TN",
+          timezone: "America/Chicago",
+          windowStart: new Date(now + 86400000).toISOString(),
+          windowEnd: new Date(now + 90000000).toISOString(),
+        },
+      ],
+    },
+  });
+  expect(today.status()).toBe(201);
   await page.goto("/");
   await page.getByRole("button", { name: "Reports", exact: true }).click();
   const region = page.getByRole("region", { name: "Reports" });
   await expect(region.getByText("Freight value")).toBeVisible();
-  // The tables arrive after the figures; a busy runner needs longer than 5s.
-  await expect(region.getByRole("table").first()).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(region.getByRole("table").first()).toBeVisible();
   await region.getByRole("button", { name: "Last 7 days" }).click();
   await expect(region.getByText("Report loaded")).toBeAttached();
   const href = await region
