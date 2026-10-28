@@ -58,6 +58,7 @@ import {
 import { auditFilters, auditLog } from "@/lib/audit";
 import { authorityStatus, checkAuthority } from "@/lib/authority";
 import { cashOverview } from "@/lib/billing-cash";
+import { readiness } from "@/lib/readiness";
 import {
   claimPacket,
   createClaim,
@@ -771,6 +772,10 @@ async function handle(req: NextRequest) {
         );
     }
     if (path[0] === "documents") {
+      if (path.length === 2 && path[1] === "readiness" && req.method === "GET")
+        return NextResponse.json(
+          await readiness(user.id, req.nextUrl.searchParams.get("carrier_id")),
+        );
       if (path.length === 1 && req.method === "POST") {
         const upload = await readUpload(req);
         return NextResponse.json(
