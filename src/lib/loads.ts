@@ -345,7 +345,7 @@ export async function detail(user: string, id: string) {
 // ---------- Stop arrivals and departures ----------
 
 /** Ordered stops with their current arrival/departure and full history. */
-async function stopsWithEvents(c: PoolClient, loadId: string) {
+export async function stopsWithEvents(c: PoolClient, loadId: string) {
   const stops = await c.query(
     "SELECT * FROM load_stops WHERE load_id=$1 ORDER BY sequence",
     [loadId],

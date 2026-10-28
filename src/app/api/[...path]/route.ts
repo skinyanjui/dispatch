@@ -59,6 +59,16 @@ import { auditFilters, auditLog } from "@/lib/audit";
 import { authorityStatus, checkAuthority } from "@/lib/authority";
 import { cashOverview } from "@/lib/billing-cash";
 import {
+  claimPacket,
+  createClaim,
+  listClaims,
+  loadClaims,
+  refreshClaim,
+  setTerms,
+  settleClaim,
+  submitClaim,
+} from "@/lib/claims";
+import {
   createVehicle,
   fleetOverview,
   setVehicleStatus,
@@ -555,6 +565,53 @@ async function handle(req: NextRequest) {
           return NextResponse.json(
             await setVehicleStatus(user.id, vehicleId, await readJson(req)),
           );
+      }
+    }
+    if (path[0] === "claims") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await listClaims(
+            user.id,
+            z.uuid().parse(req.nextUrl.searchParams.get("carrier_id")),
+          ),
+        );
+      if (path.length === 1 && req.method === "POST")
+        return NextResponse.json(
+          await createClaim(user.id, await readJson(req)),
+          {
+            status: 201,
+          },
+        );
+      if (path.length === 2 && path[1] === "load" && req.method === "GET")
+        return NextResponse.json(
+          await loadClaims(
+            user.id,
+            z.uuid().parse(req.nextUrl.searchParams.get("load_id")),
+          ),
+        );
+      if (path.length === 2 && path[1] === "terms" && req.method === "POST")
+        return NextResponse.json(await setTerms(user.id, await readJson(req)));
+      if (path.length === 3) {
+        const id = z.uuid().parse(path[1]);
+        if (path[2] === "packet" && req.method === "GET") {
+          const file = await claimPacket(user.id, id);
+          return new NextResponse(new Uint8Array(file.bytes), {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${file.filename}"`,
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        }
+        if (req.method === "POST") {
+          const body = await readJson(req);
+          if (path[2] === "refresh")
+            return NextResponse.json(await refreshClaim(user.id, id, body));
+          if (path[2] === "submit")
+            return NextResponse.json(await submitClaim(user.id, id, body));
+          if (path[2] === "outcome")
+            return NextResponse.json(await settleClaim(user.id, id, body));
+        }
       }
     }
     if (path[0] === "authority") {
