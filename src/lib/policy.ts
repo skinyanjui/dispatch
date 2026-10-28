@@ -37,6 +37,7 @@ export const familyAudience: Record<string, Audience> = {
   "change-control": "non-driver",
   authority: "non-driver",
   claims: "non-driver",
+  factoring: "non-driver",
   audit: "org-admin",
   documents: "any",
   extractions: "non-driver",

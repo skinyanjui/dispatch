@@ -60,6 +60,14 @@ import { authorityStatus, checkAuthority } from "@/lib/authority";
 import { cashOverview } from "@/lib/billing-cash";
 import { readiness } from "@/lib/readiness";
 import {
+  batchFile,
+  createBatch,
+  factoringOverview,
+  markHandedOff,
+  saveFactoringSettings,
+  voidBatch,
+} from "@/lib/factoring";
+import {
   claimPacket,
   createClaim,
   listClaims,
@@ -566,6 +574,47 @@ async function handle(req: NextRequest) {
           return NextResponse.json(
             await setVehicleStatus(user.id, vehicleId, await readJson(req)),
           );
+      }
+    }
+    if (path[0] === "factoring") {
+      if (path.length === 1 && req.method === "GET")
+        return NextResponse.json(
+          await factoringOverview(
+            user.id,
+            req.nextUrl.searchParams.get("carrier_id"),
+          ),
+        );
+      if (path.length === 2 && path[1] === "settings" && req.method === "POST")
+        return NextResponse.json(
+          await saveFactoringSettings(user.id, await readJson(req)),
+        );
+      if (path.length === 2 && path[1] === "batches" && req.method === "POST")
+        return NextResponse.json(
+          await createBatch(user.id, await readJson(req)),
+          {
+            status: 201,
+          },
+        );
+      if (path.length === 4 && path[1] === "batches") {
+        const id = z.uuid().parse(path[2]);
+        if (path[3] === "file" && req.method === "GET") {
+          const file = await batchFile(user.id, id);
+          return new NextResponse(file.csv, {
+            headers: {
+              "Content-Type": "text/csv; charset=utf-8",
+              "Content-Disposition": `attachment; filename="${file.filename}"`,
+              "X-Content-Type-Options": "nosniff",
+              "X-File-SHA256": file.sha256,
+            },
+          });
+        }
+        if (req.method === "POST") {
+          const body = await readJson(req);
+          if (path[3] === "handoff")
+            return NextResponse.json(await markHandedOff(user.id, id, body));
+          if (path[3] === "void")
+            return NextResponse.json(await voidBatch(user.id, id, body));
+        }
       }
     }
     if (path[0] === "claims") {
