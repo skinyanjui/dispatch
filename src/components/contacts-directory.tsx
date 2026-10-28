@@ -325,12 +325,17 @@ export function ContactsDirectory({
           onCancel={() => setEditing(null)}
           onSave={async (body, existing) => {
             const ok = await act(async () => {
-              if (existing?.contact)
-                await api(`contacts/${existing.contact.id}`, {
-                  ...body,
-                  version: existing.contact.version,
-                });
-              else await api("contacts", body);
+              if (existing?.contact) {
+                const r = await api<{ pending_approval?: boolean }>(
+                  `contacts/${existing.contact.id}`,
+                  { ...body, version: existing.contact.version },
+                );
+                // A carrier contact's phone or email waits for a second person (ADR 0064).
+                return r?.pending_approval
+                  ? "Saved. The new phone or email counts once a second person approves it in the carrier's files."
+                  : "Contact updated.";
+              }
+              await api("contacts", body);
               return existing ? "Contact updated." : "Contact added.";
             });
             if (ok) setEditing(null);
@@ -475,6 +480,9 @@ function ContactForm({
           carrier_id: String(f.get("carrier")) || null,
           sms_consent: f.get("sms_consent") === "on",
           sms_consent_note: String(f.get("sms_consent_note") || "").trim(),
+          ...(entry
+            ? { change_reason: String(f.get("change_reason") || "").trim() }
+            : {}),
         };
         if (!entry) {
           const signature = JSON.stringify(body);
@@ -581,6 +589,15 @@ function ContactForm({
         />
       </label>
       <small>An email address or a phone number is required.</small>
+      {entry?.contact?.carrier_id && (
+        <label>
+          Why the phone or email is changing{" "}
+          <small>
+            (needed if you change either; a second person approves it)
+          </small>
+          <input name="change_reason" maxLength={500} />
+        </label>
+      )}
       <div className="opsActions">
         <button className="primary" disabled={busy}>
           {entry ? "Save changes" : "Add contact"}

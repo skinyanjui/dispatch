@@ -43,7 +43,8 @@ type RecordTab =
   | "check-ins"
   | "documents"
   | "exceptions"
-  | "notes";
+  | "notes"
+  | "claims";
 import { DocumentsPage } from "@/components/documents-page";
 import { LoadDraft } from "@/components/load-draft";
 import { LoadsViewBar } from "@/components/loads-view-bar";
@@ -55,6 +56,7 @@ import {
   type ViewConfig,
 } from "@/components/loads-views";
 import { LoadNotes } from "@/components/load-notes";
+import { LoadClaimsTab } from "@/components/load-claims";
 import { LoadCheckIns } from "@/components/load-check-ins";
 import { DocumentPanel } from "@/components/document-panel";
 import { StopList } from "@/components/stop-list";
@@ -1164,6 +1166,10 @@ export default function Workspace({
     ...(selectedRole !== "driver" && selectedRole !== undefined
       ? [{ id: "notes" as const, label: "Notes" }]
       : []),
+    // Detention and TONU claims have no demo endpoints yet (ADR 0067).
+    ...(!demo && selectedRole !== "driver" && selectedRole !== undefined
+      ? [{ id: "claims" as const, label: "Claims" }]
+      : []),
   ];
   const nextStage = selected
     ? stages[stages.indexOf(selected.stage) + 1]
@@ -1644,6 +1650,7 @@ export default function Workspace({
               onAuthError={handleError}
               invoiceId={invoiceTarget}
               onInvoiceChange={setInvoiceTarget}
+              demo={demo}
             />
           ) : section === "exceptions" ? (
             <ExceptionQueue
@@ -2191,6 +2198,17 @@ export default function Workspace({
                         />
                       </>
                     )}
+                    {recordTab === "claims" &&
+                      !demo &&
+                      selectedRole !== "driver" &&
+                      selectedRole !== undefined && (
+                        <LoadClaimsTab
+                          key={"claims-" + selected.id}
+                          loadId={selected.id}
+                          offline={offline}
+                          onAuthError={handleError}
+                        />
+                      )}
                     {recordTab === "notes" && (
                       <>
                         {selectedRole !== "driver" &&

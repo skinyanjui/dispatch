@@ -1,0 +1,100 @@
+/* Money controls: cash, factoring, registration, payout approvals and claims
+   (ADRs 0064-0069). Panels follow the fleet panel pattern; spacing and colour
+   come from tokens. */
+.appShell .moneyStack {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+.appShell .moneyPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+}
+.appShell .moneyPanel > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.appShell .moneyPanel > header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.appShell .moneyBody {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+.appShell .moneyBody > p {
+  margin: 0;
+}
+.appShell .moneyBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+.appShell .moneyBar label {
+  margin: 0;
+}
+.appShell .moneyFacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.appShell .moneyFacts div {
+  display: grid;
+  gap: var(--space-1);
+}
+.appShell .moneyFacts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.appShell .moneyFacts dd {
+  margin: 0;
+  font-weight: 500;
+}
+.appShell .flagList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+}
+.appShell .changeItem {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--soft);
+}
+.appShell .changeItem h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.appShell .changeItem p {
+  margin: 0;
+}
+.appShell .claimCard {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.appShell .claimCard h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.appShell .claimCard p {
+  margin: 0;
+}

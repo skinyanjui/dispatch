@@ -24,6 +24,8 @@ import {
 } from "@/lib/entry";
 import type { WorkspaceFilters } from "@/lib/routes";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
+import { CashTab } from "@/components/cash-tab";
+import { FactoringTab } from "@/components/factoring-tab";
 
 const paymentLabels: Record<PaymentState, string> = {
   unpaid: "Unpaid",
@@ -582,7 +584,10 @@ export function BillingWorkspace({
   invoiceId = null,
   onInvoiceChange,
   scope = {},
+  demo = false,
 }: {
+  /** The browser-only demo has no cash, factoring or claims endpoints. */
+  demo?: boolean;
   scope?: WorkspaceFilters;
   context: Context;
   offline: boolean;
@@ -607,7 +612,9 @@ export function BillingWorkspace({
     [selected, setSelected] = useState<string[]>([]),
     [fee, setFee] = useState("8"),
     [allLoads, setAllLoads] = useState(false),
-    [tab, setTab] = useState<"invoices" | "freight">("invoices"),
+    [tab, setTab] = useState<"invoices" | "freight" | "cash" | "factoring">(
+      "invoices",
+    ),
     [filter, setFilter] = useState<InvoiceFilter>("all"),
     [freightFilter, setFreightFilter] = useState<FreightFilter>("all"),
     [open, setOpenState] = useState<
@@ -1167,12 +1174,32 @@ export function BillingWorkspace({
                 label: "Carrier freight",
                 count: billable.length,
               },
+              ...(demo
+                ? []
+                : [
+                    { id: "cash" as const, label: "Cash" },
+                    { id: "factoring" as const, label: "Factoring" },
+                  ]),
             ]}
             value={tab}
             onChange={setTab}
           />
           <TabPanel idPrefix="billing" value={tab}>
-            {tab === "invoices" ? (
+            {tab === "cash" ? (
+              <CashTab
+                key={"cash-" + carrierId}
+                carrierId={carrierId}
+                offline={offline}
+                onAuthError={onAuthError}
+              />
+            ) : tab === "factoring" ? (
+              <FactoringTab
+                key={"factoring-" + carrierId}
+                carrierId={carrierId}
+                offline={offline}
+                onAuthError={onAuthError}
+              />
+            ) : tab === "invoices" ? (
               <>
                 <p className="helpText">
                   Relay&apos;s fee invoices to this carrier under the dispatch

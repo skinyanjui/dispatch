@@ -72,10 +72,19 @@ export function LoadChanges({
       const json = path + JSON.stringify(body);
       if (attempt.current?.body !== json)
         attempt.current = { body: json, key: crypto.randomUUID() };
-      await api(`loads/${load.id}/${path}`, body, attempt.current.key);
+      const r = await api<{ pending_approval?: boolean }>(
+        `loads/${load.id}/${path}`,
+        body,
+        attempt.current.key,
+      );
       attempt.current = null;
       setMode(null);
-      await onChanged(done);
+      // A new address after dispatch waits for a second person (ADR 0064).
+      await onChanged(
+        r?.pending_approval
+          ? "Sent for approval. The new address counts once a second person approves it in the carrier's files."
+          : done,
+      );
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onAuthError(e);
       setError(e instanceof Error ? e.message : "SERVICE_UNAVAILABLE");

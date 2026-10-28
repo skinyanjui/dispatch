@@ -6,6 +6,10 @@ import { DocumentPanel } from "./document-panel";
 import { ApiError, useApi } from "@/lib/client-api";
 import type { CarrierDocuments } from "@/lib/contracts";
 import { ErrorAlert } from "@/components/ui/feedback";
+import {
+  CarrierRegistration,
+  PayoutApprovals,
+} from "@/components/carrier-controls";
 
 export function CarrierDocumentsDialog({
   carrierId,
@@ -101,6 +105,20 @@ export function CarrierDocumentsDialog({
                 setNotice(message);
               }}
             />
+            {!demo && (
+              <>
+                <CarrierRegistration
+                  carrierId={carrierId}
+                  offline={offline}
+                  onAuthError={onAuthError}
+                />
+                <PayoutApprovals
+                  carrierId={carrierId}
+                  offline={offline}
+                  onAuthError={onAuthError}
+                />
+              </>
+            )}
             <p className="detailFoot">
               Insurance expiry is shown for awareness; booking is gated only by
               a current verified dispatch agreement. Uploading a dispatch

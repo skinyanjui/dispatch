@@ -490,7 +490,7 @@ export async function claimPacket(user: string, id: string) {
     await member(c, user, carrier.rows[0].carrier_id, true);
     return claimView(r.rows[0]);
   });
-  const ev = row.evidence as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const ev = row.evidence as Record<string, any>;
   const lines: string[] = [
     `Load ${row.load_reference}`,
     `Claim: ${row.kind === "detention" ? "Detention" : "Truck ordered not used (TONU)"}  Amount: ${dollars(row.claimed_minor)}`,

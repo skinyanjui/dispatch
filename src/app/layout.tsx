@@ -14,6 +14,7 @@ import "./marketing.css";
 import "./workspace-look.css";
 import "./assistant.css";
 import "./fleet.css";
+import "./money.css";
 import "./controls.css";
 import "./loads.css";
 import "./exceptions.css";
