@@ -57,6 +57,7 @@ import {
 } from "@/lib/change-control";
 import { auditFilters, auditLog } from "@/lib/audit";
 import { authorityStatus, checkAuthority } from "@/lib/authority";
+import { cashOverview } from "@/lib/billing-cash";
 import {
   createVehicle,
   fleetOverview,
@@ -801,6 +802,15 @@ async function handle(req: NextRequest) {
     )
       return NextResponse.json(
         await carrierDocuments(user.id, z.uuid().parse(path[1])),
+      );
+    if (
+      path.length === 2 &&
+      path[0] === "billing" &&
+      path[1] === "cash" &&
+      req.method === "GET"
+    )
+      return NextResponse.json(
+        await cashOverview(user.id, req.nextUrl.searchParams),
       );
     if (path.length === 1 && path[0] === "billing" && req.method === "GET")
       return NextResponse.json(
