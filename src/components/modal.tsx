@@ -29,8 +29,10 @@ export function Modal({
     dialog?.showModal();
     return () => {
       dialog?.close();
-      // Back to where the person was once the page has settled.
-      requestAnimationFrame(() => {
+      // Back to where the person was once the page has settled. An opener that
+      // is disabled while a refresh finishes gets a short, bounded wait.
+      let frames = 0;
+      const restore = () => {
         // A person may already have focused their next control. Do not steal
         // that focus when the delayed restoration callback runs.
         const current = document.activeElement;
@@ -41,9 +43,14 @@ export function Modal({
           !dialog?.contains(current)
         )
           return;
-        if (opener?.isConnected && !(opener as HTMLButtonElement).disabled)
-          opener.focus();
-      });
+        if (!opener?.isConnected) return;
+        if ((opener as HTMLButtonElement).disabled) {
+          if (++frames < 60) requestAnimationFrame(restore);
+          return;
+        }
+        opener.focus();
+      };
+      requestAnimationFrame(restore);
     };
   }, []);
   return (
