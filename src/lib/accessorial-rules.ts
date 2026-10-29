@@ -96,11 +96,17 @@ export function detentionCalc(input: {
   };
 }
 
-/** TONU applies to a load cancelled after it was dispatched but before pickup. */
-export function tonuEligibility(load: { cancelled: boolean; stage: string }): {
-  eligible: boolean;
-  reason: string | null;
-} {
+/**
+ * TONU applies to a load cancelled by the payer (the shipper or broker) after
+ * it was dispatched and before pickup. A cancellation by the carrier, the
+ * dispatcher or someone else never qualifies, and one with no recorded party
+ * cannot be shown to.
+ */
+export function tonuEligibility(load: {
+  cancelled: boolean;
+  stage: string;
+  party?: string | null;
+}): { eligible: boolean; reason: string | null } {
   if (!load.cancelled)
     return { eligible: false, reason: "The load was not cancelled." };
   if (load.stage !== "dispatched")
@@ -108,6 +114,24 @@ export function tonuEligibility(load: { cancelled: boolean; stage: string }): {
       eligible: false,
       reason:
         "Only a load cancelled after dispatch and before pickup qualifies.",
+    };
+  if (!load.party)
+    return {
+      eligible: false,
+      reason:
+        "Who cancelled the order was not recorded, so a TONU claim cannot be shown.",
+    };
+  if (load.party !== "payer")
+    return {
+      eligible: false,
+      reason:
+        "Only a cancellation by the shipper or broker qualifies; this one was recorded as made by " +
+        (load.party === "carrier"
+          ? "the carrier"
+          : load.party === "dispatch"
+            ? "the dispatcher"
+            : "someone else") +
+        ".",
     };
   return { eligible: true, reason: null };
 }

@@ -215,10 +215,17 @@ test("detention arithmetic: later of arrival and window opening, free time, cap,
       arrived: rep("2026-10-01T14:30:00.000Z", 3000),
     }).issues.includes("recorded_late"),
   );
-  assert.deepEqual(tonuEligibility({ cancelled: true, stage: "dispatched" }), {
-    eligible: true,
-    reason: null,
-  });
+  assert.deepEqual(
+    tonuEligibility({ cancelled: true, stage: "dispatched", party: "payer" }),
+    { eligible: true, reason: null },
+  );
+  // Only the payer's cancellation is owed; anyone else's, or an unrecorded one, is not.
+  for (const party of ["carrier", "dispatch", "other", null])
+    assert.equal(
+      tonuEligibility({ cancelled: true, stage: "dispatched", party }).eligible,
+      false,
+      String(party),
+    );
   assert.equal(
     tonuEligibility({ cancelled: true, stage: "booked" }).eligible,
     false,
@@ -411,9 +418,18 @@ test("TONU needs a cancellation after dispatch, a stated fee and terms; the evid
       stage: "dispatched",
     })
   ).version;
+  // Once dispatched, a cancellation must say who made it.
+  await assert.rejects(
+    cancelLoad(t.dispatcher, r.load.id, {
+      version,
+      reason: "Shipper cancelled the order",
+    }),
+    { code: "CANCEL_PARTY_REQUIRED" },
+  );
   await cancelLoad(t.dispatcher, r.load.id, {
     version,
     reason: "Shipper cancelled the order",
+    party: "payer",
   });
   assert.equal((await loadClaims(t.manager, r.load.id)).tonu.eligible, true);
   await assert.rejects(
@@ -421,6 +437,13 @@ test("TONU needs a cancellation after dispatch, a stated fee and terms; the evid
     { code: "TONU_AMOUNT_REQUIRED" },
   );
   await terms(r.load.id, 1, { tonu_minor: 15000 });
+  // A fee agreed only by phone is not claimed.
+  await terms(r.load.id, 2, { tonu_minor: 15000, source: "verbal" });
+  await assert.rejects(
+    createClaim(t.dispatcher, { load_id: r.load.id, kind: "tonu", key: key() }),
+    { code: "TONU_TERMS_NOT_WRITTEN" },
+  );
+  await terms(r.load.id, 3, { tonu_minor: 15000 });
   const made = await createClaim(t.dispatcher, {
     load_id: r.load.id,
     kind: "tonu",
@@ -430,12 +453,34 @@ test("TONU needs a cancellation after dispatch, a stated fee and terms; the evid
   assert.equal(claim.claimed_minor, "15000");
   const tonu = (claim.evidence as { tonu: Record<string, string | null> }).tonu;
   assert.equal(tonu.cancel_reason, "Shipper cancelled the order");
+  assert.equal(tonu.cancelled_by_party, "payer");
   assert.ok(
     tonu.dispatched_at && tonu.cancelled_at && tonu.cancelled_by && tonu.driver,
   );
   assert.match(
     (await claimPacket(t.dispatcher, made.id)).bytes.toString("latin1"),
     /Truck ordered not used/,
+  );
+  // The carrier's own cancellation never qualifies, whatever it says in the reason.
+  const own = await route();
+  await terms(own.load.id);
+  const ownVersion = (
+    await mutate(t.dispatcher, own.load.id, "milestones", {
+      version: own.version,
+      stage: "dispatched",
+    })
+  ).version;
+  await cancelLoad(t.manager, own.load.id, {
+    version: ownVersion,
+    reason: "Our truck broke down",
+    party: "carrier",
+  });
+  const ownView = await loadClaims(t.manager, own.load.id);
+  assert.equal(ownView.tonu.eligible, false);
+  assert.match(ownView.tonu.reason!, /made by the carrier/);
+  await assert.rejects(
+    createClaim(t.manager, { load_id: own.load.id, kind: "tonu", key: key() }),
+    { code: "TONU_NOT_ELIGIBLE" },
   );
   // Cancelled while still booked does not qualify.
   const early = await route();

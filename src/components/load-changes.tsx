@@ -300,6 +300,13 @@ export function LoadChanges({
                   reason: String(
                     new FormData(e.currentTarget).get("reason"),
                   ).trim(),
+                  ...(new FormData(e.currentTarget).get("party")
+                    ? {
+                        party: String(
+                          new FormData(e.currentTarget).get("party"),
+                        ),
+                      }
+                    : {}),
                 },
                 "Done. The load has been cancelled.",
               );
@@ -315,6 +322,26 @@ export function LoadChanges({
             <label>
               Reason
               <input name="reason" required maxLength={500} />
+            </label>
+            <label>
+              Who cancelled the order
+              <select
+                name="party"
+                required={load.stage === "dispatched"}
+                defaultValue=""
+              >
+                <option value="">
+                  {load.stage === "dispatched" ? "Choose…" : "Not recorded"}
+                </option>
+                <option value="payer">The shipper or broker</option>
+                <option value="carrier">Our carrier</option>
+                <option value="dispatch">Dispatch</option>
+                <option value="other">Someone else</option>
+              </select>
+              <small>
+                A truck-ordered-not-used fee is only claimable when the shipper
+                or broker cancelled.
+              </small>
             </label>
             <ErrorAlert error={error} />
             <div className="opsActions">

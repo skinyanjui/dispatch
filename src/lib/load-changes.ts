@@ -46,10 +46,14 @@ export const editSchema = z
       .optional(),
   })
   .strict();
+export const cancelParties = ["payer", "carrier", "dispatch", "other"] as const;
 export const cancelSchema = z
   .object({
     version: z.number().int().positive(),
     reason: z.string().trim().min(1).max(500),
+    // Who cancelled the order. Required once the load is dispatched, because
+    // a truck-ordered-not-used fee is owed only when the payer cancelled (ADR 0070).
+    party: z.enum(cancelParties).optional(),
   })
   .strict();
 
@@ -344,10 +348,12 @@ export async function cancelLoad(
       throw new HttpError(409, "VERSION_CONFLICT");
     if (load.stage !== "booked" && load.stage !== "dispatched")
       throw new HttpError(422, "CANNOT_CANCEL_STARTED");
+    if (load.stage === "dispatched" && !data.party)
+      throw new HttpError(422, "CANCEL_PARTY_REQUIRED");
     const version = load.version + 1;
     await c.query(
-      "UPDATE loads SET cancelled_at=now(),cancelled_by=$2,cancel_reason=$3,version=$4 WHERE id=$1",
-      [id, user, data.reason, version],
+      "UPDATE loads SET cancelled_at=now(),cancelled_by=$2,cancel_reason=$3,cancel_party=$5,version=$4 WHERE id=$1",
+      [id, user, data.reason, version, data.party ?? null],
     );
     // Open exceptions on freight that will not move are closed with the reason.
     await c.query(
@@ -355,7 +361,10 @@ export async function cancelLoad(
         resolution=$3,version=version+1,updated_at=now() WHERE load_id=$1 AND status<>'resolved'`,
       [id, user, "Load cancelled: " + data.reason.slice(0, 900)],
     );
-    await event(c, user, load, "load.cancelled", { reason: data.reason });
+    await event(c, user, load, "load.cancelled", {
+      reason: data.reason,
+      party: data.party ?? null,
+    });
     await notifyDriver(
       c,
       load,

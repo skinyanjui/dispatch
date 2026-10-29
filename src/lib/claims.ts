@@ -148,6 +148,7 @@ async function tonuEvidence(c: PoolClient, load: Record<string, unknown>) {
     cancelled_at: load.cancelled_at ? iso(load.cancelled_at) : null,
     cancelled_by: (who.rows[0]?.name as string | undefined) ?? null,
     cancel_reason: (load.cancel_reason as string | null) ?? null,
+    cancelled_by_party: (load.cancel_party as string | null) ?? null,
     dispatched_at: dispatched.rows[0]
       ? iso(dispatched.rows[0].created_at)
       : null,
@@ -198,6 +199,7 @@ export async function loadClaims(user: string, loadId: string) {
     const tonu = tonuEligibility({
       cancelled: !!load.cancelled_at,
       stage: load.stage,
+      party: load.cancel_party,
     });
     return {
       load_id: loadId,
@@ -306,8 +308,12 @@ async function snapshot(
   const eligible = tonuEligibility({
     cancelled: !!load.cancelled_at,
     stage: load.stage as string,
+    party: load.cancel_party as string | null,
   });
   if (!eligible.eligible) throw new HttpError(422, "TONU_NOT_ELIGIBLE");
+  // A fee the carrier cannot show was agreed in writing is not claimed.
+  if (terms.source === "verbal")
+    throw new HttpError(422, "TONU_TERMS_NOT_WRITTEN");
   if (!terms.tonu_minor) throw new HttpError(422, "TONU_AMOUNT_REQUIRED");
   return {
     claimed: terms.tonu_minor,
@@ -524,6 +530,7 @@ export async function claimPacket(user: string, id: string) {
       `Dispatched: ${ev.tonu.dispatched_at ? when(ev.tonu.dispatched_at) : "not recorded"}${ev.tonu.dispatched_by ? ` by ${ev.tonu.dispatched_by}` : ""}`,
       `Driver assigned: ${ev.tonu.driver ?? "not recorded"}`,
       `Cancelled: ${when(ev.tonu.cancelled_at)}${ev.tonu.cancelled_by ? ` by ${ev.tonu.cancelled_by}` : ""}`,
+      `Cancelled by: ${ev.tonu.cancelled_by_party === "payer" ? "the shipper or broker" : (ev.tonu.cancelled_by_party ?? "not recorded")}`,
       `Reason given: ${ev.tonu.cancel_reason ?? "not recorded"}`,
     );
   }
