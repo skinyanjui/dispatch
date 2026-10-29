@@ -385,3 +385,45 @@ test("carriers that need a person are counted for the operations alert", async (
   });
   assert.equal((await authorityAttention()) - before, 0);
 });
+
+test("a lookup speaks only for the USDOT number it was made for", async () => {
+  const fresh = await tenant("AuthorityNumber");
+  await setDot(fresh.carrier, "6000001");
+  await checkAuthority(fresh.dispatcher, {
+    carrier_id: fresh.carrier,
+    key: randomUUID(),
+  });
+  assert.equal(
+    (await authorityStatus(fresh.dispatcher, fresh.carrier)).state,
+    "clear",
+  );
+  const before = await authorityAttention();
+  // The number is swapped for another company's: the old "clear" must not carry over.
+  await setDot(fresh.carrier, "6000008");
+  const changed = await authorityStatus(fresh.dispatcher, fresh.carrier);
+  assert.deepEqual(
+    [changed.state, changed.flags, changed.usdot, changed.observed_at],
+    ["attention", ["usdot_changed"], "6000008", null],
+  );
+  assert.equal((await authorityAttention()) - before, 1);
+  // The daily job looks the new number up at once, although the last lookup is minutes old.
+  const seen: string[] = [];
+  await runAuthorityChecks(500, {
+    source: "fixture",
+    async lookup(usdot, name) {
+      seen.push(usdot);
+      return fixtureProvider.lookup(usdot, name);
+    },
+  });
+  assert.ok(seen.includes("6000008"));
+  const after = await authorityStatus(fresh.dispatcher, fresh.carrier);
+  assert.equal(after.state, "attention");
+  assert.ok(after.flags.includes("authority_revoked"));
+  assert.ok(!after.flags.includes("usdot_changed"));
+  // Changing back to the number that was looked up reads as that lookup again.
+  await setDot(fresh.carrier, "6000001");
+  assert.equal(
+    (await authorityStatus(fresh.dispatcher, fresh.carrier)).state,
+    "clear",
+  );
+});

@@ -19,6 +19,7 @@ export type AuthorityFlag =
   | "no_insurance_on_file"
   | "name_differs"
   | "lookup_failed"
+  | "usdot_changed"
   | "stale";
 export type AuthorityState = "unchecked" | "clear" | "attention" | "unverified";
 export const flagLabels: Record<AuthorityFlag, string> = {
@@ -30,6 +31,8 @@ export const flagLabels: Record<AuthorityFlag, string> = {
   no_insurance_on_file: "No insurance on file",
   name_differs: "Registered name differs from the carrier's name",
   lookup_failed: "The last lookup failed",
+  usdot_changed:
+    "The USDOT number changed since the last lookup, so nothing is confirmed for the new number",
   stale: "The last successful lookup is old",
 };
 /** A successful lookup older than this is shown as stale. */
@@ -54,6 +57,8 @@ export function deriveAuthority(
   lastOk: AuthorityCheck | null,
   carrierName: string,
   now = new Date(),
+  /** Lookups exist, but only for another USDOT number than the one on file. */
+  numberChanged = false,
 ): {
   state: AuthorityState;
   flags: AuthorityFlag[];
@@ -61,6 +66,14 @@ export function deriveAuthority(
   observed_at: string | null;
   age_hours: number | null;
 } {
+  if (!latest && numberChanged)
+    return {
+      state: "attention",
+      flags: ["usdot_changed"],
+      source: null,
+      observed_at: null,
+      age_hours: null,
+    };
   if (!latest)
     return {
       state: "unchecked",

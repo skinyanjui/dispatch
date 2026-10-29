@@ -129,18 +129,28 @@ const rowToCheck = (r: Record<string, unknown>): AuthorityCheck => ({
 });
 
 type Db = Pick<typeof pool, "query">;
-async function latestChecks(c: Db, carrierId: string) {
+/**
+ * The latest lookups for the number now on file. A lookup only speaks for the
+ * USDOT number it was made for: after the number changes, the old result must
+ * not make the new number look clear (ADR 0070).
+ */
+async function latestChecks(c: Db, carrierId: string, usdot: string) {
   const { rows } = await c.query(
-    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1`,
-    [carrierId],
+    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot=$2 ORDER BY created_at DESC,id DESC LIMIT 1`,
+    [carrierId, usdot],
   );
   const ok = await c.query(
-    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1`,
-    [carrierId],
+    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot=$2 AND outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1`,
+    [carrierId, usdot],
+  );
+  const other = await c.query(
+    `SELECT 1 FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot<>$2 LIMIT 1`,
+    [carrierId, usdot],
   );
   return {
     latest: rows[0] ? rowToCheck(rows[0]) : null,
     lastOk: ok.rows[0] ? rowToCheck(ok.rows[0]) : null,
+    numberChanged: !rows[0] && (other.rowCount ?? 0) > 0,
   };
 }
 
@@ -152,12 +162,22 @@ export async function authorityStatus(user: string, carrierId: string) {
     [carrierId],
   );
   const usdot = (profile.rows[0]?.usdot as string | undefined) ?? "";
-  const { latest, lastOk } = await latestChecks(pool, carrierId);
+  const { latest, lastOk, numberChanged } = await latestChecks(
+    pool,
+    carrierId,
+    usdot,
+  );
   return {
     carrier_id: carrierId,
     usdot,
     provider: configuredProviderName(),
-    ...deriveAuthority(latest, lastOk, carrier.name as string),
+    ...deriveAuthority(
+      latest,
+      lastOk,
+      carrier.name as string,
+      new Date(),
+      numberChanged,
+    ),
     legal_name: (lastOk ?? latest)?.legal_name ?? "",
   };
 }
@@ -270,11 +290,12 @@ export async function runAuthorityChecks(
   if (!provider) return { skipped: "no provider configured" };
   const due = await pool.query(
     `SELECT c.id,c.name,p.usdot FROM carriers c JOIN carrier_profiles p ON p.carrier_id=c.id
-     LEFT JOIN LATERAL (SELECT outcome,created_at,
+     LEFT JOIN LATERAL (SELECT outcome,created_at,usdot,
         (SELECT count(*) FROM (SELECT outcome FROM carrier_authority_checks x WHERE x.carrier_id=c.id ORDER BY created_at DESC,id DESC LIMIT 4) z WHERE z.outcome='error') errors
        FROM carrier_authority_checks k WHERE k.carrier_id=c.id ORDER BY created_at DESC,id DESC LIMIT 1) last ON true
      WHERE p.usdot<>'' AND p.step='complete' AND (
        last.created_at IS NULL
+       OR last.usdot<>p.usdot
        OR last.created_at<now()-interval '20 hours'
        OR (last.outcome='error' AND last.errors<4 AND last.created_at<now()-interval '1 hour'))
      ORDER BY last.created_at NULLS FIRST LIMIT $1`,
@@ -297,13 +318,15 @@ export async function authorityAttention(): Promise<number> {
        l.insurance_on_file,l.observed_at,
        o.outcome ok_outcome,o.source ok_source,o.legal_name ok_legal_name,o.authority_status ok_authority_status,
        o.allowed_to_operate ok_allowed_to_operate,o.out_of_service ok_out_of_service,
-       o.insurance_on_file ok_insurance_on_file,o.observed_at ok_observed_at
+       o.insurance_on_file ok_insurance_on_file,o.observed_at ok_observed_at,
+       (l.outcome IS NULL AND EXISTS(SELECT 1 FROM carrier_authority_checks k WHERE k.carrier_id=c.id)) number_changed
      FROM carriers c
-     JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id ORDER BY created_at DESC,id DESC LIMIT 1) l ON true
-     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1) o ON true`,
+     LEFT JOIN carrier_profiles p ON p.carrier_id=c.id
+     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.usdot=COALESCE(p.usdot,'') ORDER BY created_at DESC,id DESC LIMIT 1) l ON true
+     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.usdot=COALESCE(p.usdot,'') AND k.outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1) o ON true`,
   );
   return rows.filter((r) => {
-    const latest = rowToCheck(r);
+    const latest = r.outcome ? rowToCheck(r) : null;
     const ok = r.ok_outcome
       ? rowToCheck({
           outcome: r.ok_outcome,
@@ -316,6 +339,9 @@ export async function authorityAttention(): Promise<number> {
           observed_at: r.ok_observed_at,
         })
       : null;
-    return deriveAuthority(latest, ok, r.name).state === "attention";
+    return (
+      deriveAuthority(latest, ok, r.name, new Date(), r.number_changed)
+        .state === "attention"
+    );
   }).length;
 }
