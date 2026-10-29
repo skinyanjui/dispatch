@@ -64,6 +64,11 @@ const messages: Record<string, string> = {
     "Add the TONU fee from the rate confirmation in the terms first.",
   RATE_CONFIRMATION_REQUIRED:
     "Upload and accept this load's rate confirmation first, so the terms can point at it.",
+  NAME_MISMATCH:
+    "Type the carrier's name exactly as it is shown, so the wrong carrier is not erased.",
+  CARRIER_HAS_OPEN_WORK:
+    "This carrier still has active loads, open claims or a prepared factoring schedule. Finish or cancel them first.",
+  CARRIER_ERASED: "This carrier has already been erased.",
   FILE_PURGED:
     "This file was removed after the retention period. Its hash and totals are still on the schedule.",
   STEP_UP_REQUIRED:

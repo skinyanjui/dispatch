@@ -322,3 +322,39 @@ test("the claims, payout and factoring screens fit a phone and can be used by ke
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("tab", { name: /^Claims/ })).toBeFocused();
 });
+
+test("erasing a carrier is offered to organization administrators only, explains what goes and what stays, and is blocked while freight is live", async ({
+  page,
+}) => {
+  await login(page);
+  const carrier = await blueRidge(page);
+  await page.goto(`/carriers/${carrier}/documents`);
+  const dialog = page.getByRole("dialog", { name: "Carrier documents" });
+  const panel = dialog.getByText("Erase this carrier's data");
+  await expect(panel).toBeVisible();
+  await panel.click();
+  const plan = dialog.getByRole("table", { name: "What erasing does" });
+  await expect(plan).toContainText("Invoices and payments");
+  await expect(
+    plan.getByRole("row", { name: /Invoices and payments/ }),
+  ).toContainText("Kept");
+  await expect(plan.getByRole("row", { name: /^People/ })).toContainText(
+    "Removed",
+  );
+  // Blue Ridge has live freight, so asking is blocked and says why.
+  await expect(dialog.getByText("It cannot be erased yet")).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Ask for approval to erase" }),
+  ).toBeDisabled();
+  expect(await axeViolations(page)).toEqual([]);
+
+  // The carrier's own manager never sees it.
+  await page.context().clearCookies();
+  await login(page, "carrier@relay.test");
+  await page.goto(`/carriers/${carrier}/documents`);
+  const mine = page.getByRole("dialog", { name: "Carrier documents" });
+  await expect(
+    mine.getByRole("heading", { name: "Payout details and approvals" }),
+  ).toBeVisible();
+  await expect(mine.getByText("Erase this carrier's data")).toHaveCount(0);
+});

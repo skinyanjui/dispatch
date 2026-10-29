@@ -12,7 +12,7 @@ export async function migratePostgresObjects(store: S3Client, limit = 100) {
   const { rows } = await pool.query(
     `SELECT o.storage_key,v.sha256 FROM document_objects o
     JOIN document_versions v ON v.storage_key=o.storage_key
-    WHERE o.backend='postgres' ORDER BY o.created_at LIMIT $1`,
+    WHERE o.backend='postgres' AND o.purged_at IS NULL ORDER BY o.created_at LIMIT $1`,
     [limit],
   );
   let moved = 0;

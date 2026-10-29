@@ -142,7 +142,12 @@ export type AuthorityStatus = {
 
 export type SensitiveChange = {
   id: string;
-  kind: "payout_details" | "contact_details" | "reroute";
+  kind:
+    | "payout_details"
+    | "contact_details"
+    | "reroute"
+    | "carrier_profile"
+    | "carrier_erasure";
   summary: string;
   reason: string;
   status: "pending" | "approved" | "rejected" | "cancelled" | "stale";
@@ -170,6 +175,18 @@ export type ChangeControl = {
   } | null;
   can_decide: boolean;
   changes: SensitiveChange[];
+  /** Only for organization administrators. */
+  erasure: {
+    erased: boolean;
+    plan: {
+      id: string;
+      label: string;
+      removes: string;
+      action: "erase" | "keep";
+    }[];
+    blockers: string[];
+    pending_files: number;
+  } | null;
 };
 
 export type ClaimTerms = {

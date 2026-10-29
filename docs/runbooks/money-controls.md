@@ -41,6 +41,10 @@ Only a carrier manager turns it on, with consent. Schedules are CSVs the carrier
 
 A carrier that turns to attention notifies its dispatchers and managers once (kind `registration_alert`, mutable in notification settings) and shows on the carrier list. The freight packet shows the payout details in force. Claim evidence, factoring CSVs and lookup history are kept while the carrier exists; the daily `retention` step (ADR 0073) clears factoring CSVs and prunes lookups older than `RELAY_RETENTION_YEARS` (default 7), keeping each carrier's newest lookup and newest success, and audits each purge. Claim evidence, invoices and audit rows are untouched. Rollback: leave migrations 048 and 049; remove the alert and the step.
 
+## Carrier erasure (ADR 0074)
+
+Carrier files, "Erase this carrier's data": an organization owner or admin asks (carrier name, reason, password); a different owner or admin approves from the same approvals list. Blocked while the carrier has active loads, open claims or a prepared factoring schedule. `RELAY_ERASURE_KEEP` lists categories to keep (people, contacts, messages, notes, documents, lookups, payout); loads, billing, claims, factoring and audit are always kept. The receipt is the request row (counts, what went, what stayed) plus a `carrier.erased` audit event. Bucket files are deleted by the job step `objects`; `erasure_object_deletions` shows any that are failing. Erasure cannot be undone from the application; only a backup restore brings data back. Rollback: leave migration 050; remove the route and screen.
+
 ## Not built
 
 Live factor integrations, paid carrier-verification vendors, geofence or ELD evidence for detention, and demo versions of these screens (the public demo hides them rather than faking them).

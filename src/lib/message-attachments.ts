@@ -202,10 +202,11 @@ export async function attachmentContent(
   if (!file) throw new HttpError(404, "NOT_FOUND");
   const object = (
     await pool.query(
-      "SELECT backend,bucket,content FROM document_objects WHERE storage_key=$1",
+      "SELECT backend,bucket,content,purged_at FROM document_objects WHERE storage_key=$1",
       [file.storage_key],
     )
   ).rows[0];
+  if (object?.purged_at) throw new HttpError(410, "FILE_PURGED");
   await pool.query("INSERT INTO audit_logs VALUES($1,$2,$3,$4,now())", [
     randomUUID(),
     user,

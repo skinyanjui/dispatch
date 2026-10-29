@@ -54,6 +54,7 @@ import {
   listChanges,
   pendingCount,
   requestPayoutChange,
+  requestCarrierErasure,
 } from "@/lib/change-control";
 import { auditFilters, auditLog } from "@/lib/audit";
 import { authorityStatus, checkAuthority } from "@/lib/authority";
@@ -699,6 +700,15 @@ async function handle(req: NextRequest) {
       )
         return NextResponse.json(
           await requestPayoutChange(user.id, await readJson(req)),
+          { status: 201 },
+        );
+      if (
+        path.length === 2 &&
+        path[1] === "carrier-erasure" &&
+        req.method === "POST"
+      )
+        return NextResponse.json(
+          await requestCarrierErasure(user.id, await readJson(req)),
           { status: 201 },
         );
       if (path.length === 3 && req.method === "POST") {

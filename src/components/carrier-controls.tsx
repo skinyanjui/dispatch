@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { ErrorAlert } from "@/components/ui/feedback";
+import { CarrierErasure } from "@/components/carrier-erasure";
 import { ApiError, useApi } from "@/lib/client-api";
 import { flagLabels, type AuthorityState } from "@/lib/authority-state";
 import { formatDateTime } from "@/lib/format";
@@ -549,6 +550,15 @@ export function PayoutApprovals({
               </button>
             </div>
           </form>
+        )}
+        {data?.erasure && (
+          <CarrierErasure
+            carrierId={carrierId}
+            erasure={data.erasure}
+            offline={offline}
+            onAsked={load}
+            fail={fail}
+          />
         )}
         {recent.length > 0 && (
           <details>

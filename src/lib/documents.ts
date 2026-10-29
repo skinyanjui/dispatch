@@ -690,10 +690,11 @@ export async function documentContent(
   return transaction(async (c) => {
     const { version } = await readable(c, user, versionId);
     const object = await c.query(
-      "SELECT backend,bucket,content FROM document_objects WHERE storage_key=$1",
+      "SELECT backend,bucket,content,purged_at FROM document_objects WHERE storage_key=$1",
       [version.storage_key],
     );
     const row = object.rows[0];
+    if (row?.purged_at) throw new HttpError(410, "FILE_PURGED");
     let result: DocumentDownload;
     if (row?.backend === "postgres" && row.content)
       result = {

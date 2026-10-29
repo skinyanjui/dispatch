@@ -84,6 +84,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
     "appointments",
     "delivery",
     "exports",
+    "objects",
   ]);
   assert.equal(await appointment(soon.reference), 1);
   const podReminder = await pool.query(
@@ -107,6 +108,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
     "credentials",
     "delivery",
     "exports",
+    "objects",
     "pruned",
     "reminders",
     "retention",

@@ -11,6 +11,7 @@ import { pruneExpiredCredentials } from "./account";
 import { sendAlerts } from "./alerts";
 import { runAuthorityChecks } from "./authority";
 import { runRetention } from "./retention";
+import { runObjectPurges } from "./erasure";
 import { expireStaleChanges } from "./change-control";
 import { cleanupAbandoned } from "@/lib/message-attachments";
 
@@ -43,6 +44,8 @@ const defaultSteps = (scope: JobScope): Steps => ({
   exports: () => runPendingExports(1),
   ...(scope === "daily" ? { reminders: scheduleDailyReminders } : {}),
   delivery: () => deliverDue(50),
+  // Files queued for deletion by an erasure are retried until the store confirms.
+  objects: () => runObjectPurges(),
   // A broken alert channel must not fail the work above, so it reports itself.
   alerts: () =>
     jobStatus()

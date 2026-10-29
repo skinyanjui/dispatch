@@ -7,6 +7,7 @@ import { consumeSecondFactor } from "./account";
 import { enqueueForUser } from "./notifications";
 import { carrierAccess, emit, once, writeCompanyDetails } from "./onboarding";
 import { editLoadIn, editSchema } from "./load-changes";
+import { eraseCarrier, erasureBlockers, erasureOverview } from "./erasure";
 
 /**
  * Change control (ADR 0064). Payout instructions, a carrier contact's phone or
@@ -22,6 +23,7 @@ export const changeKinds = [
   "contact_details",
   "reroute",
   "carrier_profile",
+  "carrier_erasure",
 ] as const;
 export type ChangeKind = (typeof changeKinds)[number];
 export const verificationMethods = [
@@ -114,11 +116,21 @@ const expiredNote =
   "Expired after " + changeExpiryDays + " days without a decision";
 
 /** People who may decide changes for a carrier, other than the requester. */
-async function approversOf(c: PoolClient, carrierId: string, except: string) {
+async function approversOf(
+  c: PoolClient,
+  carrierId: string,
+  except: string,
+  kind: ChangeKind = "payout_details",
+) {
+  // Erasing a carrier is for organization administrators only.
+  const managers =
+    kind === "carrier_erasure"
+      ? "false"
+      : "EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=u.id AND m.role='carrier-manager')";
   const r = await c.query(
     `SELECT u.id,car.organization_id FROM carriers car
        JOIN users u ON u.id<>$2 AND (
-         EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=u.id AND m.role='carrier-manager')
+         ${managers}
          OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=u.id))
      WHERE car.id=$1`,
     [carrierId, except],
@@ -192,7 +204,7 @@ export async function requestChange(
     kind: input.kind,
   });
   // Tell the people who can decide it, once each; muting the kind is theirs to choose.
-  for (const a of await approversOf(c, input.carrierId, user))
+  for (const a of await approversOf(c, input.carrierId, user, input.kind))
     await enqueueForUser(c, a.id, {
       kind: "approval_request",
       organization: a.organization_id,
@@ -252,8 +264,79 @@ export async function requestPayoutChange(user: string, input: unknown) {
   });
 }
 
-/** May this person decide changes for the carrier (not counting separation of duties)? */
-async function mayDecide(c: PoolClient, user: string, carrierId: string) {
+const erasureSchema = z
+  .object({
+    carrier_id: z.uuid(),
+    confirm_name: z.string().trim().min(1).max(160),
+    reason: z.string().trim().min(1).max(500),
+    password: z.string().max(256).optional(),
+    code: z.string().max(40).optional(),
+    key,
+  })
+  .strict();
+
+/**
+ * Asks to erase a carrier (ADR 0074). Only an organization administrator may
+ * ask, after typing the carrier's name and their password again; a different
+ * administrator must approve, and nothing is erased before then.
+ */
+export async function requestCarrierErasure(user: string, input: unknown) {
+  const data = erasureSchema.parse(input);
+  return transaction(async (c) => {
+    await carrierAccess(c, user, data.carrier_id);
+    if (!(await isOrgAdmin(c, user, data.carrier_id)))
+      throw new HttpError(404, "NOT_FOUND");
+    return once(c, user, data.key, "change.erasure", data, async () => {
+      const carrier = await c.query(
+        "SELECT name,erased_at FROM carriers WHERE id=$1",
+        [data.carrier_id],
+      );
+      const name = carrier.rows[0].name as string;
+      if (carrier.rows[0].erased_at) throw new HttpError(409, "CARRIER_ERASED");
+      if (data.confirm_name.toLowerCase() !== name.toLowerCase())
+        throw new HttpError(422, "NAME_MISMATCH");
+      if ((await erasureBlockers(c, data.carrier_id)).length)
+        throw new HttpError(409, "CARRIER_HAS_OPEN_WORK");
+      await stepUp(c, user, data.password, data.code);
+      const id = await requestChange(c, user, {
+        carrierId: data.carrier_id,
+        kind: "carrier_erasure",
+        subjectId: null,
+        summary: `Erase ${name} and its personal data`.slice(0, 300),
+        current: { name },
+        proposed: {},
+        reason: data.reason,
+      });
+      return { id, status: "pending" };
+    });
+  });
+}
+
+/** Is this person an owner or admin of the carrier's organization? */
+async function isOrgAdmin(
+  c: PoolClient | typeof pool,
+  user: string,
+  carrierId: string,
+) {
+  const r = await c.query(
+    `SELECT 1 FROM carriers car JOIN organization_members om ON om.organization_id=car.organization_id
+     WHERE car.id=$2 AND om.user_id=$1`,
+    [user, carrierId],
+  );
+  return r.rowCount === 1;
+}
+
+/**
+ * May this person decide changes for the carrier (not counting separation of
+ * duties)? Erasing a carrier is for organization administrators only.
+ */
+async function mayDecide(
+  c: PoolClient,
+  user: string,
+  carrierId: string,
+  kind: ChangeKind | string = "payout_details",
+) {
+  if (kind === "carrier_erasure") return isOrgAdmin(c, user, carrierId);
   const r = await c.query(
     `SELECT 1 FROM carriers car
      WHERE car.id=$2 AND (
@@ -310,6 +393,7 @@ export async function listChanges(user: string, carrierId: string) {
   if (!(await mayRead(pool, user, carrierId)))
     throw new HttpError(404, "NOT_FOUND");
   const decide = await transaction((c) => mayDecide(c, user, carrierId));
+  const admin = await isOrgAdmin(pool, user, carrierId);
   const rows = await pool.query(
     `SELECT s.*,ru.name requester_name,du.name decider_name
      FROM sensitive_changes s JOIN users ru ON ru.id=s.requested_by LEFT JOIN users du ON du.id=s.decided_by
@@ -320,7 +404,11 @@ export async function listChanges(user: string, carrierId: string) {
     cooling_hours: coolingHours(),
     payout_details: await payoutDetails(pool, carrierId),
     can_decide: decide,
-    changes: rows.rows.map((r) => view(r, user, decide)),
+    changes: rows.rows.map((r) =>
+      view(r, user, r.kind === "carrier_erasure" ? admin : decide),
+    ),
+    // Erasure is offered to organization administrators only.
+    erasure: admin ? await erasureOverview(carrierId) : null,
   };
 }
 
@@ -330,7 +418,7 @@ export async function pendingCount(user: string) {
   const r = await pool.query(
     `SELECT car.id carrier_id,car.name,count(*)::int n FROM sensitive_changes s JOIN carriers car ON car.id=s.carrier_id
      WHERE s.status='pending' AND s.requested_by<>$1 AND (
-       EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=$1 AND m.role='carrier-manager')
+       (s.kind<>'carrier_erasure' AND EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=$1 AND m.role='carrier-manager'))
        OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=$1))
      GROUP BY car.id,car.name ORDER BY car.name`,
     [user],
@@ -377,7 +465,7 @@ export async function decideChange(user: string, id: string, input: unknown) {
   const data = decisionSchema.parse(input);
   return transaction(async (c) => {
     const row = await lockChange(c, user, id);
-    if (!(await mayDecide(c, user, row.carrier_id)))
+    if (!(await mayDecide(c, user, row.carrier_id, row.kind)))
       throw new HttpError(404, "NOT_FOUND");
     if (row.status !== "pending") throw new HttpError(409, "CHANGE_DECIDED");
     if (row.requested_by === user) throw new HttpError(409, "SAME_PERSON");
@@ -461,6 +549,19 @@ async function apply(
       ],
     );
     return { effective_at: effective };
+  }
+  if (row.kind === "carrier_erasure") {
+    const cur = row.current_value as { name: string };
+    const now = await c.query(
+      "SELECT name,erased_at FROM carriers WHERE id=$1 FOR UPDATE",
+      [row.carrier_id],
+    );
+    if (!now.rows[0] || now.rows[0].erased_at || now.rows[0].name !== cur.name)
+      return "stale";
+    if ((await erasureBlockers(c, row.carrier_id)).length)
+      throw new HttpError(409, "CARRIER_HAS_OPEN_WORK");
+    await eraseCarrier(c, row.carrier_id, row.id, approver);
+    return { effective_at: new Date() };
   }
   if (row.kind === "carrier_profile") {
     const cur = row.current_value as {
