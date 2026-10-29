@@ -25,7 +25,8 @@ import {
   recordStopEvent,
 } from "../../src/lib/loads";
 import type { Load } from "../../src/lib/contracts";
-import { request, sessionFor, tenant } from "./fixtures";
+import { reviewDocument, uploadDocument } from "../../src/lib/documents";
+import { pdf, request, sessionFor, tenant } from "./fixtures";
 
 let t: Awaited<ReturnType<typeof tenant>>;
 before(async () => {
@@ -85,12 +86,34 @@ const report = (
   idempotency_key: randomUUID(),
   ...extra,
 });
-const terms = (
+/** Upload a rate confirmation for the load and accept it. */
+async function acceptRateConfirmation(loadId: string) {
+  const v = await uploadDocument(
+    t.dispatcher,
+    {
+      carrier_id: t.carrier,
+      load_id: loadId,
+      type: "rate_confirmation",
+      idempotency_key: randomUUID(),
+    },
+    { name: "rate-confirmation.pdf", bytes: pdf() },
+  );
+  await reviewDocument(t.dispatcher, v.version_id, { decision: "accepted" });
+  return v.version_id as string;
+}
+const terms = async (
   loadId: string,
   version = 0,
   over: Record<string, unknown> = {},
-) =>
-  setTerms(t.dispatcher, {
+) => {
+  if ((over.source ?? "rate_confirmation") === "rate_confirmation") {
+    const has = await pool.query(
+      "SELECT 1 FROM documents WHERE load_id=$1 AND type='rate_confirmation'",
+      [loadId],
+    );
+    if (!has.rowCount) await acceptRateConfirmation(loadId);
+  }
+  return setTerms(t.dispatcher, {
     load_id: loadId,
     free_minutes: 120,
     rate_minor_per_hour: 6000,
@@ -100,6 +123,7 @@ const terms = (
     version,
     ...over,
   });
+};
 /** Arrives 30 minutes into the window, leaves four hours later: 240 minutes on site. */
 async function visit(r: Awaited<ReturnType<typeof route>>) {
   let version = r.version;
@@ -564,5 +588,31 @@ test("HTTP: only people of the carrier can read or change claims; strangers and 
       kind: "detention",
     }),
     400,
+  );
+});
+
+test("terms taken from the rate confirmation point at that accepted file; without one they are refused", async () => {
+  const r = await route();
+  await assert.rejects(
+    setTerms(t.dispatcher, {
+      load_id: r.load.id,
+      free_minutes: 120,
+      rate_minor_per_hour: 6000,
+      cap_minutes: null,
+      tonu_minor: null,
+      source: "rate_confirmation",
+      version: 0,
+    }),
+    { message: "RATE_CONFIRMATION_REQUIRED" },
+  );
+  // A written agreement does not need the file.
+  await terms(r.load.id, 0, { source: "agreement" });
+  const versionId = await acceptRateConfirmation(r.load.id);
+  await terms(r.load.id, 1);
+  const claims = await loadClaims(t.dispatcher, r.load.id);
+  assert.equal(claims.terms?.source_document?.version_id, versionId);
+  assert.equal(
+    claims.terms?.source_document?.filename,
+    "rate-confirmation.pdf",
   );
 });

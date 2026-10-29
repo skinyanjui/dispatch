@@ -114,8 +114,14 @@ test("Billing has Cash and Factoring tabs: figures, a fee preview that refuses n
   ).toBeVisible();
   await expect(page.getByLabel("Factor's name")).toHaveCount(0);
 
+  await page.getByRole("tab", { name: /^Claims/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Detention and TONU claims" }),
+  ).toBeVisible();
+  expect(await axeViolations(page)).toEqual([]);
+
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const tab of [/^Cash/, /^Factoring/]) {
+  for (const tab of [/^Cash/, /^Factoring/, /^Claims/]) {
     await page.getByRole("tab", { name: tab }).click();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,
@@ -225,6 +231,14 @@ test("a load's Claims tab shows the terms, each stop's detention arithmetic and 
   await expect(dialog.getByText("The load was not cancelled.")).toBeVisible();
   await dialog.getByLabel("Detention per hour ($)").fill("60");
   await dialog.getByLabel("TONU fee ($, optional)").fill("150");
+  // Terms that cite the rate confirmation need an accepted one on the load.
+  await dialog.getByRole("button", { name: "Save terms" }).click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    /accepted rate confirmation/i,
+  );
+  await dialog
+    .getByLabel("Where the terms come from")
+    .selectOption("agreement");
   await dialog.getByRole("button", { name: "Save terms" }).click();
   await expect(
     dialog.getByRole("status").filter({ hasText: "Terms saved." }),
@@ -251,4 +265,5 @@ test("the browser-only demo has no cash, factoring or claims screens to mislead 
   await expect(page.getByRole("tab", { name: /^Invoices/ })).toBeVisible();
   await expect(page.getByRole("tab", { name: /^Cash/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: /^Factoring/ })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: /^Claims/ })).toHaveCount(0);
 });

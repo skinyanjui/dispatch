@@ -59,18 +59,50 @@ type Terms = {
   source: string;
   version: number;
   set_at: string;
+  /** The rate confirmation file the terms were taken from, when they say so. */
+  source_document: {
+    version_id: string;
+    filename: string;
+    version: number;
+    sha256: string;
+    uploaded_at: string;
+  } | null;
 };
 
 async function loadTerms(c: PoolClient | typeof pool, loadId: string) {
   const r = await c.query(
-    `SELECT free_minutes,rate_minor_per_hour::text,cap_minutes,tonu_minor::text,source,version,set_at
-     FROM detention_terms WHERE load_id=$1`,
+    `SELECT t.free_minutes,t.rate_minor_per_hour::text,t.cap_minutes,t.tonu_minor::text,t.source,t.version,t.set_at,
+       v.id doc_id,v.filename doc_filename,v.version doc_version,v.sha256 doc_sha,v.uploaded_at doc_at
+     FROM detention_terms t LEFT JOIN document_versions v ON v.id=t.document_version_id WHERE t.load_id=$1`,
     [loadId],
   );
   const row = r.rows[0];
-  return row
-    ? ({ ...row, set_at: new Date(row.set_at).toISOString() } as Terms)
-    : null;
+  if (!row) return null;
+  const { doc_id, doc_filename, doc_version, doc_sha, doc_at, ...rest } = row;
+  return {
+    ...rest,
+    set_at: new Date(row.set_at).toISOString(),
+    source_document: doc_id
+      ? {
+          version_id: doc_id as string,
+          filename: doc_filename as string,
+          version: doc_version as number,
+          sha256: doc_sha as string,
+          uploaded_at: new Date(doc_at).toISOString(),
+        }
+      : null,
+  } as Terms;
+}
+/** The load's current accepted rate confirmation file, if there is one. */
+async function acceptedRateConfirmation(c: PoolClient, loadId: string) {
+  const r = await c.query(
+    `SELECT v.id FROM documents d
+     JOIN LATERAL (SELECT id FROM document_versions WHERE document_id=d.id ORDER BY version DESC LIMIT 1) v ON true
+     JOIN LATERAL (SELECT decision FROM document_reviews WHERE version_id=v.id ORDER BY created_at DESC,id DESC LIMIT 1) r ON true
+     WHERE d.load_id=$1 AND d.type='rate_confirmation' AND r.decision='accepted'`,
+    [loadId],
+  );
+  return (r.rows[0]?.id as string | undefined) ?? null;
 }
 const toRules = (t: Terms | null): DetentionTerms | null =>
   t && {
@@ -216,9 +248,11 @@ export async function listClaims(user: string, carrierId: string) {
   return transaction(async (c) => {
     await member(c, user, carrierId, true);
     const rows = await c.query(
-      `${claimSql} WHERE a.carrier_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 200`,
+      `${claimSql} WHERE a.carrier_id=$1 ORDER BY a.created_at DESC,a.id LIMIT 201`,
       [carrierId],
     );
+    const truncated = rows.rows.length > 200;
+    if (truncated) rows.rows.length = 200;
     const sum = (status: string) =>
       rows.rows
         .filter((r) => r.status === status)
@@ -226,6 +260,7 @@ export async function listClaims(user: string, carrierId: string) {
         .toString();
     return {
       carrier_id: carrierId,
+      list_truncated: truncated,
       claims: rows.rows.map((r) => ({ ...claimView(r), evidence: undefined })),
       totals: {
         draft_minor: sum("draft"),
@@ -248,6 +283,15 @@ export async function setTerms(user: string, input: unknown) {
     const old = await loadTerms(c, data.load_id);
     if ((old?.version ?? 0) !== data.version)
       throw new HttpError(409, "VERSION_CONFLICT");
+    // Terms that say they come from the rate confirmation point at that file,
+    // so a payer can be shown it; without an accepted one there is nothing to
+    // point at (ADR 0071).
+    const documentVersion =
+      data.source === "rate_confirmation"
+        ? await acceptedRateConfirmation(c, data.load_id)
+        : null;
+    if (data.source === "rate_confirmation" && !documentVersion)
+      throw new HttpError(422, "RATE_CONFIRMATION_REQUIRED");
     const open = await c.query(
       "SELECT 1 FROM accessorial_claims WHERE load_id=$1 AND status IN ('draft','submitted') LIMIT 1",
       [data.load_id],
@@ -255,10 +299,10 @@ export async function setTerms(user: string, input: unknown) {
     // Terms a submitted claim relies on do not change under it.
     if (open.rowCount) throw new HttpError(409, "CLAIM_OPEN");
     await c.query(
-      `INSERT INTO detention_terms(load_id,carrier_id,free_minutes,rate_minor_per_hour,cap_minutes,tonu_minor,source,set_by)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO detention_terms(load_id,carrier_id,free_minutes,rate_minor_per_hour,cap_minutes,tonu_minor,source,set_by,document_version_id)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT(load_id) DO UPDATE SET free_minutes=$3,rate_minor_per_hour=$4,cap_minutes=$5,tonu_minor=$6,source=$7,
-         set_by=$8,set_at=now(),version=detention_terms.version+1`,
+         set_by=$8,document_version_id=$9,set_at=now(),version=detention_terms.version+1`,
       [
         data.load_id,
         load.carrier_id,
@@ -268,6 +312,7 @@ export async function setTerms(user: string, input: unknown) {
         data.tonu_minor,
         data.source,
         user,
+        documentVersion,
       ],
     );
     await emit(c, user, load.carrier_id, "claim.terms_set", {
@@ -286,6 +331,9 @@ async function snapshot(
   terms: Terms | null,
 ) {
   if (!terms) throw new HttpError(422, "TERMS_REQUIRED");
+  // Terms taken from a rate confirmation must still point at that file.
+  if (terms.source === "rate_confirmation" && !terms.source_document)
+    throw new HttpError(422, "RATE_CONFIRMATION_REQUIRED");
   if (kind === "detention") {
     if (!stopId) throw new HttpError(422, "STOP_REQUIRED");
     const e = await stopEvidence(c, load as { id: string }, stopId, terms);
@@ -501,7 +549,7 @@ export async function claimPacket(user: string, id: string) {
     `Load ${row.load_reference}`,
     `Claim: ${row.kind === "detention" ? "Detention" : "Truck ordered not used (TONU)"}  Amount: ${dollars(row.claimed_minor)}`,
     `Evidence captured: ${when(ev.captured_at)}`,
-    `Terms source: ${ev.terms.source === "verbal" ? "verbal agreement (not in writing)" : ev.terms.source.replace("_", " ")}`,
+    `Terms source: ${ev.terms.source === "verbal" ? "verbal agreement (not in writing)" : ev.terms.source.replace("_", " ")}${ev.terms.source_document ? `, file "${ev.terms.source_document.filename}" (version ${ev.terms.source_document.version}, SHA-256 ${ev.terms.source_document.sha256.slice(0, 16)}...)` : ""}`,
     "",
   ];
   if (row.kind === "detention") {

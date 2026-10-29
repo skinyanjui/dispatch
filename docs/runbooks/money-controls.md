@@ -27,6 +27,8 @@ Read-only. Billing, Cash shows net per load and days to cash (a fee is real only
 
 TONU needs the payer's cancellation (recorded when a dispatched load is cancelled) and terms that are in writing (ADR 0070).
 
+Terms that cite the rate confirmation store a link to the load's accepted rate confirmation file (refused without one; ADR 0071), and the packet names it. Billing, Claims tab: every claim for the carrier, with totals and sent claims waiting 14+ days.
+
 Per load, Claims tab: terms, then claims that freeze their evidence. Terms are locked while a claim is open. Times are people's reports, not telematics; the packet says so. Rollback: remove the tab and routes; the tables can stay.
 
 ## Factoring handoff (ADR 0069)

@@ -167,6 +167,13 @@ export function LoadClaimsTab({
             the later of arrival and the opening of the appointment window.
             {hasOpen && " Terms are locked while a claim is open."}
           </p>
+          {data?.terms?.source === "rate_confirmation" && (
+            <p className="helpText">
+              {data.terms.source_document
+                ? `Taken from ${data.terms.source_document.filename} (version ${data.terms.source_document.version}), the accepted rate confirmation.`
+                : "Not tied to a rate confirmation file."}
+            </p>
+          )}
           <div className="formGrid">
             <label>
               <span>Free time (minutes)</span>

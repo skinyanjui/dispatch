@@ -26,6 +26,7 @@ import type { WorkspaceFilters } from "@/lib/routes";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
 import { CashTab } from "@/components/cash-tab";
 import { FactoringTab } from "@/components/factoring-tab";
+import { ClaimsTab } from "@/components/claims-tab";
 
 const paymentLabels: Record<PaymentState, string> = {
   unpaid: "Unpaid",
@@ -612,9 +613,9 @@ export function BillingWorkspace({
     [selected, setSelected] = useState<string[]>([]),
     [fee, setFee] = useState("8"),
     [allLoads, setAllLoads] = useState(false),
-    [tab, setTab] = useState<"invoices" | "freight" | "cash" | "factoring">(
-      "invoices",
-    ),
+    [tab, setTab] = useState<
+      "invoices" | "freight" | "cash" | "factoring" | "claims"
+    >("invoices"),
     [filter, setFilter] = useState<InvoiceFilter>("all"),
     [freightFilter, setFreightFilter] = useState<FreightFilter>("all"),
     [open, setOpenState] = useState<
@@ -1179,6 +1180,7 @@ export function BillingWorkspace({
                 : [
                     { id: "cash" as const, label: "Cash" },
                     { id: "factoring" as const, label: "Factoring" },
+                    { id: "claims" as const, label: "Claims" },
                   ]),
             ]}
             value={tab}
@@ -1190,6 +1192,12 @@ export function BillingWorkspace({
                 key={"cash-" + carrierId}
                 carrierId={carrierId}
                 offline={offline}
+                onAuthError={onAuthError}
+              />
+            ) : tab === "claims" ? (
+              <ClaimsTab
+                key={"claims-" + carrierId}
+                carrierId={carrierId}
                 onAuthError={onAuthError}
               />
             ) : tab === "factoring" ? (

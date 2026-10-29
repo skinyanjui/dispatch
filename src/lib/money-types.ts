@@ -180,6 +180,13 @@ export type ClaimTerms = {
   source: "rate_confirmation" | "agreement" | "verbal";
   version: number;
   set_at: string;
+  source_document: {
+    version_id: string;
+    filename: string;
+    version: number;
+    sha256: string;
+    uploaded_at: string;
+  } | null;
 };
 export type ClaimStopEvidence = {
   stop: {
@@ -220,4 +227,11 @@ export type LoadClaims = {
     amount_minor: string | null;
   };
   claims: Claim[];
+};
+
+export type ClaimsOverview = {
+  carrier_id: string;
+  list_truncated: boolean;
+  claims: Claim[];
+  totals: { draft_minor: string; submitted_minor: string; paid_minor: string };
 };
