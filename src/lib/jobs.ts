@@ -10,6 +10,7 @@ import {
 import { pruneExpiredCredentials } from "./account";
 import { sendAlerts } from "./alerts";
 import { runAuthorityChecks } from "./authority";
+import { expireStaleChanges } from "./change-control";
 import { cleanupAbandoned } from "@/lib/message-attachments";
 
 /**
@@ -54,6 +55,7 @@ const defaultSteps = (scope: JobScope): Steps => ({
         pruned: pruneJobRuns,
         credentials: pruneExpiredCredentials,
         authority: () => runAuthorityChecks(),
+        changes: () => expireStaleChanges(),
       }
     : {}),
 });

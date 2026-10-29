@@ -6,6 +6,7 @@ import { GET, POST } from "../../src/app/api/[...path]/route";
 import {
   cancelChange,
   decideChange,
+  expireStaleChanges,
   listChanges,
   payoutDetails,
   pendingCount,
@@ -724,4 +725,81 @@ test("an approval needs the approver's password again, and a code if they use tw
     ).status,
     "rejected",
   );
+});
+
+test("approvers are told when a request waits, and a request nobody decides lapses", async () => {
+  const fresh = await tenant("Waiting");
+  const admin = randomUUID();
+  await pool.query(
+    "INSERT INTO users(id,email,password_hash,name) VALUES($1,$2,'x','Org admin')",
+    [admin, admin + "@relay.test"],
+  );
+  await pool.query(
+    "INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'admin')",
+    [fresh.organization, admin],
+  );
+  const ask = () =>
+    requestPayoutChange(fresh.dispatcher, {
+      carrier_id: fresh.carrier,
+      payee_name: "Lapsing Payee",
+      method: "ach",
+      account_last4: "",
+      reason: "Moved banks",
+      key: randomUUID(),
+    }) as Promise<{ id: string }>;
+  const told = async (user: string, id?: string) =>
+    (
+      await pool.query(
+        "SELECT subject FROM notifications WHERE recipient_user_id=$1 AND kind='approval_request'" +
+          (id ? " AND dedupe_key LIKE $2" : ""),
+        id ? [user, "%" + id + "%"] : [user],
+      )
+    ).rowCount;
+  const first = await ask();
+  // The carrier's manager and the organization admin are told; the requester is not.
+  assert.equal(await told(fresh.manager, first.id), 1);
+  assert.equal(await told(admin, first.id), 1);
+  assert.equal(await told(fresh.dispatcher), 0);
+  assert.equal(await told(fresh.driverUser), 0);
+  // The banner reads a count by carrier.
+  const waiting = await pendingCount(fresh.manager);
+  assert.deepEqual(
+    waiting.carriers.map((x) => [x.carrier_id, x.count]),
+    [[fresh.carrier, 1]],
+  );
+  assert.equal((await pendingCount(fresh.dispatcher)).pending, 0);
+
+  // While it waits, asking again is refused; once it has lapsed it is not.
+  await assert.rejects(ask(), { code: "CHANGE_PENDING" });
+  await pool.query(
+    "UPDATE sensitive_changes SET requested_at=now()-interval '8 days' WHERE id=$1",
+    [first.id],
+  );
+  assert.equal((await pendingCount(fresh.manager)).pending, 0);
+  const lapsed = (
+    await listChanges(fresh.dispatcher, fresh.carrier)
+  ).changes.find((c) => c.id === first.id)!;
+  assert.deepEqual([lapsed.status, lapsed.expired], ["cancelled", true]);
+  const again = await ask();
+  assert.notEqual(again.id, first.id);
+  // The daily job closes lapsed requests nobody asked about again, and audits it.
+  await pool.query(
+    "UPDATE sensitive_changes SET requested_at=now()-interval '9 days' WHERE id=$1",
+    [again.id],
+  );
+  assert.ok((await expireStaleChanges()) >= 1);
+  assert.equal(
+    (
+      await pool.query("SELECT status FROM sensitive_changes WHERE id=$1", [
+        again.id,
+      ])
+    ).rows[0].status,
+    "cancelled",
+  );
+  const actions = (
+    await pool.query("SELECT action FROM audit_logs WHERE resource_id=$1", [
+      fresh.carrier,
+    ])
+  ).rows.map((r) => r.action);
+  assert.ok(actions.includes("change.expired"));
 });

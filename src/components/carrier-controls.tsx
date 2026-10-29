@@ -540,7 +540,9 @@ export function PayoutApprovals({
                     : c.status === "rejected"
                       ? `rejected by ${c.decided_by_name}`
                       : c.status === "cancelled"
-                        ? "withdrawn"
+                        ? c.expired
+                          ? "lapsed without a decision"
+                          : "withdrawn"
                         : "out of date when approved"}
                 </li>
               ))}

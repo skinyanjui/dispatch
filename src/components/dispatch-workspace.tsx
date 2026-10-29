@@ -57,6 +57,7 @@ import {
 } from "@/components/loads-views";
 import { LoadNotes } from "@/components/load-notes";
 import { LoadClaimsTab } from "@/components/load-claims";
+import { ApprovalsWaiting } from "@/components/approvals-waiting";
 import { LoadCheckIns } from "@/components/load-check-ins";
 import { DocumentPanel } from "@/components/document-panel";
 import { StopList } from "@/components/stop-list";
@@ -1273,6 +1274,9 @@ export default function Workspace({
             <ErrorAlert>
               Offline — this view may be stale. Reconnect, then refresh.
             </ErrorAlert>
+          )}
+          {!demo && !driverOnly && !selected && !creating && (
+            <ApprovalsWaiting refreshKey={section} onAuthError={handleError} />
           )}
           {!selected && !creating && errorPanel}
           {!selected && !creating && notice && (

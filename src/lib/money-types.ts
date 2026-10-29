@@ -139,6 +139,7 @@ export type SensitiveChange = {
   effective_at: string | null;
   can_decide: boolean;
   can_cancel: boolean;
+  expired: boolean;
 };
 export type ChangeControl = {
   cooling_hours: number;

@@ -32,6 +32,7 @@ const labels: Record<string, string> = {
   "carrier.setup_completed": "Finished carrier setup",
   "change.approved": "Approved a sensitive change",
   "change.cancelled": "Withdrew a sensitive change",
+  "change.expired": "A request for approval lapsed without a decision",
   "change.rejected": "Rejected a sensitive change",
   "change.requested": "Asked to change sensitive details",
   "change.stale": "A sensitive change was out of date when approved",

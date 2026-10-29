@@ -4,6 +4,7 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { consumeAttempt, digest, HttpError, verifyPassword } from "./auth";
 import { consumeSecondFactor } from "./account";
+import { enqueueForUser } from "./notifications";
 import { carrierAccess, emit, once, writeCompanyDetails } from "./onboarding";
 import { editLoadIn, editSchema } from "./load-changes";
 
@@ -107,6 +108,47 @@ async function stepUp(
   }
 }
 
+/** A request nobody decides within this many days lapses, freeing the slot (ADR 0071). */
+export const changeExpiryDays = 7;
+const expiredNote =
+  "Expired after " + changeExpiryDays + " days without a decision";
+
+/** People who may decide changes for a carrier, other than the requester. */
+async function approversOf(c: PoolClient, carrierId: string, except: string) {
+  const r = await c.query(
+    `SELECT u.id,car.organization_id FROM carriers car
+       JOIN users u ON u.id<>$2 AND (
+         EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=u.id AND m.role='carrier-manager')
+         OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=u.id))
+     WHERE car.id=$1`,
+    [carrierId, except],
+  );
+  return r.rows as { id: string; organization_id: string }[];
+}
+
+/**
+ * Lets lapsed requests go: a pending request older than the limit is closed
+ * (as withdrawn by its requester, with a note), so it cannot block a new one
+ * forever. Returns how many were closed.
+ */
+export async function expireStaleChanges(c?: PoolClient, carrierId?: string) {
+  const run = async (client: PoolClient) => {
+    const r = await client.query(
+      `UPDATE sensitive_changes SET status='cancelled',decided_by=requested_by,decided_at=now(),decision_note=$1
+       WHERE status='pending' AND requested_at<now()-make_interval(days=>$2) AND ($3::uuid IS NULL OR carrier_id=$3)
+       RETURNING id,carrier_id,requested_by,kind`,
+      [expiredNote, changeExpiryDays, carrierId ?? null],
+    );
+    for (const row of r.rows)
+      await emit(client, row.requested_by, row.carrier_id, "change.expired", {
+        change_id: row.id,
+        kind: row.kind,
+      });
+    return r.rowCount ?? 0;
+  };
+  return c ? run(c) : transaction(run);
+}
+
 /** Parks a change for a second person. Returns the change id. */
 export async function requestChange(
   c: PoolClient,
@@ -122,6 +164,8 @@ export async function requestChange(
   },
 ): Promise<string> {
   const id = randomUUID();
+  // A request that lapsed must not block asking again.
+  await expireStaleChanges(c, input.carrierId);
   try {
     await c.query(
       `INSERT INTO sensitive_changes(id,carrier_id,kind,subject_id,summary,current_value,proposed_value,reason,requested_by)
@@ -147,6 +191,18 @@ export async function requestChange(
     change_id: id,
     kind: input.kind,
   });
+  // Tell the people who can decide it, once each; muting the kind is theirs to choose.
+  for (const a of await approversOf(c, input.carrierId, user))
+    await enqueueForUser(c, a.id, {
+      kind: "approval_request",
+      organization: a.organization_id,
+      dedupe: `approval_request:${id}:${a.id}`,
+      subject: `A change is waiting for your approval: ${input.summary}`.slice(
+        0,
+        200,
+      ),
+      text: `${input.summary}\n\nWhy: ${input.reason}\n\nReview it in Relay (Carriers, then the carrier's files). It lapses after ${changeExpiryDays} days if nobody decides.`,
+    });
   return id;
 }
 
@@ -246,6 +302,7 @@ const view = (r: Record<string, unknown>, user: string, decide: boolean) => ({
   // The requester cannot approve their own change; the screen hides the button.
   can_decide: decide && r.status === "pending" && r.requested_by !== user,
   can_cancel: r.status === "pending" && r.requested_by === user,
+  expired: r.status === "cancelled" && r.decision_note === expiredNote,
 });
 
 /** Pending and recent changes for one carrier, with the payout details in force. */
@@ -267,16 +324,25 @@ export async function listChanges(user: string, carrierId: string) {
   };
 }
 
-/** Pending changes across the carriers a person can decide for (a count for the home screen). */
+/** Pending changes across the carriers a person can decide for, by carrier (for the banner). */
 export async function pendingCount(user: string) {
+  await expireStaleChanges();
   const r = await pool.query(
-    `SELECT count(*)::int n FROM sensitive_changes s JOIN carriers car ON car.id=s.carrier_id
+    `SELECT car.id carrier_id,car.name,count(*)::int n FROM sensitive_changes s JOIN carriers car ON car.id=s.carrier_id
      WHERE s.status='pending' AND s.requested_by<>$1 AND (
        EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=$1 AND m.role='carrier-manager')
-       OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=$1))`,
+       OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=$1))
+     GROUP BY car.id,car.name ORDER BY car.name`,
     [user],
   );
-  return { pending: r.rows[0].n as number };
+  return {
+    pending: r.rows.reduce((t, x) => t + (x.n as number), 0),
+    carriers: r.rows.map((x) => ({
+      carrier_id: x.carrier_id as string,
+      name: x.name as string,
+      count: x.n as number,
+    })),
+  };
 }
 
 async function lockChange(c: PoolClient, user: string, id: string) {

@@ -170,6 +170,15 @@ test("a payout change waits for a second person who says how they checked it", a
   // The carrier's manager reviews it.
   await page.context().clearCookies();
   await login(page, "carrier@relay.test");
+  // They are told on any page that a change is waiting, with a link to it.
+  await page.goto("/");
+  const banner = page.getByRole("region", {
+    name: "Changes waiting for your approval",
+  });
+  await expect(banner).toContainText("waiting for your approval");
+  await expect(
+    banner.getByRole("link", { name: /^Review Blue Ridge/ }),
+  ).toHaveAttribute("href", `/carriers/${carrier}/documents`);
   await page.goto(`/carriers/${carrier}/documents`);
   const mine = page
     .getByRole("dialog", { name: "Carrier documents" })
