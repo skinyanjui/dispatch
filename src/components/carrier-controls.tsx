@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { ErrorAlert } from "@/components/ui/feedback";
 import { ApiError, useApi } from "@/lib/client-api";
@@ -203,6 +203,21 @@ export function PayoutApprovals({
       setError(fail(e));
     }
   }, [api, carrierId, fail]);
+  // Focus follows the form: into it when it opens, back to the section when
+  // it closes (the Review button it came from is gone by then).
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const wasDeciding = useRef(false);
+  const decidingId = deciding?.change.id ?? null;
+  useEffect(() => {
+    if (decidingId) {
+      wasDeciding.current = true;
+      formRef.current?.querySelector("select")?.focus();
+    } else if (wasDeciding.current) {
+      wasDeciding.current = false;
+      titleRef.current?.focus();
+    }
+  }, [decidingId]);
   useEffect(() => {
     // Fetch per carrier; state is set after the response.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -230,7 +245,9 @@ export function PayoutApprovals({
   return (
     <section className="moneyPanel" aria-labelledby="payout-title">
       <header>
-        <h3 id="payout-title">Payout details and approvals</h3>
+        <h3 id="payout-title" ref={titleRef} tabIndex={-1}>
+          Payout details and approvals
+        </h3>
         <button
           type="button"
           className="secondary"
@@ -418,6 +435,7 @@ export function PayoutApprovals({
         ))}
         {deciding && (
           <form
+            ref={formRef}
             className="changeItem"
             aria-label={"Decide: " + deciding.change.summary}
             onSubmit={(e) => e.preventDefault()}

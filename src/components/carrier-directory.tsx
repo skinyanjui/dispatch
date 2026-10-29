@@ -44,6 +44,16 @@ function authLabel(a: CarrierSummary["authorization"]) {
 const authTone = (s: CarrierSummary["authorization"]["state"]) =>
   s === "current" ? "good" : s === "expiring" ? "warn" : "bad";
 
+const registrationBadge: Record<
+  CarrierSummary["registration"],
+  [string, string]
+> = {
+  clear: ["Registration clear", "good"],
+  attention: ["Registration needs attention", "bad"],
+  unverified: ["Registration unverified", "warn"],
+  unchecked: ["Registration not checked", ""],
+};
+
 export function CarrierDirectory({
   context,
   onViewLoads,
@@ -168,6 +178,29 @@ export function CarrierDirectory({
             aria-label={`${authLabel(s.authorization)}. Open setup for ${c.name}`}
           >
             {authLabel(s.authorization)}
+          </button>
+        );
+      },
+    },
+    {
+      id: "registration",
+      header: "Public registration",
+      accessor: (c) => stat(c.id)?.registration ?? "",
+      sortable: true,
+      render: (_, c) => {
+        const s = stat(c.id);
+        if (c.role === "driver") return "—";
+        if (!s) return pending(c.id);
+        const [label, tone] = registrationBadge[s.registration];
+        return (
+          <button
+            type="button"
+            className={"opsPill carrierAuth " + tone}
+            disabled={busy || !onDocuments}
+            onClick={() => onDocuments?.(c.id)}
+            aria-label={`${label}. Open files for ${c.name}`}
+          >
+            {label}
           </button>
         );
       },

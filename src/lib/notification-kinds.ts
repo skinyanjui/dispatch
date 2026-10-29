@@ -8,6 +8,7 @@ export const optionalKinds = [
   "message_received",
   "appointment_reminder",
   "approval_request",
+  "registration_alert",
 ] as const;
 export type OptionalKind = (typeof optionalKinds)[number];
 export type NotificationKind =
@@ -28,6 +29,7 @@ export const notificationLabels: Record<NotificationKind, string> = {
   message_received: "New messages in my inbox",
   appointment_reminder: "Upcoming pickup and delivery reminders (drivers)",
   approval_request: "Changes waiting for my approval",
+  registration_alert: "Carrier registration needs attention",
   message: "Messages sent from Relay",
 };
 export type NotificationLogEntry = {

@@ -189,11 +189,15 @@ test("a payout change waits for a second person who says how they checked it", a
   const mine = page
     .getByRole("dialog", { name: "Carrier documents" })
     .getByRole("article", { name: /Payout to Fictional Payee LLC/ });
-  await mine.getByRole("button", { name: /^Review/ }).click();
+  // By keyboard: focus the button and press Enter.
+  await mine.getByRole("button", { name: /^Review/ }).focus();
+  await page.keyboard.press("Enter");
   const form = page.getByRole("form", {
     name: /Decide: Payout to Fictional Payee LLC/,
   });
   await expect(form).toContainText("Confirm it another way");
+  // Focus moves into the form, to its first field.
+  await expect(form.getByLabel("How you confirmed it")).toBeFocused();
   await form.getByLabel("How you confirmed it").selectOption("callback");
   // Approving needs the password again; a wrong one changes nothing and keeps the form.
   await expect(form.getByRole("button", { name: "Approve" })).toBeDisabled();
@@ -213,6 +217,10 @@ test("a payout change waits for a second person who says how they checked it", a
     /Fictional Payee LLC.*account ending 1234/,
   );
   await expect(dialog2).toContainText(/cooling off until/);
+  // The Review button is gone; focus lands on the section, not on the page top.
+  await expect(
+    dialog2.getByRole("heading", { name: "Payout details and approvals" }),
+  ).toBeFocused();
 });
 
 test("a load's Claims tab shows the terms, each stop's detention arithmetic and TONU eligibility", async ({
@@ -266,4 +274,49 @@ test("the browser-only demo has no cash, factoring or claims screens to mislead 
   await expect(page.getByRole("tab", { name: /^Cash/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: /^Factoring/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: /^Claims/ })).toHaveCount(0);
+});
+
+test("the claims, payout and factoring screens fit a phone and can be used by keyboard", async ({
+  page,
+}) => {
+  await login(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const noOverflow = async () =>
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
+  const carrier = await blueRidge(page);
+
+  await page.goto("/billing");
+  for (const tab of [/^Claims/, /^Factoring/]) {
+    await page.getByRole("tab", { name: tab }).click();
+    await noOverflow();
+  }
+
+  const load = await createLoad(page, carrier);
+  await page.goto(`/loads/${load.id}`);
+  const loadDialog = page.getByRole("dialog", { name: "Load details" });
+  await loadDialog.getByRole("tab", { name: /^Claims/ }).click();
+  await expect(
+    loadDialog.getByRole("heading", { name: "Terms" }),
+  ).toBeVisible();
+  await noOverflow();
+  expect(await axeViolations(page)).toEqual([]);
+
+  await page.goto(`/carriers/${carrier}/documents`);
+  const docs = page.getByRole("dialog", { name: "Carrier documents" });
+  await docs.getByRole("button", { name: "Change payout details" }).click();
+  await expect(docs.getByLabel("Payee name")).toBeVisible();
+  await noOverflow();
+  expect(await axeViolations(page)).toEqual([]);
+
+  // Tabs are reachable and operable without a mouse.
+  await page.goto("/billing");
+  await page.getByRole("tab", { name: /^Cash/ }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: /^Factoring/ })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: /^Claims/ })).toBeFocused();
 });

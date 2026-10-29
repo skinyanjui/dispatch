@@ -37,6 +37,10 @@ Cancelling a schedule already handed to the factor holds its loads until the car
 
 Only a carrier manager turns it on, with consent. Schedules are CSVs the carrier hands over; Relay sends nothing and cannot see funding. A schedule can be cancelled (even after handoff), releasing its loads. If a factor needs a different layout, add a mapping on top of the stored batch rather than changing the stored file.
 
+## Registration alerts and retention (ADR 0072)
+
+A carrier that turns to attention notifies its dispatchers and managers once (kind `registration_alert`, mutable in notification settings) and shows on the carrier list. The freight packet shows the payout details in force. Claim evidence, factoring CSVs and lookup history are kept while the carrier exists; no deletion job exists. Rollback: leave migration 048; remove the column and the alert.
+
 ## Not built
 
 Live factor integrations, paid carrier-verification vendors, geofence or ELD evidence for detention, and demo versions of these screens (the public demo hides them rather than faking them).

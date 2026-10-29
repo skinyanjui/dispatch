@@ -710,3 +710,42 @@ test("an MC number that is another carrier's or unknown is flagged, and changing
   await set("2100007", "");
   assert.ok((await look()).flags.includes("no_insurance_on_file"));
 });
+
+test("a carrier that turns to attention is announced once to the people who dispatch for it, and shows on the carrier list", async () => {
+  const mine = await tenant("RegistrationAlert");
+  await pool
+    .query(
+      "INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'owner')",
+      [mine.organization, mine.dispatcher],
+    )
+    .catch(() => undefined);
+  const alerts = (subjectLike = "%registration needs attention%") =>
+    pool
+      .query(
+        "SELECT recipient_user_id FROM notifications WHERE kind='registration_alert' AND subject LIKE $1 AND organization_id=$2",
+        [subjectLike, mine.organization],
+      )
+      .then((r) => r.rows.map((x) => x.recipient_user_id as string));
+  await setDot(mine.carrier, "1000001");
+  await check(mine.carrier, mine.dispatcher);
+  assert.deepEqual(await alerts(), [], "a clear carrier says nothing");
+  await setDot(mine.carrier, "1000008"); // authority revoked
+  await check(mine.carrier, mine.dispatcher);
+  const told = await alerts();
+  assert.ok(told.includes(mine.dispatcher) && told.includes(mine.manager));
+  const count = told.length;
+  await check(mine.carrier, mine.dispatcher); // still attention: no second alert
+  assert.equal((await alerts()).length, count);
+  // The list the dispatcher sees carries the state.
+  const { carrierSummaries } = await import("../../src/lib/carrier-summary");
+  const row = (await carrierSummaries(mine.dispatcher)).carriers.find(
+    (c) => c.id === mine.carrier,
+  );
+  assert.equal(row?.registration, "attention");
+  // Back to clear and then trouble again is a new announcement.
+  await setDot(mine.carrier, "1000001");
+  await check(mine.carrier, mine.dispatcher);
+  await setDot(mine.carrier, "1000008");
+  await check(mine.carrier, mine.dispatcher);
+  assert.ok((await alerts()).length > count);
+});

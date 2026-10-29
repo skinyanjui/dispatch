@@ -1,4 +1,6 @@
 import { pool } from "./db";
+import { registrationStates } from "./authority";
+import type { AuthorityState } from "./authority-state";
 
 export type CarrierSummary = {
   id: string;
@@ -17,6 +19,8 @@ export type CarrierSummary = {
   };
   open_exceptions: number;
   drivers: number;
+  /** From the latest public-registry lookup for the number on file. */
+  registration: AuthorityState;
 };
 
 /**
@@ -48,6 +52,7 @@ export async function carrierSummaries(user: string) {
     ORDER BY c.name,c.id`,
     [user],
   );
+  const registration = await registrationStates(rows.map((r) => r.id));
   const carriers: CarrierSummary[] = rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -65,6 +70,7 @@ export async function carrierSummaries(user: string) {
     },
     open_exceptions: r.open_exceptions,
     drivers: r.drivers,
+    registration: registration.get(r.id) ?? "unchecked",
   }));
   return { carriers, generated_at: new Date().toISOString() };
 }

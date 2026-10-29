@@ -199,6 +199,13 @@ export type BillingOverview = {
   invoices_cursor?: string | null;
   carrier_id: string;
   can_invoice: boolean;
+  payout?: {
+    payee_name: string;
+    method: string;
+    account_last4: string;
+    effective_at: string;
+    cooling_off: boolean;
+  } | null;
   loads: {
     id: string;
     reference: string;

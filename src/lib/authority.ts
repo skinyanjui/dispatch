@@ -3,9 +3,13 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { HttpError } from "./auth";
 import { carrierAccess, emit, once } from "./onboarding";
+import { enqueueForUser } from "./notifications";
 import {
   deriveAuthority,
+  flagLabels,
   type AuthorityCheck,
+  type AuthorityFlag,
+  type AuthorityState,
   type McOutcome,
 } from "./authority-state";
 
@@ -317,6 +321,22 @@ async function recordLookup(
   const outcome = error ? "error" : lookup!.found ? "ok" : "not_found";
   const l = lookup && lookup.found ? lookup : null;
   const id = randomUUID();
+  // What the carrier looked like at the previous lookup, whatever its number.
+  const previous = (
+    await c.query(
+      "SELECT usdot,mc_number FROM carrier_authority_checks WHERE carrier_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1",
+      [carrierId],
+    )
+  ).rows[0];
+  const before = previous
+    ? await stateOf(
+        c,
+        carrierId,
+        carrierName,
+        previous.usdot,
+        previous.mc_number,
+      )
+    : { state: "unchecked" as AuthorityState, flags: [] as AuthorityFlag[] };
   await c.query(
     `INSERT INTO carrier_authority_checks(id,carrier_id,usdot,source,outcome,legal_name,authority_status,
        allowed_to_operate,out_of_service,insurance_on_file,insurance_shortfall,mc_number,mc_outcome,error_code,observed_at,checked_by)
@@ -340,7 +360,81 @@ async function recordLookup(
       by,
     ],
   );
+  const after = await stateOf(c, carrierId, carrierName, usdot, mc);
+  // A carrier that turns to "attention" is told to the people who dispatch for
+  // it, once; a failed lookup is the operations alert's business (ADR 0072).
+  const reasons = after.flags.filter((f) => f !== "lookup_failed");
+  const alreadyFlagged = before.state === "attention";
+  if (after.state === "attention" && !alreadyFlagged && reasons.length)
+    await notifyRegistration(carrierId, carrierName, id, reasons);
   return { id, outcome };
+}
+
+async function stateOf(
+  c: Db,
+  carrierId: string,
+  carrierName: string,
+  usdot: string,
+  mc: string,
+) {
+  const { latest, lastOk, numberChanged } = await latestChecks(
+    c,
+    carrierId,
+    usdot,
+    mc,
+  );
+  return deriveAuthority(
+    latest,
+    lastOk,
+    carrierName,
+    new Date(),
+    numberChanged,
+  );
+}
+
+async function notifyRegistration(
+  carrierId: string,
+  carrierName: string,
+  checkId: string,
+  reasons: AuthorityFlag[],
+) {
+  await transaction(async (c) => {
+    const people = await c.query(
+      `SELECT DISTINCT u.id,car.organization_id FROM carriers car
+         JOIN users u ON EXISTS(SELECT 1 FROM memberships m WHERE m.carrier_id=car.id AND m.user_id=u.id
+                                AND m.role IN ('dispatcher','carrier-manager'))
+           OR EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=car.organization_id AND om.user_id=u.id)
+       WHERE car.id=$1`,
+      [carrierId],
+    );
+    for (const p of people.rows)
+      await enqueueForUser(c, p.id, {
+        kind: "registration_alert",
+        organization: p.organization_id,
+        dedupe: `registration_alert:${checkId}:${p.id}`,
+        subject: `${carrierName}: registration needs attention`.slice(0, 200),
+        text: `The latest public registration lookup for ${carrierName} found:\n\n${reasons.map((f) => "- " + flagLabels[f]).join("\n")}\n\nReview it under Carriers, then the carrier's files. Do not book new freight on this carrier until someone has looked.`,
+      });
+  });
+}
+
+/** Registration state for several carriers the caller can already see. */
+export async function registrationStates(carrierIds: string[]) {
+  const out = new Map<string, AuthorityState>();
+  if (!carrierIds.length) return out;
+  const { rows } = await pool.query(
+    `SELECT c.id,c.name,p.usdot,p.mc_number mc FROM carriers c
+       LEFT JOIN carrier_profiles p ON p.carrier_id=c.id WHERE c.id=ANY($1::uuid[])`,
+    [carrierIds],
+  );
+  for (const r of rows)
+    out.set(
+      r.id,
+      r.usdot
+        ? (await stateOf(pool, r.id, r.name, r.usdot, r.mc ?? "")).state
+        : "unchecked",
+    );
+  return out;
 }
 
 const checkInput = z.object({ carrier_id: z.uuid(), key: z.uuid() }).strict();

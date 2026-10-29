@@ -28,11 +28,11 @@ Scope: ADRs 0064 to 0069 as shipped (change control, registration lookups, cash 
 
 ## Lower: coverage and polish
 
-17. **Phone and keyboard coverage is thin.** Browser tests check horizontal overflow of the two Billing tabs and axe on a few states. Nothing exercises the Claims tab, the payout form or the factoring table at 390px, the approve form by keyboard, or where focus goes when the review form closes (the "Review" button it came from disappears).
-18. **Registration status shows only in a carrier's files dialog.** It is not on the carrier list, the board or the load, and a dispatcher is not told when a carrier turns to `attention`; only the operations alert goes out, and to the alert webhook.
-19. **Retention is undefined** for stored claim evidence, factoring CSVs (kept in the database) and lookup history.
-20. **The verification choice is self-attested.** "I called a number already on record" is a statement, not proof; the record keeps who said it and when, which is the most this can do.
-21. **Payout details are not used anywhere except factoring.** They do not appear on billing packets or invoices, so the cooling-off protects nothing yet beyond schedules.
+17. **FIXED, ADR 0072. Phone and keyboard coverage is thin.** Browser tests check horizontal overflow of the two Billing tabs and axe on a few states. Nothing exercises the Claims tab, the payout form or the factoring table at 390px, the approve form by keyboard, or where focus goes when the review form closes (the "Review" button it came from disappears).
+18. **FIXED, ADR 0072. Registration status shows only in a carrier's files dialog.** It is not on the carrier list, the board or the load, and a dispatcher is not told when a carrier turns to `attention`; only the operations alert goes out, and to the alert webhook.
+19. **DECIDED, not automated, ADR 0072. Retention is undefined** for stored claim evidence, factoring CSVs (kept in the database) and lookup history.
+20. **ACCEPTED limit, ADR 0072. The verification choice is self-attested.** "I called a number already on record" is a statement, not proof; the record keeps who said it and when, which is the most this can do.
+21. **FIXED, ADR 0072. Payout details are not used anywhere except factoring.** They do not appear on billing packets or invoices, so the cooling-off protects nothing yet beyond schedules.
 
 ## Checked and fine
 

@@ -1,3 +1,4 @@
+import { payoutDetails } from "./change-control";
 import { pickupRange } from "./reporting-scope";
 import { decodeCursor, encodeCursor, pgTimestamp } from "./loads";
 import { randomUUID } from "node:crypto";
@@ -122,8 +123,18 @@ export async function submitPacket(
       "UPDATE carrier_billing_packets SET status='submitted',submitted_at=now(),submitted_by=$2,version=version+1,updated_at=now() WHERE load_id=$1",
       [loadId, user],
     );
+    const payout = await payoutDetails(c, load.carrier_id);
     await event(c, user, load, "billing.packet_submitted", {
       amount_minor: packet.amount_minor,
+      // What the packet told the payer about where to pay, as of now.
+      remit_to: payout
+        ? {
+            payee_name: payout.payee_name,
+            method: payout.method,
+            account_last4: payout.account_last4,
+            in_force: !payout.cooling_off,
+          }
+        : null,
       document_versions: slots.map((s) => s.current?.id),
     });
     return { load_id: loadId, version: packet.version + 1 };
@@ -543,6 +554,8 @@ export async function billingOverview(user: string, params: URLSearchParams) {
           : null,
       carrier_id: carrierId,
       can_invoice: membership.role === "dispatcher",
+      // Where the carrier's money is to be sent, once the details count.
+      payout: await payoutDetails(c, carrierId),
       loads: loads.rows.map((l) => ({
         ...l,
         documents_ready: ready[l.id],

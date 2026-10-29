@@ -24,6 +24,7 @@ import {
 } from "@/lib/entry";
 import type { WorkspaceFilters } from "@/lib/routes";
 import { ErrorAlert, PageIntro } from "@/components/ui/feedback";
+import { formatDate } from "@/lib/format";
 import { CashTab } from "@/components/cash-tab";
 import { FactoringTab } from "@/components/factoring-tab";
 import { ClaimsTab } from "@/components/claims-tab";
@@ -64,10 +65,12 @@ type Row = BillingOverview["loads"][number];
 
 function PacketCard({
   row,
+  payout,
   disabled,
   run,
 }: {
   row: Row;
+  payout?: BillingOverview["payout"];
   disabled: boolean;
   run: (fn: () => Promise<string>) => Promise<boolean>;
 }) {
@@ -118,6 +121,17 @@ function PacketCard({
             />
             <Fact label="Invoiced" value={formatMoney(packet.amount_minor)} />
             <Fact label="Received" value={formatMoney(packet.paid_minor)} />
+            <Fact
+              label="Pay the carrier at"
+              value={
+                !payout
+                  ? "No payout details on file"
+                  : `${payout.payee_name}, ${payout.method.replace("_", " ")} ending ${payout.account_last4}` +
+                    (payout.cooling_off
+                      ? `, not in force until ${formatDate(payout.effective_at)}`
+                      : "")
+              }
+            />
           </>
         )}
         {packet?.receipts.map((r) => (
@@ -1440,7 +1454,12 @@ export function BillingWorkspace({
               onClose={() => setOpen(null)}
             >
               <div className="inspectorBody">
-                <PacketCard row={openPacket} disabled={disabled} run={run} />
+                <PacketCard
+                  row={openPacket}
+                  payout={data.payout}
+                  disabled={disabled}
+                  run={run}
+                />
               </div>
             </Sheet>
           )}

@@ -342,3 +342,66 @@ test("a zero fee, or one that rounds to $0.00, cannot become an invoice", async 
   ]);
   await createInvoice(t.dispatcher, input(1)); // $2,500 × 0.01% = $0.25
 });
+
+test("the packet says where to pay the carrier, and records it when it is submitted", async () => {
+  const other = await tenant("BillingPayout");
+  // Re-use the helpers on this tenant's own carrier.
+  const load = await bookedLoad(other.dispatcher, other.carrier);
+  let version = (
+    await mutate(other.dispatcher, load.id, "assign", {
+      version: 1,
+      driverId: other.driver,
+    })
+  ).version;
+  for (const stage of ["dispatched", "picked-up", "delivered"])
+    version = (
+      await mutate(other.dispatcher, load.id, "milestones", { version, stage })
+    ).version;
+  for (const type of ["rate_confirmation", "bol", "pod"]) {
+    const v = await uploadDocument(
+      other.dispatcher,
+      {
+        carrier_id: other.carrier,
+        load_id: load.id,
+        type,
+        idempotency_key: randomUUID(),
+      },
+      { name: type + ".pdf", bytes: pdf() },
+    );
+    await reviewDocument(other.dispatcher, v.version_id, {
+      decision: "accepted",
+    });
+  }
+  const overview = () =>
+    billingOverview(
+      other.manager,
+      new URLSearchParams({ carrier_id: other.carrier }),
+    );
+  assert.equal((await overview()).payout, null);
+  await pool.query(
+    `INSERT INTO carrier_payout_details(carrier_id,payee_name,method,account_last4,effective_at)
+     VALUES($1,'Fictional Payee LLC','ach','4321',now()+interval '1 day')`,
+    [other.carrier],
+  );
+  const shown = (await overview()).payout!;
+  assert.equal(shown.payee_name, "Fictional Payee LLC");
+  assert.equal(shown.account_last4, "4321");
+  assert.equal(shown.cooling_off, true);
+  await savePacket(other.manager, load.id, {
+    version: 0,
+    bill_to: "Fictional Broker LLC",
+    carrier_invoice_number: "RM-1",
+    amount_minor: 250000,
+  });
+  await submitPacket(other.manager, load.id, { version: 1 });
+  const logged = await pool.query(
+    "SELECT payload FROM load_events WHERE load_id=$1 AND type='billing.packet_submitted'",
+    [load.id],
+  );
+  assert.deepEqual(logged.rows[0].payload.remit_to, {
+    payee_name: "Fictional Payee LLC",
+    method: "ach",
+    account_last4: "4321",
+    in_force: false,
+  });
+});
