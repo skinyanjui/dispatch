@@ -34,6 +34,9 @@ function fixture(reference: string) {
 }
 
 async function mockContext(page: Page) {
+  await page.route("**/api/change-control/pending", (route) =>
+    route.fulfill({ json: { pending: 0, carriers: [] } }),
+  );
   await page.route("**/api/loads/*/notes", (route) =>
     route.fulfill({ json: { notes: [] } }),
   );
@@ -301,6 +304,9 @@ test("board card names distinguish shared references across carriers", async ({
   page,
 }) => {
   const secondCarrier = "33333333-3333-4333-8333-333333333333";
+  await page.route("**/api/change-control/pending", (route) =>
+    route.fulfill({ json: { pending: 0, carriers: [] } }),
+  );
   await page.route("**/api/me", (route) =>
     route.fulfill({
       json: {

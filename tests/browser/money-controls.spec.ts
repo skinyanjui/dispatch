@@ -234,7 +234,7 @@ test("a load's Claims tab shows the terms, each stop's detention arithmetic and 
   // Terms that cite the rate confirmation need an accepted one on the load.
   await dialog.getByRole("button", { name: "Save terms" }).click();
   await expect(dialog.getByRole("alert")).toContainText(
-    /accepted rate confirmation/i,
+    /rate confirmation first/i,
   );
   await dialog
     .getByLabel("Where the terms come from")

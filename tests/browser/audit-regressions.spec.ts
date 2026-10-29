@@ -48,6 +48,9 @@ function fixture(id = loadId, carrier = carriers[0]) {
 }
 
 async function mockContext(page: Page) {
+  await page.route("**/api/change-control/pending", (route) =>
+    route.fulfill({ json: { pending: 0, carriers: [] } }),
+  );
   await page.route("**/api/loads/*/notes", (route) =>
     route.fulfill({ json: { notes: [] } }),
   );
