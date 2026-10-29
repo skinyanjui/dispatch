@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { pool } from "./db";
 import { configWarnings } from "./config-check";
 import type { JobStatus } from "./jobs";
-import { authorityAttention } from "./authority";
+import { authorityAttention, authorityFailing } from "./authority";
 
 /**
  * Pushes operational problems to a chat or paging webhook so they are not only
@@ -44,6 +44,12 @@ export async function collectAlerts(jobs: JobStatus[]): Promise<Alert[]> {
     alerts.push({
       key: "exports.stalled",
       text: `${r.stalled_exports} report export(s) never started in the last 24 hours.`,
+    });
+  const failing = await authorityFailing();
+  if (failing)
+    alerts.push({
+      key: "authority.failing",
+      text: `${failing} carrier registration lookup(s) have failed four times in a row. The registry, the API key or the network may be down.`,
     });
   const authority = await authorityAttention();
   if (authority)

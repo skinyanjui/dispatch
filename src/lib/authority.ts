@@ -154,6 +154,12 @@ async function latestChecks(c: Db, carrierId: string, usdot: string) {
   };
 }
 
+/** Seconds between lookups of one carrier by hand; RELAY_AUTHORITY_COOLDOWN_SECONDS, default 60. */
+export function checkCooldownSeconds() {
+  const n = Number(process.env.RELAY_AUTHORITY_COOLDOWN_SECONDS ?? 60);
+  return Number.isInteger(n) && n >= 0 && n <= 3600 ? n : 60;
+}
+
 /** What the screens show for one carrier. */
 export async function authorityStatus(user: string, carrierId: string) {
   const carrier = await transaction((c) => carrierAccess(c, user, carrierId));
@@ -258,6 +264,13 @@ export async function checkAuthority(
   if (!usdot) throw new HttpError(422, "USDOT_REQUIRED");
   await transaction((c) =>
     once(c, user, data.key, "authority.check", data, async () => {
+      // A person pressing "Check now" repeatedly would hammer the public
+      // service; a replay of the same request is answered before this point.
+      const recent = await c.query(
+        "SELECT 1 FROM carrier_authority_checks WHERE carrier_id=$1 AND created_at>now()-make_interval(secs=>$2::int) LIMIT 1",
+        [data.carrier_id, checkCooldownSeconds()],
+      );
+      if (recent.rowCount) throw new HttpError(429, "CHECK_TOO_SOON");
       const done = await recordLookup(
         c,
         data.carrier_id,
@@ -278,16 +291,24 @@ export async function checkAuthority(
 
 /**
  * The daily job: re-checks carriers with a USDOT number whose last check is
- * old, a bounded number per run. A failed lookup is retried after an hour,
- * then daily once it has failed four times in a row.
+ * old. It works within a time budget (each lookup can take up to its own
+ * timeout, so a serverless function limit is not overrun) with a few lookups at
+ * once, and leaves what it did not reach for the next run, reporting how many.
+ * A failed lookup is retried after an hour, then daily once it has failed four
+ * times in a row (and the operations alert says so).
  */
 export async function runAuthorityChecks(
   limit = 50,
   provider: Provider | null = configuredProviderName()
     ? configuredProvider()
     : null,
+  options: { budgetMs?: number; concurrency?: number } = {},
 ) {
   if (!provider) return { skipped: "no provider configured" };
+  const budgetMs =
+    options.budgetMs ??
+    Number(process.env.RELAY_AUTHORITY_JOB_BUDGET_MS ?? 30000);
+  const concurrency = options.concurrency ?? 4;
   const due = await pool.query(
     `SELECT c.id,c.name,p.usdot FROM carriers c JOIN carrier_profiles p ON p.carrier_id=c.id
      LEFT JOIN LATERAL (SELECT outcome,created_at,usdot,
@@ -301,14 +322,40 @@ export async function runAuthorityChecks(
      ORDER BY last.created_at NULLS FIRST LIMIT $1`,
     [limit],
   );
+  const started = Date.now();
+  const queue = [...due.rows];
   let checked = 0;
   let failed = 0;
-  for (const r of due.rows) {
-    const out = await recordLookup(pool, r.id, r.name, r.usdot, provider, null);
-    checked++;
-    if (out.outcome === "error") failed++;
-  }
-  return { checked, failed };
+  const worker = async () => {
+    // A lookup already under way finishes; no new one starts after the budget.
+    while (queue.length && Date.now() - started < budgetMs) {
+      const r = queue.shift()!;
+      const out = await recordLookup(
+        pool,
+        r.id,
+        r.name,
+        r.usdot,
+        provider,
+        null,
+      );
+      checked++;
+      if (out.outcome === "error") failed++;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
+  return { checked, failed, deferred: queue.length };
+}
+
+/** Carriers whose last four lookups all failed: the registry or the key may be down. */
+export async function authorityFailing(): Promise<number> {
+  const { rows } = await pool.query(
+    `SELECT count(*)::int n FROM (
+       SELECT c.id FROM carriers c JOIN carrier_profiles p ON p.carrier_id=c.id
+       WHERE p.usdot<>'' AND p.step='complete' AND (
+         SELECT count(*) FROM (SELECT outcome FROM carrier_authority_checks x WHERE x.carrier_id=c.id ORDER BY created_at DESC,id DESC LIMIT 4) z WHERE z.outcome='error') >= 4
+     ) f`,
+  );
+  return rows[0].n as number;
 }
 
 /** Carriers whose latest lookup needs a person (for the operations alert). */

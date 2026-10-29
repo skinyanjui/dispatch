@@ -5,6 +5,7 @@ import { pool } from "../../src/lib/db";
 import { GET, POST } from "../../src/app/api/[...path]/route";
 import {
   authorityAttention,
+  authorityFailing,
   authorityStatus,
   checkAuthority,
   configuredProvider,
@@ -18,10 +19,13 @@ import {
   sameName,
   type AuthorityCheck,
 } from "../../src/lib/authority-state";
+import { collectAlerts } from "../../src/lib/alerts";
 import { request, sessionFor, tenant } from "./fixtures";
 
 let t: Awaited<ReturnType<typeof tenant>>;
 before(async () => {
+  // Most tests look a carrier up several times in a row; one test sets a cooldown.
+  process.env.RELAY_AUTHORITY_COOLDOWN_SECONDS = "0";
   t = await tenant("Authority");
 });
 after(() => pool.end());
@@ -415,7 +419,7 @@ test("a lookup speaks only for the USDOT number it was made for", async () => {
   assert.equal((await authorityAttention()) - before, 1);
   // The daily job looks the new number up at once, although the last lookup is minutes old.
   const seen: string[] = [];
-  await runAuthorityChecks(500, {
+  await runAuthorityChecks(5000, {
     source: "fixture",
     async lookup(usdot, name) {
       seen.push(usdot);
@@ -433,4 +437,114 @@ test("a lookup speaks only for the USDOT number it was made for", async () => {
     (await authorityStatus(fresh.dispatcher, fresh.carrier)).state,
     "clear",
   );
+});
+
+test("'Check now' has a cooldown, but a replay of the same request is answered", async () => {
+  const fresh = await tenant("AuthorityCooldown");
+  await setDot(fresh.carrier, "7000001");
+  process.env.RELAY_AUTHORITY_COOLDOWN_SECONDS = "1";
+  try {
+    const key = randomUUID();
+    await checkAuthority(fresh.dispatcher, { carrier_id: fresh.carrier, key });
+    // Another press straight away is refused without looking anything up.
+    await assert.rejects(
+      checkAuthority(fresh.dispatcher, {
+        carrier_id: fresh.carrier,
+        key: randomUUID(),
+      }),
+      { code: "CHECK_TOO_SOON" },
+    );
+    // A retry of the first request (a lost reply) is replayed, not refused.
+    assert.equal(
+      (
+        await checkAuthority(fresh.dispatcher, {
+          carrier_id: fresh.carrier,
+          key,
+        })
+      ).state,
+      "clear",
+    );
+    const count = async () =>
+      (
+        await pool.query(
+          "SELECT count(*)::int n FROM carrier_authority_checks WHERE carrier_id=$1",
+          [fresh.carrier],
+        )
+      ).rows[0].n;
+    assert.equal(await count(), 1);
+    await new Promise((r) => setTimeout(r, 1100));
+    await checkAuthority(fresh.dispatcher, {
+      carrier_id: fresh.carrier,
+      key: randomUUID(),
+    });
+    assert.equal(await count(), 2);
+  } finally {
+    process.env.RELAY_AUTHORITY_COOLDOWN_SECONDS = "0";
+  }
+});
+
+test("the daily job stops at its time budget, says what it left, and finishes the rest next run", async () => {
+  const carriers: string[] = [];
+  for (const label of [
+    "AuthorityBudgetA",
+    "AuthorityBudgetB",
+    "AuthorityBudgetC",
+  ]) {
+    const x = await tenant(label);
+    carriers.push(x.carrier, x.foreign);
+  }
+  for (const [i, id] of carriers.entries()) await setDot(id, "800000" + i);
+  const seen: string[] = [];
+  const slow = {
+    source: "fixture" as const,
+    async lookup(usdot: string, name: string) {
+      seen.push(usdot);
+      await new Promise((r) => setTimeout(r, 60));
+      return fixtureProvider.lookup(usdot, name);
+    },
+  };
+  const first = (await runAuthorityChecks(6, slow, {
+    budgetMs: 100,
+    concurrency: 1,
+  })) as {
+    checked: number;
+    deferred: number;
+  };
+  assert.ok(first.checked >= 1 && first.deferred >= 1);
+  assert.equal(first.checked + first.deferred, 6);
+  // Lookups already under way finish; none starts after the budget.
+  assert.ok(first.checked <= 3);
+  const second = (await runAuthorityChecks(6, slow, {
+    budgetMs: 10_000,
+    concurrency: 3,
+  })) as {
+    checked: number;
+    deferred: number;
+  };
+  assert.equal(second.deferred, 0);
+  assert.ok(second.checked >= first.deferred);
+  for (let i = 0; i < 6; i++)
+    assert.ok(seen.includes("800000" + i), "800000" + i);
+});
+
+test("four failed lookups in a row raise an operations alert", async () => {
+  const fresh = await tenant("AuthorityFailing");
+  await setDot(fresh.carrier, "9000001");
+  const before = await authorityFailing();
+  for (let i = 0; i < 4; i++)
+    await pool.query(
+      "INSERT INTO carrier_authority_checks(id,carrier_id,usdot,source,outcome,error_code,observed_at) VALUES($1,$2,'9000001','fmcsa','error','TIMEOUT',now())",
+      [randomUUID(), fresh.carrier],
+    );
+  assert.equal((await authorityFailing()) - before, 1);
+  const alerts = await collectAlerts([]);
+  const alert = alerts.find((a) => a.key === "authority.failing");
+  assert.ok(alert);
+  assert.match(alert!.text, /failed four times in a row/);
+  // A success clears it.
+  await pool.query(
+    "INSERT INTO carrier_authority_checks(id,carrier_id,usdot,source,outcome,legal_name,authority_status,observed_at) VALUES($1,$2,'9000001','fmcsa','ok','x','active',now())",
+    [randomUUID(), fresh.carrier],
+  );
+  assert.equal((await authorityFailing()) - before, 0);
 });
