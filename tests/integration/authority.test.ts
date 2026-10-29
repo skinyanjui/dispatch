@@ -48,19 +48,26 @@ const ok = (over: Partial<AuthorityCheck> = {}): AuthorityCheck => ({
 });
 
 test("names match across punctuation and company suffixes, not across businesses", () => {
-  assert.equal(
-    sameName("BLUE RIDGE TRANSPORT, L.L.C.", "Blue Ridge Transport"),
-    true,
-  );
-  assert.equal(
-    sameName("Blue Ridge Transport Inc", "Blue Ridge Transport LLC"),
-    true,
-  );
-  assert.equal(
-    sameName("Unrelated Freight Holdings", "Blue Ridge Transport"),
-    false,
-  );
-  assert.equal(sameName("", "Blue Ridge Transport"), false);
+  const same: [string, string][] = [
+    ["BLUE RIDGE TRANSPORT, L.L.C.", "Blue Ridge Transport"],
+    ["Blue Ridge Transport Inc", "Blue Ridge Transport LLC"],
+    ["Smith & Sons Trucking Co.", "Smith and Sons Trucking"],
+    ["Blue Ridge Transport Holdings of Texas", "Blue Ridge Transport"],
+    ["Ridge Trucking", "Blue Ridge Transport"],
+  ];
+  for (const [a, b] of same) assert.equal(sameName(a, b), true, a + " / " + b);
+  const different: [string, string][] = [
+    ["Unrelated Freight Holdings", "Blue Ridge Transport"],
+    ["Transport LLC", "Blue Ridge Transport"], // says nothing about which company
+    ["Freight Lines Inc", "Blue Ridge Transport"],
+    ["A", "Blue Ridge Transport"], // one letter matches nothing
+    ["Blue Transport", "Blue Ridge Transport"], // one short word is not enough
+    ["Red Ridge Transport", "Blue Ridge Transport"],
+    ["", "Blue Ridge Transport"],
+    ["Blue Ridge Transport", ""],
+  ];
+  for (const [a, b] of different)
+    assert.equal(sameName(a, b), false, a + " / " + b);
 });
 
 test("each finding raises its own flag; trouble reaching the registry never hides the last good result", () => {

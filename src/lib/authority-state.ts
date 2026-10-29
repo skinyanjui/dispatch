@@ -38,18 +38,83 @@ export const flagLabels: Record<AuthorityFlag, string> = {
 /** A successful lookup older than this is shown as stale. */
 export const staleAfterHours = 72;
 
-const noise =
-  /\b(llc|inc|incorporated|co|corp|corporation|company|ltd|lp|llp)\b/g;
-const squash = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(noise, " ")
-    .replace(/[^a-z0-9]+/g, "");
-/** Same business under a different punctuation or suffix is not a mismatch. */
+/** Words that say what kind of company it is, not which one (ADR 0071). */
+const legalWords = new Set([
+  "llc",
+  "inc",
+  "incorporated",
+  "co",
+  "corp",
+  "corporation",
+  "company",
+  "ltd",
+  "lp",
+  "llp",
+  "pllc",
+  "the",
+  "of",
+  "and",
+  "a",
+  "an",
+]);
+const genericWords = new Set([
+  "transport",
+  "transportation",
+  "trucking",
+  "truck",
+  "trucks",
+  "logistics",
+  "freight",
+  "express",
+  "lines",
+  "line",
+  "carriers",
+  "carrier",
+  "hauling",
+  "haul",
+  "services",
+  "service",
+  "group",
+  "holdings",
+  "enterprises",
+  "enterprise",
+  "solutions",
+  "delivery",
+  "motor",
+  "motors",
+  "distribution",
+  "international",
+  "intl",
+  "systems",
+  "brothers",
+  "bros",
+  "sons",
+  "partners",
+]);
+const distinctive = (name: string) =>
+  new Set(
+    name
+      .toLowerCase()
+      .replace(/\./g, "")
+      .replace(/&/g, " and ")
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w && !legalWords.has(w) && !genericWords.has(w)),
+  );
+/**
+ * Whether two company names are plausibly the same business. Only the words
+ * that tell companies apart count: "Transport LLC" names nobody, and a lone
+ * short word matches only a name that is little more than it.
+ */
 export function sameName(registered: string, ours: string) {
-  const a = squash(registered);
-  const b = squash(ours);
-  return a !== "" && b !== "" && (a === b || a.includes(b) || b.includes(a));
+  const a = distinctive(registered);
+  const b = distinctive(ours);
+  if (!a.size || !b.size) return false;
+  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
+  if (![...small].every((w) => large.has(w))) return false;
+  if (small.size === large.size) return true;
+  if (small.size >= 2) return true;
+  const only = [...small][0];
+  return only.length >= 5 && large.size <= 2;
 }
 
 export function deriveAuthority(
