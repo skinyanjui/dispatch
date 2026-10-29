@@ -8,6 +8,7 @@ import { emit } from "./onboarding";
 import { csvCell } from "./csv";
 import { loadDocumentSlotsFor } from "./documents";
 import { payoutDetails } from "./change-control";
+import { sameName } from "./authority-state";
 
 /**
  * Factoring handoff (ADR 0069). The carrier consents, once, to share its billing
@@ -170,6 +171,8 @@ export async function factoringOverview(
       can_consent: m.role === "carrier-manager",
       settings: s,
       payout_in_force: !!payout && !payout.cooling_off,
+      payout_names_factor: !!payout && payoutNamesFactor(payout, s.factor_name),
+      payout_payee: payout?.payee_name ?? null,
       payout_cooling_off: !!payout?.cooling_off,
       loads: loads.map((l) => ({
         id: l.id as string,
@@ -226,6 +229,14 @@ export async function saveFactoringSettings(user: string, input: unknown) {
   });
 }
 
+/** Payout details point at the factor: paid by "factor" to a payee matching its name (ADR 0071). */
+export function payoutNamesFactor(
+  payout: { method: string; payee_name: string },
+  factorName: string,
+) {
+  return payout.method === "factor" && sameName(payout.payee_name, factorName);
+}
+
 const header = [
   "carrier_invoice_number",
   "load_reference",
@@ -263,6 +274,9 @@ export async function createBatch(user: string, input: unknown) {
     if (!payout) throw new HttpError(422, "PAYOUT_DETAILS_REQUIRED");
     if (payout.cooling_off)
       throw new HttpError(422, "PAYOUT_DETAILS_COOLING_OFF");
+    // The factor pays whoever the payout details name, so they must name the factor.
+    if (!payoutNamesFactor(payout, s.factor_name))
+      throw new HttpError(422, "PAYOUT_NOT_TO_FACTOR");
     const found = await candidates(c, data.carrier_id, data.load_ids);
     // A guessed or foreign id is simply absent from the carrier's own list.
     if (found.length !== data.load_ids.length)

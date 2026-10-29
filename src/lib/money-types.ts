@@ -82,6 +82,8 @@ export type FactoringOverview = {
     consented_at: string | null;
   };
   payout_in_force: boolean;
+  payout_names_factor: boolean;
+  payout_payee: string | null;
   payout_cooling_off: boolean;
   loads: {
     id: string;

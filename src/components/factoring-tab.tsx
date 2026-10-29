@@ -136,7 +136,9 @@ export function FactoringTab({
             type="checkbox"
             aria-label={`Include ${l.reference}`}
             checked={picked.includes(l.id)}
-            disabled={offline || !data?.payout_in_force}
+            disabled={
+              offline || !data?.payout_in_force || !data.payout_names_factor
+            }
             onChange={(e) =>
               setPicked((p) =>
                 e.target.checked ? [...p, l.id] : p.filter((x) => x !== l.id),
@@ -344,6 +346,16 @@ export function FactoringTab({
                   </p>
                 )
               )}
+              {s?.enabled &&
+                data.payout_in_force &&
+                !data.payout_names_factor && (
+                  <ErrorAlert polite>
+                    This carrier&apos;s payout details pay{" "}
+                    <strong>{data.payout_payee}</strong>, not {s.factor_name}.
+                    Change them to pay the factor (and have a second person
+                    approve) before preparing a schedule.
+                  </ErrorAlert>
+                )}
               {s?.enabled && !data.payout_in_force && (
                 <ErrorAlert polite>
                   {data.payout_cooling_off
@@ -362,7 +374,11 @@ export function FactoringTab({
                     type="button"
                     className="primary"
                     disabled={
-                      offline || busy || !picked.length || !data.payout_in_force
+                      offline ||
+                      busy ||
+                      !picked.length ||
+                      !data.payout_in_force ||
+                      !data.payout_names_factor
                     }
                     onClick={() => void prepare()}
                   >

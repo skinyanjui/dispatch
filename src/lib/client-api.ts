@@ -234,7 +234,7 @@ const messages: Record<string, string> = {
   LOAD_CANCELLED: "This load was cancelled, so it's now read-only.",
   LOAD_LOCKED: "Delivered loads are locked so the record stays accurate.",
   REASON_REQUIRED:
-    "Add a short reason. This load is already on the move, and the history will thank you.",
+    "Add a short reason for this change, so whoever reviews it and the history know why.",
   NO_CHANGES: "Nothing was different, so there was nothing to save.",
   STOP_ALREADY_STARTED:
     "This stop already has an arrival or departure recorded, so it can't be changed.",

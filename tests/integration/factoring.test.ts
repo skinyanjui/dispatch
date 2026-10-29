@@ -93,12 +93,17 @@ const enable = (user = t.manager, over: Record<string, unknown> = {}) =>
   });
 const batch = (loadIds: string[], key = randomUUID(), user = t.dispatcher) =>
   createBatch(user, { carrier_id: t.carrier, load_ids: loadIds, key });
-async function payout(coolingHours: string) {
+async function payout(
+  coolingHours: string,
+  to: { payee_name: string; method: string } = {
+    payee_name: "Fictional Factor Co",
+    method: "factor",
+  },
+) {
   process.env.RELAY_PAYOUT_COOLING_HOURS = coolingHours;
   const { id } = (await requestPayoutChange(t.dispatcher, {
     carrier_id: t.carrier,
-    payee_name: "Fictional Factor Co",
-    method: "factor",
+    ...to,
     account_last4: "9988",
     reason: "Moved to factoring",
     key: randomUUID(),
@@ -171,7 +176,23 @@ test("a schedule needs payout details in force and loads that are delivered, doc
     (await factoringOverview(t.manager, t.carrier)).payout_cooling_off,
     true,
   );
+  // Payout details that pay someone else, or by another method, do not serve a
+  // schedule for this factor (ADR 0071).
+  for (const to of [
+    { payee_name: "Some Other Person", method: "ach" },
+    { payee_name: "Some Other Person", method: "factor" },
+    { payee_name: "Fictional Factor Co", method: "ach" },
+  ]) {
+    await payout("0", to);
+    await assert.rejects(batch([ok.id]), { code: "PAYOUT_NOT_TO_FACTOR" });
+    const o = await factoringOverview(t.manager, t.carrier);
+    assert.deepEqual([o.payout_in_force, o.payout_names_factor], [true, false]);
+  }
   await payout("0");
+  assert.equal(
+    (await factoringOverview(t.manager, t.carrier)).payout_names_factor,
+    true,
+  );
   assert.equal(
     (await factoringOverview(t.manager, t.carrier)).payout_in_force,
     true,
