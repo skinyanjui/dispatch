@@ -11,7 +11,9 @@ import {
   pendingCount,
   requestPayoutChange,
 } from "../../src/lib/change-control";
+import { authorityStatus } from "../../src/lib/authority";
 import { createContact, updateContact } from "../../src/lib/contacts";
+import { saveCompany } from "../../src/lib/onboarding";
 import { detail, mutate } from "../../src/lib/loads";
 import { editLoad } from "../../src/lib/load-changes";
 import { bookedLoad, request, sessionFor, tenant } from "./fixtures";
@@ -511,4 +513,110 @@ test("unlinking or moving a carrier contact is held too, so its details cannot b
     carrier_id: null,
   });
   assert.equal(direct.pending_approval, undefined);
+});
+
+test("once a carrier is set up, its name, contact email, phone and USDOT number change only with a second person", async () => {
+  const fresh = await tenant("CarrierProfile");
+  const profile = async () =>
+    (
+      await pool.query(
+        `SELECT p.version,p.step,p.contact_name,p.contact_email,p.phone,p.usdot,c.name
+         FROM carrier_profiles p JOIN carriers c ON c.id=p.carrier_id WHERE p.carrier_id=$1`,
+        [fresh.carrier],
+      )
+    ).rows[0];
+  await pool.query(
+    "INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,step) VALUES($1,'Casey','casey@carrier.test','800-555-0100','1000001','team')",
+    [fresh.carrier],
+  );
+  const save = async (
+    over: Record<string, unknown>,
+    user = fresh.dispatcher,
+  ) => {
+    const p = await profile();
+    return saveCompany(user, fresh.carrier, {
+      name: p.name,
+      contact_name: p.contact_name,
+      contact_email: p.contact_email,
+      phone: p.phone,
+      usdot: p.usdot,
+      version: p.version,
+      key: randomUUID(),
+      ...over,
+    }) as Promise<{ pending_approval?: boolean; change_id?: string }>;
+  };
+  // While setup is under way the dispatcher fills the details in directly.
+  const early = await save({ contact_email: "casey2@carrier.test" });
+  assert.equal(early.pending_approval, undefined);
+  assert.equal((await profile()).contact_email, "casey2@carrier.test");
+
+  await pool.query(
+    "UPDATE carrier_profiles SET step='complete' WHERE carrier_id=$1",
+    [fresh.carrier],
+  );
+  // The contact person's own name is not sensitive.
+  assert.equal(
+    (await save({ contact_name: "Casey Lane" })).pending_approval,
+    undefined,
+  );
+  assert.equal((await profile()).contact_name, "Casey Lane");
+
+  // Email, phone, USDOT and the carrier's name wait, and need a reason.
+  for (const over of [
+    { contact_email: "attacker@evil.test" },
+    { phone: "999-555-0000" },
+    { usdot: "1000002" },
+    { name: "Renamed Transport" },
+  ])
+    await assert.rejects(save(over), { code: "REASON_REQUIRED" });
+  const held = await save({
+    contact_name: "Casey L.",
+    contact_email: "attacker@evil.test",
+    usdot: "1000002",
+    name: "Renamed Transport",
+    change_reason: "Carrier asked us to update its file",
+  });
+  assert.equal(held.pending_approval, true);
+  const still = await profile();
+  assert.deepEqual(
+    [still.contact_email, still.usdot, still.name, still.contact_name],
+    ["casey2@carrier.test", "1000001", still.name, "Casey L."],
+  );
+  assert.notEqual(still.name, "Renamed Transport");
+  // The person who asked cannot approve it; the carrier's manager can.
+  await assert.rejects(approve(held.change_id!, fresh.dispatcher), {
+    code: "NOT_FOUND",
+  });
+  await approve(held.change_id!, fresh.manager);
+  const done = await profile();
+  assert.deepEqual(
+    [done.contact_email, done.usdot, done.name],
+    ["attacker@evil.test", "1000002", "Renamed Transport"],
+  );
+  // A changed USDOT number is not covered by the old lookup (ADR 0070).
+  assert.equal(
+    (await authorityStatus(fresh.manager, fresh.carrier)).state,
+    "unchecked",
+  );
+
+  // A request goes stale if the record moved on.
+  const second = await save({
+    phone: "111-555-0000",
+    change_reason: "New office line",
+  });
+  await pool.query(
+    "UPDATE carrier_profiles SET phone='222-555-0000' WHERE carrier_id=$1",
+    [fresh.carrier],
+  );
+  assert.equal(
+    ((await approve(second.change_id!, fresh.manager)) as { status: string })
+      .status,
+    "stale",
+  );
+  assert.equal((await profile()).phone, "222-555-0000");
+  // Another carrier's people cannot ask or decide.
+  await assert.rejects(
+    save({ phone: "1", change_reason: "x" }, fresh.foreignManager),
+    { code: "NOT_FOUND" },
+  );
 });

@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool, transaction } from "./db";
 import { HttpError } from "./auth";
-import { carrierAccess, emit, once } from "./onboarding";
+import { carrierAccess, emit, once, writeCompanyDetails } from "./onboarding";
 import { editLoadIn, editSchema } from "./load-changes";
 
 /**
@@ -19,6 +19,7 @@ export const changeKinds = [
   "payout_details",
   "contact_details",
   "reroute",
+  "carrier_profile",
 ] as const;
 export type ChangeKind = (typeof changeKinds)[number];
 export const verificationMethods = [
@@ -345,6 +346,37 @@ async function apply(
       ],
     );
     return { effective_at: effective };
+  }
+  if (row.kind === "carrier_profile") {
+    const cur = row.current_value as {
+      name: string;
+      contact_email: string;
+      phone: string;
+      usdot: string;
+    };
+    const p = row.proposed_value as typeof cur;
+    const now = await c.query(
+      `SELECT c.name,p.contact_name,p.contact_email,p.phone,p.usdot FROM carriers c
+       JOIN carrier_profiles p ON p.carrier_id=c.id WHERE c.id=$1 FOR UPDATE OF p`,
+      [row.carrier_id],
+    );
+    const n = now.rows[0];
+    if (
+      !n ||
+      n.name !== cur.name ||
+      n.contact_email !== cur.contact_email ||
+      n.phone !== cur.phone ||
+      n.usdot !== cur.usdot
+    )
+      return "stale";
+    await writeCompanyDetails(c, row.carrier_id, {
+      name: p.name,
+      contact_name: n.contact_name,
+      contact_email: p.contact_email,
+      phone: p.phone,
+      usdot: p.usdot,
+    });
+    return { effective_at: new Date() };
   }
   if (row.kind === "contact_details") {
     const p = row.proposed_value as {

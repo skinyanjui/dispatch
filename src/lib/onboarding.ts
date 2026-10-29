@@ -4,6 +4,7 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { digest, hashNewPassword, HttpError } from "./auth";
 import { insertReview } from "./documents";
+import { requestChange } from "./change-control";
 import { appOrigin, enqueueForEmail } from "./notifications";
 import { acceptStaffInvite, inspectStaffInvite, isStaffInvite } from "./staff";
 
@@ -171,13 +172,44 @@ export async function carrierSetup(user: string, id: string) {
     };
   });
 }
+/** Writes the carrier's name and profile fields and revokes pending manager
+ *  invitations addressed elsewhere. Shared by direct saves and approved changes. */
+export async function writeCompanyDetails(
+  c: PoolClient,
+  id: string,
+  d: {
+    name: string;
+    contact_name: string;
+    contact_email: string;
+    phone: string;
+    usdot: string;
+  },
+) {
+  await c.query("UPDATE carriers SET name=$2 WHERE id=$1", [id, d.name]);
+  await c.query(
+    `INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,step) VALUES($1,$2,$3,$4,$5,'team')
+        ON CONFLICT(carrier_id) DO UPDATE SET contact_name=$2,contact_email=$3,phone=$4,usdot=$5,version=carrier_profiles.version+1,updated_at=now()`,
+    [id, d.contact_name, d.contact_email, d.phone, d.usdot],
+  );
+  await c.query(
+    "UPDATE onboarding_invites SET revoked_at=now() WHERE carrier_id=$1 AND role='carrier-manager' AND email<>$2 AND accepted_at IS NULL AND revoked_at IS NULL",
+    [id, d.contact_email],
+  );
+}
+
 export async function saveCompany(user: string, id: string, input: unknown) {
   const data = company
-    .extend({ version: z.number().int().nonnegative(), key })
+    .extend({
+      version: z.number().int().nonnegative(),
+      key,
+      // Why the carrier's name, email, phone or USDOT number is changing, once
+      // setup is complete (ADR 0070).
+      change_reason: z.string().trim().max(500).default(""),
+    })
     .strict()
     .parse(input);
   return transaction(async (c) => {
-    await carrierAccess(c, user, id, false, true);
+    const carrier = await carrierAccess(c, user, id, false, true);
     return once(
       c,
       user,
@@ -186,24 +218,51 @@ export async function saveCompany(user: string, id: string, input: unknown) {
       { id, ...data },
       async () => {
         const old = await c.query(
-          "SELECT version FROM carrier_profiles WHERE carrier_id=$1",
+          "SELECT version,contact_name,contact_email,phone,usdot,step FROM carrier_profiles WHERE carrier_id=$1",
           [id],
         );
-        if ((old.rows[0]?.version ?? 0) !== data.version)
+        const was = old.rows[0];
+        if ((was?.version ?? 0) !== data.version)
           throw new HttpError(409, "VERSION_CONFLICT");
-        await c.query("UPDATE carriers SET name=$2 WHERE id=$1", [
-          id,
-          data.name,
-        ]);
-        await c.query(
-          `INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,step) VALUES($1,$2,$3,$4,$5,'team')
-        ON CONFLICT(carrier_id) DO UPDATE SET contact_name=$2,contact_email=$3,phone=$4,usdot=$5,version=carrier_profiles.version+1,updated_at=now()`,
-          [id, data.contact_name, data.contact_email, data.phone, data.usdot],
-        );
-        await c.query(
-          "UPDATE onboarding_invites SET revoked_at=now() WHERE carrier_id=$1 AND role='carrier-manager' AND email<>$2 AND accepted_at IS NULL AND revoked_at IS NULL",
-          [id, data.contact_email],
-        );
+        // Once a carrier is set up, its name, contact email, phone and USDOT
+        // number are what invitations, calls and the registration monitor rest
+        // on, so changing them waits for a second person. The contact's own
+        // name applies now.
+        if (
+          was?.step === "complete" &&
+          (data.name !== carrier.name ||
+            data.contact_email !== was.contact_email ||
+            data.phone !== was.phone ||
+            data.usdot !== was.usdot)
+        ) {
+          if (!data.change_reason) throw new HttpError(422, "REASON_REQUIRED");
+          const change = await requestChange(c, user, {
+            carrierId: id,
+            kind: "carrier_profile",
+            subjectId: null,
+            summary: `Change ${carrier.name}'s name, contact email, phone or USDOT number`,
+            current: {
+              name: carrier.name,
+              contact_email: was.contact_email,
+              phone: was.phone,
+              usdot: was.usdot,
+            },
+            proposed: {
+              name: data.name,
+              contact_email: data.contact_email,
+              phone: data.phone,
+              usdot: data.usdot,
+            },
+            reason: data.change_reason,
+          });
+          if (data.contact_name !== was.contact_name)
+            await c.query(
+              "UPDATE carrier_profiles SET contact_name=$2,version=version+1,updated_at=now() WHERE carrier_id=$1",
+              [id, data.contact_name],
+            );
+          return { id, pending_approval: true, change_id: change };
+        }
+        await writeCompanyDetails(c, id, data);
         await emit(c, user, id, "carrier.details_saved");
         return { id };
       },

@@ -151,10 +151,11 @@ export function CarrierOnboarding({
         },
       };
     }
-    const result = await api<{ id: string; expires_at: string }>(
-      path,
-      pending.current.input,
-    );
+    const result = await api<{
+      id: string;
+      expires_at: string;
+      pending_approval?: boolean;
+    }>(path, pending.current.input);
     const token = pending.current.input.token;
     return { ...result, token };
   }
@@ -314,6 +315,9 @@ export function CarrierOnboarding({
                   contact_email: String(f.get("contact_email")),
                   phone: String(f.get("phone") || ""),
                   usdot: String(f.get("usdot") || ""),
+                  ...(data
+                    ? { change_reason: String(f.get("change_reason") || "") }
+                    : {}),
                 };
                 if (!data) {
                   const created = await save("onboarding/carriers", {
@@ -328,7 +332,7 @@ export function CarrierOnboarding({
                   setNotice("Company details saved.");
                   await onChanged();
                 } else {
-                  await save(
+                  const saved = await save(
                     "onboarding/carriers/" + data.carrier.id + "/company",
                     { ...body, version: company?.version ?? 0 },
                   );
@@ -338,7 +342,13 @@ export function CarrierOnboarding({
                     ),
                   );
                   setStep(data.agreement?.current ? "team" : "agreement");
-                  setNotice("Company details saved.");
+                  // After setup, a new name, email, phone or USDOT number waits
+                  // for a second person (ADR 0070).
+                  setNotice(
+                    saved.pending_approval
+                      ? "Saved. The new name, email, phone or USDOT number counts once a second person approves it in the carrier's files."
+                      : "Company details saved.",
+                  );
                   await onChanged();
                 }
               });
@@ -417,10 +427,21 @@ export function CarrierOnboarding({
                     defaultValue={company?.usdot || ""}
                   />
                   <small>
-                    Recorded for reference. No automatic authority verification.
+                    Used to look up the carrier&apos;s public registration.
                   </small>
                 </label>
               </details>
+              {company?.step === "complete" && (
+                <label>
+                  Why a name, email, phone or USDOT number is changing
+                  <small>
+                    {" "}
+                    (needed if you change one of them; a second person approves
+                    it)
+                  </small>
+                  <input name="change_reason" maxLength={500} />
+                </label>
+              )}
               <button className="primary full">
                 {busy ? "Saving…" : "Save and continue"}
                 <ArrowRightIcon size={16} />
