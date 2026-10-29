@@ -447,28 +447,37 @@ export async function updateContact(user: string, id: string, input: unknown) {
     const current = await lockContact(c, user, id);
     if (current.version !== version)
       throw new HttpError(409, "VERSION_CONFLICT");
-    // A carrier contact's phone or email is where impostors redirect calls and
-    // paperwork, so changing it waits for a second person. Other fields apply now.
+    // Moving a contact to another carrier needs access to that carrier too,
+    // whether the move applies now or waits for approval.
+    if (fields.carrier_id !== current.carrier_id)
+      await writeScope(c, user, fields.carrier_id, current.organization_id);
+    // A carrier contact's phone, email and carrier link are where impostors
+    // redirect calls and paperwork, so changing any of them waits for a second
+    // person. Unlinking or moving the contact is held too: otherwise it could be
+    // unlinked and its details changed freely. Other fields apply now.
     let held: string | null = null;
     if (
       current.carrier_id &&
-      fields.carrier_id === current.carrier_id &&
-      (fields.email !== current.email || fields.phone !== current.phone)
+      (fields.carrier_id !== current.carrier_id ||
+        fields.email !== current.email ||
+        fields.phone !== current.phone)
     ) {
       if (!change_reason) throw new HttpError(422, "REASON_REQUIRED");
       held = await requestContactChange(
         c,
         user,
         current,
-        { email: fields.email, phone: fields.phone },
+        {
+          email: fields.email,
+          phone: fields.phone,
+          carrier_id: fields.carrier_id,
+        },
         change_reason,
       );
       fields.email = current.email;
       fields.phone = current.phone;
+      fields.carrier_id = current.carrier_id;
     }
-    // Moving a contact to another carrier needs access to that carrier too.
-    if (fields.carrier_id !== current.carrier_id)
-      await writeScope(c, user, fields.carrier_id, current.organization_id);
     await c.query(
       `UPDATE contacts SET kind=$2,name=$3,company=$4,email=$5,phone=$6,notes=$7,carrier_id=$8,
       -- Consent belongs to a phone number: it is kept only while the number

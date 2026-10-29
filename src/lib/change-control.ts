@@ -278,7 +278,7 @@ export async function decideChange(user: string, id: string, input: unknown) {
       return { id, status: "rejected" };
     }
     if (!data.verification) throw new HttpError(422, "VERIFICATION_REQUIRED");
-    const outcome = await apply(c, row);
+    const outcome = await apply(c, row, user);
     if (outcome === "stale") {
       await c.query(
         "UPDATE sensitive_changes SET status='stale',decided_by=$2,decided_at=now(),decision_note=$3 WHERE id=$1",
@@ -322,6 +322,7 @@ type Row = {
 async function apply(
   c: PoolClient,
   row: Row,
+  approver: string,
 ): Promise<"stale" | { effective_at: Date }> {
   if (row.kind === "payout_details") {
     const p = row.proposed_value as {
@@ -346,10 +347,18 @@ async function apply(
     return { effective_at: effective };
   }
   if (row.kind === "contact_details") {
-    const p = row.proposed_value as { email: string; phone: string };
-    const cur = row.current_value as { email: string; phone: string };
+    const p = row.proposed_value as {
+      email: string;
+      phone: string;
+      carrier_id: string | null;
+    };
+    const cur = row.current_value as {
+      email: string;
+      phone: string;
+      carrier_id: string;
+    };
     const now = await c.query(
-      "SELECT email,phone FROM contacts WHERE id=$1 AND carrier_id=$2 FOR UPDATE",
+      "SELECT email,phone,organization_id FROM contacts WHERE id=$1 AND carrier_id=$2 FOR UPDATE",
       [row.subject_id, row.carrier_id],
     );
     if (
@@ -358,14 +367,27 @@ async function apply(
       now.rows[0].phone !== cur.phone
     )
       return "stale";
+    // Moving the contact to another carrier needs the approver to answer for
+    // that carrier too, and it must stay in the same organization.
+    if (p.carrier_id && p.carrier_id !== row.carrier_id) {
+      const target = await c.query(
+        "SELECT organization_id FROM carriers WHERE id=$1",
+        [p.carrier_id],
+      );
+      if (
+        target.rows[0]?.organization_id !== now.rows[0].organization_id ||
+        !(await mayDecide(c, approver, p.carrier_id))
+      )
+        throw new HttpError(422, "TARGET_CARRIER_APPROVAL_REQUIRED");
+    }
     // Consent belongs to a phone number; a new number needs consent recorded again.
     await c.query(
-      `UPDATE contacts SET email=$2,phone=$3,
+      `UPDATE contacts SET email=$2,phone=$3,carrier_id=$4,
         sms_consent_at=CASE WHEN phone=$3 THEN sms_consent_at END,
         sms_consent_by=CASE WHEN phone=$3 THEN sms_consent_by END,
         sms_consent_note=CASE WHEN phone=$3 THEN sms_consent_note ELSE '' END,
         version=version+1,updated_at=now() WHERE id=$1`,
-      [row.subject_id, p.email, p.phone],
+      [row.subject_id, p.email, p.phone, p.carrier_id],
     );
     return { effective_at: new Date() };
   }
@@ -404,7 +426,7 @@ async function apply(
   return { effective_at: new Date() };
 }
 
-/** Used by contact updates: parks a phone or email change on a carrier's contact. */
+/** Used by contact updates: parks a change to a carrier contact's phone, email or carrier link. */
 export async function requestContactChange(
   c: PoolClient,
   user: string,
@@ -415,15 +437,22 @@ export async function requestContactChange(
     email: string;
     phone: string;
   },
-  next: { email: string; phone: string },
+  next: { email: string; phone: string; carrier_id: string | null },
   reason: string,
 ) {
+  const linkOnly = next.email === contact.email && next.phone === contact.phone;
   return requestChange(c, user, {
     carrierId: contact.carrier_id,
     kind: "contact_details",
     subjectId: contact.id,
-    summary: `New phone or email for ${contact.name}`,
-    current: { email: contact.email, phone: contact.phone },
+    summary: linkOnly
+      ? `Unlink or move ${contact.name} to another carrier`
+      : `New phone, email or carrier link for ${contact.name}`,
+    current: {
+      email: contact.email,
+      phone: contact.phone,
+      carrier_id: contact.carrier_id,
+    },
     proposed: next,
     reason,
   });

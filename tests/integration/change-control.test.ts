@@ -370,3 +370,145 @@ test("HTTP: lists, counts and decides only for people of the carrier; drivers an
     true,
   );
 });
+
+test("unlinking or moving a carrier contact is held too, so its details cannot be changed freely afterwards", async () => {
+  const base = {
+    kind: "receiver",
+    name: "Dock Office",
+    company: "",
+    notes: "",
+    sms_consent: false,
+    sms_consent_note: "",
+  };
+  const make = () =>
+    createContact(t.dispatcher, {
+      idempotency_key: randomUUID(),
+      ...base,
+      email: "dock@receiver.test",
+      phone: "615-555-0100",
+      carrier_id: t.carrier,
+    });
+  const row = async (id: string) =>
+    (
+      await pool.query(
+        "SELECT email,phone,carrier_id,version FROM contacts WHERE id=$1",
+        [id],
+      )
+    ).rows[0];
+  const edit = (id: string, version: number, over: Record<string, unknown>) =>
+    updateContact(t.dispatcher, id, {
+      ...base,
+      email: "dock@receiver.test",
+      phone: "615-555-0100",
+      carrier_id: t.carrier,
+      version,
+      ...over,
+    }) as Promise<{ pending_approval?: boolean; change_id?: string }>;
+
+  // Unlinking alone needs a reason and waits; the contact stays linked.
+  const a = await make();
+  await assert.rejects(edit(a.id, 1, { carrier_id: null }), {
+    code: "REASON_REQUIRED",
+  });
+  const unlink = await edit(a.id, 1, {
+    carrier_id: null,
+    change_reason: "No longer ours",
+  });
+  assert.equal(unlink.pending_approval, true);
+  assert.equal((await row(a.id)).carrier_id, t.carrier);
+  // While it waits, the same trick is not open: a second edit is refused, not applied.
+  await assert.rejects(
+    edit(a.id, 2, {
+      carrier_id: null,
+      phone: "999-555-0000",
+      change_reason: "x",
+    }),
+    { code: "CHANGE_PENDING" },
+  );
+  assert.equal((await row(a.id)).phone, "615-555-0100");
+  await approve(unlink.change_id!);
+  assert.equal((await row(a.id)).carrier_id, null);
+
+  // Unlinking and changing the details in one call changes nothing until approved.
+  const b = await make();
+  const both = await edit(b.id, 1, {
+    carrier_id: null,
+    email: "evil@receiver.test",
+    phone: "999-555-0000",
+    change_reason: "Moved",
+  });
+  assert.deepEqual(
+    [(await row(b.id)).carrier_id, (await row(b.id)).phone],
+    [t.carrier, "615-555-0100"],
+  );
+  await approve(both.change_id!);
+  assert.deepEqual(
+    [
+      (await row(b.id)).carrier_id,
+      (await row(b.id)).email,
+      (await row(b.id)).phone,
+    ],
+    [null, "evil@receiver.test", "999-555-0000"],
+  );
+
+  // Moving it to another carrier with new details is held, and only someone who
+  // answers for both carriers can approve it.
+  const m = await make();
+  const move = await edit(m.id, 1, {
+    carrier_id: t.foreign,
+    phone: "999-555-0111",
+    change_reason: "Now works with the other carrier",
+  });
+  assert.equal(move.pending_approval, true);
+  assert.deepEqual(
+    [(await row(m.id)).carrier_id, (await row(m.id)).phone],
+    [t.carrier, "615-555-0100"],
+  );
+  await assert.rejects(approve(move.change_id!), {
+    code: "TARGET_CARRIER_APPROVAL_REQUIRED",
+  });
+  assert.equal((await row(m.id)).carrier_id, t.carrier);
+  const admin = randomUUID();
+  await pool.query(
+    "INSERT INTO users(id,email,password_hash,name) VALUES($1,$2,'not-a-login-fixture','Org admin')",
+    [admin, admin + "@relay.test"],
+  );
+  await pool.query(
+    "INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'admin')",
+    [t.organization, admin],
+  );
+  await approve(move.change_id!, admin);
+  assert.deepEqual(
+    [(await row(m.id)).carrier_id, (await row(m.id)).phone],
+    [t.foreign, "999-555-0111"],
+  );
+  // Someone who cannot reach the target carrier cannot even ask for the move.
+  const c2 = await make();
+  await assert.rejects(
+    updateContact(t.manager, c2.id, {
+      ...base,
+      email: "dock@receiver.test",
+      phone: "615-555-0100",
+      carrier_id: t.foreign,
+      version: 1,
+      change_reason: "x",
+    }),
+    { code: "NOT_FOUND" },
+  );
+  // A contact that was never linked to a carrier is still edited directly.
+  const free = await createContact(t.dispatcher, {
+    idempotency_key: randomUUID(),
+    ...base,
+    kind: "broker",
+    email: "b@broker.test",
+    phone: "",
+    carrier_id: null,
+  });
+  const direct = await edit(free.id, 1, {
+    kind: "broker",
+    email: "c@broker.test",
+    phone: "",
+    carrier_id: null,
+  });
+  assert.equal(direct.pending_approval, undefined);
+});

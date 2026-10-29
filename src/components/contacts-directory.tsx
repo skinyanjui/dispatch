@@ -591,9 +591,9 @@ function ContactForm({
       <small>An email address or a phone number is required.</small>
       {entry?.contact?.carrier_id && (
         <label>
-          Why the phone or email is changing{" "}
+          Why the phone, email or carrier is changing{" "}
           <small>
-            (needed if you change either; a second person approves it)
+            (needed if you change any of them; a second person approves it)
           </small>
           <input name="change_reason" maxLength={500} />
         </label>
