@@ -465,6 +465,7 @@ export async function releaseBatchLoads(
 export async function batchFile(user: string, id: string) {
   return transaction(async (c) => {
     const b = await lockBatch(c, user, id);
+    if (b.file_csv === null) throw new HttpError(410, "FILE_PURGED");
     await emit(c, user, b.carrier_id, "factoring.batch_downloaded", {
       batch_id: id,
     });

@@ -109,6 +109,7 @@ test("a tick sends appointment reminders and delivery, not the daily sweeps", as
     "exports",
     "pruned",
     "reminders",
+    "retention",
   ]);
   const bare = await (await cron()).json();
   assert.deepEqual(Object.keys(bare).sort(), Object.keys(daily).sort());

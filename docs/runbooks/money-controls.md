@@ -39,7 +39,7 @@ Only a carrier manager turns it on, with consent. Schedules are CSVs the carrier
 
 ## Registration alerts and retention (ADR 0072)
 
-A carrier that turns to attention notifies its dispatchers and managers once (kind `registration_alert`, mutable in notification settings) and shows on the carrier list. The freight packet shows the payout details in force. Claim evidence, factoring CSVs and lookup history are kept while the carrier exists; no deletion job exists. Rollback: leave migration 048; remove the column and the alert.
+A carrier that turns to attention notifies its dispatchers and managers once (kind `registration_alert`, mutable in notification settings) and shows on the carrier list. The freight packet shows the payout details in force. Claim evidence, factoring CSVs and lookup history are kept while the carrier exists; the daily `retention` step (ADR 0073) clears factoring CSVs and prunes lookups older than `RELAY_RETENTION_YEARS` (default 7), keeping each carrier's newest lookup and newest success, and audits each purge. Claim evidence, invoices and audit rows are untouched. Rollback: leave migrations 048 and 049; remove the alert and the step.
 
 ## Not built
 

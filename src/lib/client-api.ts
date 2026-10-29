@@ -64,6 +64,8 @@ const messages: Record<string, string> = {
     "Add the TONU fee from the rate confirmation in the terms first.",
   RATE_CONFIRMATION_REQUIRED:
     "Upload and accept this load's rate confirmation first, so the terms can point at it.",
+  FILE_PURGED:
+    "This file was removed after the retention period. Its hash and totals are still on the schedule.",
   STEP_UP_REQUIRED:
     "Approving a change needs your password again. Enter it and try once more.",
   STEP_UP_FAILED:
