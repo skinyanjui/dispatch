@@ -8,8 +8,17 @@ export type AuthorityCheck = {
   allowed_to_operate: boolean | null;
   out_of_service: boolean | null;
   insurance_on_file: boolean | null;
+  /** Some insurance is on file but less than the registry says is required. */
+  insurance_shortfall: boolean | null;
+  /** What the lookup found for the carrier's MC number, when it has one. */
+  mc_outcome: McOutcome;
   observed_at: string;
 };
+export type McOutcome =
+  | "not_checked"
+  | "matches"
+  | "different_carrier"
+  | "not_found";
 export type AuthorityFlag =
   | "dot_not_found"
   | "not_allowed_to_operate"
@@ -17,6 +26,9 @@ export type AuthorityFlag =
   | "authority_revoked"
   | "out_of_service"
   | "no_insurance_on_file"
+  | "insurance_below_required"
+  | "mc_other_carrier"
+  | "mc_not_found"
   | "name_differs"
   | "lookup_failed"
   | "usdot_changed"
@@ -29,10 +41,15 @@ export const flagLabels: Record<AuthorityFlag, string> = {
   authority_revoked: "Operating authority was revoked",
   out_of_service: "Ordered out of service",
   no_insurance_on_file: "No insurance on file",
+  insurance_below_required:
+    "Insurance on file is less than the registry says is required",
+  mc_other_carrier:
+    "The MC number belongs to a different carrier than this USDOT number",
+  mc_not_found: "No carrier with this MC number",
   name_differs: "Registered name differs from the carrier's name",
   lookup_failed: "The last lookup failed",
   usdot_changed:
-    "The USDOT number changed since the last lookup, so nothing is confirmed for the new number",
+    "The USDOT or MC number changed since the last lookup, so nothing is confirmed for the new number",
   stale: "The last successful lookup is old",
 };
 /** A successful lookup older than this is shown as stale. */
@@ -158,7 +175,14 @@ export function deriveAuthority(
     if (view.authority_status === "inactive") flags.push("authority_inactive");
     if (view.authority_status === "revoked") flags.push("authority_revoked");
     if (view.out_of_service === true) flags.push("out_of_service");
-    if (view.insurance_on_file === false) flags.push("no_insurance_on_file");
+    if (view.insurance_on_file === false)
+      flags.push(
+        view.insurance_shortfall
+          ? "insurance_below_required"
+          : "no_insurance_on_file",
+      );
+    if (view.mc_outcome === "different_carrier") flags.push("mc_other_carrier");
+    if (view.mc_outcome === "not_found") flags.push("mc_not_found");
     if (view.legal_name && !sameName(view.legal_name, carrierName))
       flags.push("name_differs");
     if (age(view) > staleAfterHours) flags.push("stale");

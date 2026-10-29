@@ -116,6 +116,7 @@ export type CarrierSetup = {
     contact_email: string;
     phone: string;
     usdot: string;
+    mc_number?: string;
     step: "agreement" | "team" | "complete";
     version: number;
   } | null;
@@ -194,8 +195,8 @@ export type DispatchInvoice = {
   }[];
 };
 export type BillingOverview = {
-  loads_cursor?:string|null;
-  invoices_cursor?:string|null;
+  loads_cursor?: string | null;
+  invoices_cursor?: string | null;
   carrier_id: string;
   can_invoice: boolean;
   loads: {

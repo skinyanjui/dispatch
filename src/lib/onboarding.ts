@@ -27,6 +27,12 @@ const company = z.object({
     .trim()
     .regex(/^\d{1,8}$|^$/)
     .default(""),
+  // The carrier's MC (docket) number, checked against its USDOT number (ADR 0071).
+  mc_number: z
+    .string()
+    .trim()
+    .regex(/^\d{1,8}$|^$/)
+    .default(""),
 });
 const timezone = z
   .string()
@@ -135,8 +141,15 @@ export async function createCarrier(user: string, input: unknown) {
         id,
       ]);
       await c.query(
-        "INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot) VALUES($1,$2,$3,$4,$5)",
-        [id, data.contact_name, data.contact_email, data.phone, data.usdot],
+        "INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,mc_number) VALUES($1,$2,$3,$4,$5,$6)",
+        [
+          id,
+          data.contact_name,
+          data.contact_email,
+          data.phone,
+          data.usdot,
+          data.mc_number,
+        ],
       );
       await emit(c, user, id, "carrier.created");
       return { id };
@@ -183,13 +196,14 @@ export async function writeCompanyDetails(
     contact_email: string;
     phone: string;
     usdot: string;
+    mc_number: string;
   },
 ) {
   await c.query("UPDATE carriers SET name=$2 WHERE id=$1", [id, d.name]);
   await c.query(
-    `INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,step) VALUES($1,$2,$3,$4,$5,'team')
-        ON CONFLICT(carrier_id) DO UPDATE SET contact_name=$2,contact_email=$3,phone=$4,usdot=$5,version=carrier_profiles.version+1,updated_at=now()`,
-    [id, d.contact_name, d.contact_email, d.phone, d.usdot],
+    `INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,mc_number,step) VALUES($1,$2,$3,$4,$5,$6,'team')
+        ON CONFLICT(carrier_id) DO UPDATE SET contact_name=$2,contact_email=$3,phone=$4,usdot=$5,mc_number=$6,version=carrier_profiles.version+1,updated_at=now()`,
+    [id, d.contact_name, d.contact_email, d.phone, d.usdot, d.mc_number],
   );
   await c.query(
     "UPDATE onboarding_invites SET revoked_at=now() WHERE carrier_id=$1 AND role='carrier-manager' AND email<>$2 AND accepted_at IS NULL AND revoked_at IS NULL",
@@ -218,7 +232,7 @@ export async function saveCompany(user: string, id: string, input: unknown) {
       { id, ...data },
       async () => {
         const old = await c.query(
-          "SELECT version,contact_name,contact_email,phone,usdot,step FROM carrier_profiles WHERE carrier_id=$1",
+          "SELECT version,contact_name,contact_email,phone,usdot,mc_number,step FROM carrier_profiles WHERE carrier_id=$1",
           [id],
         );
         const was = old.rows[0];
@@ -233,25 +247,28 @@ export async function saveCompany(user: string, id: string, input: unknown) {
           (data.name !== carrier.name ||
             data.contact_email !== was.contact_email ||
             data.phone !== was.phone ||
-            data.usdot !== was.usdot)
+            data.usdot !== was.usdot ||
+            data.mc_number !== was.mc_number)
         ) {
           if (!data.change_reason) throw new HttpError(422, "REASON_REQUIRED");
           const change = await requestChange(c, user, {
             carrierId: id,
             kind: "carrier_profile",
             subjectId: null,
-            summary: `Change ${carrier.name}'s name, contact email, phone or USDOT number`,
+            summary: `Change ${carrier.name}'s name, contact email, phone, USDOT or MC number`,
             current: {
               name: carrier.name,
               contact_email: was.contact_email,
               phone: was.phone,
               usdot: was.usdot,
+              mc_number: was.mc_number,
             },
             proposed: {
               name: data.name,
               contact_email: data.contact_email,
               phone: data.phone,
               usdot: data.usdot,
+              mc_number: data.mc_number,
             },
             reason: data.change_reason,
           });

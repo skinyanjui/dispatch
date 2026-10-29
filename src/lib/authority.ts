@@ -3,7 +3,11 @@ import { z } from "zod";
 import { pool, transaction } from "./db";
 import { HttpError } from "./auth";
 import { carrierAccess, emit, once } from "./onboarding";
-import { deriveAuthority, type AuthorityCheck } from "./authority-state";
+import {
+  deriveAuthority,
+  type AuthorityCheck,
+  type McOutcome,
+} from "./authority-state";
 
 /**
  * Carrier authority and insurance monitoring (ADR 0065). A provider looks up
@@ -25,18 +29,21 @@ export type Lookup =
       allowed_to_operate: boolean | null;
       out_of_service: boolean | null;
       insurance_on_file: boolean | null;
+      insurance_shortfall: boolean | null;
+      mc_outcome: McOutcome;
       observed_at: string;
     }
   | { found: false; observed_at: string };
 export type Provider = {
   source: "fixture" | "fmcsa";
-  lookup(usdot: string, carrierName: string): Promise<Lookup>;
+  /** `mc` is the carrier's MC (docket) number, when it has one: the lookup says whether it belongs to this USDOT number. */
+  lookup(usdot: string, carrierName: string, mc?: string): Promise<Lookup>;
 };
 
 /** Fictional rules keyed on the last digit, so demos and tests can show every state. */
 export const fixtureProvider: Provider = {
   source: "fixture",
-  async lookup(usdot, carrierName) {
+  async lookup(usdot, carrierName, mc) {
     const last = Number(usdot.slice(-1));
     const observed_at = new Date().toISOString();
     if (last === 9) return { found: false, observed_at };
@@ -47,13 +54,69 @@ export const fixtureProvider: Provider = {
         last === 8 ? "revoked" : last === 5 ? "inactive" : "active",
       allowed_to_operate: last !== 8,
       out_of_service: last === 4,
-      insurance_on_file: last !== 7,
+      // 7: none on file; 3: some, but less than required.
+      insurance_on_file: last !== 7 && last !== 3,
+      insurance_shortfall: last === 3 ? true : last === 7 ? false : null,
+      // The MC number's last digit: 9 matches nobody, 7 belongs to another carrier.
+      mc_outcome: !mc
+        ? "not_checked"
+        : mc.endsWith("9")
+          ? "not_found"
+          : mc.endsWith("7")
+            ? "different_carrier"
+            : "matches",
       observed_at,
     };
   },
 };
 
 const yes = (v: unknown) => (v === "Y" ? true : v === "N" ? false : null);
+const thousands = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+/**
+ * Insurance against what the registry says is required: bodily-injury and
+ * property damage (amounts, in thousands of dollars), cargo and bond (some on
+ * file). Required and missing, or on file but below the required amount, is
+ * not insured; where the registry states no requirement, any amount on file is
+ * taken as insured and a missing figure as unknown.
+ */
+export function insuranceFrom(carrier: Record<string, unknown>): {
+  insurance_on_file: boolean | null;
+  insurance_shortfall: boolean | null;
+} {
+  const bipd = thousands(carrier.bipdInsuranceOnFile);
+  const checks: { required: boolean; ok: boolean; partial: boolean }[] = [];
+  const need = (
+    required: unknown,
+    onFile: number | null,
+    amount?: number | null,
+  ) => {
+    if (required !== "Y") return;
+    const some = onFile !== null && onFile > 0;
+    const enough = some && (amount == null || onFile! >= amount);
+    checks.push({ required: true, ok: enough, partial: some && !enough });
+  };
+  need(
+    carrier.bipdInsuranceRequired,
+    bipd,
+    thousands(carrier.bipdRequiredAmount),
+  );
+  need(carrier.cargoInsuranceRequired, thousands(carrier.cargoInsuranceOnFile));
+  need(carrier.bondInsuranceRequired, thousands(carrier.bondInsuranceOnFile));
+  if (!checks.length)
+    return {
+      insurance_on_file: bipd === null ? null : bipd > 0,
+      insurance_shortfall: bipd !== null && bipd <= 0 ? false : null,
+    };
+  const short = checks.some((c) => !c.ok);
+  return {
+    insurance_on_file: !short,
+    insurance_shortfall: short ? checks.some((c) => c.partial) : null,
+  };
+}
+
 /** Parses the public QCMobile carrier response; unknown shapes are an error, never a guess. */
 export function parseFmcsa(body: unknown, observed_at: string): Lookup {
   const carrier = (body as { content?: { carrier?: Record<string, unknown> } })
@@ -68,35 +131,56 @@ export function parseFmcsa(body: unknown, observed_at: string): Lookup {
         : common === "N"
           ? "revoked"
           : "unknown";
-  const insured = Number(carrier.bipdInsuranceOnFile ?? NaN);
   return {
     found: true,
     legal_name: String(carrier.legalName ?? "").slice(0, 200),
     authority_status: authority,
     allowed_to_operate: yes(carrier.allowedToOperate),
     out_of_service: yes(carrier.outOfService),
-    insurance_on_file: Number.isFinite(insured) ? insured > 0 : null,
+    ...insuranceFrom(carrier),
+    mc_outcome: "not_checked",
     observed_at,
   };
+}
+/** Which USDOT number a docket (MC) number belongs to, from the docket lookup response. */
+export function docketOutcome(body: unknown, usdot: string): McOutcome {
+  const rows = (body as { content?: unknown })?.content;
+  const first = (Array.isArray(rows) ? rows[0] : rows) as
+    | { carrier?: { dotNumber?: unknown } }
+    | undefined;
+  const dot = first?.carrier?.dotNumber;
+  if (dot === undefined || dot === null) return "not_found";
+  return String(dot) === usdot ? "matches" : "different_carrier";
 }
 export function fmcsaProvider(
   webKey: string,
   fetcher: typeof fetch = fetch,
 ): Provider {
+  const get = (path: string) =>
+    fetcher(
+      `https://mobile.fmcsa.dot.gov/qc/services/${path}?webKey=${encodeURIComponent(webKey)}`,
+      {
+        signal: AbortSignal.timeout(8000),
+        headers: { accept: "application/json" },
+      },
+    );
   return {
     source: "fmcsa",
-    async lookup(usdot) {
-      const res = await fetcher(
-        `https://mobile.fmcsa.dot.gov/qc/services/carriers/${encodeURIComponent(usdot)}?webKey=${encodeURIComponent(webKey)}`,
-        {
-          signal: AbortSignal.timeout(8000),
-          headers: { accept: "application/json" },
-        },
-      );
+    async lookup(usdot, _name, mc) {
+      const res = await get(`carriers/${encodeURIComponent(usdot)}`);
       const observed_at = new Date().toISOString();
       if (res.status === 404) return { found: false, observed_at };
       if (!res.ok) throw new Error("PROVIDER_HTTP_" + res.status);
-      return parseFmcsa(await res.json(), observed_at);
+      const found = parseFmcsa(await res.json(), observed_at);
+      if (!found.found || !mc) return found;
+      // Does the MC number belong to this USDOT number? A sold or hijacked
+      // registration answers with someone else's.
+      const dock = await get(
+        `carriers/docket-number/${encodeURIComponent(mc)}`,
+      );
+      if (dock.status === 404) return { ...found, mc_outcome: "not_found" };
+      if (!dock.ok) throw new Error("PROVIDER_HTTP_" + dock.status);
+      return { ...found, mc_outcome: docketOutcome(await dock.json(), usdot) };
     },
   };
 }
@@ -125,6 +209,9 @@ const rowToCheck = (r: Record<string, unknown>): AuthorityCheck => ({
   allowed_to_operate: r.allowed_to_operate as boolean | null,
   out_of_service: r.out_of_service as boolean | null,
   insurance_on_file: r.insurance_on_file as boolean | null,
+  insurance_shortfall: (r.insurance_shortfall as boolean | null) ?? null,
+  mc_outcome: ((r.mc_outcome as McOutcome | undefined) ??
+    "not_checked") as McOutcome,
   observed_at: new Date(r.observed_at as string).toISOString(),
 });
 
@@ -134,18 +221,23 @@ type Db = Pick<typeof pool, "query">;
  * USDOT number it was made for: after the number changes, the old result must
  * not make the new number look clear (ADR 0070).
  */
-async function latestChecks(c: Db, carrierId: string, usdot: string) {
+async function latestChecks(
+  c: Db,
+  carrierId: string,
+  usdot: string,
+  mc: string,
+) {
   const { rows } = await c.query(
-    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot=$2 ORDER BY created_at DESC,id DESC LIMIT 1`,
-    [carrierId, usdot],
+    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot=$2 AND mc_number=$3 ORDER BY created_at DESC,id DESC LIMIT 1`,
+    [carrierId, usdot, mc],
   );
   const ok = await c.query(
-    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot=$2 AND outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1`,
-    [carrierId, usdot],
+    `SELECT * FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot=$2 AND mc_number=$3 AND outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1`,
+    [carrierId, usdot, mc],
   );
   const other = await c.query(
-    `SELECT 1 FROM carrier_authority_checks WHERE carrier_id=$1 AND usdot<>$2 LIMIT 1`,
-    [carrierId, usdot],
+    `SELECT 1 FROM carrier_authority_checks WHERE carrier_id=$1 AND (usdot<>$2 OR mc_number<>$3) LIMIT 1`,
+    [carrierId, usdot, mc],
   );
   return {
     latest: rows[0] ? rowToCheck(rows[0]) : null,
@@ -164,18 +256,21 @@ export function checkCooldownSeconds() {
 export async function authorityStatus(user: string, carrierId: string) {
   const carrier = await transaction((c) => carrierAccess(c, user, carrierId));
   const profile = await pool.query(
-    "SELECT usdot FROM carrier_profiles WHERE carrier_id=$1",
+    "SELECT usdot,mc_number FROM carrier_profiles WHERE carrier_id=$1",
     [carrierId],
   );
   const usdot = (profile.rows[0]?.usdot as string | undefined) ?? "";
+  const mc = (profile.rows[0]?.mc_number as string | undefined) ?? "";
   const { latest, lastOk, numberChanged } = await latestChecks(
     pool,
     carrierId,
     usdot,
+    mc,
   );
   return {
     carrier_id: carrierId,
     usdot,
+    mc_number: mc,
     provider: configuredProviderName(),
     ...deriveAuthority(
       latest,
@@ -201,13 +296,14 @@ async function recordLookup(
   carrierId: string,
   carrierName: string,
   usdot: string,
+  mc: string,
   provider: Provider,
   by: string | null,
 ) {
   let lookup: Lookup | null = null;
   let error: string | null = null;
   try {
-    lookup = await provider.lookup(usdot, carrierName);
+    lookup = await provider.lookup(usdot, carrierName, mc || undefined);
   } catch (e) {
     // A fixed vocabulary: provider messages can name hosts and addresses.
     const message = e instanceof Error ? e.message : "";
@@ -223,8 +319,8 @@ async function recordLookup(
   const id = randomUUID();
   await c.query(
     `INSERT INTO carrier_authority_checks(id,carrier_id,usdot,source,outcome,legal_name,authority_status,
-       allowed_to_operate,out_of_service,insurance_on_file,error_code,observed_at,checked_by)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+       allowed_to_operate,out_of_service,insurance_on_file,insurance_shortfall,mc_number,mc_outcome,error_code,observed_at,checked_by)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
     [
       id,
       carrierId,
@@ -236,6 +332,9 @@ async function recordLookup(
       l?.allowed_to_operate ?? null,
       l?.out_of_service ?? null,
       l?.insurance_on_file ?? null,
+      l?.insurance_shortfall ?? null,
+      mc,
+      l?.mc_outcome ?? "not_checked",
       error,
       lookup?.observed_at ?? new Date().toISOString(),
       by,
@@ -257,10 +356,11 @@ export async function checkAuthority(
     carrierAccess(c, user, data.carrier_id),
   );
   const profile = await pool.query(
-    "SELECT usdot FROM carrier_profiles WHERE carrier_id=$1",
+    "SELECT usdot,mc_number FROM carrier_profiles WHERE carrier_id=$1",
     [data.carrier_id],
   );
   const usdot = (profile.rows[0]?.usdot as string | undefined) ?? "";
+  const mc = (profile.rows[0]?.mc_number as string | undefined) ?? "";
   if (!usdot) throw new HttpError(422, "USDOT_REQUIRED");
   await transaction((c) =>
     once(c, user, data.key, "authority.check", data, async () => {
@@ -276,6 +376,7 @@ export async function checkAuthority(
         data.carrier_id,
         carrier.name as string,
         usdot,
+        mc,
         provider,
         user,
       );
@@ -310,13 +411,13 @@ export async function runAuthorityChecks(
     Number(process.env.RELAY_AUTHORITY_JOB_BUDGET_MS ?? 30000);
   const concurrency = options.concurrency ?? 4;
   const due = await pool.query(
-    `SELECT c.id,c.name,p.usdot FROM carriers c JOIN carrier_profiles p ON p.carrier_id=c.id
-     LEFT JOIN LATERAL (SELECT outcome,created_at,usdot,
+    `SELECT c.id,c.name,p.usdot,p.mc_number mc FROM carriers c JOIN carrier_profiles p ON p.carrier_id=c.id
+     LEFT JOIN LATERAL (SELECT outcome,created_at,usdot,mc_number,
         (SELECT count(*) FROM (SELECT outcome FROM carrier_authority_checks x WHERE x.carrier_id=c.id ORDER BY created_at DESC,id DESC LIMIT 4) z WHERE z.outcome='error') errors
        FROM carrier_authority_checks k WHERE k.carrier_id=c.id ORDER BY created_at DESC,id DESC LIMIT 1) last ON true
      WHERE p.usdot<>'' AND p.step='complete' AND (
        last.created_at IS NULL
-       OR last.usdot<>p.usdot
+       OR last.usdot<>p.usdot OR last.mc_number<>p.mc_number
        OR last.created_at<now()-interval '20 hours'
        OR (last.outcome='error' AND last.errors<4 AND last.created_at<now()-interval '1 hour'))
      ORDER BY last.created_at NULLS FIRST LIMIT $1`,
@@ -335,6 +436,7 @@ export async function runAuthorityChecks(
         r.id,
         r.name,
         r.usdot,
+        r.mc,
         provider,
         null,
       );
@@ -362,15 +464,15 @@ export async function authorityFailing(): Promise<number> {
 export async function authorityAttention(): Promise<number> {
   const { rows } = await pool.query(
     `SELECT c.name,l.outcome,l.source,l.legal_name,l.authority_status,l.allowed_to_operate,l.out_of_service,
-       l.insurance_on_file,l.observed_at,
+       l.insurance_on_file,l.insurance_shortfall,l.mc_outcome,l.observed_at,
        o.outcome ok_outcome,o.source ok_source,o.legal_name ok_legal_name,o.authority_status ok_authority_status,
        o.allowed_to_operate ok_allowed_to_operate,o.out_of_service ok_out_of_service,
-       o.insurance_on_file ok_insurance_on_file,o.observed_at ok_observed_at,
+       o.insurance_on_file ok_insurance_on_file,o.insurance_shortfall ok_insurance_shortfall,o.mc_outcome ok_mc_outcome,o.observed_at ok_observed_at,
        (l.outcome IS NULL AND EXISTS(SELECT 1 FROM carrier_authority_checks k WHERE k.carrier_id=c.id)) number_changed
      FROM carriers c
      LEFT JOIN carrier_profiles p ON p.carrier_id=c.id
-     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.usdot=COALESCE(p.usdot,'') ORDER BY created_at DESC,id DESC LIMIT 1) l ON true
-     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.usdot=COALESCE(p.usdot,'') AND k.outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1) o ON true`,
+     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.usdot=COALESCE(p.usdot,'') AND k.mc_number=COALESCE(p.mc_number,'') ORDER BY created_at DESC,id DESC LIMIT 1) l ON true
+     LEFT JOIN LATERAL (SELECT * FROM carrier_authority_checks k WHERE k.carrier_id=c.id AND k.usdot=COALESCE(p.usdot,'') AND k.mc_number=COALESCE(p.mc_number,'') AND k.outcome='ok' ORDER BY created_at DESC,id DESC LIMIT 1) o ON true`,
   );
   return rows.filter((r) => {
     const latest = r.outcome ? rowToCheck(r) : null;
@@ -383,6 +485,8 @@ export async function authorityAttention(): Promise<number> {
           allowed_to_operate: r.ok_allowed_to_operate,
           out_of_service: r.ok_out_of_service,
           insurance_on_file: r.ok_insurance_on_file,
+          insurance_shortfall: r.ok_insurance_shortfall,
+          mc_outcome: r.ok_mc_outcome,
           observed_at: r.ok_observed_at,
         })
       : null;

@@ -579,6 +579,7 @@ test("once a carrier is set up, its name, contact email, phone and USDOT number 
     { contact_email: "attacker@evil.test" },
     { phone: "999-555-0000" },
     { usdot: "1000002" },
+    { mc_number: "123456" },
     { name: "Renamed Transport" },
   ])
     await assert.rejects(save(over), { code: "REASON_REQUIRED" });

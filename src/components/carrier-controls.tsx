@@ -102,6 +102,10 @@ export function CarrierRegistration({
                 <dd>{data.usdot || "Not on file"}</dd>
               </div>
               <div>
+                <dt>MC number</dt>
+                <dd>{data.mc_number || "Not on file"}</dd>
+              </div>
+              <div>
                 <dt>Registered name</dt>
                 <dd>{data.legal_name || "—"}</dd>
               </div>

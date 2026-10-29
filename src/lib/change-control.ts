@@ -468,10 +468,11 @@ async function apply(
       contact_email: string;
       phone: string;
       usdot: string;
+      mc_number: string;
     };
     const p = row.proposed_value as typeof cur;
     const now = await c.query(
-      `SELECT c.name,p.contact_name,p.contact_email,p.phone,p.usdot FROM carriers c
+      `SELECT c.name,p.contact_name,p.contact_email,p.phone,p.usdot,p.mc_number FROM carriers c
        JOIN carrier_profiles p ON p.carrier_id=c.id WHERE c.id=$1 FOR UPDATE OF p`,
       [row.carrier_id],
     );
@@ -481,7 +482,8 @@ async function apply(
       n.name !== cur.name ||
       n.contact_email !== cur.contact_email ||
       n.phone !== cur.phone ||
-      n.usdot !== cur.usdot
+      n.usdot !== cur.usdot ||
+      n.mc_number !== (cur.mc_number ?? "")
     )
       return "stale";
     await writeCompanyDetails(c, row.carrier_id, {
@@ -490,6 +492,7 @@ async function apply(
       contact_email: p.contact_email,
       phone: p.phone,
       usdot: p.usdot,
+      mc_number: p.mc_number ?? "",
     });
     return { effective_at: new Date() };
   }

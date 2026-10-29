@@ -10,7 +10,9 @@ import {
   checkAuthority,
   configuredProvider,
   fixtureProvider,
+  docketOutcome,
   fmcsaProvider,
+  insuranceFrom,
   parseFmcsa,
   runAuthorityChecks,
 } from "../../src/lib/authority";
@@ -47,6 +49,8 @@ const ok = (over: Partial<AuthorityCheck> = {}): AuthorityCheck => ({
   allowed_to_operate: true,
   out_of_service: false,
   insurance_on_file: true,
+  insurance_shortfall: null,
+  mc_outcome: "not_checked",
   observed_at: new Date().toISOString(),
   ...over,
 });
@@ -249,6 +253,8 @@ test("the FMCSA parser maps the service's fields and never guesses at an unknown
     allowed_to_operate: true,
     out_of_service: false,
     insurance_on_file: true,
+    insurance_shortfall: null,
+    mc_outcome: "not_checked",
     observed_at: at,
   });
   const lapsed = parseFmcsa(
@@ -547,4 +553,160 @@ test("four failed lookups in a row raise an operations alert", async () => {
     [randomUUID(), fresh.carrier],
   );
   assert.equal((await authorityFailing()) - before, 0);
+});
+
+test("insurance is judged against what the registry says is required, not just 'something'", () => {
+  const required = { bipdInsuranceRequired: "Y", bipdRequiredAmount: "750" };
+  assert.deepEqual(
+    insuranceFrom({ ...required, bipdInsuranceOnFile: "1000" }),
+    {
+      insurance_on_file: true,
+      insurance_shortfall: null,
+    },
+  );
+  // Some on file, but less than required: not insured, and says so.
+  assert.deepEqual(insuranceFrom({ ...required, bipdInsuranceOnFile: "500" }), {
+    insurance_on_file: false,
+    insurance_shortfall: true,
+  });
+  assert.deepEqual(insuranceFrom({ ...required, bipdInsuranceOnFile: "0" }), {
+    insurance_on_file: false,
+    insurance_shortfall: false,
+  });
+  // Cargo and bond count when the registry requires them.
+  const cargo = {
+    ...required,
+    bipdInsuranceOnFile: "750",
+    cargoInsuranceRequired: "Y",
+  };
+  assert.equal(
+    insuranceFrom({ ...cargo, cargoInsuranceOnFile: "0" }).insurance_on_file,
+    false,
+  );
+  assert.equal(
+    insuranceFrom({ ...cargo, cargoInsuranceOnFile: "100" }).insurance_on_file,
+    true,
+  );
+  assert.equal(
+    insuranceFrom({ ...cargo, bondInsuranceRequired: "Y" }).insurance_on_file,
+    false,
+  );
+  // With no stated requirement, an amount on file is taken as insured; nothing known stays unknown.
+  assert.deepEqual(insuranceFrom({ bipdInsuranceOnFile: "750" }), {
+    insurance_on_file: true,
+    insurance_shortfall: null,
+  });
+  assert.deepEqual(insuranceFrom({}), {
+    insurance_on_file: null,
+    insurance_shortfall: null,
+  });
+});
+
+test("the docket lookup says whether an MC number belongs to this USDOT number", async () => {
+  assert.equal(
+    docketOutcome(
+      { content: [{ carrier: { dotNumber: 1234567 } }] },
+      "1234567",
+    ),
+    "matches",
+  );
+  assert.equal(
+    docketOutcome(
+      { content: [{ carrier: { dotNumber: 7654321 } }] },
+      "1234567",
+    ),
+    "different_carrier",
+  );
+  assert.equal(docketOutcome({ content: [] }, "1234567"), "not_found");
+  assert.equal(docketOutcome({}, "1234567"), "not_found");
+  const calls: string[] = [];
+  const fake = (docket: { status: number; body?: unknown }) =>
+    (async (url: string) => {
+      calls.push(String(url).replace(/\?webKey=.*/, ""));
+      if (String(url).includes("docket-number"))
+        return new Response(JSON.stringify(docket.body ?? {}), {
+          status: docket.status,
+        });
+      return new Response(
+        JSON.stringify({
+          content: {
+            carrier: {
+              legalName: "BLUE RIDGE TRANSPORT LLC",
+              allowedToOperate: "Y",
+              outOfService: "N",
+              commonAuthorityStatus: "A",
+              bipdInsuranceOnFile: "750",
+            },
+          },
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+  const other = await fmcsaProvider(
+    "k",
+    fake({
+      status: 200,
+      body: { content: [{ carrier: { dotNumber: 9999999 } }] },
+    }),
+  ).lookup("1234567", "x", "555");
+  assert.ok(other.found && other.mc_outcome === "different_carrier");
+  const missing = await fmcsaProvider("k", fake({ status: 404 })).lookup(
+    "1234567",
+    "x",
+    "555",
+  );
+  assert.ok(missing.found && missing.mc_outcome === "not_found");
+  calls.length = 0;
+  const none = await fmcsaProvider("k", fake({ status: 200 })).lookup(
+    "1234567",
+    "x",
+  );
+  assert.ok(none.found && none.mc_outcome === "not_checked");
+  assert.equal(calls.length, 1); // no docket call without an MC number
+  await assert.rejects(
+    fmcsaProvider("k", fake({ status: 503 })).lookup("1234567", "x", "555"),
+    /PROVIDER_HTTP_503/,
+  );
+});
+
+test("an MC number that is another carrier's or unknown is flagged, and changing it invalidates the old lookup", async () => {
+  const fresh = await tenant("AuthorityMc");
+  const set = (usdot: string, mc: string) =>
+    pool.query(
+      `INSERT INTO carrier_profiles(carrier_id,contact_name,contact_email,phone,usdot,mc_number,step) VALUES($1,'C','c@x.test','',$2,$3,'complete')
+       ON CONFLICT(carrier_id) DO UPDATE SET usdot=$2,mc_number=$3`,
+      [fresh.carrier, usdot, mc],
+    );
+  const look = () =>
+    checkAuthority(fresh.dispatcher, {
+      carrier_id: fresh.carrier,
+      key: randomUUID(),
+    });
+  await set("2100001", "123456");
+  const ok = await look();
+  assert.deepEqual([ok.state, ok.mc_number], ["clear", "123456"]);
+  // The number is swapped: nothing is confirmed for the new one until it is looked up.
+  await set("2100001", "123459");
+  const swapped = await authorityStatus(fresh.dispatcher, fresh.carrier);
+  assert.deepEqual(
+    [swapped.state, swapped.flags],
+    ["attention", ["usdot_changed"]],
+  );
+  const notFound = await look();
+  assert.ok(
+    notFound.flags.includes("mc_not_found") && notFound.state === "attention",
+  );
+  await set("2100001", "123457");
+  const other = await look();
+  assert.ok(
+    other.flags.includes("mc_other_carrier") && other.state === "attention",
+  );
+  // No MC number: not checked, and not a finding.
+  await set("2100001", "");
+  assert.equal((await look()).state, "clear");
+  // Insurance below the requirement reads differently from none at all.
+  await set("2100003", "");
+  assert.ok((await look()).flags.includes("insurance_below_required"));
+  await set("2100007", "");
+  assert.ok((await look()).flags.includes("no_insurance_on_file"));
 });

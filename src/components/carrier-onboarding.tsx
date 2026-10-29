@@ -315,6 +315,7 @@ export function CarrierOnboarding({
                   contact_email: String(f.get("contact_email")),
                   phone: String(f.get("phone") || ""),
                   usdot: String(f.get("usdot") || ""),
+                  mc_number: String(f.get("mc_number") || ""),
                   ...(data
                     ? { change_reason: String(f.get("change_reason") || "") }
                     : {}),
@@ -346,7 +347,7 @@ export function CarrierOnboarding({
                   // for a second person (ADR 0070).
                   setNotice(
                     saved.pending_approval
-                      ? "Saved. The new name, email, phone or USDOT number counts once a second person approves it in the carrier's files."
+                      ? "Saved. The new name, email, phone, USDOT or MC number counts once a second person approves it in the carrier's files."
                       : "Company details saved.",
                   );
                   await onChanged();
@@ -430,10 +431,24 @@ export function CarrierOnboarding({
                     Used to look up the carrier&apos;s public registration.
                   </small>
                 </label>
+                <label>
+                  MC number
+                  <input
+                    name="mc_number"
+                    inputMode="numeric"
+                    pattern="[0-9]{1,8}|^$"
+                    maxLength={8}
+                    defaultValue={company?.mc_number || ""}
+                  />
+                  <small>
+                    Checked against the USDOT number, to catch a sold or
+                    hijacked registration.
+                  </small>
+                </label>
               </details>
               {company?.step === "complete" && (
                 <label>
-                  Why a name, email, phone or USDOT number is changing
+                  Why a name, email, phone, USDOT or MC number is changing
                   <small>
                     {" "}
                     (needed if you change one of them; a second person approves

@@ -130,6 +130,7 @@ export type FactoringOverview = {
 export type AuthorityStatus = {
   carrier_id: string;
   usdot: string;
+  mc_number: string;
   provider: "fixture" | "fmcsa" | null;
   state: AuthorityState;
   flags: AuthorityFlag[];
