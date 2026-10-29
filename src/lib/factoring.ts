@@ -49,6 +49,15 @@ const voidSchema = z
   .object({
     version: z.number().int().positive(),
     reason: z.string().trim().min(1).max(500),
+    // Needed when the schedule was already handed to the factor.
+    factor_informed: z.boolean().default(false),
+  })
+  .strict();
+const releaseSchema = z
+  .object({
+    version: z.number().int().positive(),
+    // The factor has confirmed it has not advanced against these invoices.
+    factor_confirmed_no_advance: z.literal(true),
   })
   .strict();
 
@@ -64,7 +73,8 @@ export type Ineligible =
   | "packet_not_submitted"
   | "paperwork_incomplete"
   | "already_paid"
-  | "already_in_batch";
+  | "already_in_batch"
+  | "held_after_handoff";
 export const ineligibleLabels: Record<Ineligible, string> = {
   not_delivered: "Not delivered",
   no_packet: "No billing packet",
@@ -72,6 +82,8 @@ export const ineligibleLabels: Record<Ineligible, string> = {
   paperwork_incomplete: "Paperwork not all accepted",
   already_paid: "Already paid",
   already_in_batch: "Already in a batch",
+  held_after_handoff:
+    "Held until the factor confirms it has not advanced on it",
 };
 
 async function candidates(c: PoolClient, carrierId: string, only?: string[]) {
@@ -81,7 +93,9 @@ async function candidates(c: PoolClient, carrierId: string, only?: string[]) {
        (SELECT to_char(min(e.created_at) AT TIME ZONE 'UTC','YYYY-MM-DD') FROM load_events e
           WHERE e.load_id=l.id AND e.type='load.milestones' AND e.payload->>'stage'='delivered') delivered_on,
        (SELECT COALESCE(sum(r.amount_minor),0)::text FROM carrier_payment_receipts r WHERE r.load_id=l.id) paid,
-       EXISTS(SELECT 1 FROM factoring_batch_loads f WHERE f.load_id=l.id AND f.active) in_batch
+       EXISTS(SELECT 1 FROM factoring_batch_loads f WHERE f.load_id=l.id AND f.active) in_batch,
+       EXISTS(SELECT 1 FROM factoring_batch_loads f JOIN factoring_batches b ON b.id=f.batch_id
+         WHERE f.load_id=l.id AND f.active AND b.status='void') held
      FROM loads l LEFT JOIN carrier_billing_packets p ON p.load_id=l.id
      WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL AND ($2::uuid[] IS NULL OR l.id=ANY($2::uuid[]))
      ORDER BY l.created_at DESC,l.id LIMIT 300`,
@@ -99,6 +113,7 @@ async function candidates(c: PoolClient, carrierId: string, only?: string[]) {
     else if (!slots.get(r.id)!.every((s) => s.status === "accepted"))
       reason = "paperwork_incomplete";
     else if (BigInt(r.paid) >= BigInt(r.amount)) reason = "already_paid";
+    else if (r.held) reason = "held_after_handoff";
     else if (r.in_batch) reason = "already_in_batch";
     return { ...r, reason: reason as Ineligible | null };
   });
@@ -129,9 +144,11 @@ const batchView = (r: Record<string, unknown>) => ({
   created_at: iso(r.created_at),
   handed_off_at: r.handed_off_at ? iso(r.handed_off_at) : null,
   void_reason: (r.void_reason as string | null) ?? null,
+  // Cancelled after it was handed over, and its loads are still held.
+  loads_held: r.status === "void" && !!r.handed_off_at && !r.loads_released_at,
   version: r.version as number,
 });
-const batchSql = `SELECT id,factor_name,status,load_count,total_minor::text,file_sha256,created_at,handed_off_at,void_reason,version FROM factoring_batches`;
+const batchSql = `SELECT id,factor_name,status,load_count,total_minor::text,file_sha256,created_at,handed_off_at,void_reason,loads_released_at,version FROM factoring_batches`;
 
 /** Settings, loads that can go in a batch (or why not) and past batches. */
 export async function factoringOverview(
@@ -334,7 +351,12 @@ export async function markHandedOff(user: string, id: string, input: unknown) {
   });
 }
 
-/** Cancels a batch before or after handoff and releases its loads. */
+/**
+ * Cancels a batch. A schedule that was only prepared frees its loads at once.
+ * One already handed to the factor may have been advanced against, so cancelling
+ * it needs the carrier to say the factor was told, and its loads stay held until
+ * `releaseBatchLoads`: otherwise the same invoices could be financed twice.
+ */
 export async function voidBatch(user: string, id: string, input: unknown) {
   const data = voidSchema.parse(input);
   return transaction(async (c) => {
@@ -342,15 +364,48 @@ export async function voidBatch(user: string, id: string, input: unknown) {
     if (b.version !== data.version)
       throw new HttpError(409, "VERSION_CONFLICT");
     if (b.status === "void") throw new HttpError(409, "BATCH_VOID");
+    const handedOff = b.status === "handed_off";
+    if (handedOff && !data.factor_informed)
+      throw new HttpError(422, "FACTOR_NOTICE_REQUIRED");
     await c.query(
       "UPDATE factoring_batches SET status='void',voided_at=now(),voided_by=$2,void_reason=$3,version=version+1 WHERE id=$1",
       [id, user, data.reason],
     );
+    if (!handedOff)
+      await c.query(
+        "UPDATE factoring_batch_loads SET active=false WHERE batch_id=$1",
+        [id],
+      );
+    await emit(c, user, b.carrier_id, "factoring.batch_voided", {
+      batch_id: id,
+      after_handoff: handedOff,
+    });
+    return { id, version: b.version + 1, loads_held: handedOff };
+  });
+}
+
+/** Frees the loads of a schedule cancelled after handoff, once the factor confirms. */
+export async function releaseBatchLoads(
+  user: string,
+  id: string,
+  input: unknown,
+) {
+  const data = releaseSchema.parse(input);
+  return transaction(async (c) => {
+    const b = await lockBatch(c, user, id);
+    if (b.version !== data.version)
+      throw new HttpError(409, "VERSION_CONFLICT");
+    if (b.status !== "void" || !b.handed_off_at || b.loads_released_at)
+      throw new HttpError(409, "BATCH_NOT_HELD");
     await c.query(
       "UPDATE factoring_batch_loads SET active=false WHERE batch_id=$1",
       [id],
     );
-    await emit(c, user, b.carrier_id, "factoring.batch_voided", {
+    await c.query(
+      "UPDATE factoring_batches SET loads_released_at=now(),loads_released_by=$2,version=version+1 WHERE id=$1",
+      [id, user],
+    );
+    await emit(c, user, b.carrier_id, "factoring.batch_released", {
       batch_id: id,
     });
     return { id, version: b.version + 1 };

@@ -42,8 +42,11 @@ const labels: Record<string, string> = {
   "claim.submitted": "Marked a claim as sent",
   "claim.terms_set": "Set detention and TONU terms",
   "factoring.batch_downloaded": "Downloaded a factoring schedule",
-  "factoring.batch_handed_off": "Marked a factoring schedule as handed to the factor",
+  "factoring.batch_handed_off":
+    "Marked a factoring schedule as handed to the factor",
   "factoring.batch_prepared": "Prepared a factoring schedule",
+  "factoring.batch_released":
+    "Released the loads of a cancelled factoring schedule",
   "factoring.batch_voided": "Cancelled a factoring schedule",
   "factoring.disabled": "Turned factoring handoff off",
   "factoring.enabled": "Agreed to share billing data with a factor",

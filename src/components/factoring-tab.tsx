@@ -41,6 +41,9 @@ export function FactoringTab({
     [picked, setPicked] = useState<string[]>([]),
     [voiding, setVoiding] = useState<Batch | null>(null),
     [reason, setReason] = useState(""),
+    [informed, setInformed] = useState(false),
+    [releasing, setReleasing] = useState<Batch | null>(null),
+    [confirmed, setConfirmed] = useState(false),
     [busy, setBusy] = useState(false);
   // One identity per unchanged selection, so a retry after a lost reply is safe.
   const retry = useRef<{ sig: string; key: string } | null>(null);
@@ -230,10 +233,24 @@ export function FactoringTab({
               disabled={offline || busy}
               onClick={() => {
                 setReason("");
+                setInformed(false);
                 setVoiding(b);
               }}
             >
               Cancel<span className="srOnly"> this schedule</span>
+            </button>
+          )}
+          {b.loads_held && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={offline || busy}
+              onClick={() => {
+                setConfirmed(false);
+                setReleasing(b);
+              }}
+            >
+              Release loads<span className="srOnly"> of this schedule</span>
             </button>
           )}
         </div>
@@ -386,6 +403,57 @@ export function FactoringTab({
           )}
         </>
       )}
+      {releasing && (
+        <Sheet
+          label="Release loads"
+          eyebrow="Factoring"
+          onClose={() => setReleasing(null)}
+        >
+          <form
+            className="inspectorBody"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const b = releasing;
+              setReleasing(null);
+              void run(
+                () =>
+                  api(`factoring/batches/${b.id}/release`, {
+                    version: b.version,
+                    factor_confirmed_no_advance: true,
+                  }),
+                "Loads released. They can go in a new schedule.",
+              );
+            }}
+          >
+            <h2>Release these loads?</h2>
+            <p className="setupIntro">
+              Only release them once the factor has confirmed it has not
+              advanced money against these {releasing.load_count} invoices.
+              Otherwise the same invoices could be financed twice.
+            </p>
+            <label className="filterCheck">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
+              <span>The factor confirmed it has not advanced on them</span>
+            </label>
+            <div className="formActions">
+              <button type="submit" className="primary" disabled={!confirmed}>
+                Release loads
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setReleasing(null)}
+              >
+                Keep them held
+              </button>
+            </div>
+          </form>
+        </Sheet>
+      )}
       {voiding && (
         <Sheet
           label="Cancel schedule"
@@ -403,16 +471,30 @@ export function FactoringTab({
                   api(`factoring/batches/${b.id}/void`, {
                     version: b.version,
                     reason: reason.trim(),
+                    factor_informed: informed,
                   }),
-                "Schedule cancelled. Its loads can go in a new one.",
+                b.status === "handed_off"
+                  ? "Schedule cancelled. Its loads stay held until the factor confirms it has not advanced on them."
+                  : "Schedule cancelled. Its loads can go in a new one.",
               );
             }}
           >
             <h2>Cancel this schedule?</h2>
             <p className="setupIntro">
-              Its {voiding.load_count} loads are released so they can go in a
-              new schedule. If you already gave it to the factor, tell them.
+              {voiding.status === "handed_off"
+                ? `You already gave this schedule to the factor, who may have advanced money against its ${voiding.load_count} loads. They stay held, and cannot go in a new schedule, until the factor confirms it has not advanced on them.`
+                : `Its ${voiding.load_count} loads are released so they can go in a new schedule.`}
             </p>
+            {voiding.status === "handed_off" && (
+              <label className="filterCheck">
+                <input
+                  type="checkbox"
+                  checked={informed}
+                  onChange={(e) => setInformed(e.target.checked)}
+                />
+                <span>I have told the factor this schedule is cancelled</span>
+              </label>
+            )}
             <label>
               <span>Why</span>
               <input

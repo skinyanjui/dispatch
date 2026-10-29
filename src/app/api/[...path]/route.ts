@@ -64,6 +64,7 @@ import {
   createBatch,
   factoringOverview,
   markHandedOff,
+  releaseBatchLoads,
   saveFactoringSettings,
   voidBatch,
 } from "@/lib/factoring";
@@ -614,6 +615,10 @@ async function handle(req: NextRequest) {
             return NextResponse.json(await markHandedOff(user.id, id, body));
           if (path[3] === "void")
             return NextResponse.json(await voidBatch(user.id, id, body));
+          if (path[3] === "release")
+            return NextResponse.json(
+              await releaseBatchLoads(user.id, id, body),
+            );
         }
       }
     }

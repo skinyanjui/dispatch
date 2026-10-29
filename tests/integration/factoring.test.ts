@@ -17,6 +17,7 @@ import {
   createBatch,
   factoringOverview,
   markHandedOff,
+  releaseBatchLoads,
   saveFactoringSettings,
   voidBatch,
 } from "../../src/lib/factoring";
@@ -234,19 +235,85 @@ test("a schedule needs payout details in force and loads that are delivered, doc
     voidBatch(t.manager, made.id, { version: 1, reason: "x" }),
     { code: "VERSION_CONFLICT" },
   );
-  await voidBatch(t.manager, made.id, {
+  // Cancelling after handoff needs the carrier to say the factor was told...
+  await assert.rejects(
+    voidBatch(t.manager, made.id, { version: 2, reason: "Factor rejected it" }),
+    { code: "FACTOR_NOTICE_REQUIRED" },
+  );
+  const voided = await voidBatch(t.manager, made.id, {
     version: 2,
     reason: "Factor rejected the schedule",
+    factor_informed: true,
   });
+  assert.equal(voided.loads_held, true);
   await assert.rejects(
     voidBatch(t.manager, made.id, { version: 3, reason: "again" }),
     { code: "BATCH_VOID" },
+  );
+  // ...and its loads stay held: they may already have been advanced against, so
+  // they cannot go straight into a new schedule.
+  const overview = await factoringOverview(t.dispatcher, t.carrier);
+  assert.equal(
+    overview.loads.find((l) => l.id === ok.id)!.reason,
+    "held_after_handoff",
+  );
+  assert.equal(
+    overview.batches.find((x) => x.id === made.id)!.loads_held,
+    true,
+  );
+  await assert.rejects(batch([ok.id]), { code: "LOAD_NOT_ELIGIBLE" });
+  // Releasing them needs the factor's confirmation, once.
+  await assert.rejects(
+    releaseBatchLoads(t.manager, made.id, {
+      version: 3,
+      factor_confirmed_no_advance: false,
+    }),
+    { name: "ZodError" },
+  );
+  await assert.rejects(
+    releaseBatchLoads(t.manager, made.id, {
+      version: 2,
+      factor_confirmed_no_advance: true,
+    }),
+    { code: "VERSION_CONFLICT" },
+  );
+  await releaseBatchLoads(t.manager, made.id, {
+    version: 3,
+    factor_confirmed_no_advance: true,
+  });
+  await assert.rejects(
+    releaseBatchLoads(t.manager, made.id, {
+      version: 4,
+      factor_confirmed_no_advance: true,
+    }),
+    { code: "BATCH_NOT_HELD" },
   );
   assert.equal(
     (await factoringOverview(t.dispatcher, t.carrier)).loads.find(
       (l) => l.id === ok.id,
     )!.reason,
     null,
+  );
+  // A schedule that was never handed over frees its loads at once.
+  const fresh = await billed();
+  const prepared = await batch([fresh.id]);
+  const freed = await voidBatch(t.manager, prepared.id, {
+    version: 1,
+    reason: "Wrong loads",
+  });
+  assert.equal(freed.loads_held, false);
+  assert.equal(
+    (await factoringOverview(t.dispatcher, t.carrier)).loads.find(
+      (l) => l.id === fresh.id,
+    )!.reason,
+    null,
+  );
+  await assert.rejects(
+    releaseBatchLoads(t.manager, prepared.id, {
+      version: 2,
+      factor_confirmed_no_advance: true,
+    }),
+    { code: "BATCH_NOT_HELD" },
   );
   const again = await batch([ok.id]);
   assert.notEqual(again.id, made.id);
@@ -262,6 +329,7 @@ test("a schedule needs payout details in force and loads that are delivered, doc
     "factoring.batch_downloaded",
     "factoring.batch_handed_off",
     "factoring.batch_voided",
+    "factoring.batch_released",
   ])
     assert.ok(actions.includes(a), a);
 });
@@ -307,6 +375,10 @@ test("HTTP: the schedule file and every action are for the carrier's own people 
     ],
     [`factoring/batches/${made.id}/handoff`, { version: 1 }],
     [`factoring/batches/${made.id}/void`, { version: 1, reason: "x" }],
+    [
+      `factoring/batches/${made.id}/release`,
+      { version: 1, factor_confirmed_no_advance: true },
+    ],
   ];
   for (const user of [t.driverUser, t.foreignManager]) {
     for (const p of reads)

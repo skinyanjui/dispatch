@@ -103,6 +103,7 @@ export type FactoringOverview = {
     created_at: string;
     handed_off_at: string | null;
     void_reason: string | null;
+    loads_held: boolean;
     version: number;
   }[];
 };
