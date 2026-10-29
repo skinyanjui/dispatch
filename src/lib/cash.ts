@@ -7,14 +7,16 @@ export type CashStage =
   | "ready_for_packet"
   | "awaiting_payment"
   | "partly_paid"
+  | "factored"
   | "paid";
-export type WaitingOn = "driver" | "dispatcher" | "payer" | null;
+export type WaitingOn = "driver" | "dispatcher" | "payer" | "factor" | null;
 export const cashStageLabels: Record<CashStage, string> = {
   not_delivered: "Not delivered yet",
   waiting_on_pod: "Waiting for proof of delivery",
   ready_for_packet: "Ready to bill",
   awaiting_payment: "Waiting for payment",
   partly_paid: "Partly paid",
+  factored: "With the factor",
   paid: "Paid",
 };
 
@@ -24,6 +26,8 @@ export type CashInput = {
   packet_amount_minor: string | null;
   packet_submitted: boolean;
   paid_minor: string;
+  /** The load is on a schedule the carrier handed to its factor (ADR 0071). */
+  factored?: boolean;
 };
 export function cashStage(i: CashInput): {
   stage: CashStage;
@@ -33,6 +37,8 @@ export function cashStage(i: CashInput): {
   const paid = BigInt(i.paid_minor);
   if (i.packet_amount_minor && paid >= BigInt(i.packet_amount_minor))
     return { stage: "paid", waiting_on: null };
+  // Sold to the factor: the factor, not the payer, is who the carrier waits on.
+  if (i.factored) return { stage: "factored", waiting_on: "factor" };
   if (!i.pod_accepted) return { stage: "waiting_on_pod", waiting_on: "driver" };
   if (!i.packet_submitted)
     return { stage: "ready_for_packet", waiting_on: "dispatcher" };

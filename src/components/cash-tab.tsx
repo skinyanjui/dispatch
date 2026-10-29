@@ -22,6 +22,7 @@ const stageTone: Record<CashStage, StatusTone> = {
   ready_for_packet: "warn",
   awaiting_payment: "neutral",
   partly_paid: "neutral",
+  factored: "neutral",
   paid: "good",
 };
 const days = (n: number | null) =>
@@ -111,9 +112,11 @@ export function CashTab({
       accessor: (l) =>
         l.waiting_on === "payer"
           ? (l.payer ?? "The payer")
-          : l.waiting_on
-            ? ownerLabels[l.waiting_on]
-            : "—",
+          : l.waiting_on === "factor"
+            ? "The factor"
+            : l.waiting_on
+              ? ownerLabels[l.waiting_on]
+              : "—",
     },
     {
       id: "gross",
@@ -134,7 +137,11 @@ export function CashTab({
           <>
             {formatMoney(l.fee.minor)}{" "}
             <span className="helpText">
-              {l.fee.state === "estimate" ? "estimate at " : ""}
+              {l.fee.state === "estimate"
+                ? "estimate at "
+                : l.fee.state === "draft"
+                  ? "draft invoice, "
+                  : ""}
               {l.fee.bps !== null ? formatBps(l.fee.bps) : ""}
             </span>
           </>
@@ -142,7 +149,7 @@ export function CashTab({
     },
     {
       id: "net",
-      header: "You keep",
+      header: "After our fee",
       accessor: (l) => l.net_minor,
       type: "money",
       render: (_, l) => (l.net_minor === null ? "—" : formatMoney(l.net_minor)),
@@ -220,7 +227,8 @@ export function CashTab({
         </button>
         <p id="cash-preview-help" className="helpText">
           Loads on a dispatch invoice always show their real fee. A preview only
-          fills in the others and is labelled an estimate.
+          fills in the others and is labelled an estimate. Days are counted in
+          whole UTC days.
         </p>
       </form>
       {previewError && <ErrorAlert polite>{previewError}</ErrorAlert>}
@@ -231,18 +239,33 @@ export function CashTab({
       {s && (
         <StatTiles label="Cash summary">
           <StatTile
-            label="You keep"
+            label="After our fee"
             value={formatMoney(s.net_minor)}
             hint={
-              s.net_loads === s.loads
-                ? `On ${s.loads} delivered loads`
-                : `Only the ${s.net_loads} of ${s.loads} loads with a known fee`
+              (s.net_loads === s.loads
+                ? `On ${s.loads} delivered loads. `
+                : `Only the ${s.net_loads} of ${s.loads} loads with a known fee. `) +
+              (s.net_draft_loads
+                ? `${s.net_draft_loads} on a draft invoice. `
+                : "") +
+              "Factoring and quick-pay fees are not taken off."
             }
           />
           <StatTile
-            label="Still to collect"
+            label="Billed, not yet paid"
             value={formatMoney(s.outstanding_minor)}
-            hint={`${s.unpaid} unpaid ${s.unpaid === 1 ? "load" : "loads"}`}
+            hint={`${s.unpaid - s.with_factor_loads - s.unbilled_loads} billed ${s.unpaid - s.with_factor_loads - s.unbilled_loads === 1 ? "load" : "loads"}, not counting the factor's`}
+          />
+          <StatTile
+            label="With the factor"
+            value={formatMoney(s.with_factor_minor)}
+            hint={`${s.with_factor_loads} ${s.with_factor_loads === 1 ? "load" : "loads"} handed over; record what the factor pays you`}
+          />
+          <StatTile
+            label="Not billed yet"
+            value={formatMoney(s.unbilled_gross_minor)}
+            hint={`${s.unbilled_loads} delivered ${s.unbilled_loads === 1 ? "load" : "loads"} with no billing packet (rate shown)`}
+            tone={s.unbilled_loads ? "bad" : undefined}
           />
           <StatTile
             label="Average days to cash"

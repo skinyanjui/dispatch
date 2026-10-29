@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { pool } from "../../src/lib/db";
 import { GET } from "../../src/app/api/[...path]/route";
 import {
+  changeInvoice,
   createInvoice,
   recordCarrierReceipt,
   savePacket,
@@ -134,6 +135,15 @@ test("money and day rules use integers and whole UTC days", () => {
     stage: "paid",
     waiting_on: null,
   });
+  // Sold to a factor: waiting on the factor, until it is paid in full.
+  assert.deepEqual(cashStage({ ...base, factored: true }), {
+    stage: "factored",
+    waiting_on: "factor",
+  });
+  assert.equal(
+    cashStage({ ...base, factored: true, paid_minor: "100" }).stage,
+    "paid",
+  );
 });
 
 test("each delivered load shows its stage, who it waits on, the fee state and the days", async () => {
@@ -152,13 +162,27 @@ test("each delivered load shows its stage, who it waits on, the fee state and th
   await submitted(paid.id, "PD-1");
   await receipt(paid.id, 100000, plusDays(2));
   await receipt(paid.id, 150000, plusDays(5));
-  await createInvoice(t.dispatcher, {
+  const invoice = await createInvoice(t.dispatcher, {
     carrier_id: t.carrier,
     load_ids: [paid.id],
     fee_bps: 1000,
     due_on: plusDays(30),
     idempotency_key: randomUUID(),
   });
+  // A load handed to the factor is waiting on the factor, not on the payer.
+  const sold = await delivered();
+  await accept(sold.id);
+  await submitted(sold.id, "FC-1");
+  const batchId = randomUUID();
+  await pool.query(
+    `INSERT INTO factoring_batches(id,carrier_id,factor_name,status,load_count,total_minor,file_sha256,file_csv,created_by,handed_off_at,handed_off_by,idempotency_key,request_hash)
+     VALUES($1,$2,'Fictional Factor Co','handed_off',1,250000,repeat('a',64),'x',$3,now(),$3,$4,'h')`,
+    [batchId, t.carrier, t.manager, randomUUID()],
+  );
+  await pool.query(
+    "INSERT INTO factoring_batch_loads(batch_id,carrier_id,load_id,amount_minor) VALUES($1,$2,$3,250000)",
+    [batchId, t.carrier, sold.id],
+  );
   // A load that has not been delivered is not part of the cash picture.
   const booked = await bookedLoad(t.dispatcher, t.carrier);
 
@@ -201,9 +225,10 @@ test("each delivered load shows its stage, who it waits on, the fee state and th
     to_cash: 5,
     waiting: null,
   });
-  // Only the invoiced load has a real fee; nothing else gets an invented net.
+  // A fee on a draft invoice can still change, so it is a draft, not invoiced;
+  // nothing else gets an invented net.
   assert.deepEqual(d.fee, {
-    state: "invoiced",
+    state: "draft",
     minor: "25000",
     bps: 1000,
     invoice_number: null,
@@ -211,12 +236,69 @@ test("each delivered load shows its stage, who it waits on, the fee state and th
   assert.equal(d.net_minor, "225000");
   assert.deepEqual([a.fee.state, a.net_minor], ["unknown", null]);
   assert.equal(view.summary.net_loads, 1);
+  assert.equal(view.summary.net_draft_loads, 1);
   assert.equal(view.summary.net_minor, "225000");
+  // Once the invoice is issued the fee is real.
+  await changeInvoice(t.dispatcher, invoice.id, {
+    action: "issue",
+    version: 1,
+  });
+  const issued = await cashOverview(
+    t.manager,
+    new URLSearchParams({ carrier_id: t.carrier, as_of: asOf }),
+  );
+  const di = issued.loads.find((l) => l.id === paid.id)!;
+  assert.equal(di.fee.state, "invoiced");
+  assert.match(di.fee.invoice_number!, /^RLY-\d+$/);
+  assert.equal(issued.summary.net_draft_loads, 0);
+  // Sold to the factor: not "waiting on the payer", and not in "billed, not yet paid".
+  const f = by(sold.id);
+  assert.deepEqual(
+    [f.cash_stage, f.waiting_on, f.owed_minor],
+    ["factored", "factor", "250000"],
+  );
+  assert.deepEqual(
+    [view.summary.with_factor_loads, view.summary.with_factor_minor],
+    [1, "250000"],
+  );
+  // Delivered but not billed: two loads, their rate shown, and not counted as owed.
+  assert.deepEqual(
+    [view.summary.unbilled_loads, view.summary.unbilled_gross_minor],
+    [2, "500000"],
+  );
   assert.equal(view.summary.avg_days_to_cash, 5);
   assert.equal(view.summary.paid, 1);
   assert.equal(view.summary.oldest_waiting_days, 9);
   // Outstanding: the unpaid remainders of loads that have a packet.
   assert.equal(view.summary.outstanding_minor, (250000n + 150000n).toString());
+  assert.equal(view.list_truncated, false);
+
+  // A cut list says so and keeps the figures for every load read; a ceiling on
+  // the loads read is reported too.
+  const cut = await cashOverview(
+    t.manager,
+    new URLSearchParams({ carrier_id: t.carrier, as_of: asOf }),
+    { listLimit: 2 },
+  );
+  assert.deepEqual(
+    [
+      cut.loads.length,
+      cut.list_truncated,
+      cut.totals_partial,
+      cut.summary.loads,
+    ],
+    [2, true, false, view.summary.loads],
+  );
+  assert.equal(cut.summary.net_minor, view.summary.net_minor);
+  const partial2 = await cashOverview(
+    t.manager,
+    new URLSearchParams({ carrier_id: t.carrier, as_of: asOf }),
+    { readLimit: 3 },
+  );
+  assert.deepEqual(
+    [partial2.totals_partial, partial2.summary.loads],
+    [true, 3],
+  );
 
   // Previewing a percentage labels the others as estimates and leaves the real fee alone.
   const preview = await cashOverview(

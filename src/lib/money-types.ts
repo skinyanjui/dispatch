@@ -10,7 +10,7 @@ export type CashLoad = {
   reference: string;
   gross_minor: string;
   fee: {
-    state: "invoiced" | "estimate" | "unknown";
+    state: "invoiced" | "draft" | "estimate" | "unknown";
     minor: string | null;
     bps: number | null;
     invoice_number: string | null;
@@ -47,6 +47,12 @@ export type CashOverview = {
     fee_minor: string;
     net_minor: string;
     outstanding_minor: string;
+    with_factor_loads: number;
+    with_factor_minor: string;
+    unbilled_loads: number;
+    unbilled_gross_minor: string;
+    /** Loads in the net figure whose fee is on a draft invoice and may change. */
+    net_draft_loads: number;
     unpaid: number;
     paid: number;
     avg_days_to_cash: number | null;

@@ -24,7 +24,7 @@ export type CashLoad = {
   reference: string;
   gross_minor: string;
   fee: {
-    state: "invoiced" | "estimate" | "unknown";
+    state: "invoiced" | "draft" | "estimate" | "unknown";
     minor: string | null;
     bps: number | null;
     invoice_number: string | null;
@@ -79,7 +79,9 @@ export async function cashOverview(
          p.bill_to,p.status packet_status,p.amount_minor::text packet_amount,
          to_char(p.submitted_at AT TIME ZONE 'UTC','YYYY-MM-DD') submitted_on,
          (SELECT COALESCE(sum(r.amount_minor),0)::text FROM carrier_payment_receipts r WHERE r.load_id=l.id) paid,
-         dl.fee_minor::text invoiced_fee,i.fee_bps invoiced_bps,i.number invoice_number
+         dl.fee_minor::text invoiced_fee,i.fee_bps invoiced_bps,i.number invoice_number,i.status invoice_status,
+         EXISTS(SELECT 1 FROM factoring_batch_loads f JOIN factoring_batches b ON b.id=f.batch_id
+           WHERE f.load_id=l.id AND f.active AND b.status='handed_off') factored
        FROM loads l
        LEFT JOIN carrier_billing_packets p ON p.load_id=l.id
        LEFT JOIN dispatch_invoice_lines dl ON dl.load_id=l.id AND dl.active
@@ -113,10 +115,12 @@ export async function cashOverview(
         packet_amount_minor: r.packet_amount,
         packet_submitted: r.packet_status === "submitted",
         paid_minor: r.paid,
+        factored: r.factored,
       });
+      // A draft invoice's fee can still change, so it is not called invoiced.
       const fee: CashLoad["fee"] = r.invoiced_fee
         ? {
-            state: "invoiced",
+            state: r.invoice_status === "draft" ? "draft" : "invoiced",
             minor: r.invoiced_fee,
             bps: r.invoiced_bps,
             invoice_number: r.invoice_number,
@@ -188,9 +192,23 @@ export async function cashOverview(
         net_minor: known
           .reduce((t, l) => t + BigInt(l.net_minor!), 0n)
           .toString(),
+        // Billed and not yet paid, excluding what the factor now holds.
         outstanding_minor: sum((l) =>
-          l.cash_stage === "paid" ? null : l.owed_minor,
+          l.cash_stage === "paid" || l.cash_stage === "factored"
+            ? null
+            : l.owed_minor,
         ),
+        with_factor_loads: out.filter((l) => l.cash_stage === "factored")
+          .length,
+        with_factor_minor: sum((l) =>
+          l.cash_stage === "factored" ? l.owed_minor : null,
+        ),
+        // Delivered but not yet billed: nothing is owed on paper, and money is waiting.
+        unbilled_loads: out.filter((l) => l.owed_minor === null).length,
+        unbilled_gross_minor: sum((l) =>
+          l.owed_minor === null ? l.gross_minor : null,
+        ),
+        net_draft_loads: known.filter((l) => l.fee.state === "draft").length,
         unpaid: out.filter((l) => l.cash_stage !== "paid").length,
         paid: out.filter((l) => l.cash_stage === "paid").length,
         avg_days_to_cash: averageDays(
