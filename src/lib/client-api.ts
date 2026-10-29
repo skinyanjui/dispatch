@@ -27,6 +27,43 @@ const messages: Record<string, string> = {
     "The agreement's end date needs to be on or after its start date.",
   PASSWORD_REQUIRED:
     "Pick a password with at least 12 characters. A few random words works great.",
+  AMOUNT_REQUIRED: "Enter the amount that was received.",
+  OVER_CLAIMED:
+    "That is more than was claimed. Enter the amount the payer actually paid, up to the claim.",
+  AUTHORITY_PROVIDER_NOT_CONFIGURED:
+    "Registration lookups aren't set up on this server yet, so nothing was checked.",
+  USDOT_REQUIRED:
+    "Add this carrier's USDOT number in carrier setup first, then check again.",
+  CHECK_TOO_SOON:
+    "This carrier was looked up a moment ago. Give it a minute, then check again.",
+  BATCH_NOT_PREPARED: "This schedule was already handed over or cancelled.",
+  BATCH_VOID: "This schedule is already cancelled.",
+  FACTORING_NOT_ENABLED:
+    "Sharing with a factor isn't turned on for this carrier. The carrier's manager can turn it on.",
+  LOAD_NOT_ELIGIBLE:
+    "One of those loads can't go in a schedule yet. Check the status shown beside each load.",
+  PAYOUT_DETAILS_REQUIRED:
+    "This carrier has no payout details on file. Add them, and have a second person approve them, first.",
+  PAYOUT_DETAILS_COOLING_OFF:
+    "This carrier's new payout details are still cooling off, so a schedule can't be prepared yet.",
+  PAYOUT_NOT_TO_FACTOR:
+    "The payout details don't name the factor. Change them to pay the factor (and have a second person approve), or correct the factor's name.",
+  CLAIM_NOT_DRAFT: "This claim was already sent, so its evidence can't change.",
+  CLAIM_NOT_SUBMITTED:
+    "Mark the claim as sent before recording what the payer did.",
+  CLAIM_OPEN:
+    "There is already a claim open for this. Finish or settle it first.",
+  EVIDENCE_INCOMPLETE:
+    "This stop needs both an arrival and a departure recorded before it can be claimed.",
+  NOTHING_TO_CLAIM:
+    "The time on site is within the free time, so there is nothing to claim.",
+  STOP_REQUIRED: "Choose the stop this detention claim is for.",
+  TERMS_REQUIRED:
+    "Set the detention and TONU terms for this load first, from its rate confirmation or agreement.",
+  TONU_AMOUNT_REQUIRED:
+    "Add the TONU fee from the rate confirmation in the terms first.",
+  RATE_CONFIRMATION_REQUIRED:
+    "Upload and accept this load's rate confirmation first, so the terms can point at it.",
   STEP_UP_REQUIRED:
     "Approving a change needs your password again. Enter it and try once more.",
   STEP_UP_FAILED:
