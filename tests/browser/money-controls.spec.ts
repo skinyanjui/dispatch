@@ -298,7 +298,9 @@ test("the claims, payout and factoring screens fit a phone and can be used by ke
   const load = await createLoad(page, carrier);
   await page.goto(`/loads/${load.id}`);
   const loadDialog = page.getByRole("dialog", { name: "Load details" });
-  await loadDialog.getByRole("tab", { name: /^Claims/ }).click();
+  // The tabs scroll sideways on a phone; reach Claims the way a keyboard user does.
+  await loadDialog.getByRole("tab", { name: /^Claims/ }).focus();
+  await page.keyboard.press("Enter");
   await expect(
     loadDialog.getByRole("heading", { name: "Terms" }),
   ).toBeVisible();
