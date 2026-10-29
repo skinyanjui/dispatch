@@ -10,6 +10,8 @@ What each control does, how to operate it, and how to back it out. Decisions: AD
 - **Support questions:** "Why can't I approve my own request?" The database refuses it. "Why does a request say out of date?" The record changed after it was asked; ask again. Pending requests are visible in the carrier's files under Payout details and approvals.
 - **Back out:** revert the guarded paths in `contacts.ts` and `load-changes.ts`; the tables can stay.
 
+- **Hardening (ADR 0070):** unlinking or moving a carrier contact, and changes to a finished carrier's name, contact email, phone or USDOT number, wait for approval too. Approving needs the approver's password (and a two-step code if enrolled); six wrong tries in five minutes lock approvals for that person for five minutes. People who sign in only through a provider must set a password first.
+
 ## Registration lookups (ADR 0065)
 
 - **Settings:** `RELAY_AUTHORITY_PROVIDER` = `fmcsa` (needs `FMCSA_WEBKEY`) or `fixture` (fictional, for demos only). In production with neither, "Check now" answers 503 and the daily job skips, on purpose.
@@ -23,9 +25,13 @@ Read-only. Billing, Cash shows net per load and days to cash (a fee is real only
 
 ## Detention and TONU (ADR 0067)
 
+TONU needs the payer's cancellation (recorded when a dispatched load is cancelled) and terms that are in writing (ADR 0070).
+
 Per load, Claims tab: terms, then claims that freeze their evidence. Terms are locked while a claim is open. Times are people's reports, not telematics; the packet says so. Rollback: remove the tab and routes; the tables can stay.
 
 ## Factoring handoff (ADR 0069)
+
+Cancelling a schedule already handed to the factor holds its loads until the carrier releases them, confirming the factor has not advanced on them (ADR 0070).
 
 Only a carrier manager turns it on, with consent. Schedules are CSVs the carrier hands over; Relay sends nothing and cannot see funding. A schedule can be cancelled (even after handoff), releasing its loads. If a factor needs a different layout, add a mapping on top of the stored batch rather than changing the stored file.
 

@@ -27,6 +27,30 @@ const messages: Record<string, string> = {
     "The agreement's end date needs to be on or after its start date.",
   PASSWORD_REQUIRED:
     "Pick a password with at least 12 characters. A few random words works great.",
+  STEP_UP_REQUIRED:
+    "Approving a change needs your password again. Enter it and try once more.",
+  STEP_UP_FAILED:
+    "That password didn't match, so nothing was approved. Try again.",
+  MFA_CODE_REQUIRED:
+    "Enter the current code from your authenticator app (or a recovery code) to approve this.",
+  CHANGE_PENDING:
+    "A change to this is already waiting for a second person. Ask them to approve or reject it first, or withdraw it.",
+  CHANGE_DECIDED: "Someone already decided this request. Refresh to see how.",
+  SAME_PERSON:
+    "You asked for this change, so a different person has to approve it.",
+  VERIFICATION_REQUIRED:
+    "Say how you confirmed this (a call to a number on record, a signed document, or in person) before approving.",
+  TARGET_CARRIER_APPROVAL_REQUIRED:
+    "Moving this contact needs someone who answers for both carriers, such as an organization admin, to approve it.",
+  FACTOR_NOTICE_REQUIRED:
+    "This schedule was already handed to the factor. Tell them it is cancelled, then tick the box to confirm.",
+  BATCH_NOT_HELD: "This schedule's loads are not being held.",
+  CANCEL_PARTY_REQUIRED:
+    "Say who cancelled the order. A truck-ordered-not-used fee depends on it.",
+  TONU_TERMS_NOT_WRITTEN:
+    "A fee agreed only by phone can't be claimed. Add it from the rate confirmation or a written agreement.",
+  TONU_NOT_ELIGIBLE:
+    "A truck-ordered-not-used claim needs the shipper or broker to have cancelled after dispatch and before pickup.",
   VERSION_CONFLICT:
     "Someone just updated this. Refresh the page to see the latest, then try again.",
   INVALID_CREDENTIALS:

@@ -23,7 +23,14 @@ import {
 } from "../../src/lib/factoring";
 import { mutate } from "../../src/lib/loads";
 import { reviewDocument, uploadDocument } from "../../src/lib/documents";
-import { bookedLoad, pdf, request, sessionFor, tenant } from "./fixtures";
+import {
+  bookedLoad,
+  pdf,
+  request,
+  sessionFor,
+  tenant,
+  withPassword,
+} from "./fixtures";
 
 let t: Awaited<ReturnType<typeof tenant>>;
 before(async () => {
@@ -99,6 +106,7 @@ async function payout(coolingHours: string) {
   await decideChange(t.manager, id, {
     decision: "approve",
     verification: "callback",
+    password: await withPassword(t.manager),
   });
   delete process.env.RELAY_PAYOUT_COOLING_HOURS;
 }

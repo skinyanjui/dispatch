@@ -180,6 +180,15 @@ test("a payout change waits for a second person who says how they checked it", a
   });
   await expect(form).toContainText("Confirm it another way");
   await form.getByLabel("How you confirmed it").selectOption("callback");
+  // Approving needs the password again; a wrong one changes nothing and keeps the form.
+  await expect(form.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await form.getByLabel("Your password").fill("not my password");
+  await form.getByRole("button", { name: "Approve" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Carrier documents" }).getByRole("alert"),
+  ).toContainText("That password didn't match");
+  await expect(form).toBeVisible();
+  await form.getByLabel("Your password").fill(process.env.SEED_PASSWORD!);
   await form.getByRole("button", { name: "Approve" }).click();
   const dialog2 = page.getByRole("dialog", { name: "Carrier documents" });
   await expect(

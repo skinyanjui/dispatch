@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { pool } from "../../src/lib/db";
-import { digest } from "../../src/lib/auth";
+import { digest, hashNewPassword } from "../../src/lib/auth";
 import { createLoad } from "../../src/lib/loads";
 
 export const origin = "http://localhost:3000";
@@ -144,3 +144,15 @@ export function request(
 
 export const pdf = (text = randomUUID()) =>
   Buffer.from("%PDF-1.4\n% fictional QA " + text + "\n%%EOF\n");
+
+/** Gives a fixture user a real password (they have none by default) and returns it. */
+export const stepUpPassword = "Fictional QA step-up 2026";
+let stepUpHash: Promise<string> | null = null;
+export async function withPassword(user: string) {
+  stepUpHash ??= hashNewPassword(stepUpPassword);
+  await pool.query("UPDATE users SET password_hash=$2 WHERE id=$1", [
+    user,
+    await stepUpHash,
+  ]);
+  return stepUpPassword;
+}

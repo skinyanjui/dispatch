@@ -263,7 +263,7 @@ export async function mfaEnable(user: string, input: unknown) {
 }
 
 /** Accepts a fresh TOTP code or an unused recovery code; consumes either. */
-async function consumeSecondFactor(
+export async function consumeSecondFactor(
   c: import("pg").PoolClient,
   user: string,
   code: string,

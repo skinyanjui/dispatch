@@ -186,6 +186,8 @@ export function PayoutApprovals({
       change: SensitiveChange;
       verification: string;
       note: string;
+      password: string;
+      code: string;
     } | null>(null);
   const load = useCallback(async () => {
     try {
@@ -378,6 +380,8 @@ export function PayoutApprovals({
                         change: c,
                         verification: "callback",
                         note: "",
+                        password: "",
+                        code: "",
                       })
                     }
                   >
@@ -435,6 +439,31 @@ export function PayoutApprovals({
               </select>
             </label>
             <label>
+              <span>Your password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={256}
+                value={deciding.password}
+                onChange={(e) =>
+                  setDeciding({ ...deciding, password: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span>Authenticator or recovery code</span>
+              <input
+                autoComplete="one-time-code"
+                maxLength={40}
+                value={deciding.code}
+                onChange={(e) =>
+                  setDeciding({ ...deciding, code: e.target.value })
+                }
+              />
+              <small>Only if you use two-step verification.</small>
+            </label>
+            <label>
               <span>Note (optional)</span>
               <input
                 maxLength={500}
@@ -448,16 +477,21 @@ export function PayoutApprovals({
               <button
                 type="button"
                 className="primary"
-                disabled={busy}
+                disabled={busy || !deciding.password}
                 onClick={() => {
                   const d = deciding;
-                  setDeciding(null);
+                  // Kept open on failure so a mistyped password can be retried.
                   void run(
                     () =>
                       api(`change-control/${d.change.id}/decision`, {
                         decision: "approve",
                         verification: d.verification,
                         note: d.note,
+                        password: d.password,
+                        ...(d.code.trim() ? { code: d.code.trim() } : {}),
+                      }).then((r) => {
+                        setDeciding(null);
+                        return r;
                       }),
                     "Approved.",
                   );

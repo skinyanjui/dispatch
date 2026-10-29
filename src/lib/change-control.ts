@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool, transaction } from "./db";
-import { HttpError } from "./auth";
+import { consumeAttempt, digest, HttpError, verifyPassword } from "./auth";
+import { consumeSecondFactor } from "./account";
 import { carrierAccess, emit, once, writeCompanyDetails } from "./onboarding";
 import { editLoadIn, editSchema } from "./load-changes";
 
@@ -56,8 +57,55 @@ const decisionSchema = z
     decision: z.enum(["approve", "reject"]),
     verification: z.enum(verificationMethods).optional(),
     note: z.string().trim().max(500).default(""),
+    // Approving needs the approver's password again, and an authenticator or
+    // recovery code if they use two-step verification (ADR 0070).
+    password: z.string().max(256).optional(),
+    code: z.string().max(40).optional(),
   })
   .strict();
+
+/**
+ * Step-up for an approval: a stolen or left-open session alone cannot approve a
+ * payout change. Wrong attempts are limited per person.
+ */
+async function stepUp(
+  c: PoolClient,
+  user: string,
+  password: string | undefined,
+  code: string | undefined,
+) {
+  // Only failures count, so a person approving several changes is not locked
+  // out, but six wrong tries in five minutes lock approvals even for the right
+  // password.
+  const identity = "stepup:" + user;
+  const used = await pool.query(
+    "SELECT attempts FROM login_attempts WHERE identity_hash=$1 AND resets_at>now()",
+    [digest(identity)],
+  );
+  if ((used.rows[0]?.attempts ?? 0) >= 6)
+    throw new HttpError(429, "TRY_AGAIN_LATER");
+  const fail = async (status: number, error: string): Promise<never> => {
+    await consumeAttempt(identity, 1_000_000, 300);
+    throw new HttpError(status, error);
+  };
+  if (!password) throw new HttpError(422, "STEP_UP_REQUIRED");
+  const { rows } = await c.query(
+    "SELECT password_hash,mfa_enabled_at FROM users WHERE id=$1",
+    [user],
+  );
+  let matches = false;
+  try {
+    matches = await verifyPassword(password, rows[0].password_hash);
+  } catch {
+    // An account with no usable password cannot step up and must set one.
+  }
+  if (!matches) return fail(403, "STEP_UP_FAILED");
+  if (rows[0].mfa_enabled_at) {
+    if (!code) throw new HttpError(422, "MFA_CODE_REQUIRED");
+    if (!(await consumeSecondFactor(c, user, code)))
+      return fail(422, "INVALID_MFA_CODE");
+  }
+}
 
 /** Parks a change for a second person. Returns the change id. */
 export async function requestChange(
@@ -279,6 +327,7 @@ export async function decideChange(user: string, id: string, input: unknown) {
       return { id, status: "rejected" };
     }
     if (!data.verification) throw new HttpError(422, "VERIFICATION_REQUIRED");
+    await stepUp(c, user, data.password, data.code);
     const outcome = await apply(c, row, user);
     if (outcome === "stale") {
       await c.query(

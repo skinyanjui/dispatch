@@ -12,7 +12,13 @@ import {
 import { decideChange } from "../../src/lib/change-control";
 import { cancelLoad, editLoad } from "../../src/lib/load-changes";
 import { openException } from "../../src/lib/exceptions";
-import { bookedLoad, request, sessionFor, tenant } from "./fixtures";
+import {
+  bookedLoad,
+  request,
+  sessionFor,
+  tenant,
+  withPassword,
+} from "./fixtures";
 
 let t: Awaited<ReturnType<typeof tenant>>;
 before(async () => {
@@ -132,6 +138,7 @@ test("edits keep stops in order, references unique, and need a reason once dispa
   await decideChange(t.manager, held.change_id!, {
     decision: "approve",
     verification: "callback",
+    password: await withPassword(t.manager),
   });
   assert.equal((await queued("Load % was updated")) - before, 1);
   // Money-only edits do not page the driver.

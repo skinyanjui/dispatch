@@ -11,12 +11,20 @@ import {
   pendingCount,
   requestPayoutChange,
 } from "../../src/lib/change-control";
+import { mfaEnable, mfaSetup } from "../../src/lib/account";
+import { codeAt, stepAt } from "../../src/lib/totp";
 import { authorityStatus } from "../../src/lib/authority";
 import { createContact, updateContact } from "../../src/lib/contacts";
 import { saveCompany } from "../../src/lib/onboarding";
 import { detail, mutate } from "../../src/lib/loads";
 import { editLoad } from "../../src/lib/load-changes";
-import { bookedLoad, request, sessionFor, tenant } from "./fixtures";
+import {
+  bookedLoad,
+  request,
+  sessionFor,
+  tenant,
+  withPassword,
+} from "./fixtures";
 
 let t: Awaited<ReturnType<typeof tenant>>;
 before(async () => {
@@ -35,8 +43,12 @@ const payout = (over: Record<string, unknown> = {}) => ({
 });
 const ask = (over: Record<string, unknown> = {}, user = t.dispatcher) =>
   requestPayoutChange(user, payout(over)) as Promise<{ id: string }>;
-const approve = (id: string, user = t.manager) =>
-  decideChange(user, id, { decision: "approve", verification: "callback" });
+const approve = async (id: string, user = t.manager) =>
+  decideChange(user, id, {
+    decision: "approve",
+    verification: "callback",
+    password: await withPassword(user),
+  });
 
 test("payout details change only when a different person approves after verifying", async () => {
   process.env.RELAY_PAYOUT_COOLING_HOURS = "24";
@@ -618,5 +630,98 @@ test("once a carrier is set up, its name, contact email, phone and USDOT number 
   await assert.rejects(
     save({ phone: "1", change_reason: "x" }, fresh.foreignManager),
     { code: "NOT_FOUND" },
+  );
+});
+
+test("an approval needs the approver's password again, and a code if they use two-step verification", async () => {
+  const fresh = await tenant("StepUp");
+  const ask = async () =>
+    (
+      (await requestPayoutChange(fresh.dispatcher, {
+        carrier_id: fresh.carrier,
+        payee_name: "Step Up Payee",
+        method: "ach",
+        account_last4: "1234",
+        reason: "Moved banks",
+        key: randomUUID(),
+      })) as { id: string }
+    ).id;
+  const decide = (id: string, extra: Record<string, unknown>) =>
+    decideChange(fresh.manager, id, {
+      decision: "approve",
+      verification: "callback",
+      ...extra,
+    });
+  const password = await withPassword(fresh.manager);
+  const id = await ask();
+  // A session alone is not enough.
+  await assert.rejects(decide(id, {}), { code: "STEP_UP_REQUIRED" });
+  await assert.rejects(decide(id, { password: "not the password" }), {
+    code: "STEP_UP_FAILED",
+  });
+  // An account with no usable password cannot approve either.
+  await pool.query("UPDATE users SET password_hash='!' WHERE id=$1", [
+    fresh.manager,
+  ]);
+  await assert.rejects(decide(id, { password }), { code: "STEP_UP_FAILED" });
+  await withPassword(fresh.manager);
+  // Rejecting is always allowed: stopping a change never needs the extra proof.
+  const other = await ask().catch(() => null);
+  assert.equal(other, null); // one pending request at a time
+  // Failed attempts are limited per person: after six wrong tries in five
+  // minutes even the right password is refused for a while.
+  for (let i = 0; i < 4; i++)
+    await assert.rejects(decide(id, { password: "wrong " + i }), {
+      code: "STEP_UP_FAILED",
+    });
+  await assert.rejects(decide(id, { password }), { code: "TRY_AGAIN_LATER" });
+  // ...so a fresh approver proves it works with the right password.
+  const admin = randomUUID();
+  await pool.query(
+    "INSERT INTO users(id,email,password_hash,name) VALUES($1,$2,'x','Second approver')",
+    [admin, admin + "@relay.test"],
+  );
+  await pool.query(
+    "INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'admin')",
+    [fresh.organization, admin],
+  );
+  const adminPassword = await withPassword(admin);
+  // With two-step verification on, a code is needed as well.
+  const { secret } = await mfaSetup(admin);
+  const enrolled = stepAt(Date.now());
+  await mfaEnable(admin, { code: codeAt(secret, enrolled) });
+  await assert.rejects(
+    decideChange(admin, id, {
+      decision: "approve",
+      verification: "callback",
+      password: adminPassword,
+    }),
+    { code: "MFA_CODE_REQUIRED" },
+  );
+  await assert.rejects(
+    decideChange(admin, id, {
+      decision: "approve",
+      verification: "callback",
+      password: adminPassword,
+      code: "000000" === codeAt(secret, enrolled + 1) ? "111111" : "000000",
+    }),
+    { code: "INVALID_MFA_CODE" },
+  );
+  const done = (await decideChange(admin, id, {
+    decision: "approve",
+    verification: "callback",
+    password: adminPassword,
+    code: codeAt(secret, enrolled + 1),
+  })) as { status: string };
+  assert.equal(done.status, "approved");
+  // Rejecting needs no password.
+  const next = await ask();
+  assert.equal(
+    (
+      (await decideChange(fresh.manager, next, { decision: "reject" })) as {
+        status: string;
+      }
+    ).status,
+    "rejected",
   );
 });
