@@ -54,7 +54,15 @@ const query = z
   })
   .strict();
 
-export async function cashOverview(user: string, params: URLSearchParams) {
+/** Loads read for the figures, and loads listed (ADR 0071). */
+const defaultLimits = { readLimit: 5000, listLimit: 200 };
+
+export async function cashOverview(
+  user: string,
+  params: URLSearchParams,
+  limits: Partial<typeof defaultLimits> = {},
+) {
+  const { readLimit, listLimit } = { ...defaultLimits, ...limits };
   const q = query.parse({
     carrier_id: params.get("carrier_id"),
     fee_bps: params.get("fee_bps"),
@@ -77,9 +85,12 @@ export async function cashOverview(user: string, params: URLSearchParams) {
        LEFT JOIN dispatch_invoice_lines dl ON dl.load_id=l.id AND dl.active
        LEFT JOIN dispatch_invoices i ON i.id=dl.invoice_id AND i.status<>'void'
        WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL AND l.stage='delivered'
-       ORDER BY l.created_at DESC,l.id LIMIT 200`,
-      [q.carrier_id],
+       ORDER BY l.created_at DESC,l.id LIMIT $2`,
+      [q.carrier_id, readLimit + 1],
     );
+    // One more than the ceiling is read, only to know the ceiling was hit.
+    const totalsPartial = loads.rows.length > readLimit;
+    loads.rows = loads.rows.slice(0, readLimit);
     const ids = loads.rows.map((r) => r.id as string);
     const receipts = ids.length
       ? await c.query(
@@ -162,7 +173,10 @@ export async function cashOverview(user: string, params: URLSearchParams) {
       carrier_id: q.carrier_id,
       as_of: asOf,
       fee_bps_preview: q.fee_bps,
-      loads: out,
+      loads: out.slice(0, listLimit),
+      // The list shows the newest; the figures below count every load read.
+      list_truncated: out.length > listLimit,
+      totals_partial: totalsPartial,
       summary: {
         loads: out.length,
         gross_minor: sum((l) => l.gross_minor),

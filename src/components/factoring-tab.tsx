@@ -388,6 +388,16 @@ export function FactoringTab({
                       : ""}
                   </button>
                 </header>
+                <p className="helpText">
+                  Every load that is ready is listed, however old. Of the rest,
+                  the newest are shown with the reason they are not ready.
+                </p>
+                {data.ready_truncated && (
+                  <ErrorAlert polite>
+                    More loads are ready than can be listed. Prepare these first
+                    and the rest will follow.
+                  </ErrorAlert>
+                )}
                 <DataTable
                   caption="Loads and whether they can go in a factoring schedule"
                   columns={loadColumns}

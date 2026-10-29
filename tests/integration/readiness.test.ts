@@ -170,3 +170,49 @@ test("HTTP: other carriers' people get 404 and a missing carrier is a field erro
   );
   assert.equal(await call("documents/readiness", t.manager), 400);
 });
+
+test("older held-up loads are found, and a cut list says so with figures for all", async () => {
+  const fresh = await tenant("ReadinessMany");
+  const made: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const l = await bookedLoad(fresh.dispatcher, fresh.carrier);
+    let version = (
+      await mutate(fresh.dispatcher, l.id, "assign", {
+        version: 1,
+        driverId: fresh.driver,
+      })
+    ).version;
+    for (const stage of ["dispatched", "picked-up", "delivered"])
+      version = (
+        await mutate(fresh.dispatcher, l.id, "milestones", { version, stage })
+      ).version;
+    made.push(l.id);
+  }
+  // Read two at a time and list three: the oldest load is still found and counted.
+  const view = await readiness(fresh.manager, fresh.carrier, {
+    batchSize: 2,
+    scanLimit: 100,
+    returnLimit: 3,
+  });
+  assert.equal(view.summary.loads, 7);
+  assert.equal(view.summary.blocking_billing, 7);
+  assert.equal(view.loads.length, 3);
+  assert.equal(view.list_truncated, true);
+  assert.equal(view.scan_truncated, false);
+  assert.equal(view.loads_scanned, 7);
+  // A ceiling on how many are read is reported, not hidden.
+  const capped = await readiness(fresh.manager, fresh.carrier, {
+    batchSize: 2,
+    scanLimit: 4,
+    returnLimit: 50,
+  });
+  assert.equal(capped.scan_truncated, true);
+  assert.equal(capped.summary.loads, 4);
+  // Unlimited: everything listed, nothing flagged.
+  const full = await readiness(fresh.manager, fresh.carrier);
+  assert.deepEqual(
+    [full.loads.length, full.list_truncated, full.scan_truncated],
+    [7, false, false],
+  );
+  assert.deepEqual(full.loads.map((l) => l.id).sort(), [...made].sort());
+});

@@ -87,7 +87,17 @@ export const ineligibleLabels: Record<Ineligible, string> = {
     "Held until the factor confirms it has not advanced on it",
 };
 
-async function candidates(c: PoolClient, carrierId: string, only?: string[]) {
+/**
+ * Loads with the reason each cannot go in a schedule (or null). `readyOnly`
+ * looks only at loads that could (delivered, billed, unpaid, in no batch), so a
+ * long history cannot hide an old load that is ready (ADR 0071).
+ */
+async function candidates(
+  c: PoolClient,
+  carrierId: string,
+  opts: { only?: string[]; readyOnly?: boolean; limit?: number } = {},
+) {
+  const { only, readyOnly = false, limit = 300 } = opts;
   const rows = await c.query(
     `SELECT l.id,l.reference,l.stage,p.status packet_status,p.bill_to,p.carrier_invoice_number,p.amount_minor::text amount,
        to_char(p.submitted_at AT TIME ZONE 'UTC','YYYY-MM-DD') submitted_on,
@@ -99,8 +109,11 @@ async function candidates(c: PoolClient, carrierId: string, only?: string[]) {
          WHERE f.load_id=l.id AND f.active AND b.status='void') held
      FROM loads l LEFT JOIN carrier_billing_packets p ON p.load_id=l.id
      WHERE l.carrier_id=$1 AND l.cancelled_at IS NULL AND ($2::uuid[] IS NULL OR l.id=ANY($2::uuid[]))
-     ORDER BY l.created_at DESC,l.id LIMIT 300`,
-    [carrierId, only ?? null],
+       AND ($3::boolean=false OR (l.stage='delivered' AND p.status='submitted'
+         AND COALESCE((SELECT sum(r.amount_minor) FROM carrier_payment_receipts r WHERE r.load_id=l.id),0)<p.amount_minor
+         AND NOT EXISTS(SELECT 1 FROM factoring_batch_loads f WHERE f.load_id=l.id AND f.active)))
+     ORDER BY l.created_at DESC,l.id LIMIT $4`,
+    [carrierId, only ?? null, readyOnly, limit],
   );
   const slots = await loadDocumentSlotsFor(
     c,
@@ -155,13 +168,31 @@ const batchSql = `SELECT id,factor_name,status,load_count,total_minor::text,file
 export async function factoringOverview(
   user: string,
   carrierParam: string | null,
+  limits: { readyLimit?: number; recentLimit?: number } = {},
 ) {
   const carrierId = z.uuid().parse(carrierParam);
   return transaction(async (c) => {
     const m = await member(c, user, carrierId, true);
     const s = await settings(c, carrierId);
     const payout = await payoutDetails(c, carrierId);
-    const loads = s.enabled ? await candidates(c, carrierId) : [];
+    // Every load that is ready is listed, however old; of the rest only the
+    // newest are, each with the reason it is not ready.
+    const readyLimit = limits.readyLimit ?? 1000;
+    const ready = s.enabled
+      ? await candidates(c, carrierId, {
+          readyOnly: true,
+          limit: readyLimit + 1,
+        })
+      : [];
+    const recent = s.enabled
+      ? await candidates(c, carrierId, { limit: limits.recentLimit ?? 100 })
+      : [];
+    const readyTruncated = ready.length > readyLimit;
+    const seen = new Set(ready.slice(0, readyLimit).map((l) => l.id as string));
+    const loads = [
+      ...ready.slice(0, readyLimit),
+      ...recent.filter((l) => !seen.has(l.id as string)),
+    ].sort((a, b) => Number(!!a.reason) - Number(!!b.reason));
     const batches = await c.query(
       `${batchSql} WHERE carrier_id=$1 ORDER BY created_at DESC,id LIMIT 50`,
       [carrierId],
@@ -170,6 +201,7 @@ export async function factoringOverview(
       carrier_id: carrierId,
       can_consent: m.role === "carrier-manager",
       settings: s,
+      ready_truncated: readyTruncated,
       payout_in_force: !!payout && !payout.cooling_off,
       payout_names_factor: !!payout && payoutNamesFactor(payout, s.factor_name),
       payout_payee: payout?.payee_name ?? null,
@@ -277,7 +309,10 @@ export async function createBatch(user: string, input: unknown) {
     // The factor pays whoever the payout details name, so they must name the factor.
     if (!payoutNamesFactor(payout, s.factor_name))
       throw new HttpError(422, "PAYOUT_NOT_TO_FACTOR");
-    const found = await candidates(c, data.carrier_id, data.load_ids);
+    const found = await candidates(c, data.carrier_id, {
+      only: data.load_ids,
+      limit: data.load_ids.length,
+    });
     // A guessed or foreign id is simply absent from the carrier's own list.
     if (found.length !== data.load_ids.length)
       throw new HttpError(404, "NOT_FOUND");

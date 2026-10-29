@@ -36,6 +36,10 @@ export type CashOverview = {
   as_of: string;
   fee_bps_preview: number | null;
   loads: CashLoad[];
+  /** Only the newest loads are listed; the summary counts all that were read. */
+  list_truncated: boolean;
+  /** Even the summary stops at the ceiling, so older loads are not in it. */
+  totals_partial: boolean;
   summary: {
     loads: number;
     gross_minor: string;
@@ -64,6 +68,11 @@ export type Readiness = {
   carrier_id: string;
   scope: "carrier" | "my_loads";
   loads: ReadinessLoad[];
+  /** More held-up loads were found than are listed; the summary counts them all. */
+  list_truncated: boolean;
+  /** The ceiling on loads read was reached, so older loads were not looked at. */
+  scan_truncated: boolean;
+  loads_scanned: number;
   summary: {
     loads: number;
     blocking_billing: number;
@@ -81,6 +90,8 @@ export type FactoringOverview = {
     consented_by: string | null;
     consented_at: string | null;
   };
+  /** More ready loads exist than are listed. */
+  ready_truncated: boolean;
   payout_in_force: boolean;
   payout_names_factor: boolean;
   payout_payee: string | null;

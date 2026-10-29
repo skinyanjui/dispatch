@@ -427,3 +427,30 @@ test("HTTP: the schedule file and every action are for the carrier's own people 
     400,
   );
 });
+
+test("an old load that is ready is listed however long the history, and a cut list says so", async () => {
+  const fresh = await billed();
+  const newer: string[] = [];
+  for (let i = 0; i < 3; i++)
+    newer.push((await billed("Newer " + i, false, false)).id);
+  await enable();
+  await payout("0");
+  // Only the newest 2 loads of the history are read for "why not"; the old ready one is still found.
+  const view = await factoringOverview(t.dispatcher, t.carrier, {
+    recentLimit: 2,
+  });
+  const found = view.loads.find((l) => l.id === fresh.id);
+  assert.ok(found && found.eligible);
+  assert.equal(view.ready_truncated, false);
+  // The newest loads are still explained.
+  assert.ok(
+    view.loads.some((l) => l.id === newer[2] && l.reason === "no_packet"),
+  );
+  // A ceiling on ready loads is reported.
+  const capped = await factoringOverview(t.dispatcher, t.carrier, {
+    readyLimit: 1,
+    recentLimit: 2,
+  });
+  assert.equal(capped.ready_truncated, true);
+  assert.equal(capped.loads.filter((l) => l.eligible).length, 1);
+});

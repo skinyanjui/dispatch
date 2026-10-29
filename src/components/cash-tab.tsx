@@ -269,6 +269,18 @@ export function CashTab({
         <header>
           <h3 id="cash-loads">Delivered loads</h3>
         </header>
+        {cash?.list_truncated && (
+          <p className="helpText">
+            Showing the newest {cash.loads.length} of {cash.summary.loads}{" "}
+            delivered loads. The figures above count all of them.
+          </p>
+        )}
+        {cash?.totals_partial && (
+          <ErrorAlert polite>
+            This carrier has more delivered loads than can be added up here, so
+            the figures cover only the newest {cash.summary.loads}.
+          </ErrorAlert>
+        )}
         <DataTable
           caption="Delivered loads: what each earned and where its money is"
           columns={columns}
@@ -286,6 +298,18 @@ export function CashTab({
         <header>
           <h3 id="cash-paper">Paperwork holding up billing</h3>
         </header>
+        {paper?.list_truncated && (
+          <p className="helpText">
+            Showing {paper.loads.length} of {paper.summary.loads} loads with
+            paperwork to do, the most urgent first.
+          </p>
+        )}
+        {paper?.scan_truncated && (
+          <ErrorAlert polite>
+            Only the newest {paper.loads_scanned} loads were checked. Older
+            loads may also be waiting on paperwork.
+          </ErrorAlert>
+        )}
         <DataTable
           caption="Loads with paperwork still to do, and who has to act"
           columns={paperColumns}
