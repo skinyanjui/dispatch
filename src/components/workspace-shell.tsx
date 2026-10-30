@@ -62,7 +62,9 @@ export const sectionTitles: Record<
 export function Brand() {
   return (
     <span className="brand">
-      <StackIcon size={20} weight="bold" aria-hidden="true" />
+      <span className="brandMark">
+        <StackIcon size={16} weight="bold" aria-hidden="true" />
+      </span>
       relay<span className="brandPeriod">.</span>
     </span>
   );

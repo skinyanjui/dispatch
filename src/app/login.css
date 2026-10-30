@@ -43,9 +43,6 @@
   font-size: 22px;
   color: var(--login-ink);
 }
-.loginHero .brand svg {
-  color: var(--login-blue);
-}
 .heroBody {
   position: relative;
   z-index: 1;

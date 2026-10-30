@@ -121,6 +121,22 @@ a svg {
   align-items: center;
   gap: var(--space-2);
 }
+/* The mark: white stack on a blue tile, the one coloured note in the neutral app. */
+.brandMark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.45em;
+  height: 1.45em;
+  border-radius: 0.4em;
+  background: var(--accent);
+  color: var(--ink-inverse);
+  font-size: inherit;
+}
+.brandMark svg {
+  width: 0.8em;
+  height: 0.8em;
+}
 .brandPeriod {
   margin-left: calc(var(--space-2) * -1);
   color: var(--accent);
@@ -689,9 +705,6 @@ fieldset label:last-child {
 
   .brand {
     font-size: 19px;
-  }
-  .brand > svg {
-    width: 17px;
   }
 
   .toolbar {

@@ -22,3 +22,9 @@ Anchors land 96px below the top so the bar never covers a heading. The backdrop 
 ## Colours
 
 Audited 2026-10-30. Every colour in the bar, dropdowns and phone card comes from a token; the bar's translucent white and its two shadows are new `.mk` tokens (`--mk-bar`, `--mk-shadow-bar`, `--mk-shadow-card`), and the phone backdrop uses `--backdrop` instead of the navy `--ink` at reduced opacity. Contrast (WCAG 2.2 AA, 4.5:1): `--mk-ink` on white 17.0, on `--mk-soft` 15.9; `--mk-muted` on white 7.5, on `--mk-soft` 7.0; `--accent` text on white 6.1; white on the `--accent` button 6.1 (7.5 on hover). The 1px bar and card borders (`--mk-line`) are decorative; the shadows and fill separate the surfaces. Summary rows in the phone card gained a visible focus ring (`--focus`), which the global rule did not cover.
+
+## Brand colour and the app audit (2026-10-30)
+
+The logo is now a white stack icon on a rounded `--accent` tile (`.brandMark`, sized in `em` so it scales in the sidebar, phone bar, public bar, footer and sign-in hero) beside the ink wordmark and blue period. It is the one coloured note in the otherwise neutral app; white on the tile is 6.1:1. The sign-in hero rule that tinted the icon blue is removed, since blue on the tile would vanish.
+
+The signed-in sidebar and the demo banner were audited with the same method and needed no colour change: item text `--ink` on the canvas 11.4, on the active row 10.1; `--subtle` labels and icons 5.7 on the canvas, 5.3 on hover, 5.0 on the active row; the blue active icon 4.8 on the active row (3:1 needed for icons); the demo banner's `--muted` 11px note 6.6 and blue link 5.4 on `--accent-soft`. Not run here: the signed-in pages need a seeded database, so the sign-in hero was checked by contrast only, not by screenshot.
