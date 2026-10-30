@@ -1,11 +1,36 @@
-/* Public navigation (components/marketing-nav.tsx): a mega menu from 900px, a
-   full-height sheet below. The panels are positioned against .mkBar so they
-   span the page width under the header. */
-.mkHeader {
+/* Public navigation (components/marketing-nav.tsx, ADR 0075): a floating bar
+   that sticks near the top, a mega menu that drops from it as a card from
+   900px, and a card that opens over the bar below that. The panels are
+   positioned against .mkHeader, so they are exactly as wide as the bar. */
+.mkBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: var(--space-3) var(--space-3) 0;
+  /* The strip around the floating bar does not catch clicks meant for the page. */
+  pointer-events: none;
+}
+.mk .mkHeader {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  padding: var(--space-3) 0;
+  width: min(1080px, 100%);
+  margin-inline: auto;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--mk-line);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: saturate(1.4) blur(14px);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 10px 28px -14px rgb(0 0 0 / 0.22);
+  pointer-events: auto;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .mk .mkHeader {
+    background: var(--panel);
+  }
 }
 .mkLogo {
   display: inline-flex;
@@ -32,7 +57,7 @@
   min-height: var(--control-h);
   padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--control-radius, 7px);
+  border-radius: 10px;
   background: transparent;
   color: var(--mk-ink);
   font: inherit;
@@ -62,7 +87,7 @@
 .mkNavActions .mkButton {
   min-height: var(--control-h);
   padding: 0 var(--space-4);
-  border-radius: var(--control-radius, 7px);
+  border-radius: 10px;
   font-size: 13.5px;
   font-weight: 600;
 }
@@ -75,35 +100,51 @@
   margin-left: auto;
   padding: 0;
   border: 0;
-  border-radius: var(--control-radius, 7px);
+  border-radius: 12px;
   background: transparent;
   color: var(--mk-ink);
+  cursor: pointer;
 }
 .mkMenuButton:hover {
   background: var(--mk-soft);
 }
 
-/* Mega panel */
+/* Mega panel: a card under the bar, as wide as the bar. */
 .mkMega {
   position: absolute;
-  top: 100%;
+  top: calc(100% + var(--space-2));
+  /* Out by the bar's 1px border, so card and bar are the same width. */
+  left: -1px;
+  right: -1px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--mk-line);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 24px 48px -24px rgb(0 0 0 / 0.28);
+  animation: mkDrop 0.14s ease-out;
+}
+/* Keeps the pointer "inside" while it crosses the gap between bar and card. */
+.mkMega::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-2));
   left: 0;
   right: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: var(--space-8);
-  padding: var(--space-6) max(20px, calc((100% - 1080px) / 2));
-  background: var(--panel);
-  border-bottom: 1px solid var(--mk-line);
-  box-shadow: 0 24px 40px -28px rgb(0 0 0 / 0.3);
+  height: var(--space-2);
 }
 .mkMegaGroups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-6);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
 }
 .mkMegaTitle {
   margin: 0 0 var(--space-2);
+  padding-inline: var(--space-3);
   color: var(--mk-muted);
   font-size: 12px;
   font-weight: 600;
@@ -121,7 +162,7 @@
   display: grid;
   gap: 2px;
   padding: var(--space-2) var(--space-3);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--mk-ink);
   text-decoration: none;
 }
@@ -131,7 +172,7 @@
 }
 .mkMega li a strong {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 .mkMega li a span {
   color: var(--mk-muted);
@@ -144,6 +185,9 @@
   padding: var(--space-4);
   border-radius: 12px;
   background: var(--mk-soft);
+}
+.mkMegaFeature .mkMegaTitle {
+  padding-inline: 0;
 }
 .mkMegaFeature p:not(.mkMegaTitle) {
   margin: 0;
@@ -163,27 +207,39 @@
   justify-self: start;
 }
 
-/* Phone sheet */
+/* Phone card: opens over the bar, same inset, so the bar seems to unfold. */
 .mkSheet {
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  max-height: none;
-  margin: 0;
-  padding: var(--space-3) var(--space-5) var(--space-6);
-  border: 0;
+  position: fixed;
+  inset: var(--space-3) var(--space-3) auto;
+  width: auto;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid var(--mk-line);
+  border-radius: 20px;
   background: var(--panel);
   color: var(--mk-ink);
-  overflow-y: auto;
+  box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.35);
+  overflow: hidden;
 }
 .mkSheet[open] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: block;
+  animation: mkDrop 0.16s ease-out;
 }
 .mkSheet::backdrop {
   background: var(--ink);
-  opacity: 0.4;
+  opacity: 0.35;
+}
+html:has(.mkSheet[open]) {
+  overflow: hidden;
+}
+.mkSheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: calc(100dvh - 2 * var(--space-3));
+  padding: var(--space-2) var(--space-2) var(--space-3) var(--space-4);
+  overflow-y: auto;
 }
 .mkSheetHead {
   display: flex;
@@ -192,8 +248,7 @@
 }
 .mkSheetNav {
   display: grid;
-  flex: 1 1 auto;
-  align-content: start;
+  padding-right: var(--space-2);
 }
 .mk .mkSheetLink,
 .mkSheetGroup summary {
@@ -201,10 +256,10 @@
   align-items: center;
   justify-content: space-between;
   min-height: 52px;
-  border-bottom: 1px solid var(--mk-line);
   color: var(--mk-ink);
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   text-decoration: none;
   cursor: pointer;
   list-style: none;
@@ -212,19 +267,21 @@
 .mkSheetGroup summary::-webkit-details-marker {
   display: none;
 }
-.mkSheetGroup summary::after {
-  content: "+";
+.mkSheetGroup summary svg {
   color: var(--mk-muted);
-  font-weight: 400;
+  transition: transform 0.15s;
 }
-.mkSheetGroup[open] summary::after {
-  content: "–";
+.mkSheetGroup[open] summary svg {
+  transform: rotate(180deg);
 }
 .mk .mkSheetLink[aria-current="page"] {
   color: var(--accent);
 }
+.mkSheetGroup[open] {
+  padding-bottom: var(--space-2);
+}
 .mkSheetGroup p {
-  margin: var(--space-3) 0 var(--space-1);
+  margin: var(--space-2) 0 var(--space-1);
   color: var(--mk-muted);
   font-size: 12px;
   font-weight: 600;
@@ -241,21 +298,39 @@
   align-items: center;
   min-height: var(--touch-min);
   color: var(--mk-ink);
+  font-size: 16px;
   text-decoration: none;
 }
 .mkSheetActions {
   display: grid;
   gap: var(--space-2);
+  padding-right: var(--space-2);
 }
 .mkSheetActions a {
   justify-content: center;
   min-height: 48px;
 }
 
+@keyframes mkDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mkMega,
+  .mkSheet[open] {
+    animation: none;
+  }
+  .mkNavTrigger svg,
+  .mkSheetGroup summary svg {
+    transition: none;
+  }
+}
+
 @media (max-width: 899px) {
   .mkNav,
-  .mkNavActions,
-  .mkMega {
+  .mkNavActions {
     display: none;
   }
   .mkMenuButton {
@@ -268,7 +343,7 @@
   }
 }
 
-/* Anchors land below the sticky bar. */
+/* Anchors land below the floating bar. */
 .mk [id] {
-  scroll-margin-top: 88px;
+  scroll-margin-top: 96px;
 }

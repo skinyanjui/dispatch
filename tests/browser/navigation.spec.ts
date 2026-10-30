@@ -74,6 +74,34 @@ test("the mega menu opens by click, hover and keyboard, and closes with Escape, 
   await expect(page.locator("#assign")).toBeInViewport();
 });
 
+test("the bar floats, stays put, and Tab walks from a trigger into its panel", async ({
+  page,
+}) => {
+  await page.setViewportSize(desktop);
+  await page.goto("/welcome");
+  const header = page.locator(".mkHeader");
+  const box = (await header.boundingBox())!;
+  expect(box.y).toBeGreaterThan(4); // inset from the top: it floats
+  await page.mouse.wheel(0, 1500);
+  await expect
+    .poll(async () => (await header.boundingBox())!.y)
+    .toBeGreaterThan(4);
+  await expect(header).toBeInViewport({ ratio: 1 });
+  // The open panel is as wide as the bar.
+  await trigger(page, "Product").click();
+  const panel = page.getByRole("region", { name: "Product menu" });
+  const bar = (await header.boundingBox())!;
+  const card = (await panel.boundingBox())!;
+  expect(Math.abs(card.width - bar.width)).toBeLessThan(2);
+  // Tab from the trigger lands on the panel's first link.
+  await trigger(page, "Product").focus();
+  await page.keyboard.press("Tab");
+  await expect(panel.getByRole("link").first()).toBeFocused();
+  // Tabbing out of the menu closes it.
+  await page.getByRole("link", { name: "Request access" }).first().focus();
+  await expect(panel).toHaveCount(0);
+});
+
 test("every menu link reaches a real page and a real section", async ({
   page,
 }) => {
@@ -107,6 +135,12 @@ test("on a phone the header shows a menu button and the sheet works", async ({
   await expect(
     sheet.getByRole("link", { name: "Assign and dispatch" }),
   ).toBeVisible();
+  // One group open at a time.
+  await sheet.getByText("Resources", { exact: true }).click();
+  await expect(
+    sheet.getByRole("link", { name: "Assign and dispatch" }),
+  ).toBeHidden();
+  await sheet.getByText("Product", { exact: true }).click();
   await expect(
     sheet.getByRole("link", { name: "Request access" }),
   ).toBeVisible();

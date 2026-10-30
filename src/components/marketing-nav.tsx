@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { CaretDownIcon, ListIcon, XIcon } from "@phosphor-icons/react";
 import { Brand } from "@/components/workspace-shell";
 import { menu, type MenuEntry } from "@/lib/marketing-menu";
@@ -9,32 +9,43 @@ import { AuthorizeVisual, PaperworkVisual } from "@/components/step-visuals";
 type Menu = Extract<MenuEntry, { kind: "menu" }>;
 
 /**
- * The public site's navigation: a mega menu from 900px (hover, click or
- * keyboard; Escape closes and returns focus), and a full-height sheet on
- * phones. Both read src/lib/marketing-menu.ts.
+ * The public site's navigation, inside the floating bar (ADR 0075): a mega
+ * menu from 900px that drops from the bar as a card, and below that a card
+ * that opens over the bar. Both read src/lib/marketing-menu.ts.
+ *
+ * Desktop: a mouse opens a panel by hovering its trigger; a click (or
+ * ArrowDown) pins it so the pointer can leave. Each panel sits right after its
+ * trigger in the DOM, so Tab walks into its links. Escape closes it and
+ * returns focus; so do an outside click, focus leaving the menu, and
+ * following a link.
  */
 export function MarketingNav({ current }: { current: string }) {
-  const [open, setOpen] = useState<string | null>(null);
-  // A menu opened by hover is pinned by the click that follows it (the pointer
-  // is already over the trigger); only a click on a pinned menu closes it.
-  const pinned = useRef(false);
-  const bar = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<{ id: string; pinned: boolean } | null>(
+    null,
+  );
+  const wrap = useRef<HTMLDivElement>(null);
   const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
+  const focusPanel = useRef(false);
   const sheet = useRef<HTMLDialogElement>(null);
   const base = useId();
+  const panelId = (id: string) => `${base}-${id}`;
+  const openId = open?.id ?? null;
 
-  const close = useCallback((returnFocus = false) => {
-    setOpen((was) => {
-      if (was && returnFocus) triggers.current[was]?.focus();
-      return null;
-    });
-    pinned.current = false;
-  }, []);
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close(true);
+    if (!openId) return;
+    if (focusPanel.current) {
+      focusPanel.current = false;
+      wrap.current
+        ?.querySelector<HTMLElement>(`#${CSS.escape(panelId(openId))} a`)
+        ?.focus();
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      triggers.current[openId]?.focus();
+      setOpen(null);
+    };
     const onPointer = (e: PointerEvent) => {
-      if (!bar.current?.contains(e.target as Node)) close();
+      if (!wrap.current?.contains(e.target as Node)) setOpen(null);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPointer);
@@ -42,11 +53,36 @@ export function MarketingNav({ current }: { current: string }) {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onPointer);
     };
-  }, [open, close]);
+    // panelId only depends on `base`, which never changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId]);
 
+  // The card is for narrow screens; if the window grows past the breakpoint
+  // while it is open, close it so the page behind is not left inert.
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 900px)");
+    const onChange = () => wide.matches && sheet.current?.close();
+    wide.addEventListener("change", onChange);
+    return () => wide.removeEventListener("change", onChange);
+  }, []);
+
+  const closeSheet = () => sheet.current?.close();
   const isCurrent = (href: string) => href.split("#")[0] === current;
   return (
-    <div className="mkNavWrap" ref={bar} onMouseLeave={() => close()}>
+    <div
+      className="mkNavWrap"
+      ref={wrap}
+      onMouseLeave={() => setOpen(null)}
+      onBlur={(e) => {
+        // Focus moving anywhere but the open trigger or its panel closes it;
+        // focus leaving the window (no related target) does not.
+        const next = e.relatedTarget as Node | null;
+        if (!next || !openId) return;
+        const panel = document.getElementById(panelId(openId));
+        if (!panel?.contains(next) && triggers.current[openId] !== next)
+          setOpen(null);
+      }}
+    >
       <nav aria-label="Main" className="mkNav">
         {menu.map((entry) =>
           entry.kind === "link" ? (
@@ -55,50 +91,38 @@ export function MarketingNav({ current }: { current: string }) {
               href={entry.href}
               className="mkNavLink"
               aria-current={entry.href === current ? "page" : undefined}
-              onMouseEnter={() => close()}
+              onPointerEnter={(e) => e.pointerType === "mouse" && setOpen(null)}
             >
               {entry.label}
             </Link>
           ) : (
-            <button
+            <MenuTrigger
               key={entry.id}
-              type="button"
-              className="mkNavLink mkNavTrigger"
-              ref={(el) => {
+              entry={entry}
+              panelId={panelId(entry.id)}
+              expanded={openId === entry.id}
+              isCurrent={isCurrent}
+              register={(el) => {
                 triggers.current[entry.id] = el;
               }}
-              aria-expanded={open === entry.id}
-              aria-controls={`${base}-${entry.id}`}
-              data-current={entry.page === current ? "true" : undefined}
-              onClick={() => {
-                if (open === entry.id && pinned.current) close();
-                else {
-                  setOpen(entry.id);
-                  pinned.current = true;
-                }
+              onToggle={() =>
+                setOpen((was) =>
+                  was?.id === entry.id && was.pinned
+                    ? null
+                    : { id: entry.id, pinned: true },
+                )
+              }
+              onHover={() =>
+                setOpen((was) =>
+                  was?.id === entry.id ? was : { id: entry.id, pinned: false },
+                )
+              }
+              onArrowDown={() => {
+                focusPanel.current = true;
+                setOpen({ id: entry.id, pinned: true });
               }}
-              onMouseEnter={() => {
-                if (open !== entry.id) pinned.current = false;
-                setOpen(entry.id);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown") {
-                  e.preventDefault();
-                  setOpen(entry.id);
-                  pinned.current = true;
-                  requestAnimationFrame(() =>
-                    document
-                      .querySelector<HTMLElement>(
-                        `#${CSS.escape(`${base}-${entry.id}`)} a`,
-                      )
-                      ?.focus(),
-                  );
-                }
-              }}
-            >
-              {entry.label}
-              <CaretDownIcon size={12} aria-hidden="true" />
-            </button>
+              onNavigate={() => setOpen(null)}
+            />
           ),
         )}
       </nav>
@@ -119,156 +143,168 @@ export function MarketingNav({ current }: { current: string }) {
         <ListIcon size={20} aria-hidden="true" />
       </button>
 
-      {menu.map(
-        (entry) =>
-          entry.kind === "menu" &&
-          open === entry.id && (
-            <MegaPanel
-              key={entry.id}
-              id={`${base}-${entry.id}`}
-              entry={entry}
-              isCurrent={isCurrent}
-              onNavigate={() => close()}
-            />
-          ),
-      )}
-
       <dialog
         ref={sheet}
         className="mkSheet"
         aria-label="Menu"
-        onClick={(e) => e.target === sheet.current && sheet.current.close()}
+        onClick={(e) => e.target === sheet.current && closeSheet()}
       >
-        <div className="mkSheetHead">
-          <Link
-            href="/welcome"
-            aria-label="Relay home"
-            onClick={() => sheet.current?.close()}
-          >
-            <Brand />
-          </Link>
-          <button
-            type="button"
-            className="mkMenuButton"
-            aria-label="Close menu"
-            onClick={() => sheet.current?.close()}
-          >
-            <XIcon size={20} aria-hidden="true" />
-          </button>
-        </div>
-        <nav aria-label="Menu" className="mkSheetNav">
-          {menu.map((entry) =>
-            entry.kind === "link" ? (
-              <Link
-                key={entry.href}
-                href={entry.href}
-                className="mkSheetLink"
-                aria-current={entry.href === current ? "page" : undefined}
-                onClick={() => sheet.current?.close()}
-              >
-                {entry.label}
-              </Link>
-            ) : (
-              <details key={entry.id} className="mkSheetGroup">
-                <summary>{entry.label}</summary>
-                {entry.groups.map((g) => (
-                  <div key={g.title}>
-                    <p>{g.title}</p>
-                    <ul>
-                      {g.items.map((item) => (
-                        <li key={item.href + item.label}>
-                          <Link
-                            href={item.href}
-                            onClick={() => sheet.current?.close()}
-                          >
-                            {item.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </details>
-            ),
-          )}
-        </nav>
-        <div className="mkSheetActions">
-          <Link
-            className="mkButton"
-            href="/request-access"
-            onClick={() => sheet.current?.close()}
-          >
-            Request access
-          </Link>
-          <Link
-            className="mkGhost"
-            href="/"
-            onClick={() => sheet.current?.close()}
-          >
-            Sign in
-          </Link>
+        <div className="mkSheetBody">
+          <div className="mkSheetHead">
+            <Link href="/welcome" aria-label="Relay home" onClick={closeSheet}>
+              <Brand />
+            </Link>
+            <button
+              type="button"
+              className="mkMenuButton"
+              aria-label="Close menu"
+              onClick={closeSheet}
+            >
+              <XIcon size={20} aria-hidden="true" />
+            </button>
+          </div>
+          <nav aria-label="Menu" className="mkSheetNav">
+            {menu.map((entry) =>
+              entry.kind === "link" ? (
+                <Link
+                  key={entry.href}
+                  href={entry.href}
+                  className="mkSheetLink"
+                  aria-current={entry.href === current ? "page" : undefined}
+                  onClick={closeSheet}
+                >
+                  {entry.label}
+                </Link>
+              ) : (
+                <details key={entry.id} className="mkSheetGroup" name="mkSheet">
+                  <summary>
+                    {entry.label}
+                    <CaretDownIcon size={16} aria-hidden="true" />
+                  </summary>
+                  {entry.groups.map((g) => (
+                    <div key={g.title}>
+                      <p>{g.title}</p>
+                      <ul>
+                        {g.items.map((item) => (
+                          <li key={item.href + item.label}>
+                            <Link href={item.href} onClick={closeSheet}>
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </details>
+              ),
+            )}
+          </nav>
+          <div className="mkSheetActions">
+            <Link
+              className="mkButton"
+              href="/request-access"
+              onClick={closeSheet}
+            >
+              Request access
+            </Link>
+            <Link className="mkGhost" href="/" onClick={closeSheet}>
+              Sign in
+            </Link>
+          </div>
         </div>
       </dialog>
     </div>
   );
 }
 
-function MegaPanel({
-  id,
+function MenuTrigger({
   entry,
+  panelId,
+  expanded,
   isCurrent,
+  register,
+  onToggle,
+  onHover,
+  onArrowDown,
   onNavigate,
 }: {
-  id: string;
   entry: Menu;
+  panelId: string;
+  expanded: boolean;
   isCurrent: (href: string) => boolean;
+  register: (el: HTMLButtonElement | null) => void;
+  onToggle: () => void;
+  onHover: () => void;
+  onArrowDown: () => void;
   onNavigate: () => void;
 }) {
   return (
-    <div
-      id={id}
-      className="mkMega"
-      role="region"
-      aria-label={`${entry.label} menu`}
-    >
-      <div className="mkMegaGroups">
-        {entry.groups.map((g) => (
-          <div key={g.title} className="mkMegaGroup">
-            <p className="mkMegaTitle">{g.title}</p>
-            <ul>
-              {g.items.map((item) => (
-                <li key={item.href + item.label}>
-                  <Link
-                    href={item.href}
-                    aria-current={
-                      isCurrent(item.href) && !item.href.includes("#")
-                        ? "page"
-                        : undefined
-                    }
-                    onClick={onNavigate}
-                  >
-                    <strong>{item.label}</strong>
-                    <span>{item.text}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <div className="mkMegaFeature">
-        <p className="mkMegaTitle">{entry.feature.title}</p>
-        <p>{entry.feature.text}</p>
-        {entry.id === "product" && <PaperworkVisual />}
-        {entry.id === "how" && <AuthorizeVisual />}
-        <Link
-          className="mkGhost"
-          href={entry.feature.href}
-          onClick={onNavigate}
+    <>
+      <button
+        type="button"
+        className="mkNavLink mkNavTrigger"
+        ref={register}
+        aria-expanded={expanded}
+        aria-controls={expanded ? panelId : undefined}
+        data-current={isCurrent(entry.page ?? "") ? "true" : undefined}
+        onClick={onToggle}
+        onPointerEnter={(e) => e.pointerType === "mouse" && onHover()}
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowDown") return;
+          e.preventDefault();
+          onArrowDown();
+        }}
+      >
+        {entry.label}
+        <CaretDownIcon size={12} aria-hidden="true" />
+      </button>
+      {expanded && (
+        <div
+          id={panelId}
+          className="mkMega"
+          role="region"
+          aria-label={`${entry.label} menu`}
         >
-          {entry.feature.cta}
-        </Link>
-      </div>
-    </div>
+          <div className="mkMegaGroups">
+            {entry.groups.map((g) => (
+              <div key={g.title} className="mkMegaGroup">
+                <p className="mkMegaTitle">{g.title}</p>
+                <ul>
+                  {g.items.map((item) => (
+                    <li key={item.href + item.label}>
+                      <Link
+                        href={item.href}
+                        aria-current={
+                          isCurrent(item.href) && !item.href.includes("#")
+                            ? "page"
+                            : undefined
+                        }
+                        onClick={onNavigate}
+                      >
+                        <strong>{item.label}</strong>
+                        <span>{item.text}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="mkMegaFeature">
+            <p className="mkMegaTitle">{entry.feature.title}</p>
+            <p>{entry.feature.text}</p>
+            {entry.id === "product" && <PaperworkVisual />}
+            {entry.id === "how" && <AuthorizeVisual />}
+            <Link
+              className="mkGhost"
+              href={entry.feature.href}
+              onClick={onNavigate}
+            >
+              {entry.feature.cta}
+            </Link>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

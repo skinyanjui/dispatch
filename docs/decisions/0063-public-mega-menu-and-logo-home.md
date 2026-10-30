@@ -1,6 +1,6 @@
 # 0063 Public mega menu, phone menu, and where the logo goes
 
-Status: accepted, 2026-10-24.
+Status: accepted, 2026-10-24. The header, mega menu and phone menu are superseded by ADR 0075; the logo rules stand.
 
 ## Context
 

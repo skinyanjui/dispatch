@@ -22,7 +22,6 @@
   background: var(--panel);
   border-radius: 8px;
 }
-.mkHeader,
 .mkFooter,
 .mk main > section {
   width: min(1080px, calc(100% - 40px));
@@ -213,22 +212,8 @@
   text-underline-offset: 2px;
 }
 
-/* Sticky navigation: a plain bar that stays at the top while scrolling. */
-.mkBar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: rgb(246 248 253 / 0.86);
-  backdrop-filter: saturate(1.4) blur(10px);
-  border-bottom: 1px solid transparent;
-}
-@supports not (backdrop-filter: blur(1px)) {
-  .mkBar {
-    background: var(--surface-cool);
-  }
-}
 .mk {
-  scroll-padding-top: 72px;
+  scroll-padding-top: 96px;
 }
 /* Simple and centered, in the spirit of a single clear message per page. */
 .mkCenter {
@@ -243,10 +228,6 @@
 .mk {
   background: var(--panel);
   color: var(--mk-ink);
-}
-.mkBar {
-  background: rgb(255 255 255 / 0.86);
-  border-bottom: 1px solid var(--mk-line);
 }
 .mkHero h1 {
   font-weight: 600;

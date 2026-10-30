@@ -1,7 +1,7 @@
 /**
- * The public site's menus, as data: the desktop mega menu and the phone menu
- * read the same list, and a browser test follows every link to prove its page
- * and its #section exist.
+ * The public site's menus, as data: the floating desktop mega menu and the
+ * phone menu read the same list, and a browser test follows every link to prove
+ * its page and its #section exist. Each page is listed once (ADR 0075).
  */
 export type MenuItem = { href: string; label: string; text: string };
 export type MenuGroup = { title: string; items: MenuItem[] };
@@ -48,6 +48,16 @@ export const menu: MenuEntry[] = [
         title: "Keep records",
         items: [
           {
+            href: "/how-it-works#authorize",
+            label: "Authorize every carrier",
+            text: "No booking without an agreement",
+          },
+          {
+            href: "/how-it-works#paperwork",
+            label: "Paperwork",
+            text: "Received, accepted or missing",
+          },
+          {
             href: "/welcome#billing",
             label: "Bill, separately",
             text: "Carrier packet and your invoice",
@@ -56,31 +66,6 @@ export const menu: MenuEntry[] = [
             href: "/welcome#drafts",
             label: "Drafts from templates",
             text: "Reviewed by a person, never sent",
-          },
-          {
-            href: "/how-it-works#paperwork",
-            label: "Paperwork",
-            text: "Received, accepted or missing",
-          },
-        ],
-      },
-      {
-        title: "Stay in control",
-        items: [
-          {
-            href: "/how-it-works#authorize",
-            label: "Authorize every carrier",
-            text: "No booking without an agreement",
-          },
-          {
-            href: "/pricing#ai",
-            label: "AI, off until you turn it on",
-            text: "You decide, with a limit",
-          },
-          {
-            href: "/welcome#status",
-            label: "Where Relay is today",
-            text: "What is and is not connected",
           },
         ],
       },
@@ -138,16 +123,6 @@ export const menu: MenuEntry[] = [
           },
         ],
       },
-      {
-        title: "Limits",
-        items: [
-          {
-            href: "/how-it-works#limits",
-            label: "What it does not do",
-            text: "No live carriers or money movement",
-          },
-        ],
-      },
     ],
     feature: {
       title: "Walk through it",
@@ -164,23 +139,33 @@ export const menu: MenuEntry[] = [
     label: "Resources",
     groups: [
       {
-        title: "Try and ask",
+        title: "Know the limits",
+        items: [
+          {
+            href: "/how-it-works#limits",
+            label: "What it does not do",
+            text: "No live carriers or money movement",
+          },
+          {
+            href: "/welcome#status",
+            label: "Where Relay is today",
+            text: "What is and is not connected",
+          },
+          {
+            href: "/pricing#ai",
+            label: "AI, off until you turn it on",
+            text: "You decide, with a limit",
+          },
+        ],
+      },
+      {
+        title: "Try and trust",
         items: [
           {
             href: "/demo",
             label: "Interactive demo",
             text: "Fictional data, in your browser",
           },
-          {
-            href: "/request-access",
-            label: "Request access",
-            text: "A person reviews every request",
-          },
-        ],
-      },
-      {
-        title: "Trust",
-        items: [
           {
             href: "/terms",
             label: "Terms",
