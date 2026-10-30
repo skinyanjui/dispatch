@@ -39,6 +39,7 @@
 }
 .appShell .sidebarItem.active {
   background: var(--sidebar-active);
+  color: var(--accent);
   font-weight: 500;
 }
 .appShell .sidebarLabel {
@@ -46,21 +47,21 @@
   font-size: 12px;
   font-weight: 500;
 }
-/* Buttons: outlined and compact; blue stays for the main action. */
+/* Buttons: compact; the main action is filled blue, the rest outlined in blue. */
 .appShell .secondary,
 .appShell a.secondary {
   min-height: 28px;
   padding: 0 var(--space-3);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-line);
   border-radius: 4px;
-  color: var(--ink);
+  color: var(--accent);
   font-size: 13px;
   font-weight: 400;
   box-shadow: none;
 }
-.appShell .secondary:hover {
-  background: var(--soft);
+.appShell .secondary:hover:not(:disabled) {
+  background: var(--accent-tint-soft);
 }
 .appShell .primary {
   min-height: 28px;

@@ -971,9 +971,9 @@ select {
   color: var(--ink);
 }
 .appShell .queueTab.active {
-  color: var(--ink);
-  border-color: var(--ink);
-  background: var(--soft);
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-tint);
 }
 .appShell .queueDot {
   width: 9px;

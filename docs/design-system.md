@@ -69,6 +69,8 @@ Rules: add a token before using a new colour. `check-design-system.mjs` fails an
 
 **Breakpoints.** 1100px (tablet: boards scroll sideways), 1000px (the sidebar becomes a sheet), 800px (two columns collapse to one), 760px (phone layout), 640px (low-priority table columns drop out, tiles go two across), 560px (a board lane is most of the screen).
 
+**Blue for action and selection.** In the app, the main button is filled `--action`; secondary buttons are outlined in `--accent-line` with `--accent` text (hover `--accent-tint-soft`); the active sidebar row, pressed segment, pressed chip and active queue tab are `--accent-tint` with `--accent` text, and weight never changes. Blue on those tints is 5.2:1 or better.
+
 **Contrast.** Text on its surface meets WCAG 2.2 AA (4.5:1). Light text is `--muted` and `--subtle`: in the app `#555` (7.5:1 on white) and `#606060` (6.3:1), on public pages `#4a5578` and `#54607f`; do not add a lighter grey for text. White on `--action` is 6.5:1; `--warn` on `--warn-bg` is above 6:1. Focus is a 2px outline in `--focus`.
 
 ## 4. Components (`src/components/ui`)

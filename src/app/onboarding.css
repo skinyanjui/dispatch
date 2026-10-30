@@ -339,3 +339,7 @@
     flex-wrap: wrap;
   }
 }
+.demoBanner .secondary {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}

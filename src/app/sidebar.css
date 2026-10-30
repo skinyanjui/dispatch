@@ -121,7 +121,7 @@
 }
 .sidebarSub.active {
   background: var(--sidebar-active);
-  color: var(--ink);
+  color: var(--accent);
   font-weight: 500;
 }
 .sidebarSpacer {

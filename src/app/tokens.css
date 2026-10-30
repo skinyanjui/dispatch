@@ -109,6 +109,8 @@
   --stage-contacted: #6b8de3;
   /* Selected rows and folders, and loading placeholders. */
   --accent-tint: #e9edfb;
+  /* Outline of a secondary button in the app: a pale step of the accent. */
+  --accent-line: #b9c4f8;
   --skeleton-from: #f1f3fb;
   --skeleton-to: #e6eaf8;
   /* Raised surfaces: menus, and the navigation sheet on phones. */
@@ -137,7 +139,7 @@
   --panel-soft: #f5f5f5;
   --sidebar-bg: transparent;
   --sidebar-hover: #ebebeb;
-  --sidebar-active: #e6e6e6;
+  --sidebar-active: var(--accent-tint);
   --radius: 8px;
   --control-radius: 4px;
   --accent-soft: #eef1ff;

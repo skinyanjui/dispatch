@@ -68,6 +68,8 @@
   color: var(--error);
 }
 .appShell .chip[aria-pressed="true"] {
+  background: var(--accent-tint);
+  color: var(--accent);
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -106,7 +108,7 @@
 }
 .appShell .segment[aria-pressed="true"] {
   background: var(--sidebar-active);
-  color: var(--ink);
+  color: var(--accent);
 }
 
 /* ---- Folders: the Inbox rail ---- */
