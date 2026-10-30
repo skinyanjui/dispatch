@@ -4,14 +4,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { CaretDownIcon, ListIcon, XIcon } from "@phosphor-icons/react";
 import { Brand } from "@/components/workspace-shell";
 import { menu, type MenuEntry } from "@/lib/marketing-menu";
-import { AuthorizeVisual, PaperworkVisual } from "@/components/step-visuals";
 
 type Menu = Extract<MenuEntry, { kind: "menu" }>;
 
 /**
- * The public site's navigation, inside the floating bar (ADR 0075): a mega
- * menu from 900px that drops from the bar as a card, and below that a card
- * that opens over the bar. Both read src/lib/marketing-menu.ts.
+ * The public site's navigation, inside the floating bar (ADR 0075): a
+ * dropdown card under each trigger from 900px, and below that a card that
+ * opens over the bar. Both read src/lib/marketing-menu.ts.
  *
  * Desktop: a mouse opens a panel by hovering its trigger; a click (or
  * ArrowDown) pins it so the pointer can leave. Each panel sits right after its
@@ -239,7 +238,7 @@ function MenuTrigger({
   onNavigate: () => void;
 }) {
   return (
-    <>
+    <div className="mkNavItem">
       <button
         type="button"
         className="mkNavLink mkNavTrigger"
@@ -265,46 +264,30 @@ function MenuTrigger({
           role="region"
           aria-label={`${entry.label} menu`}
         >
-          <div className="mkMegaGroups">
-            {entry.groups.map((g) => (
-              <div key={g.title} className="mkMegaGroup">
-                <p className="mkMegaTitle">{g.title}</p>
-                <ul>
-                  {g.items.map((item) => (
-                    <li key={item.href + item.label}>
-                      <Link
-                        href={item.href}
-                        aria-current={
-                          isCurrent(item.href) && !item.href.includes("#")
-                            ? "page"
-                            : undefined
-                        }
-                        onClick={onNavigate}
-                      >
-                        <strong>{item.label}</strong>
-                        <span>{item.text}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="mkMegaFeature">
-            <p className="mkMegaTitle">{entry.feature.title}</p>
-            <p>{entry.feature.text}</p>
-            {entry.id === "product" && <PaperworkVisual />}
-            {entry.id === "how" && <AuthorizeVisual />}
-            <Link
-              className="mkGhost"
-              href={entry.feature.href}
-              onClick={onNavigate}
-            >
-              {entry.feature.cta}
-            </Link>
-          </div>
+          {entry.groups.map((g) => (
+            <div key={g.title} className="mkMegaGroup">
+              <p className="mkMegaTitle">{g.title}</p>
+              <ul>
+                {g.items.map((item) => (
+                  <li key={item.href + item.label}>
+                    <Link
+                      href={item.href}
+                      aria-current={
+                        isCurrent(item.href) && !item.href.includes("#")
+                          ? "page"
+                          : undefined
+                      }
+                      onClick={onNavigate}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
-    </>
+    </div>
   );
 }

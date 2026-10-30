@@ -1,7 +1,7 @@
 /* Public navigation (components/marketing-nav.tsx, ADR 0075): a floating bar
-   that sticks near the top, a mega menu that drops from it as a card from
-   900px, and a card that opens over the bar below that. The panels are
-   positioned against .mkHeader, so they are exactly as wide as the bar. */
+   that sticks near the top, a dropdown card under each trigger from 900px,
+   and a card that opens over the bar below that. Colours come from the .mk
+   tokens (tokens.css). */
 .mkBar {
   position: sticky;
   top: 0;
@@ -20,11 +20,9 @@
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
   border: 1px solid var(--mk-line);
   border-radius: 16px;
-  background: rgb(255 255 255 / 0.82);
+  background: var(--mk-bar);
   backdrop-filter: saturate(1.4) blur(14px);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.04),
-    0 10px 28px -14px rgb(0 0 0 / 0.22);
+  box-shadow: var(--mk-shadow-bar);
   pointer-events: auto;
 }
 @supports not (backdrop-filter: blur(1px)) {
@@ -109,42 +107,37 @@
   background: var(--mk-soft);
 }
 
-/* Mega panel: a card under the bar, as wide as the bar. */
+/* Dropdown: a small card under its trigger, labels only. */
+.mkNavItem {
+  position: relative;
+}
 .mkMega {
   position: absolute;
-  top: calc(100% + var(--space-2));
-  /* Out by the bar's 1px border, so card and bar are the same width. */
-  left: -1px;
-  right: -1px;
+  top: calc(100% + var(--space-5));
+  left: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: var(--space-6);
-  padding: var(--space-5);
+  gap: var(--space-3);
+  min-width: 240px;
+  padding: var(--space-2);
   border: 1px solid var(--mk-line);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--panel);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.04),
-    0 24px 48px -24px rgb(0 0 0 / 0.28);
+  box-shadow: var(--mk-shadow-card);
   animation: mkDrop 0.14s ease-out;
 }
-/* Keeps the pointer "inside" while it crosses the gap between bar and card. */
+/* The card clears the bar (its trigger sits mid-bar); this keeps the pointer
+   "inside" while it crosses the gap. */
 .mkMega::before {
   content: "";
   position: absolute;
-  top: calc(-1 * var(--space-2));
+  top: calc(-1 * var(--space-5));
   left: 0;
   right: 0;
-  height: var(--space-2);
-}
-.mkMegaGroups {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
+  height: var(--space-5);
 }
 .mkMegaTitle {
-  margin: 0 0 var(--space-2);
-  padding-inline: var(--space-3);
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-1);
   color: var(--mk-muted);
   font-size: 12px;
   font-weight: 600;
@@ -153,58 +146,28 @@
 }
 .mkMega ul {
   display: grid;
-  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .mkMega li a {
-  display: grid;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-radius: 8px;
   color: var(--mk-ink);
+  font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
 }
 .mkMega li a:hover,
 .mkMega li a:focus-visible {
   background: var(--mk-soft);
 }
-.mkMega li a strong {
-  font-size: 14px;
-  font-weight: 500;
-}
-.mkMega li a span {
-  color: var(--mk-muted);
-  font-size: 13px;
-}
-.mkMegaFeature {
-  display: grid;
-  align-content: start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-radius: 12px;
-  background: var(--mk-soft);
-}
-.mkMegaFeature .mkMegaTitle {
-  padding-inline: 0;
-}
-.mkMegaFeature p:not(.mkMegaTitle) {
-  margin: 0;
-  color: var(--mk-muted);
-}
-.mkMegaFeature .miniRow {
-  flex-wrap: wrap;
-}
-.mkMegaFeature .miniRowName {
-  flex: 1 1 100%;
-}
-.mkMegaFeature .stepVisual {
-  padding: var(--space-3);
-  background: var(--panel);
-}
-.mkMegaFeature .mkGhost {
-  justify-self: start;
+.mkMega li a[aria-current="page"] {
+  color: var(--accent);
 }
 
 /* Phone card: opens over the bar, same inset, so the bar seems to unfold. */
@@ -219,7 +182,7 @@
   border-radius: 20px;
   background: var(--panel);
   color: var(--mk-ink);
-  box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.35);
+  box-shadow: var(--mk-shadow-card);
   overflow: hidden;
 }
 .mkSheet[open] {
@@ -227,8 +190,7 @@
   animation: mkDrop 0.16s ease-out;
 }
 .mkSheet::backdrop {
-  background: var(--ink);
-  opacity: 0.35;
+  background: var(--backdrop);
 }
 html:has(.mkSheet[open]) {
   overflow: hidden;
@@ -263,6 +225,11 @@ html:has(.mkSheet[open]) {
   text-decoration: none;
   cursor: pointer;
   list-style: none;
+}
+.mkSheetGroup summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: 8px;
 }
 .mkSheetGroup summary::-webkit-details-marker {
   display: none;

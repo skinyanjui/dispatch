@@ -31,9 +31,6 @@ test("the mega menu opens by click, hover and keyboard, and closes with Escape, 
   await expect(
     panel.getByRole("link", { name: /Board, table and calendar/ }),
   ).toBeVisible();
-  await expect(
-    panel.getByRole("link", { name: "Open the interactive demo" }),
-  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
   await expect(product).toBeFocused();
@@ -87,12 +84,13 @@ test("the bar floats, stays put, and Tab walks from a trigger into its panel", a
     .poll(async () => (await header.boundingBox())!.y)
     .toBeGreaterThan(4);
   await expect(header).toBeInViewport({ ratio: 1 });
-  // The open panel is as wide as the bar.
+  // The open panel is a small card under its trigger, not a full-width slab.
   await trigger(page, "Product").click();
   const panel = page.getByRole("region", { name: "Product menu" });
   const bar = (await header.boundingBox())!;
   const card = (await panel.boundingBox())!;
-  expect(Math.abs(card.width - bar.width)).toBeLessThan(2);
+  expect(card.width).toBeLessThan(bar.width / 2);
+  expect(card.y).toBeGreaterThanOrEqual(bar.y + bar.height);
   // Tab from the trigger lands on the panel's first link.
   await trigger(page, "Product").focus();
   await page.keyboard.press("Tab");
@@ -109,10 +107,7 @@ test("every menu link reaches a real page and a real section", async ({
   const links = menu.flatMap((e) =>
     e.kind === "link"
       ? [e.href]
-      : [
-          ...e.groups.flatMap((g) => g.items.map((i) => i.href)),
-          e.feature.href,
-        ],
+      : e.groups.flatMap((g) => g.items.map((i) => i.href)),
   );
   for (const href of new Set(links)) {
     const [path, hash] = href.split("#");
